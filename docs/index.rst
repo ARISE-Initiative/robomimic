@@ -18,6 +18,7 @@ Welcome to robomimic's documentation!
    introduction/datasets
    introduction/model_zoo
    introduction/results
+   introduction/model_zoo
 
 .. toctree::
    :maxdepth: 1
