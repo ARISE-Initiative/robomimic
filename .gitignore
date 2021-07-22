@@ -4,6 +4,9 @@ dist/
 # datasets folder
 datasets/
 
+# local test dataset that is lazily downloaded by example scripts
+tests/assets/test.hdf5
+
 # pycharm configs
 .idea/
 
