@@ -127,3 +127,8 @@ if __name__ == "__main__":
             break
 
     f.close()
+
+    # maybe display error message
+    print("")
+    if (action_min < -1.) or (action_max > 1.):
+        raise Exception("Dataset should have actions in [-1., 1.] but got bounds [{}, {}]".format(action_min, action_max))
