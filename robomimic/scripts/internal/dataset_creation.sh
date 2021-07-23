@@ -338,3 +338,37 @@ python test.py --agent /afs/cs.stanford.edu/u/amandlek/installed_libraries/bench
 --render_video --video_dir ~/Downloads/can_paired_rollouts_bc_rnn --n_rollouts 50 --horizon 400 --seed 1
 
 
+#################################################################
+# Preparation of roboturk-pilot demo.hdf5s                      #
+#################################################################
+
+# NOTE: we have a new, better, mechanism in public release
+
+# download raw data
+wget http://cvgl.stanford.edu/projects/roboturk/RoboTurkPilot.zip
+unzip RoboTurkPilot.zip
+
+# in RobotTeleop
+python process_demo_hdf5.py --folder ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/
+
+# convert to valid hdf5
+python teleop_to_env_meta.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 
+
+# split into fastest 225
+python split_fastest.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 --n 225
+python split_train_val.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 --filter_key fastest_225
+
+# playback dataset
+python playback_dataset.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 \
+--n 10 --video_path ~/Downloads/playback_rt_cans_225.mp4 --render_image_names agentview --filter_key fastest_225
+
+python playback_dataset.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 \
+--n 10 --video_path ~/Downloads/playback_rt_cans_act_225.mp4 --render_image_names agentview --filter_key fastest_225 --use-actions
+
+# low dim
+python dataset_states_to_obs.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 \
+--output_name low_dim.hdf5 --done_mode 2
+
+# test image - first 10 traj
+python dataset_states_to_obs.py --done_mode 2 --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 \
+--output_name image.hdf5 --camera_names agentview --camera_height 84 --camera_width 84 --n 5
