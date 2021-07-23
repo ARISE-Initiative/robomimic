@@ -729,7 +729,7 @@ python merge_filter_keys.py \
 --filter_keys chen roberto danfei yuke --name worse_okay --valid
 
 # verify dataset looks okay
-python get_dataset_stats.py \
+python get_dataset_info.py \
 --dataset ~/Desktop/benchmark_datasets/panda_lift_multi_human/demo.hdf5 --verbose
 
 
@@ -894,7 +894,7 @@ python train.py --config ~/Downloads/bc_can_ckpt_fk_6.3k_lr_1e-4_gmm_n_mlp_1024_
 python train.py --config ~/Downloads/hbcq_can_ckpt_fk_6.3k_def_actor_y.json 
 
 # verify dataset looks okay
-python get_dataset_stats.py \
+python get_dataset_info.py \
 --dataset ~/Desktop/benchmark_datasets/panda_two_arm_transport_multi_human/demo.hdf5 --verbose
 
 

@@ -76,7 +76,7 @@ python merge_filter_keys.py \
 --filter_keys chen roberto danfei yuke --name worse_okay --valid
 
 # verify dataset looks okay
-python get_dataset_stats.py \
+python get_dataset_info.py \
 --dataset ~/Desktop/benchmark_datasets/panda_lift_multi_human/demo.hdf5 --verbose
 
 
