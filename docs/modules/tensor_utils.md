@@ -1,15 +1,15 @@
 # TensorUtils
 
-Most Robomimic's models operate on nested tensor dictionaries, both for input and training labels. We provide a suite of utility to work with these dictionaries in `robomimic.utils.tensor_utils`. For example, given a numpy dictionary of observations:
+Most models in **robomimic** operate on nested tensor dictionaries, both for input and training labels. We provide a suite of utilities to work with these dictionaries in `robomimic.utils.tensor_utils`. For example, given a numpy dictionary of observations:
 ```python
 import numpy as np
 
 x = {
-  'image': np.random.randn(3, 224, 224),
-  'proprio': {
-    'eef_pos': np.random.randn(3),
-    'eef_rot': np.random.randn(3)
-  }
+    'image': np.random.randn(3, 224, 224),
+    'proprio': {
+        'eef_pos': np.random.randn(3),
+        'eef_rot': np.random.randn(3)
+    }
 }
 ```
 
@@ -29,7 +29,7 @@ x = TensorUtils.to_batch(x)
 x = TensorUtils.to_device(x, torch.device("cuda:0"))
 ```
 
-The library also supports nontrivial shape operations on the nest dict. For example:
+The library also supports nontrivial shape operations on the nested dict. For example:
 
 ```python
 # create a new dimension at dim=1 and expand the dimension size to 10
@@ -45,7 +45,7 @@ x = TensorUtils.gather_sequence(x_seq, indices=torch.arange(10))
 # x["image"].shape == torch.Size([10, 3, 224, 224])
 ```
 
-In addition, `map_tensor` allows applying arbitrary function to all tensors in a nested dictionary or list of tensors and return the same nested structure.
+In addition, `map_tensor` allows applying an arbitrary function to all tensors in a nested dictionary or list of tensors and returns the same nested structure.
 ```python
 x = TensorUtils.map_tensor(x, your_func)
 ```
