@@ -1,6 +1,6 @@
 # TensorUtils
 
-Most Robomimic's model operates on nested tensor dictionaries, both for input and training labels. We provide a suite of utility to work with these dictionaries in `robomimic.utils.tensor_utils`. For example, given a numpy dictionary of observations:
+Most Robomimic's models operate on nested tensor dictionaries, both for input and training labels. We provide a suite of utility to work with these dictionaries in `robomimic.utils.tensor_utils`. For example, given a numpy dictionary of observations:
 ```python
 import numpy as np
 
