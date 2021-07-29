@@ -372,3 +372,144 @@ python dataset_states_to_obs.py --dataset ~/Desktop/roboturk_v1_test/RoboTurkPil
 # test image - first 10 traj
 python dataset_states_to_obs.py --done_mode 2 --dataset ~/Desktop/roboturk_v1_test/RoboTurkPilot/bins-Can/demo_new.hdf5 \
 --output_name image.hdf5 --camera_names agentview --camera_height 84 --camera_width 84 --n 5
+
+
+# full resolution videos for robomimic video
+# NOTE: make sure to edit playback_dataset.py to get appropriate image resolution (MH - 675 x 800, PH - 450 x 800)
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_better_1.mp4 --n 10 --filter_key better_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_better_2.mp4 --n 10 --filter_key better_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_okay_1.mp4 --n 10 --filter_key okay_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_okay_2.mp4 --n 10 --filter_key okay_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_worse_1.mp4 --n 10 --filter_key worse_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/lift/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_lift_mh_full_size_worse_2.mp4 --n 10 --filter_key worse_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_better_1.mp4 --n 10 --filter_key better_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_better_2.mp4 --n 10 --filter_key better_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_okay_1.mp4 --n 10 --filter_key okay_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_okay_2.mp4 --n 10 --filter_key okay_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_worse_1.mp4 --n 10 --filter_key worse_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/can/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_can_mh_full_size_worse_2.mp4 --n 10 --filter_key worse_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_better_1.mp4 --n 10 --filter_key better_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_better_2.mp4 --n 10 --filter_key better_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_okay_1.mp4 --n 10 --filter_key okay_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_okay_2.mp4 --n 10 --filter_key okay_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_worse_1.mp4 --n 10 --filter_key worse_operator_1
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/square/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_square_mh_full_size_worse_2.mp4 --n 10 --filter_key worse_operator_2
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_better.mp4 --n 10 --filter_key better
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_okay.mp4 --n 10 --filter_key okay
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_worse.mp4 --n 10 --filter_key worse
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_worse_better.mp4 --n 10 --filter_key worse_better
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_worse_okay.mp4 --n 10 --filter_key worse_okay
+
+python playback_dataset.py --dataset /cvgl/downloads/rt_benchmark/transport/mh/demo.hdf5 \
+--video_path ~/Downloads/playback_transport_mh_full_size_okay_better.mp4 --n 10 --filter_key okay_better
+
+
+# full resolution model zoo policy rollouts, for robomimic video
+# NOTE: make sure to edit rollout function in run_trained_agent for desired resolution (e.g. 450 x 800)
+
+# low-dim
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/lift/bc_rnn/lift_ph_low_dim_epoch_1000_succ_100.pth \
+--video_path ~/Downloads/model_zoo_lift_ld.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/can/bc_rnn/can_ph_low_dim_epoch_1150_succ_100.pth \
+--video_path ~/Downloads/model_zoo_can_ld.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/square/bc_rnn/square_ph_low_dim_epoch_1850_succ_84.pth \
+--video_path ~/Downloads/model_zoo_square_ld.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/transport/bc_rnn/transport_ph_low_dim_epoch_1000_succ_78.pth \
+--video_path ~/Downloads/model_zoo_transport_ld.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/tool_hang/bc_rnn/tool_hang_ph_low_dim_epoch_2000_succ_14.pth \
+--video_path ~/Downloads/model_zoo_tool_hang_ld.mp4 --n_rollouts 10
+
+# image
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/lift/bc_rnn/lift_ph_image_epoch_500_succ_100.pth \
+--video_path ~/Downloads/model_zoo_lift_im.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/can/bc_rnn/can_ph_image_epoch_300_succ_100.pth \
+--video_path ~/Downloads/model_zoo_can_im.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/square/bc_rnn/square_ph_image_epoch_540_succ_78.pth \
+--video_path ~/Downloads/model_zoo_square_im.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/transport/bc_rnn/transport_ph_image_epoch_580_succ_70.pth \
+--video_path ~/Downloads/model_zoo_transport_im.mp4 --n_rollouts 10
+
+python run_trained_agent.py \
+--agent /cvgl/downloads/rt_benchmark/model_zoo/tool_hang/bc_rnn/tool_hang_ph_image_epoch_440_succ_74.pth \
+--video_path ~/Downloads/model_zoo_tool_hang_im.mp4 --n_rollouts 10
+
+
+
+# rollout videos by algo (for robomimic video)
+# NOTE: make sure to edit rollout func in utils/train_utils.py on benchmark branch for appropriate resolution
+
+# bc
+python test.py \
+--agent /afs/cs.stanford.edu/u/amandlek/installed_libraries/benchmark/slurm/log/batchRL/batchrl_benchmark/hp_sweep/low_dim/bc/core_se_bc_low_dim/benchmark_se_transport_ld_bc_trained_models/bc_ds_se_transport_ld_seed_1/2021-05-30-21-59-24-854881/models/model_epoch_850_TwoArmTransport_success_0.2.pth \
+--render_video --video_dir ~/Downloads/algo_rollout_bc --n_rollouts 10
+
+# bc-rnn
+python test.py \
+--agent /afs/cs.stanford.edu/u/amandlek/installed_libraries/benchmark/slurm/log/batchRL/batchrl_benchmark/hp_sweep/low_dim/bc/core_se_bc_rnn_low_dim/benchmark_se_transport_ld_bc_trained_models/bc_rnn_ds_se_transport_ld_seed_1/2021-05-30-22-00-21-247760/models/model_epoch_1550_TwoArmTransport_success_0.76.pth \
+--render_video --video_dir ~/Downloads/algo_rollout_bc_rnn --n_rollouts 10
+
+# cql
+python test.py \
+--agent /cvgl2/u/soroush/slurm/log/batchRL/batchrl_benchmark/hp_sweep/low_dim/sac_cql/core_se_cql_low_dim/benchmark_se_transport_ld_cql_trained_models/sac_cql_ds_se_transport_ld_seed_1/2021-06-11-18-50-30-970426/models/model_epoch_2000.pth \
+--render_video --video_dir ~/Downloads/algo_rollout_cql --n_rollouts 10

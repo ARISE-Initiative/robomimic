@@ -1,6 +1,6 @@
-# Modular Examples
+# Using robomimic Modules
 
-This section discusses some simple modular examples packaged with the repository (in the top-level `examples` folder). These examples showcase different modular components in the repository, to assist users who may want to build on these components, or use these components in other applications.
+This section discusses some simple examples packaged with the repository (in the top-level `examples` folder) that provide a more thorough understanding of components used in the repository. These examples are meant to assist users who may want to build on these components, or use these components in other applications, in contrast to the [Getting Started](./quickstart.html) section, which provides examples relevant to using the repository as-is.
 
 ## Train Loop Example
 
@@ -148,3 +148,9 @@ print(config)
 ```
 
 Please see the [Config documentation](../modules/configs.html) for more information on Config objects.
+
+
+
+## Observation Networks Example
+
+The example script in `examples/simple_obs_net.py` discusses how to construct networks for taking observation dictionaries as input, and that produce dictionaries as outputs. See [this section](../modules/models.html#observation-encoder-and-decoder) in the documentation for more details.
