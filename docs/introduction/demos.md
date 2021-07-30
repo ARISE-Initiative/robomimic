@@ -1,4 +1,4 @@
-# Using robomimic Modules
+# Working with robomimic Modules
 
 This section discusses some simple examples packaged with the repository (in the top-level `examples` folder) that provide a more thorough understanding of components used in the repository. These examples are meant to assist users who may want to build on these components, or use these components in other applications, in contrast to the [Getting Started](./quickstart.html) section, which provides examples relevant to using the repository as-is.
 

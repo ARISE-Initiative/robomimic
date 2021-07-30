@@ -46,7 +46,14 @@ VIDEO_PATHS = [
     os.path.join(BASE_VIDEO_DIR, "playback_can_mh_worse_2.mp4"),
     os.path.join(BASE_VIDEO_DIR, "playback_square_mh_worse_2.mp4"),
     os.path.join(BASE_VIDEO_DIR, "playback_transport_mh_worse.mp4"),
+
+    os.path.join(BASE_VIDEO_DIR, "playback_liftreal.mp4"),
+    os.path.join(BASE_VIDEO_DIR, "playback_canreal.mp4"),
+    os.path.join(BASE_VIDEO_DIR, "playback_toolhangreal.mp4"),
 ]
+
+# expected size of video frames - if mismatch, will be reshaped
+VIDEO_FRAME_SIZE = (512, 512)
 
 
 def env_name_from_filename(filename):
@@ -155,6 +162,13 @@ def generate_gallery(num_rows, num_cols, num_images):
                     start=sampled_frame_inds[r_ind][c_ind] + video_ind, 
                     nframes=1,
                 )[0]
+
+                # maybe resize video frame
+                if (frame.shape[0] != VIDEO_FRAME_SIZE[0]) or (frame.shape[1] != VIDEO_FRAME_SIZE[1]):
+                    frame = Image.fromarray(frame)
+                    frame = frame.resize((VIDEO_FRAME_SIZE[1], VIDEO_FRAME_SIZE[0]))
+                    frame = np.asarray(frame)
+
                 row_image.append(frame)
             # concatenate images into a row
             row_image = np.concatenate(row_image, axis=1)
@@ -164,7 +178,7 @@ def generate_gallery(num_rows, num_cols, num_images):
         all_frames = np.concatenate(all_frames, axis=0)
 
         image = Image.fromarray(all_frames)
-        image = image.resize((200 * num_rows, 200 * num_cols))
+        image = image.resize((200 * num_cols, 200 * num_rows))
         if write_video:
             image = np.asarray(image)
             video_writer.append_data(image)
@@ -176,7 +190,9 @@ def generate_gallery(num_rows, num_cols, num_images):
 
 
 if __name__ == "__main__":
-    generate_gallery(num_rows=5, num_cols=5, num_images=10)
+    # generate_gallery(num_rows=9, num_cols=8, num_images=1)
+    # generate_gallery(num_rows=4, num_cols=8, num_images=100)
+    generate_gallery(num_rows=4, num_cols=8, num_images=1)
     # env_map = build_env_to_video_map()
     # print(json.dumps(env_map, indent=4))
 
