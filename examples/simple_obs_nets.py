@@ -50,7 +50,7 @@ def simple_obs_example():
     image_randomizer = CropRandomizer(input_shape=camera2_shape, crop_height=140, crop_width=220)
 
     # the cropper will alter the input shape
-    mod_net_kwargs["input_shape"] = image_randomizer.output_shape(camera2_shape)
+    mod_net_kwargs["input_shape"] = image_randomizer.output_shape_in(camera2_shape)
     mod_net = eval(mod_net_class)(**mod_net_kwargs)
 
     obs_encoder.register_modality(
