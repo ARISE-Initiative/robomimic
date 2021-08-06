@@ -1,0 +1,7 @@
+# requirements for building sphinx docs
+pygments==2.4.1
+sphinx
+sphinx_rtd_theme
+sphinx_markdown_tables
+recommonmark
+nbsphinx
