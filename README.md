@@ -11,7 +11,7 @@
   <img width="24.0%" src="docs/images/task_transport.gif">
  </p>
 
-[**[Homepage]**](https://arise-initiative.github.io/robomimic-web/) &ensp; [**[White Paper]**](https://arise-initiative.github.io/robomimic-web/assets/paper.pdf) &ensp; [**[Documentation]**](https://arise-initiative.github.io/robomimic-web/docs/introduction/overview.html) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
+[**[Homepage]**](https://arise-initiative.github.io/robomimic-web/) &ensp; [**[White Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Documentation]**](https://arise-initiative.github.io/robomimic-web/docs/introduction/overview.html) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
 
 -------
 ## Latest Updates
