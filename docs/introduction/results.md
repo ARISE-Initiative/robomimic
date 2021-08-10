@@ -1,6 +1,6 @@
 # Reproducing Study Results
 
-This section provides a guide on how to reproduce different experiment results from the study. Please see the [paper](https://arise-initiative.github.io/robomimic-web/assets/paper.pdf) and the [study website](https://arise-initiative.github.io/robomimic-web/study/) for more information. 
+This section provides a guide on how to reproduce different experiment results from the study. Please see the [paper](https://arxiv.org/abs/2108.03298) and the [study website](https://arise-initiative.github.io/robomimic-web/study/) for more information. 
 
 **Warning:** When working with the robosuite datasets, please make sure that you have installed [robosuite](https://robosuite.ai/), and that you are on the `offline_study` branch of robosuite.
 

@@ -41,6 +41,13 @@ The **robomimic** framework also makes reproducing the results from this [study]
 
 ## Citations
 
-Please cite [this paper](https://arise-initiative.github.io/robomimic-web/assets/paper.pdf) if you use this framework in your work:
+Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this framework in your work:
 
-TODO: bibtex
+```
+@inproceedings{robomimic2021,
+  title={What Matters in Learning from Offline Human Demonstrations for Robot Manipulation},
+  author={Ajay Mandlekar and Danfei Xu and Josiah Wong and Soroush Nasiriany and Chen Wang and Rohun Kulkarni and Li Fei-Fei and Silvio Savarese and Yuke Zhu and Roberto Mart\'{i}n-Mart\'{i}n},
+  booktitle={arXiv preprint arXiv:2108.03298},
+  year={2021}
+}
+```

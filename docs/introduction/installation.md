@@ -59,6 +59,8 @@ While the **robomimic** repository does not depend on particular simulators, ins
 
 Most of our examples and released datasets use [robosuite](https://robosuite.ai/), so we strongly recommend installing it. Install it using [the instructions here](https://robosuite.ai/docs/installation.html), and once again, we recommend installing from source. While the repository is compatible with robosuite `v1.2+`, switch to the `offline_study` branch (by running `git checkout offline_study` in the `robosuite` root directory) in order to easily work with our released datasets and reproduce our experiments.
 
+**Note:** robosuite has a dependency on [mujoco-py](https://github.com/openai/mujoco-py). If you are on an Ubuntu machine with a GPU, you should make sure that the `GPU` version of `mujoco-py` gets built, so that image rendering is fast (this is extremely important for working with image datasets). An easy way to ensure this is to clone the repository, change [this line](https://github.com/openai/mujoco-py/blob/4830435a169c1f3e3b5f9b58a7c3d9c39bdf4acb/mujoco_py/builder.py#L74) to `Builder = LinuxGPUExtensionBuilder`, and install from source by running `pip install -e .` in the `mujoco-py` root directory.
+
 ### D4RL
 
 We also have examples to run some of our algorithms on the [D4RL](https://arxiv.org/abs/2004.07219) datasets. Follow the instructions [here](https://github.com/rail-berkeley/d4rl) to install them, in order to reproduce our results or run further evaluations on these datasets.
