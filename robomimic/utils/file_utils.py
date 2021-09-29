@@ -5,8 +5,8 @@ demonstration datasets, loading model checkpoints, or downloading dataset files.
 import os
 import h5py
 import json
+import requests
 import time
-import urllib.request
 import numpy as np
 from collections import OrderedDict
 from tqdm import tqdm
@@ -35,7 +35,7 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
     Args:
         hdf5_path (str): path to hdf5 file
         demo_keys ([str]): list of demonstration keys which should
-            correspond to this filter key. For example, ["demo_0", 
+            correspond to this filter key. For example, ["demo_0",
             "demo_1"].
         key_name (str): name of filter key to create
 
@@ -43,7 +43,7 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
         ep_lengths ([int]): list of episode lengths that corresponds to
             each demonstration in the new filter key
     """
-    f = h5py.File(hdf5_path, "a")  
+    f = h5py.File(hdf5_path, "a")
     demos = sorted(list(f["data"].keys()))
 
     # collect episode lengths for the keys of interest
@@ -142,7 +142,7 @@ def get_shape_metadata_from_dataset(dataset_path, all_modalities=None, verbose=F
 def load_dict_from_checkpoint(ckpt_path):
     """
     Load checkpoint dictionary from a checkpoint file.
-    
+
     Args:
         ckpt_path (str): Path to checkpoint file.
 
@@ -329,8 +329,8 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
 
     # create env from saved metadata
     env = EnvUtils.create_env_from_metadata(
-        env_meta=env_meta, 
-        render=render, 
+        env_meta=env_meta,
+        render=render,
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
     )
@@ -338,34 +338,6 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
         print("============= Loaded Environment =============")
         print(env)
     return env, ckpt_dict
-
-
-class DownloadProgressBar(tqdm):
-    def update_to(self, b=1, bsize=1, tsize=None):
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
-
-
-def url_is_alive(url):
-    """
-    Checks that a given URL is reachable.
-    From https://gist.github.com/dehowell/884204.
-
-    Args:
-        url (str): url string
-
-    Returns:
-        is_alive (bool): True if url is reachable, False otherwise
-    """
-    request = urllib.request.Request(url)
-    request.get_method = lambda: 'HEAD'
-
-    try:
-        urllib.request.urlopen(request)
-        return True
-    except urllib.request.HTTPError:
-        return False
 
 
 def download_url(url, download_dir):
@@ -383,13 +355,19 @@ def download_url(url, download_dir):
     """
 
     # check if url is reachable. We need the sleep to make sure server doesn't reject subsequent requests
-    assert url_is_alive(url), "@download_url got unreachable url: {}".format(url)
+    response = requests.get(url, stream=True)
     time.sleep(0.5)
 
-    # infer filename from url link
+    assert (response.ok), f"Unable to access {url}: {response.reason}"
+
     fname = url.split("/")[-1]
     file_to_write = os.path.join(download_dir, fname)
+    total_size_in_bytes = int(response.headers.get('content-length', 0))
 
-    with DownloadProgressBar(unit='B', unit_scale=True,
+
+    with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:
-        urllib.request.urlretrieve(url, filename=file_to_write, reporthook=t.update_to)
+        with open(file_to_write,'wb') as f:
+            for data in response.iter_content(1024):
+                t.update(len(data))
+                f.write(data)
