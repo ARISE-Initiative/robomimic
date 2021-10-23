@@ -11,6 +11,8 @@ import torch.nn.functional as F
 
 import robomimic.utils.tensor_utils as TU
 
+# MACRO FOR VALID IMAGE CHANNEL SIZES
+VALID_IMAGE_CHANNEL_DIMS = {1, 3}       # depth, rgb
 
 # DO NOT MODIFY THIS!
 # This keeps track of observation types - and is populated on call to @initialize_obs_utils_with_obs_specs.
@@ -127,6 +129,20 @@ def key_is_image(key):
     return key_is_obs_type(key, obs_type="image")
 
 
+def key_is_depth(key):
+    """
+    Check if observation key corresponds to depth observation.
+    """
+    return key_is_obs_type(key, obs_type="depth")
+#
+#
+# def key_is_scan(key):
+#     """
+#     Check if observation key corresponds to depth observation.
+#     """
+#     return key_is_obs_type(key, obs_type="scan")
+
+
 def center_crop(im, t_h, t_w):
     """
     Takes a center crop of an image.
@@ -203,13 +219,39 @@ def process_obs(obs_dict):
     for k in new_dict:
         if key_is_image(k):
             new_dict[k] = process_image(new_dict[k])
+        elif key_is_depth(k):
+            new_dict[k] = process_depth(new_dict[k])
     return new_dict
+
+
+def process_frame(frame, channel_dim, scale):
+    """
+    Given frame fetched from dataset, process for network input. Converts array
+    to float (from uint8), normalizes pixels from range [0, @scale] to [0, 1], and channel swaps
+    from (H, W, C) to (C, H, W).
+
+    Args:
+        frame (np.array or torch.Tensor): frame array
+        channel_dim (int): Number of channels to sanity check for
+        scale (float): Value to normalize inputs by
+
+    Returns:
+        processed_frame (np.array or torch.Tensor): processed frame
+    """
+    # Channel size should either be 3 (RGB) or 1 (depth)
+    assert (frame.shape[-1] == channel_dim)
+    frame = TU.to_float(frame)
+    frame /= scale
+    frame = np.clip(frame, 0.0, 1.0)
+    frame = batch_image_hwc_to_chw(frame)
+
+    return frame
 
 
 def process_image(image):
     """
-    Given image fetched from dataset, process for network input. Converts array 
-    to float (from uint8), normalizes pixels to [0, 1], and channel swaps
+    Given image fetched from dataset, process for network input. Converts array
+    to float (from uint8), normalizes pixels from range [0, 255] to [0, 1], and channel swaps
     from (H, W, C) to (C, H, W).
 
     Args:
@@ -218,13 +260,22 @@ def process_image(image):
     Returns:
         processed_image (np.array or torch.Tensor): processed image
     """
-    assert image.shape[-1] == 3 # check for channel dimensions
+    return process_frame(frame=image, channel_dim=3, scale=255.)
 
-    image = TU.to_float(image)
-    image /= 255.
-    image = batch_image_hwc_to_chw(image)
 
-    return image
+def process_depth(depth):
+    """
+    Given depth fetched from dataset, process for network input. Converts array
+    to float (from uint8), normalizes pixels from range [0, 1] to [0, 1], and channel swaps
+    from (H, W, C) to (C, H, W).
+
+    Args:
+        depth (np.array or torch.Tensor): depth array
+
+    Returns:
+        processed_depth (np.array or torch.Tensor): processed depth
+    """
+    return process_frame(frame=depth, channel_dim=1, scale=1.)
 
 
 def unprocess_obs(obs_dict):
@@ -244,7 +295,30 @@ def unprocess_obs(obs_dict):
     for k in new_dict:
         if key_is_image(k):
             new_dict[k] = unprocess_image(new_dict[k])
+        elif key_is_depth(k):
+            new_dict[k] = unprocess_depth(new_dict[k])
+
     return new_dict
+
+
+def unprocess_frame(frame, channel_dim, scale):
+    """
+    Given frame prepared for network input, prepare for saving to dataset.
+    Inverse of @process_frame.
+
+    Args:
+        frame (np.array or torch.Tensor): frame array
+        channel_dim (int): What channel dimension should be (used for sanity check)
+        scale (float): Scaling factor to apply during denormalization
+
+    Returns:
+        unprocessed_frame (np.array or torch.Tensor): frame passed through
+            inverse operation of @process_frame
+    """
+    assert frame.shape[-3] == channel_dim # check for channel dimension
+    frame = batch_image_chw_to_hwc(frame)
+    frame *= scale
+    return frame
 
 
 def unprocess_image(image):
@@ -259,32 +333,43 @@ def unprocess_image(image):
         unprocessed_image (np.array or torch.Tensor): image passed through
             inverse operation of @process_image
     """
-    assert image.shape[-3] == 3 # check for channel dimension
-    image = batch_image_chw_to_hwc(image)
-    image *= 255.
-    image = TU.to_uint8(image)
-    return image
+    return TU.to_uint8(unprocess_frame(frame=image, channel_dim=3, scale=255.))
 
 
-def process_image_shape(image_shape):
+def unprocess_depth(depth):
     """
-    Given image shape in dataset, infer the network input shape. This accounts
+    Given depth prepared for network input, prepare for saving to dataset.
+    Inverse of @process_depth.
+
+    Args:
+        depth (np.array or torch.Tensor): depth array
+
+    Returns:
+        unprocessed_depth (np.array or torch.Tensor): depth passed through
+            inverse operation of @process_depth
+    """
+    return TU.to_uint8(unprocess_frame(frame=depth, channel_dim=1, scale=1.))
+
+
+def process_frame_shape(frame_shape):
+    """
+    Given frame shape in dataset, infer the network input shape. This accounts
     for the channel swap to prepare images for torch training (see @process_image).
 
     Args:
-        image_shape (tuple or list): tuple or list of size 3 or 4, corresponding
-            to the image shape to process
+        frame_shape (tuple or list): tuple or list of size 3 or 4, corresponding
+            to the frame shape to process
 
     Returns:
-        processed_image_shape (tuple): image shape that would result from the 
-            output of @process_image
+        processed_frame_shape (tuple): image shape that would result from the
+            output of @process_frame
     """
-    if len(image_shape) == 3:
-        return image_shape[2], image_shape[0], image_shape[1]
-    elif len(image_shape) == 4:
-        return image_shape[0], image_shape[3], image_shape[1], image_shape[2]
+    if len(frame_shape) == 3:
+        return frame_shape[2], frame_shape[0], frame_shape[1]
+    elif len(frame_shape) == 4:
+        return frame_shape[0], frame_shape[3], frame_shape[1], frame_shape[2]
     else:
-        raise ValueError("cannot handle image shape {}".format(image_shape))
+        raise ValueError("cannot handle frame shape {}".format(frame_shape))
 
 
 def normalize_obs(obs_dict, obs_normalization_stats):
@@ -327,15 +412,28 @@ def normalize_obs(obs_dict, obs_normalization_stats):
     return obs_dict
 
 
-def has_image(obs_keys):
+# def has_image(obs_keys):
+#     """
+#     Returns True if image modalities are present in the list of modalities.
+#
+#     Args:
+#         obs_key (list): list of modalities
+#     """
+#     for k in obs_keys:
+#         if key_is_image(k):
+#             return True
+#     return False
+
+def has_modality(modality, obs_keys):
     """
-    Returns True if image modalities are present in the list of modalities.
+    Returns True if @modality is present in the list of modalities.
 
     Args:
+        modality (str): modality to check for, e.g.: image, depth, etc.
         obs_key (list): list of modalities
     """
     for k in obs_keys:
-        if key_is_image(k):
+        if key_is_obs_type(k, obs_type=modality):
             return True
     return False
 

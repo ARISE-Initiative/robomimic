@@ -127,14 +127,14 @@ def get_shape_metadata_from_dataset(dataset_path, all_modalities=None, verbose=F
             print("obs modality {} with shape {}".format(k, all_shapes[k]))
 
     for k in all_shapes:
-        if ObsUtils.key_is_image(k):
-            all_shapes[k] = ObsUtils.process_image_shape(all_shapes[k])
+        if ObsUtils.key_is_image(k) or ObsUtils.key_is_depth(k):
+            all_shapes[k] = ObsUtils.process_frame_shape(all_shapes[k])
 
     f.close()
 
     shape_meta['all_shapes'] = all_shapes
     shape_meta['all_modalities'] = all_modalities
-    shape_meta['use_images'] = ObsUtils.has_image(all_modalities)
+    shape_meta['use_images'] = ObsUtils.has_modality("image", all_modalities)
 
     return shape_meta
 

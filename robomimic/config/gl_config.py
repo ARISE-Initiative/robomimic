@@ -68,17 +68,15 @@ class GLConfig(BaseConfig):
             "object",
         ]
         self.observation.modalities.subgoal.image = []                      # specify image subgoal observations for agent to predict
+        self.observation.modalities.subgoal.depth = []
 
     @property
     def all_modalities(self):
         """
         Update from superclass to include subgoals.
         """
-        return sorted(tuple(set(
-            self.observation.modalities.obs.low_dim + 
-            self.observation.modalities.obs.image +
-            self.observation.modalities.subgoal.low_dim + 
-            self.observation.modalities.subgoal.image + 
-            self.observation.modalities.goal.low_dim + 
-            self.observation.modalities.goal.image
-        )))
+        return sorted(tuple(set([
+            mod for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values(), self.observation.modalities.subgoal.values()]
+            for mod_group in group
+            for mod in mod_group
+         ])))

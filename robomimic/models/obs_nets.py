@@ -27,7 +27,7 @@ from robomimic.models.base_nets import Module, Sequential, MLP, RNN_Base, ResNet
 def obs_encoder_args_from_config(obs_encoder_config):
     """
     Generate a set of args used to create visual backbones for networks
-    from the obseration encoder config.
+    from the observation encoder config.
     """
     return dict(
         visual_feature_dimension=obs_encoder_config.visual_feature_dimension,
@@ -105,7 +105,7 @@ def obs_encoder_factory(
         mod_net_class = None
         mod_net_kwargs = None
         mod_randomizer = None
-        if ObsUtils.has_image([k]):
+        if ObsUtils.has_modality("image", [k]) or ObsUtils.has_modality("depth", [k]):
             mod_net_class = "VisualCore"
             mod_net_kwargs = deepcopy(visual_core_kwargs_template)
             # need input shape to create visual core

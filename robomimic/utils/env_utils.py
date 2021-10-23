@@ -37,6 +37,9 @@ def get_env_class(env_meta=None, env_type=None, env=None):
     elif env_type == EB.EnvType.GYM_TYPE:
         from robomimic.envs.env_gym import EnvGym
         return EnvGym
+    elif env_type == EB.EnvType.IG_MOMART_TYPE:
+        from robomimic.envs.env_ig_momart import EnvGibsonMoMaRT
+        return EnvGibsonMoMaRT
     raise Exception("code should never reach this point")
 
 
@@ -177,6 +180,9 @@ def create_env_from_metadata(
         env_name = env_meta["env_name"]
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
+
+    # # TODO: Remove once dataset is cleaned up
+    # env_kwargs["ig_config"] = env_meta["ig_config"]
 
     env = create_env(
         env_type=env_type,

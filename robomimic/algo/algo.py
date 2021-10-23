@@ -143,11 +143,11 @@ class Algo(object):
         self.goal_shapes = OrderedDict()
         self.subgoal_shapes = OrderedDict()
         for k in modality_shapes:
-            if "obs" in self.obs_config.modalities and k in (self.obs_config.modalities.obs.low_dim + self.obs_config.modalities.obs.image):
+            if "obs" in self.obs_config.modalities and k in [mod for mod_group in self.obs_config.modalities.obs.values() for mod in mod_group]:
                 self.obs_shapes[k] = modality_shapes[k]
-            if "goal" in self.obs_config.modalities and k in (self.obs_config.modalities.goal.low_dim + self.obs_config.modalities.goal.image):
+            if "goal" in self.obs_config.modalities and k in [mod for mod_group in self.obs_config.modalities.goal.values() for mod in mod_group]:
                 self.goal_shapes[k] = modality_shapes[k]
-            if "subgoal" in self.obs_config.modalities and k in (self.obs_config.modalities.subgoal.low_dim + self.obs_config.modalities.subgoal.image):
+            if "subgoal" in self.obs_config.modalities and k in [mod for mod_group in self.obs_config.modalities.subgoal.values() for mod in mod_group]:
                 self.subgoal_shapes[k] = modality_shapes[k]
 
     def _create_networks(self):

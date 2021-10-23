@@ -212,8 +212,10 @@ class BaseConfig(Config):
             "object",
         ]
         self.observation.modalities.obs.image = []              # specify image observations for agent
+        self.observation.modalities.obs.depth = []
         self.observation.modalities.goal.low_dim = []           # specify low-dim goal bservations to condition agent on
         self.observation.modalities.goal.image = []             # specify image goal bservations to condition agent on
+        self.observation.modalities.goal.depth = []
 
         # observation encoder architecture - applies to all networks that take observation dicts as input
         self.observation.encoder.visual_core = 'ResNet18Conv'   # visual core network backbone for image observations (unused if no image observations)
@@ -246,14 +248,13 @@ class BaseConfig(Config):
     @property
     def use_goals(self):
         # whether the agent is goal-conditioned
-        return len(self.observation.modalities.goal.low_dim + self.observation.modalities.goal.image) > 0
+        return len([mod for mod_group in self.observation.modalities.goal.values() for mod in mod_group]) > 0
 
     @property
     def all_modalities(self):
         # pool all modalities
-        return sorted(tuple(set(
-            self.observation.modalities.obs.low_dim + 
-            self.observation.modalities.obs.image + 
-            self.observation.modalities.goal.low_dim + 
-            self.observation.modalities.goal.image
-        )))
+        return sorted(tuple(set([
+            mod for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values()]
+            for mod_group in group
+            for mod in mod_group
+         ])))
