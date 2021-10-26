@@ -9,6 +9,7 @@ import abc
 import numpy as np
 import textwrap
 from copy import deepcopy
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
@@ -17,6 +18,7 @@ from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
+from robomimic.utils.torch_utils import extract_class_init_kwargs_from_dict
 
 
 def rnn_args_from_config(rnn_config):
@@ -113,6 +115,39 @@ class Parameter(Module):
         Forward call just returns the parameter tensor.
         """
         return self.param
+
+
+class Unsqueeze(Module):
+    """
+    Trivial class that unsqueezes the input. Useful for including in a nn.Sequential network
+    """
+    def __init__(self, dim):
+        super(Unsqueeze, self).__init__()
+        self.dim = dim
+
+    def output_shape(self, input_shape=None):
+        assert input_shape is not None
+        return input_shape[:self.dim] + [1] + input_shape[self.dim:]
+
+    def forward(self, x):
+        return x.unsqueeze(dim=self.dim)
+
+
+class Squeeze(Module):
+    """
+    Trivial class that squeezes the input. Useful for including in a nn.Sequential network
+    """
+
+    def __init__(self, dim):
+        super(Squeeze, self).__init__()
+        self.dim = dim
+
+    def output_shape(self, input_shape=None):
+        assert input_shape is not None
+        return input_shape[:self.dim] + input_shape[self.dim+1:] if input_shape[self.dim] == 1 else input_shape
+
+    def forward(self, x):
+        return x.unsqueeze(dim=self.dim)
 
 
 class MLP(Module):
@@ -579,6 +614,77 @@ class ShallowConv(ConvBase):
         return [self._output_channel, out_h, out_w]
 
 
+class Conv1dBase(Module):
+    """
+    Base class for stacked Conv1d layers.
+
+    Args:
+        input_channel (int): Number of channels for inputs to this network
+        activation (nn.Module): Per-layer activation to use. Defaults to nn.ReLU
+        conv_kwargs (dict): Specific nn.Conv1D args to use, in list form, where the ith element corresponds to the
+            argument to be passed to the ith Conv1D layer.
+            See https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html for specific possible arguments.
+
+            e.g.: common values to use:
+                out_channels (list of int): Output channel size for each sequential Conv1d layer
+                kernel_size (list of int): Kernel sizes for each sequential Conv1d layer
+                stride (list of int): Stride sizes for each sequential Conv1d layer
+    """
+    def __init__(
+        self,
+        input_channel=1,
+        activation=nn.ReLU,
+        **conv_kwargs,
+    ):
+        super(Conv1dBase, self).__init__()
+
+        # Make sure out_channels and kernel_size are specified
+        for kwarg in ("out_channels", "kernel_size"):
+            assert kwarg in conv_kwargs, f"{kwarg} must be specified in Conv1dBase kwargs!"
+
+        # Generate network
+        self.n_layers = len(conv_kwargs["out_channels"])
+        layers = OrderedDict()
+        for i in range(self.n_layers):
+            layer_kwargs = {k: v[i] for k, v in conv_kwargs.items()}
+            layers[f'conv{i}'] = nn.Conv1d(
+                in_channels=input_channel,
+                **layer_kwargs,
+            )
+            layers[f'act{i}'] = activation()
+            input_channel = layer_kwargs["out_channels"]
+
+        # Store network
+        self.nets = nn.Sequential(layers)
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        channels, length = input_shape
+        for i in range(self.n_layers):
+            net = getattr(self.nets, f"conv{i}")
+            channels = net.out_channels
+            length = int((length + 2 * net.padding[0] - net.dilation[0] * (net.kernel_size[0] - 1) - 1) / net.stride[0]) + 1
+        return [channels, length]
+
+    def forward(self, inputs):
+        x = self.nets(inputs)
+        if list(self.output_shape(list(inputs.shape)[1:])) != list(x.shape)[1:]:
+            raise ValueError('Size mismatch: expect size %s, but got size %s' % (
+                str(self.output_shape(list(inputs.shape)[1:])), str(list(x.shape)[1:]))
+            )
+        return x
+
+
 """
 ================================================
 Pooling Networks
@@ -807,67 +913,69 @@ class VisualCore(ConvBase):
     def __init__(
         self,
         input_shape,
-        visual_core_class,
-        visual_core_kwargs,
+        backbone_class,
+        backbone_kwargs,
         pool_class=None,
         pool_kwargs=None,
         flatten=True,
-        visual_feature_dimension=None,
+        feature_dimension=None,
     ):
         """
         Args:
             input_shape (tuple): shape of input (not including batch dimension)
-            visual_core_class (str): class name for the visual core
-            visual_core_kwargs (dict): kwargs for the visual core
+            backbone_class (str): class name for the visual backbone network (e.g.: ResNet18)
+            backbone_kwargs (dict): kwargs for the visual backbone network
             pool_class (str): class name for the visual feature pooler (optional)
+                Common options are "SpatialSoftmax" and "SpatialMeanPool"
             pool_kwargs (dict): kwargs for the visual feature pooler (optional)
             flatten (bool): whether to flatten the visual feature
-            visual_feature_dimension (int): if not None, add a Linear layer to 
+            feature_dimension (int): if not None, add a Linear layer to
                 project output into a desired feature dimension
         """
         super(VisualCore, self).__init__()
         self.input_shape = input_shape
         self.flatten = flatten
 
+        # extract only relevant kwargs for this specific backbone
+        backbone_kwargs = extract_class_init_kwargs_from_dict(cls=eval(backbone_class), dic=backbone_kwargs, copy=True)
         # add input channel dimension to visual core inputs
-        visual_core_kwargs = deepcopy(visual_core_kwargs)
-        visual_core_kwargs["input_channel"] = input_shape[0]
+        backbone_kwargs["input_channel"] = input_shape[0]
 
         # visual backbone
-        assert isinstance(visual_core_class, str)
-        if pool_class is not None:
-            assert isinstance(pool_class, str)
-        self.vis_core = eval(visual_core_class)(**visual_core_kwargs)
+        assert isinstance(backbone_class, str)
+        self.backbone = eval(backbone_class)(**backbone_kwargs)
 
-        assert isinstance(self.vis_core, ConvBase)
+        assert isinstance(self.backbone, ConvBase)
 
-        feat_shape = self.vis_core.output_shape(input_shape)
-        net_list = [self.vis_core]
+        feat_shape = self.backbone.output_shape(input_shape)
+        net_list = [self.backbone]
 
         # maybe make pool net
         if pool_class is not None:
+            assert isinstance(pool_class, str)
             # feed output shape of backbone to pool net
             if pool_kwargs is None:
                 pool_kwargs = dict()
-            pool_kwargs = deepcopy(pool_kwargs)
+            # extract only relevant kwargs for this specific backbone
+            pool_kwargs = extract_class_init_kwargs_from_dict(cls=eval(pool_class), dic=pool_kwargs, copy=True)
             pool_kwargs["input_shape"] = feat_shape
-            self.pool_net = eval(pool_class)(**pool_kwargs)
-            assert isinstance(self.pool_net, Module)
+            self.pool = eval(pool_class)(**pool_kwargs)
+            assert isinstance(self.pool, Module)
 
-            feat_shape = self.pool_net.output_shape(feat_shape)
-            net_list.append(self.pool_net)
+            feat_shape = self.pool.output_shape(feat_shape)
+            net_list.append(self.pool)
         else:
-            self.pool_net = None
+            self.pool = None
 
         # flatten layer
         if self.flatten:
             net_list.append(torch.nn.Flatten(start_dim=1, end_dim=-1))
 
         # maybe linear layer
-        self.visual_feature_dimension = visual_feature_dimension
-        if visual_feature_dimension is not None:
+        self.feature_dimension = feature_dimension
+        if feature_dimension is not None:
             assert self.flatten
-            linear = torch.nn.Linear(int(np.prod(feat_shape)), visual_feature_dimension)
+            linear = torch.nn.Linear(int(np.prod(feat_shape)), feature_dimension)
             net_list.append(linear)
 
         self.nets = nn.Sequential(*net_list)
@@ -884,13 +992,13 @@ class VisualCore(ConvBase):
         Returns:
             out_shape ([int]): list of integers corresponding to output shape
         """
-        if self.visual_feature_dimension is not None:
+        if self.feature_dimension is not None:
             # linear output
-            return [self.visual_feature_dimension]
-        feat_shape = self.vis_core.output_shape(input_shape)
-        if self.pool_net is not None:
+            return [self.feature_dimension]
+        feat_shape = self.backbone.output_shape(input_shape)
+        if self.pool is not None:
             # pool output
-            feat_shape = self.pool_net.output_shape(feat_shape)
+            feat_shape = self.pool.output_shape(feat_shape)
         # backbone + flat output
         if self.flatten:
             return [np.prod(feat_shape)]
@@ -912,10 +1020,133 @@ class VisualCore(ConvBase):
         indent = ' ' * 2
         msg += textwrap.indent(
             "\ninput_shape={}\noutput_shape={}".format(self.input_shape, self.output_shape(self.input_shape)), indent)
-        msg += textwrap.indent("\nvisual_net={}".format(self.vis_core), indent)
-        msg += textwrap.indent("\npool_net={}".format(self.pool_net), indent)
+        msg += textwrap.indent("\nbackbone_net={}".format(self.backbone), indent)
+        msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
         msg = header + '(' + msg + '\n)'
         return msg
+
+
+"""
+================================================
+Scan Core Networks (Conv1D Sequential + Pool)
+================================================
+"""
+class ScanCore(ConvBase):
+    """
+    A network block that combines a Conv1D backbone network with optional pooling
+    and linear layers.
+    """
+    def __init__(
+        self,
+        input_shape,
+        conv_kwargs,
+        conv_activation=nn.ReLU,
+        pool_class=None,
+        pool_kwargs=None,
+        flatten=True,
+        feature_dimension=None,
+    ):
+        """
+        Args:
+            input_shape (tuple): shape of input (not including batch dimension)
+            conv_kwargs (dict): kwargs for the conv1d backbone network. Should contain lists for the following values:
+                out_channels (int)
+                kernel_size (int)
+                stride (int)
+                ...
+            conv_activation (nn.Module): Activation to use between conv layers. Default is ReLU.
+            pool_class (str): class name for the visual feature pooler (optional)
+                Common options are "SpatialSoftmax" and "SpatialMeanPool"
+            pool_kwargs (dict): kwargs for the visual feature pooler (optional)
+            flatten (bool): whether to flatten the network output
+            feature_dimension (int): if not None, add a Linear layer to
+                project output into a desired feature dimension (note: flatten must be set to True!)
+        """
+        super(ScanCore, self).__init__()
+        self.input_shape = input_shape
+        self.flatten = flatten
+        self.feature_dimension = feature_dimension
+
+        # Generate backbone network
+        self.backbone = Conv1dBase(
+            input_channel=1,
+            activation=conv_activation,
+            **conv_kwargs,
+        )
+        feat_shape = self.backbone.output_shape(input_shape=input_shape)
+
+        # Create netlist of all generated networks
+        net_list = [self.backbone]
+
+        # Possibly add pooling network
+        if pool_class is not None:
+            # Add an unsqueeze network so that the shape is correct to pass to pooling network
+            self.unsqueeze = Unsqueeze(dim=-1)
+            net_list.append(self.unsqueeze)
+            # Get output shape
+            feat_shape = self.unsqueeze.output_shape(feat_shape)
+            # Create pooling network
+            self.pool = eval(pool_class)(input_shape=feat_shape, **pool_kwargs)
+            net_list.append(self.pool)
+            feat_shape = self.pool.output_shape(feat_shape)
+        else:
+            self.unsqueeze, self.pool = None, None
+
+        # flatten layer
+        if self.flatten:
+            net_list.append(torch.nn.Flatten(start_dim=1, end_dim=-1))
+
+        # maybe linear layer
+        if self.feature_dimension is not None:
+            assert self.flatten
+            linear = torch.nn.Linear(int(np.prod(feat_shape)), self.feature_dimension)
+            net_list.append(linear)
+
+        # Generate final network
+        self.nets = nn.Sequential(*net_list)
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        if self.feature_dimension is not None:
+            # linear output
+            return [self.feature_dimension]
+        feat_shape = self.backbone.output_shape(input_shape)
+        if self.pool is not None:
+            # pool output
+            feat_shape = self.pool.output_shape(self.unsqueeze.output_shape(feat_shape))
+        # backbone + flat output
+        return [np.prod(feat_shape)] if self.flatten else feat_shape
+
+    def forward(self, inputs):
+        """
+        Forward pass through visual core.
+        """
+        ndim = len(self.input_shape)
+        assert tuple(inputs.shape)[-ndim:] == tuple(self.input_shape)
+        return super(ScanCore, self).forward(inputs)
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        msg = ''
+        indent = ' ' * 2
+        msg += textwrap.indent(
+            "\ninput_shape={}\noutput_shape={}".format(self.input_shape, self.output_shape(self.input_shape)), indent)
+        msg += textwrap.indent("\nbackbone_net={}".format(self.backbone), indent)
+        msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
+        msg = header + '(' + msg + '\n)'
+        return msg
+
 
 
 """
@@ -1096,3 +1327,9 @@ class CropRandomizer(Randomizer):
         msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
             self.input_shape, self.crop_height, self.crop_width, self.num_crops)
         return msg
+
+
+# Register encoder core classes
+ObsUtils.register_obs_encoder_core_class(VisualCore)
+ObsUtils.register_obs_encoder_core_class(ScanCore)
+ObsUtils.register_obs_randomizer_class(CropRandomizer)

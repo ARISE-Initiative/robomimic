@@ -336,12 +336,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         # with the previous statistics.
         ep = self.demos[0]
         obs_traj = {k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in self.obs_keys}
-        obs_traj = ObsUtils.process_obs(obs_traj)
+        obs_traj = ObsUtils.process_obs_dict(obs_traj)
         merged_stats = _compute_traj_stats(obs_traj)
         print("SequenceDataset: normalizing observations...")
         for ep in LogUtils.custom_tqdm(self.demos[1:]):
             obs_traj = {k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in self.obs_keys}
-            obs_traj = ObsUtils.process_obs(obs_traj)
+            obs_traj = ObsUtils.process_obs_dict(obs_traj)
             traj_stats = _compute_traj_stats(obs_traj)
             merged_stats = _aggregate_traj_stats(merged_stats, traj_stats)
 
@@ -544,7 +544,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             obs["pad_mask"] = pad_mask
 
         # prepare image observations from dataset
-        return ObsUtils.process_obs(obs)
+        return ObsUtils.process_obs_dict(obs)
 
     def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, seq_length=1):
         """

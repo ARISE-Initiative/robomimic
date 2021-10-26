@@ -105,8 +105,8 @@ class CQL(PolicyAlgo, ValueAlgo):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor.layer_dims,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **actor_args,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
 
         # Critics
@@ -120,7 +120,7 @@ class CQL(PolicyAlgo, ValueAlgo):
                     mlp_layer_dims=self.algo_config.critic.layer_dims,
                     value_bounds=self.algo_config.critic.value_bounds,
                     goal_shapes=self.goal_shapes,
-                    **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+                    encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
                 )
                 net_list.append(critic)
 

@@ -69,6 +69,7 @@ class GLConfig(BaseConfig):
         ]
         self.observation.modalities.subgoal.image = []                      # specify image subgoal observations for agent to predict
         self.observation.modalities.subgoal.depth = []
+        self.observation.modalities.subgoal.scan = []
 
     @property
     def all_modalities(self):

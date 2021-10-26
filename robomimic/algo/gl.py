@@ -90,7 +90,7 @@ class GL(PlannerAlgo):
             input_obs_group_shapes=obs_group_shapes, 
             output_shapes=self.subgoal_shapes,
             layer_dims=self.algo_config.ae.planner_layer_dims,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)
@@ -268,8 +268,8 @@ class GL_VAE(GL):
             condition_shapes=self.obs_shapes,
             goal_shapes=self.goal_shapes,
             device=self.device,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **VAENets.vae_args_from_config(self.algo_config.vae),
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)

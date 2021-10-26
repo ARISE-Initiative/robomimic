@@ -18,38 +18,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as D
 
+from robomimic.utils.torch_utils import extract_class_init_kwargs_from_dict
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.models.base_nets import Module, Sequential, MLP, RNN_Base, ResNet18Conv, SpatialSoftmax, \
-    FeatureAggregator, VisualCore, Randomizer, CropRandomizer
-
-
-def obs_encoder_args_from_config(obs_encoder_config):
-    """
-    Generate a set of args used to create visual backbones for networks
-    from the observation encoder config.
-    """
-    return dict(
-        visual_feature_dimension=obs_encoder_config.visual_feature_dimension,
-        visual_core_class=obs_encoder_config.visual_core,
-        visual_core_kwargs=dict(obs_encoder_config.visual_core_kwargs),
-        obs_randomizer_class=obs_encoder_config.obs_randomizer_class,
-        obs_randomizer_kwargs=dict(obs_encoder_config.obs_randomizer_kwargs),
-        use_spatial_softmax=obs_encoder_config.use_spatial_softmax,
-        spatial_softmax_kwargs=dict(obs_encoder_config.spatial_softmax_kwargs),
-    )
+    FeatureAggregator, VisualCore, Randomizer
 
 
 def obs_encoder_factory(
         obs_shapes,
-        visual_feature_dimension,
-        visual_core_class,
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         feature_activation=nn.ReLU,
+        encoder_kwargs=None,
     ):
     """
     Utility function to create an @ObservationEncoder from kwargs specified in config.
@@ -58,69 +37,56 @@ def obs_encoder_factory(
         obs_shapes (OrderedDict): a dictionary that maps modality to
             expected shapes for observations.
 
-        visual_feature_dimension (int): feature dimension to encode images into
-
-        visual_core_class (str): specifies Visual Backbone network for encoding images
-
-        visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-        obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-        obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-        use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-            the end of the visual backbone network, resulting in a sharp bottleneck
-            representation for visual inputs.
-
-        spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
         feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
             None to apply no activation.
+
+        encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should be
+            nested dictionary containing relevant per-modality information for encoder networks.
+            Should be of form:
+
+            obs_type1: dict
+                feature_dimension: int
+                core_class: str
+                core_kwargs: dict
+                    ...
+                    ...
+                obs_randomizer_class: str
+                obs_randomizer_kwargs: dict
+                    ...
+                    ...
+            obs_type2: dict
+                ...
     """
-
-    ### TODO: clean this part up in the config and args to this function ###
-    if visual_core_kwargs is None:
-        visual_core_kwargs = dict()
-    visual_core_kwargs = deepcopy(visual_core_kwargs)
-
-    if obs_randomizer_class is not None:
-        obs_randomizer_class = eval(obs_randomizer_class)
-    if obs_randomizer_kwargs is None:
-        obs_randomizer_kwargs = dict()
-
-    # use a special class to wrap the visual core and pooling together
-    visual_core_kwargs_template = dict(
-        visual_core_class=visual_core_class,
-        visual_core_kwargs=deepcopy(visual_core_kwargs),
-        visual_feature_dimension=visual_feature_dimension
-    )
-    if use_spatial_softmax:
-        visual_core_kwargs_template["pool_class"] = "SpatialSoftmax"
-        visual_core_kwargs_template["pool_kwargs"] = deepcopy(spatial_softmax_kwargs)
-    else:
-        visual_core_kwargs_template["pool_class"] = "SpatialMeanPool"
-
     enc = ObservationEncoder(feature_activation=feature_activation)
-    for k in obs_shapes:
-        mod_net_class = None
-        mod_net_kwargs = None
-        mod_randomizer = None
-        if ObsUtils.has_modality("image", [k]) or ObsUtils.has_modality("depth", [k]):
-            mod_net_class = "VisualCore"
-            mod_net_kwargs = deepcopy(visual_core_kwargs_template)
-            # need input shape to create visual core
-            mod_net_kwargs["input_shape"] = obs_shapes[k]
-            if obs_randomizer_class is not None:
-                mod_obs_randomizer_kwargs = deepcopy(obs_randomizer_kwargs)
-                mod_obs_randomizer_kwargs["input_shape"] = obs_shapes[k]
-                mod_randomizer = obs_randomizer_class(**mod_obs_randomizer_kwargs)
+    for k, obs_shape in obs_shapes.items():
+        obs_type = ObsUtils.OBS_MODALITIES_TO_TYPE[k]
+        enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_type]) if encoder_kwargs is None else \
+            deepcopy(encoder_kwargs[obs_type])
+
+        for group in ("core", "obs_randomizer"):
+            # Sanity check for kwargs in case they don't exist / are None
+            if enc_kwargs.get(f"{group}_kwargs", None) is None:
+                enc_kwargs[f"{group}_kwargs"] = {}
+            # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
+            if enc_kwargs[f"{group}_class"] is not None:
+                enc_kwargs[f"{group}_kwargs"] = extract_class_init_kwargs_from_dict(
+                    cls=ObsUtils.OBS_ENCODER_CORES[enc_kwargs[f"{group}_class"]],
+                    dic=enc_kwargs[f"{group}_kwargs"],
+                    copy=False,
+                )
+            # Add in input shape info
+            enc_kwargs[f"{group}_kwargs"]["input_shape"] = obs_shape
+
+        # Add in input shape info
+        randomizer = None if enc_kwargs["obs_randomizer_class"] is None else \
+            enc_kwargs["obs_randomizer_class"](**enc_kwargs["obs_randomizer_kwargs"])
 
         enc.register_modality(
             mod_name=k,
-            mod_shape=obs_shapes[k],
-            mod_net_class=mod_net_class,
-            mod_net_kwargs=mod_net_kwargs,
-            mod_randomizer=mod_randomizer
+            mod_shape=obs_shape,
+            mod_net_class=enc_kwargs["core_class"],
+            mod_net_kwargs=enc_kwargs["core_kwargs"],
+            mod_randomizer=randomizer,
         )
 
     enc.make()
@@ -191,14 +157,6 @@ class ObservationEncoder(Module):
             assert (mod_net_class is None) and (mod_net_kwargs is None)
             assert share_mod_net_from in self.obs_shapes
 
-        if mod_net_class is not None:
-            # convert string into class
-            if sys.version_info.major == 3:
-                assert isinstance(mod_net_class, str)
-            else:
-                assert isinstance(mod_net_class, (str, unicode))
-            mod_net_class = eval(mod_net_class)
-
         mod_net_kwargs = deepcopy(mod_net_kwargs) if mod_net_kwargs is not None else {}
         if mod_randomizer is not None:
             assert isinstance(mod_randomizer, Randomizer)
@@ -230,7 +188,7 @@ class ObservationEncoder(Module):
         for k in self.obs_shapes:
             if self.obs_nets_classes[k] is not None:
                 # create net to process this modality
-                self.obs_nets[k] = self.obs_nets_classes[k](**self.obs_nets_kwargs[k])
+                self.obs_nets[k] = ObsUtils.OBS_ENCODER_CORES[self.obs_nets_classes[k]](**self.obs_nets_kwargs[k])
             elif self.obs_share_mods[k] is not None:
                 # make sure net is shared with another modality
                 self.obs_nets[k] = self.obs_nets[self.obs_share_mods[k]]
@@ -405,14 +363,8 @@ class ObservationGroupEncoder(Module):
     def __init__(
         self,
         observation_group_shapes,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=True,
-        spatial_softmax_kwargs=None,
         feature_activation=nn.ReLU,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -421,24 +373,25 @@ class ObservationGroupEncoder(Module):
                 the value should be an OrderedDict that maps modalities to
                 expected shapes.
 
-            visual_feature_dimension (int): feature dimension to encode images into
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
             feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
-                None to apply no activation. 
+                None to apply no activation.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_type1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_type2: dict
+                    ...
         """
         super(ObservationGroupEncoder, self).__init__()
 
@@ -453,14 +406,8 @@ class ObservationGroupEncoder(Module):
         for obs_group in self.observation_group_shapes:
             self.nets[obs_group] = obs_encoder_factory(
                 obs_shapes=self.observation_group_shapes[obs_group],
-                visual_feature_dimension=visual_feature_dimension,
-                visual_core_class=visual_core_class,
-                visual_core_kwargs=visual_core_kwargs,
-                obs_randomizer_class=obs_randomizer_class,
-                obs_randomizer_kwargs=obs_randomizer_kwargs,
-                use_spatial_softmax=use_spatial_softmax,
-                spatial_softmax_kwargs=spatial_softmax_kwargs,
                 feature_activation=feature_activation,
+                encoder_kwargs=encoder_kwargs,
             )
 
     def forward(self, **inputs):
@@ -531,19 +478,13 @@ class MIMO_MLP(Module):
     (including visual outputs).
     """
     def __init__(
-        self, 
+        self,
         input_obs_group_shapes,
-        output_shapes, 
+        output_shapes,
         layer_dims,
         layer_func=nn.Linear, 
         activation=nn.ReLU,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -561,21 +502,22 @@ class MIMO_MLP(Module):
 
             activation: non-linearity per MLP layer - defaults to ReLU
 
-            visual_feature_dimension (int): feature dimension to encode images into
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
 
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
+                obs_type1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_type2: dict
+                    ...
         """
         super(MIMO_MLP, self).__init__()
 
@@ -591,13 +533,7 @@ class MIMO_MLP(Module):
         # Encoder for all observation groups.
         self.nets["encoder"] = ObservationGroupEncoder(
             observation_group_shapes=input_obs_group_shapes,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs, 
+            encoder_kwargs=encoder_kwargs,
         )
 
         # flat encoder output dimension
@@ -685,13 +621,7 @@ class RNN_MIMO_MLP(Module):
         mlp_activation=nn.ReLU,
         mlp_layer_func=nn.Linear,
         per_step=True,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -713,23 +643,24 @@ class RNN_MIMO_MLP(Module):
 
             per_step (bool): if True, apply the MLP and observation decoder into @output_shapes
                 at every step of the RNN. Otherwise, apply them to the final hidden state of the 
-                RNN. 
+                RNN.
 
-            visual_feature_dimension (int): feature dimension to encode images into
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
 
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
+                obs_type1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_type2: dict
+                    ...
         """
         super(RNN_MIMO_MLP, self).__init__()
         assert isinstance(input_obs_group_shapes, OrderedDict)
@@ -744,13 +675,7 @@ class RNN_MIMO_MLP(Module):
         # Encoder for all observation groups.
         self.nets["encoder"] = ObservationGroupEncoder(
             observation_group_shapes=input_obs_group_shapes,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
+            encoder_kwargs=encoder_kwargs,
         )
 
         # flat encoder output dimension

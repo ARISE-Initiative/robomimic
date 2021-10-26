@@ -20,15 +20,131 @@ VALID_IMAGE_CHANNEL_DIMS = {1, 3}       # depth, rgb
 # modalities under that observation type.
 OBS_TYPE_TO_MODALITIES = None
 
+# DO NOT MODIFY THIS!
+# This keeps track of observation types - and is populated on call to @initialize_obs_utils_with_obs_specs.
+# This will be a dictionary that maps observation modalities to their corresponding observation modality
+# (e.g. low_dim, image)
+OBS_MODALITIES_TO_TYPE = None
+
+# DO NOT MODIFY THIS!
+# This keeps track of all un/processing functions for each modality type. It maps modality type to the corresponding
+# un/processing method to prepare the modality type for training / deployment.
+# The method should take in exactly one argument (the observation) and return the un/processed observation
+OBS_TYPE_TO_PROCESS_METHODS = {}
+OBS_TYPE_TO_UNPROCESS_METHODS = {}
+
+# DO NOT MODIFY THIS
+# This global dict stores mapping from observation encoder / randomizer network name to class.
+# Custom mappings can be added by calling register_obs_{encoder_core/randomizer}_class
+OBS_ENCODER_CORES = {"None": None}          # Include default None
+OBS_RANDOMIZERS = {"None": None}            # Include default None
+
+# DO NOT MODIFY THIS
+# This holds the default encoder kwargs that will be used if none are passed at runtime for any given network
+DEFAULT_ENCODER_KWARGS = None
+
+
+def register_obs_processor(obs_type, processor):
+    """
+    Registers a process function for the specified @obs_type. @processor should take in exactly one argument (an
+    observation under @obs_type) and return the processed observation.
+
+    If a processor already exists for @obs_type, it will be overridden with @processor.
+
+    Args:
+        obs_type (str): Observation type to register the processor method to
+        processor (function): Method that processes an observation corresponding to @obs_type and
+            prepares it for training
+    """
+    OBS_TYPE_TO_PROCESS_METHODS[obs_type] = processor
+
+
+def register_obs_unprocessor(obs_type, unprocessor):
+    """
+    Registers an unprocess function for the specified @obs_type. @unprocessor should take in exactly one argument (an
+    observation under @obs_type that comes from training) and returns the unprocessed observation. (this should be the
+    inverse of the corresponding processor function for this @obs_type).
+
+    If an unprocessor already exists for @obs_type, it will be overridden with @unprocessor.
+
+    Args:
+        obs_type (str): Observation type to register the unprocessor method to
+        unprocessor (function): Method that unprocesses an observation corresponding to @obs_type and
+            prepares it for deployment
+    """
+    OBS_TYPE_TO_UNPROCESS_METHODS[obs_type] = unprocessor
+
+
+def register_obs_encoder_core_class(encoder_cls):
+    """
+    Registers an encoder core class to be accessed by robomimic. Useful for, e.g., registering custom encoder
+    network classes (e.g.: modified variants of VisualCore)
+
+    Args:
+        encoder_cls (Module): Custom encoder core network class to register
+    """
+    global OBS_ENCODER_CORES
+    OBS_ENCODER_CORES[encoder_cls.__name__] = encoder_cls
+
+
+def register_obs_randomizer_class(randomizer_cls):
+    """
+    Registers a randomizer class to be accessed by robomimic. Useful for, e.g., registering custom randomizer
+    classes (e.g.: modified variants of CropRandomizer)
+
+    Args:
+        randomizer_cls (Module or None): Custom randomizer network class to register
+    """
+    global OBS_RANDOMIZERS
+    OBS_RANDOMIZERS[randomizer_cls.__name__] = randomizer_cls
+
+
+def obs_encoder_kwargs_from_config(obs_encoder_config):
+    """
+    Generate a set of args used to create visual backbones for networks
+    from the observation encoder config.
+
+    Args:
+        obs_encoder_config (Config): Config object containing relevant encoder information. Should be equivalent to
+            config.observation.encoder
+
+    Returns:
+        dict: Processed encoder kwargs
+    """
+    # Loop over each obs type
+    for obs_type, encoder_kwargs in obs_encoder_config.items():
+        # First run some sanity checks and store the classes
+        for cls_name, cores in zip(("core", "obs_randomizer"), (OBS_ENCODER_CORES, OBS_RANDOMIZERS)):
+            # Make sure the requested encoder for each obs_type exists
+            cfg_cls = encoder_kwargs[f"{cls_name}_class"]
+            if cfg_cls is not None:
+                assert cfg_cls in cores, f"No {cls_name} class with name {cfg_cls} found, must register this class before" \
+                    f"creating model!"
+                # encoder_kwargs[f"{cls_name}_class"] = cores[cfg_cls]
+
+        # Process core and randomizer kwargs
+        encoder_kwargs.core_kwargs = dict() if encoder_kwargs.core_kwargs is None else \
+            deepcopy(encoder_kwargs.core_kwargs)
+
+        # Make sure feature_dimension does not exist in visual_core_kwargs
+        assert "feature_dimension" not in encoder_kwargs.core_kwargs, "feature_dimension should not exist in obs_encoder core_kwargs!"
+
+        encoder_kwargs.obs_randomizer_kwargs = dict() if encoder_kwargs.obs_randomizer_kwargs is None else \
+            deepcopy(encoder_kwargs.obs_randomizer_kwargs)
+
+    return dict(obs_encoder_config)
+
 
 def initialize_obs_utils_with_obs_specs(obs_modality_specs):
     """
     This function should be called before using any modality-specific
     functions in this file, in order to make sure that all utility
     functions are aware of the observation types (e.g. which ones
-    are low-dimensional, and which ones are images). It constructs
-    a dictionary that map observation type (e.g. low_dim, image) to
-    a list of observation modalities under that type.
+    are low-dimensional, and which ones are images).
+
+    It constructs two dictionaries: (1) that map observation type (e.g. low_dim, image) to
+    a list of observation modalities under that type, and (2) that maps the inverse, specific
+    observation modalities to their corresponding observation type.
 
     Input should be a nested dictionary (or list of such dicts) with the following structure:
 
@@ -59,7 +175,10 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
             or a list of nested dictionaries. Accepting a list as input makes it convenient for
             situations where multiple modules may each have their own modality spec.
     """
-    global OBS_TYPE_TO_MODALITIES
+    global OBS_TYPE_TO_MODALITIES, OBS_MODALITIES_TO_TYPE
+
+    # initialize global dicts
+    OBS_TYPE_TO_MODALITIES, OBS_MODALITIES_TO_TYPE = {}, {}
 
     # accept one or more spec dictionaries - if it's just one, account for this
     if isinstance(obs_modality_specs, dict):
@@ -71,12 +190,21 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
     obs_type_mapping = {}
     for obs_modality_spec in obs_modality_spec_list:
         # iterates over observation variants (e.g. observations, goals, subgoals)
-        for obs_variant in obs_modality_spec:
-            for obs_type in obs_modality_spec[obs_variant]:
+        for obs_types in obs_modality_spec.values():
+            for obs_type, obs_modalities in obs_types.items():
                 # add all modalities for each obs-type to the corresponding list in obs_type_mapping
                 if obs_type not in obs_type_mapping:
                     obs_type_mapping[obs_type] = []
-                obs_type_mapping[obs_type] += obs_modality_spec[obs_variant][obs_type]
+                obs_type_mapping[obs_type] += obs_modalities
+                # loop over each modality, and add to global dict if it doesn't exist yet
+                for obs_modality in obs_modalities:
+                    if obs_modality not in OBS_MODALITIES_TO_TYPE:
+                        OBS_MODALITIES_TO_TYPE[obs_modality] = obs_type
+                    # otherwise, run sanity check to make sure we don't have conflicting, duplicate entries
+                    else:
+                        assert OBS_MODALITIES_TO_TYPE[obs_modality] == obs_type, \
+                            f"Cannot register obs modality {obs_modality} with type {obs_type}; " \
+                            f"already exists with corresponding type {OBS_MODALITIES_TO_TYPE[obs_modality]}"
 
     # remove duplicate entries and store in global mapping
     OBS_TYPE_TO_MODALITIES = { obs_type : list(set(obs_type_mapping[obs_type])) for obs_type in obs_type_mapping }
@@ -86,10 +214,23 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
         print("using obs type: {} with modalities: {}".format(obs_type, OBS_TYPE_TO_MODALITIES[obs_type]))
 
 
+def initialize_default_obs_encoder(obs_encoder_config):
+    """
+    Initializes the default observation encoder kwarg information to be used by all networks if no values are manually
+    specified at runtime.
+
+    Args:
+        obs_encoder_config (Config): Observation encoder config to use.
+            Should be equivalent to config.observation.encoder
+    """
+    global DEFAULT_ENCODER_KWARGS
+    DEFAULT_ENCODER_KWARGS = obs_encoder_kwargs_from_config(obs_encoder_config)
+
+
 def initialize_obs_utils_with_config(config):
     """
-    Utility function to parse config and call @initialize_obs_utils_with_obs_specs with the
-    correct arguments.
+    Utility function to parse config and call @initialize_obs_utils_with_obs_specs and
+    @initialize_default_obs_encoder_kwargs with the correct arguments.
 
     Args:
         config (BaseConfig instance): config object
@@ -108,6 +249,7 @@ def initialize_obs_utils_with_config(config):
     else:
         obs_modality_specs = [config.observation.modalities]
     initialize_obs_utils_with_obs_specs(obs_modality_specs=obs_modality_specs)
+    initialize_default_obs_encoder(obs_encoder_config=config.observation.encoder)
 
 
 def key_is_obs_type(key, obs_type):
@@ -116,31 +258,10 @@ def key_is_obs_type(key, obs_type):
 
     Args:
         key (str): modality name to check
-        obs_type (str): observation type - usually one of "low_dim" or "image"
+        obs_type (str): observation type - e.g.: "low_dim", "image"
     """
-    assert OBS_TYPE_TO_MODALITIES is not None, "error: must call ObsUtils.initialize_obs_utils_with_obs_config first"
-    return (key in OBS_TYPE_TO_MODALITIES[obs_type])
-
-
-def key_is_image(key):
-    """
-    Check if observation key corresponds to image observation.
-    """
-    return key_is_obs_type(key, obs_type="image")
-
-
-def key_is_depth(key):
-    """
-    Check if observation key corresponds to depth observation.
-    """
-    return key_is_obs_type(key, obs_type="depth")
-#
-#
-# def key_is_scan(key):
-#     """
-#     Check if observation key corresponds to depth observation.
-#     """
-#     return key_is_obs_type(key, obs_type="scan")
+    assert OBS_MODALITIES_TO_TYPE is not None, "error: must call ObsUtils.initialize_obs_utils_with_obs_config first"
+    return OBS_MODALITIES_TO_TYPE[key] == obs_type
 
 
 def center_crop(im, t_h, t_w):
@@ -203,25 +324,41 @@ def batch_image_chw_to_hwc(im):
         return im.permute(start_dims + [s + 2, s + 3, s + 1])
 
 
-def process_obs(obs_dict):
+def process_obs(obs, obs_type=None, obs_key=None):
     """
-    Process image observations in observation dictionary to prepare for network input.
+    Process observation @obs corresponding to @obs_type type (or implicitly inferred from @obs_key)
+    to prepare for network input.
+
+    Note that either obs_type OR obs_key must be specified!
+
+    If both are specified, obs_key will override obs_type
+
+    Args:
+        obs (np.array or torch.Tensor): Observation to process. Leading batch dimension is optional
+        obs_type (str): Observation type (e.g.: depth, image, low_dim, etc.)
+        obs_key (str): Name of observation from which to infer @obs_type
+
+    Returns:
+        processed_obs (np.array or torch.Tensor): processed observation
+    """
+    assert obs_type is not None or obs_key is not None, "Either obs_type or obs_key must be specified!"
+    if obs_key is not None:
+        obs_type = OBS_MODALITIES_TO_TYPE[obs_key]
+    return OBS_TYPE_TO_PROCESS_METHODS[obs_type](obs)
+
+
+def process_obs_dict(obs_dict):
+    """
+    Process observations in observation dictionary to prepare for network input.
 
     Args:
         obs_dict (dict): dictionary mappping observation modality to np.array or
             torch.Tensor. Leading batch dimensions are optional.
 
     Returns:
-        new_dict (dict): dictionary where image modalities have been processsed by
-            @process_image
+        new_dict (dict): dictionary where modalities have been processsed by their corresponding processors
     """
-    new_dict = { k : obs_dict[k] for k in obs_dict } # shallow copy
-    for k in new_dict:
-        if key_is_image(k):
-            new_dict[k] = process_image(new_dict[k])
-        elif key_is_depth(k):
-            new_dict[k] = process_depth(new_dict[k])
-    return new_dict
+    return { k : process_obs(obs=obs, obs_key=k) for k, obs in obs_dict.items() } # shallow copy
 
 
 def process_frame(frame, channel_dim, scale):
@@ -242,7 +379,7 @@ def process_frame(frame, channel_dim, scale):
     assert (frame.shape[-1] == channel_dim)
     frame = TU.to_float(frame)
     frame /= scale
-    frame = np.clip(frame, 0.0, 1.0)
+    frame = frame.clip(0.0, 1.0)
     frame = batch_image_hwc_to_chw(frame)
 
     return frame
@@ -278,9 +415,32 @@ def process_depth(depth):
     return process_frame(frame=depth, channel_dim=1, scale=1.)
 
 
-def unprocess_obs(obs_dict):
+def unprocess_obs(obs, obs_type=None, obs_key=None):
     """
-    Prepare processed image observations for saving to dataset. Inverse of
+    Prepare observation @obs corresponding to @obs_type type (or implicitly inferred from @obs_key)
+    to prepare for network input.
+
+    Note that either obs_type OR obs_key must be specified!
+
+    If both are specified, obs_key will override obs_type
+
+    Args:
+        obs (np.array or torch.Tensor): Observation to unprocess. Leading batch dimension is optional
+        obs_type (str): Observation type (e.g.: depth, image, low_dim, etc.)
+        obs_key (str): Name of observation from which to infer @obs_type
+
+    Returns:
+        unprocessed_obs (np.array or torch.Tensor): unprocessed observation
+    """
+    assert obs_type is not None or obs_key is not None, "Either obs_type or obs_key must be specified!"
+    if obs_key is not None:
+        obs_type = OBS_MODALITIES_TO_TYPE[obs_key]
+    return OBS_TYPE_TO_UNPROCESS_METHODS[obs_type](obs)
+
+
+def unprocess_obs_dict(obs_dict):
+    """
+    Prepare processed observation dictionary for saving to dataset. Inverse of
     @process_obs.
 
     Args:
@@ -288,17 +448,10 @@ def unprocess_obs(obs_dict):
             torch.Tensor. Leading batch dimensions are optional.
 
     Returns:
-        new_dict (dict): dictionary where image modalities have been processsed by
-            @unprocess_image
+        new_dict (dict): dictionary where modalities have been unprocesssed by
+            their respective unprocessor methods
     """
-    new_dict = { k : obs_dict[k] for k in obs_dict } # shallow copy
-    for k in new_dict:
-        if key_is_image(k):
-            new_dict[k] = unprocess_image(new_dict[k])
-        elif key_is_depth(k):
-            new_dict[k] = unprocess_depth(new_dict[k])
-
-    return new_dict
+    return { k : unprocess_obs(obs=obs, obs_key=k) for k, obs in obs_dict.items() } # shallow copy
 
 
 def unprocess_frame(frame, channel_dim, scale):
@@ -351,25 +504,19 @@ def unprocess_depth(depth):
     return TU.to_uint8(unprocess_frame(frame=depth, channel_dim=1, scale=1.))
 
 
-def process_frame_shape(frame_shape):
+def get_processed_shape(obs_type, input_shape):
     """
-    Given frame shape in dataset, infer the network input shape. This accounts
-    for the channel swap to prepare images for torch training (see @process_image).
+    Given observation type @obs_type and expected inputs of shape @input_shape (excluding batch dimension), return the
+    expected processed observation shape resulting from process_{obs_type}.
 
     Args:
-        frame_shape (tuple or list): tuple or list of size 3 or 4, corresponding
-            to the frame shape to process
+        obs_type (str): Observation type to use (e.g.: low_dim, image, depth, etc...)
+        input_shape (list of int): Expected input dimensions, excluding the batch dimension
 
     Returns:
-        processed_frame_shape (tuple): image shape that would result from the
-            output of @process_frame
+        list of int: expected processed input shape
     """
-    if len(frame_shape) == 3:
-        return frame_shape[2], frame_shape[0], frame_shape[1]
-    elif len(frame_shape) == 4:
-        return frame_shape[0], frame_shape[3], frame_shape[1], frame_shape[2]
-    else:
-        raise ValueError("cannot handle frame shape {}".format(frame_shape))
+    return list(process_obs(obs=np.zeros(input_shape), obs_type=obs_type).shape)
 
 
 def normalize_obs(obs_dict, obs_normalization_stats):
@@ -411,18 +558,6 @@ def normalize_obs(obs_dict, obs_normalization_stats):
 
     return obs_dict
 
-
-# def has_image(obs_keys):
-#     """
-#     Returns True if image modalities are present in the list of modalities.
-#
-#     Args:
-#         obs_key (list): list of modalities
-#     """
-#     for k in obs_keys:
-#         if key_is_image(k):
-#             return True
-#     return False
 
 def has_modality(modality, obs_keys):
     """
@@ -619,3 +754,14 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
     )
 
     return crops, crop_inds
+
+
+# Register all default un/process methods
+register_obs_processor("low_dim", lambda x: x)                  # Dummy method since no processing for low_dim
+register_obs_processor("image", process_image)
+register_obs_processor("depth", process_depth)
+register_obs_processor("scan", lambda x: x)
+register_obs_unprocessor("low_dim", lambda x: x)                # Dummy method since no unprocessing for low_dim
+register_obs_unprocessor("image", unprocess_image)
+register_obs_unprocessor("depth", unprocess_depth)
+register_obs_unprocessor("scan", lambda x: x)

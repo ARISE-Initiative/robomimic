@@ -14,6 +14,7 @@ import robomimic.models.vae_nets as VAENets
 import robomimic.utils.loss_utils as LossUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
@@ -65,7 +66,7 @@ class BC(PolicyAlgo):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor_layer_dims,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
         self.nets = self.nets.float().to(self.device)
 
@@ -244,7 +245,7 @@ class BC_Gaussian(BC):
             std_limits=(self.algo_config.gaussian.min_std, 7.5),
             std_activation=self.algo_config.gaussian.std_activation,
             low_noise_eval=self.algo_config.gaussian.low_noise_eval,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)
@@ -336,7 +337,7 @@ class BC_GMM(BC_Gaussian):
             min_std=self.algo_config.gmm.min_std,
             std_activation=self.algo_config.gmm.std_activation,
             low_noise_eval=self.algo_config.gmm.low_noise_eval,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)
@@ -356,8 +357,8 @@ class BC_VAE(BC):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             device=self.device,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **VAENets.vae_args_from_config(self.algo_config.vae),
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
         
         self.nets = self.nets.float().to(self.device)
@@ -466,8 +467,8 @@ class BC_RNN(BC):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor_layer_dims,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.rnn_args_from_config(self.algo_config.rnn),
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
 
         self._rnn_hidden_state = None
@@ -566,8 +567,8 @@ class BC_RNN_GMM(BC_RNN):
             min_std=self.algo_config.gmm.min_std,
             std_activation=self.algo_config.gmm.std_activation,
             low_noise_eval=self.algo_config.gmm.low_noise_eval,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.rnn_args_from_config(self.algo_config.rnn),
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
 
         self._rnn_hidden_state = None

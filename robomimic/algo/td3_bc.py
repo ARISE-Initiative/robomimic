@@ -94,7 +94,7 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             mlp_layer_dims=self.algo_config.critic.layer_dims,
             value_bounds=self.algo_config.critic.value_bounds,
             goal_shapes=self.goal_shapes,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         # Q network ensemble and target ensemble
@@ -117,7 +117,7 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor.layer_dims,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets["actor"] = actor_class(**actor_args)
