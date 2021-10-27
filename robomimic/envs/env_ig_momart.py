@@ -97,14 +97,6 @@ class EnvGibsonMoMaRT(EB.EnvBase):
         if (not render) and (not render_offscreen):
             print("WARNING: iGibson always uses a renderer -- using headless by default.")
 
-        # todo remove
-        self.ig_config["texture_scale"] = 0.25
-        # self.ig_config["image_width"] = 120
-        # self.ig_config["image_height"] = 90
-        self.ig_config["enable_shadow"] = False
-        self.ig_config["load_object_categories"] = ["dishwasher", "table", "sink", "bottom_cabinet", "trash_can"]
-        self.ig_config["load_object_instances"] = [["12349_handle"], ["bc48080ee5498d721fca2012865943e2"], ["sink_2"], ["49140"], ["97e3b7b4688c2a93f155d75bbf62b80"]]
-
         # Update ig config
         for k, v in kwargs.items():
             assert k in self.ig_config, f"Got unknown ig configuration key {k}!"
