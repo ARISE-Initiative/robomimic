@@ -112,6 +112,8 @@ def obs_encoder_kwargs_from_config(obs_encoder_config):
         dict: Processed encoder kwargs
     """
     # Loop over each obs type
+    # Unlock encoder config
+    obs_encoder_config.unlock()
     for obs_type, encoder_kwargs in obs_encoder_config.items():
         # First run some sanity checks and store the classes
         for cls_name, cores in zip(("core", "obs_randomizer"), (OBS_ENCODER_CORES, OBS_RANDOMIZERS)):
@@ -131,6 +133,9 @@ def obs_encoder_kwargs_from_config(obs_encoder_config):
 
         encoder_kwargs.obs_randomizer_kwargs = dict() if encoder_kwargs.obs_randomizer_kwargs is None else \
             deepcopy(encoder_kwargs.obs_randomizer_kwargs)
+
+    # Re-lock keys
+    obs_encoder_config.lock()
 
     return dict(obs_encoder_config)
 
