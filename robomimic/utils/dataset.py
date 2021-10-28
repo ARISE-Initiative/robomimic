@@ -127,7 +127,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 # only store low-dim observations
                 obs_keys_in_memory = []
                 for k in self.obs_keys:
-                    if not (ObsUtils.key_is_image(k)):
+                    if ObsUtils.key_is_obs_type(k, "low_dim"):
                         obs_keys_in_memory.append(k)
             self.obs_keys_in_memory = obs_keys_in_memory
 
