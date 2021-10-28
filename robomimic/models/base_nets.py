@@ -147,7 +147,7 @@ class Squeeze(Module):
         return input_shape[:self.dim] + input_shape[self.dim+1:] if input_shape[self.dim] == 1 else input_shape
 
     def forward(self, x):
-        return x.unsqueeze(dim=self.dim)
+        return x.squeeze(dim=self.dim)
 
 
 class MLP(Module):
