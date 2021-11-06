@@ -18,7 +18,7 @@ from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
-from robomimic.utils.torch_utils import extract_class_init_kwargs_from_dict
+from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
 
 
 def rnn_args_from_config(rnn_config):

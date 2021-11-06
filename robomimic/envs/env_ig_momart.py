@@ -1,3 +1,7 @@
+"""
+Wrapper environment class to enable using iGibson-based environments used in the MOMART paper
+"""
+
 from copy import deepcopy
 import numpy as np
 import json
@@ -23,7 +27,7 @@ ENV_MAPPING = {
 }
 
 
-class EnvGibsonMoMaRT(EB.EnvBase):
+class EnvGibsonMOMART(EB.EnvBase):
     """
     Wrapper class for gibson environments (https://github.com/StanfordVL/iGibson) specifically compatible with
     MoMaRT datasets
