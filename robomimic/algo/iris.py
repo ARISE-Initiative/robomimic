@@ -105,12 +105,9 @@ class IRIS(HBC, ValueAlgo):
                 assert actor_modality_shapes[k] == self.actor_goal_shapes[k]
         actor_modality_shapes.update(self.actor_goal_shapes)
 
-        goal_modalities = {"low_dim": [], "image": []}
+        goal_modalities = {obs_type: [] for obs_type in ObsUtils.OBS_MODALITY_CLASSES.keys()}
         for k in self.actor_goal_shapes.keys():
-            if ObsUtils.key_is_image(k):
-                goal_modalities["image"].append(k)
-            else:
-                goal_modalities["low_dim"].append(k)
+            goal_modalities[ObsUtils.OBS_MODALITIES_TO_TYPE[k]].append(k)
 
         actor_obs_config = deepcopy(obs_config.actor)
         with actor_obs_config.unlocked():

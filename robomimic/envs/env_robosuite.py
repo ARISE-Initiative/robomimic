@@ -49,7 +49,7 @@ class EnvRobosuite(EB.EnvBase):
         # robosuite version check
         self._is_v1 = (robosuite.__version__.split(".")[0] == "1")
         if self._is_v1:
-            assert (robosuite.__version__.split(".")[1] == "2"), "only support robosuite v0.3 and v1.2+"
+            assert (int(robosuite.__version__.split(".")[1]) >= 2), "only support robosuite v0.3 and v1.2+"
 
         kwargs = deepcopy(kwargs)
 
@@ -181,10 +181,10 @@ class EnvRobosuite(EB.EnvBase):
             di = self.env._get_observations(force_update=True) if self._is_v1 else self.env._get_observation()
         ret = {}
         for k in di:
-            if ObsUtils.key_is_image(k):
+            if (k in ObsUtils.OBS_MODALITIES_TO_TYPE) and ObsUtils.key_is_obs_type(key=k, obs_type="image"):
                 ret[k] = di[k][::-1]
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_image(ret[k])
+                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_type="image")
 
         # "object" key contains object information
         ret["object"] = np.array(di["object-state"])
@@ -195,7 +195,8 @@ class EnvRobosuite(EB.EnvBase):
                 # ensures that we don't accidentally add robot wrist images a second time
                 pf = robot.robot_model.naming_prefix
                 for k in di:
-                    if k.startswith(pf) and (k not in ret) and (not k.endswith("proprio-state")):
+                    if k.startswith(pf) and (k not in ret) and \
+                            (not k.endswith("proprio-state")) and (k in ObsUtils.OBS_MODALITIES_TO_TYPE):
                         ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
