@@ -5,7 +5,6 @@ Wrapper environment class to enable using iGibson-based environments used in the
 from copy import deepcopy
 import numpy as np
 import json
-from git import Repo, exc
 
 import pybullet as p
 import gibson2
@@ -74,17 +73,6 @@ class EnvGibsonMOMART(EB.EnvBase):
 
             kwargs (unrolled dict): Any args to substitute in the ig_configuration
         """
-        # git repo check
-        repo_path = "{}/../".format(gibson2.__path__[0])
-        try:
-            git_repo = Repo(repo_path)
-            git_branch = git_repo.active_branch.name
-        except exc.InvalidGitRepositoryError:
-            print("WARNING: iGibson source {} is not a git repo".format(repo_path))
-            git_branch = "no_git"
-
-        self.git_branch = git_branch
-
         self._env_name = env_name
         self.ig_config = deepcopy(ig_config)
         self.postprocess_visual_obs = postprocess_visual_obs

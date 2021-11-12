@@ -146,8 +146,8 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
         "proprio",
     ]
     config.observation.modalities.obs.image = [
-        "rgb",
-        "rgb_wrist",
+        # "rgb",
+        # "rgb_wrist",
     ]                # no image observations
 
     config.observation.modalities.obs.depth = [
@@ -248,7 +248,6 @@ if __name__ == "__main__":
 
     cfg_fname = f'momart_{task}_bc_rnn_config.json'
     config.dump(cfg_fname)
-    exit()
 
     # set torch device
     device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)

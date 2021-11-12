@@ -902,10 +902,26 @@ class FeatureAggregator(Module):
 
 """
 ================================================
+Encoder Core Networks (Abstract class)
+================================================
+"""
+class EncoderCore:
+    """
+    Abstract class used to categorize all cores used to encode observations
+    """
+    def __init_subclass__(cls, **kwargs):
+        """
+        Hook method to automatically register all valid subclasses so we can keep track of valid observation encoders
+        """
+        ObsUtils.register_encoder_core(cls)
+
+
+"""
+================================================
 Visual Core Networks (Backbone + Pool)
 ================================================
 """
-class VisualCore(ConvBase):
+class VisualCore(ConvBase, EncoderCore):
     """
     A network block that combines a visual backbone network with optional pooling
     and linear layers.
@@ -1031,7 +1047,7 @@ class VisualCore(ConvBase):
 Scan Core Networks (Conv1D Sequential + Pool)
 ================================================
 """
-class ScanCore(ConvBase):
+class ScanCore(ConvBase, EncoderCore):
     """
     A network block that combines a Conv1D backbone network with optional pooling
     and linear layers.
@@ -1164,6 +1180,12 @@ class Randomizer(Module):
     """
     def __init__(self):
         super(Randomizer, self).__init__()
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Hook method to automatically register all valid subclasses so we can keep track of valid observation randomizers
+        """
+        ObsUtils.register_randomizer(cls)
 
     def output_shape(self, input_shape=None):
         """
@@ -1327,9 +1349,3 @@ class CropRandomizer(Randomizer):
         msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
             self.input_shape, self.crop_height, self.crop_width, self.num_crops)
         return msg
-
-
-# Register encoder core classes
-ObsUtils.register_obs_encoder_core_class(VisualCore)
-ObsUtils.register_obs_encoder_core_class(ScanCore)
-ObsUtils.register_obs_randomizer_class(CropRandomizer)
