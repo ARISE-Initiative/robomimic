@@ -25,7 +25,7 @@ def get_algo_base_config():
     # low-level obs (note that we define it here because @observation structure might vary per algorithm, 
     # for example HBC)
     config.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.modalities.obs.image = []
+    config.observation.modalities.obs.rgb = []
 
     # by default, vanilla CQL
     config.algo.actor.bc_start_steps = 40           # BC training initially
@@ -48,9 +48,9 @@ def convert_config_for_images(config):
     config.train.num_data_workers = 0
     config.train.batch_size = 16
 
-    # replace object with image modality
+    # replace object with rgb modality
     config.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
-    config.observation.modalities.obs.image = ["agentview_image"]
+    config.observation.modalities.obs.rgb = ["agentview_image"]
 
     # set up visual encoders
     config.observation.encoder.visual_core = 'ResNet18Conv'
@@ -106,7 +106,7 @@ def cql_gaussian_modifier(config):
 image_modifiers = OrderedDict()
 for test_name in MODIFIERS:
     lst = test_name.split("-")
-    name = "-".join(lst[:1] + ["image"] + lst[1:])
+    name = "-".join(lst[:1] + ["rgb"] + lst[1:])
     image_modifiers[name] = make_image_modifier(MODIFIERS[test_name])
 MODIFIERS.update(image_modifiers)
 

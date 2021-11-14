@@ -43,7 +43,7 @@ class GL(PlannerAlgo):
         algo_config,
         obs_config,
         global_config,
-        modality_shapes,
+        obs_key_shapes,
         ac_dim,
         device
     ):
@@ -57,7 +57,7 @@ class GL(PlannerAlgo):
 
             global_config (Config object): global training config
 
-            modality_shapes (OrderedDict): dictionary that maps modality keys to shapes
+            obs_key_shapes (OrderedDict): dictionary that maps observation keys to shapes
 
             ac_dim (int): dimension of action space
 
@@ -69,7 +69,7 @@ class GL(PlannerAlgo):
             algo_config=algo_config,
             obs_config=obs_config,
             global_config=global_config,
-            modality_shapes=modality_shapes,
+            obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )
@@ -155,7 +155,7 @@ class GL(PlannerAlgo):
             # predict subgoal observations with goal network
             pred_subgoals = self.nets["goal_network"](obs=batch["obs"], goal=batch["goal_obs"])
 
-            # compute loss as L2 error for each modality
+            # compute loss as L2 error for each observation key
             losses = OrderedDict()
             target_subgoals = batch["target_subgoals"]  # targets for network prediction
             goal_loss = 0.
@@ -508,7 +508,7 @@ class ValuePlanner(PlannerAlgo, ValueAlgo):
         algo_config,
         obs_config,
         global_config,
-        modality_shapes,
+        obs_key_shapes,
         ac_dim,
         device,
 
@@ -527,7 +527,7 @@ class ValuePlanner(PlannerAlgo, ValueAlgo):
 
             global_config (Config object); global config
 
-            modality_shapes (OrderedDict): dictionary that maps input/output modality keys to shapes
+            obs_key_shapes (OrderedDict): dictionary that maps input/output observation keys to shapes
 
             ac_dim (int): action dimension
 
@@ -544,7 +544,7 @@ class ValuePlanner(PlannerAlgo, ValueAlgo):
             algo_config=algo_config.planner,
             obs_config=obs_config.planner,
             global_config=global_config,
-            modality_shapes=modality_shapes,
+            obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )
@@ -553,7 +553,7 @@ class ValuePlanner(PlannerAlgo, ValueAlgo):
             algo_config=algo_config.value,
             obs_config=obs_config.value,
             global_config=global_config,
-            modality_shapes=modality_shapes,
+            obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )

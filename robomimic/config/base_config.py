@@ -211,15 +211,15 @@ class BaseConfig(Config):
             "robot0_gripper_qpos", 
             "object",
         ]
-        self.observation.modalities.obs.image = []              # specify image observations for agent
+        self.observation.modalities.obs.rgb = []              # specify rgb image observations for agent
         self.observation.modalities.obs.depth = []
         self.observation.modalities.obs.scan = []
         self.observation.modalities.goal.low_dim = []           # specify low-dim goal observations to condition agent on
-        self.observation.modalities.goal.image = []             # specify image goal observations to condition agent on
+        self.observation.modalities.goal.rgb = []             # specify rgb image goal observations to condition agent on
         self.observation.modalities.goal.depth = []
         self.observation.modalities.goal.scan = []
 
-        # observation encoder architectures (per obs type)
+        # observation encoder architectures (per obs modality)
         # This applies to all networks that take observation dicts as input
 
         # =============== Low Dim default encoder (no encoder) ===============
@@ -234,36 +234,36 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
         # =============== Image default encoder (ResNet backbone + linear layer output) ===============
-        self.observation.encoder.image.feature_dimension = 64
-        self.observation.encoder.image.core_class = "VisualCore"
-        self.observation.encoder.image.core_kwargs.backbone_class = "ResNet18Conv"
-        self.observation.encoder.image.core_kwargs.backbone_kwargs.pretrained = False
-        self.observation.encoder.image.core_kwargs.backbone_kwargs.input_coord_conv = False
-        self.observation.encoder.image.core_kwargs.backbone_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.feature_dimension = 64
+        self.observation.encoder.rgb.core_class = "VisualCore"
+        self.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
+        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False
+        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.do_not_lock_keys()
 
         # Image: Obs Randomizer settings
-        self.observation.encoder.image.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
-        self.observation.encoder.image.obs_randomizer_kwargs.crop_height = 76       # Default arguments for "CropRandomizer"
-        self.observation.encoder.image.obs_randomizer_kwargs.crop_width = 76        # Default arguments for "CropRandomizer"
-        self.observation.encoder.image.obs_randomizer_kwargs.num_crops = 1          # Default arguments for "CropRandomizer"
-        self.observation.encoder.image.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
-        self.observation.encoder.image.obs_randomizer_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
+        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76       # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76        # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1          # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
         # Image: Pooling settings
-        self.observation.encoder.image.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-        self.observation.encoder.image.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.image.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.image.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.image.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.image.pool_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+        self.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.pool_kwargs.do_not_lock_keys()
 
-        # =============== Depth default encoder (same as image) ===============
-        self.observation.encoder.depth = deepcopy(self.observation.encoder.image)
+        # =============== Depth default encoder (same as rgb) ===============
+        self.observation.encoder.depth = deepcopy(self.observation.encoder.rgb)
 
         # =============== Scan default encoder (Conv1d backbone + linear layer output) ===============
-        self.observation.encoder.scan = deepcopy(self.observation.encoder.image)
+        self.observation.encoder.scan = deepcopy(self.observation.encoder.rgb)
 
-        # Scan: Modify the core class + kwargs, otherwise, is same as image encoder
+        # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
         self.observation.encoder.scan.core_class = "ScanCore"
         self.observation.encoder.scan.core_kwargs.conv_kwargs.out_channels = [32, 64, 64]
         self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
@@ -272,13 +272,13 @@ class BaseConfig(Config):
     @property
     def use_goals(self):
         # whether the agent is goal-conditioned
-        return len([mod for mod_group in self.observation.modalities.goal.values() for mod in mod_group]) > 0
+        return len([obs_key for modality in self.observation.modalities.goal.values() for obs_key in modality]) > 0
 
     @property
-    def all_modalities(self):
+    def all_obs_keys(self):
         # pool all modalities
         return sorted(tuple(set([
-            mod for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values()]
-            for mod_group in group
-            for mod in mod_group
+            obs_key for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values()]
+            for modality in group
+            for obs_key in modality
          ])))

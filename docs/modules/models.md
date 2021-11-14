@@ -62,7 +62,7 @@ Randomizers are `Modules` that perturb network inputs during training, and optio
 
 
 ## Observation Encoder and Decoder
- `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_modality` function.
+ `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_obs_key` function.
 
 ```python
 from robomimic.models.obs_nets import ObservationEncoder, CropRandomizer, MLP, VisualCore, ObservationDecoder
@@ -76,10 +76,10 @@ camera1_shape = [3, 224, 224]
 image_randomizer = CropRandomizer(input_shape=camera2_shape, crop_height=200, crop_width=200)
 
 # We will use a reconfigurable image processing backbone VisualCore to process the input image modality
-mod_net_class = "VisualCore"  # this is defined in models/base_nets.py
+net_class = "VisualCore"  # this is defined in models/base_nets.py
 
 # kwargs for VisualCore network
-mod_net_kwargs = {
+net_kwargs = {
     "input_shape": camera1_shape,
     "visual_core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
     "visual_core_kwargs": {"pretrained": False, "input_coord_conv": False},
@@ -88,21 +88,21 @@ mod_net_kwargs = {
 }
 
 # register the network for processing the modality
-obs_encoder.register_modality(
-    mod_name="camera1",
-    mod_shape=camera1_shape,
-    mod_net_class=mod_net_class,
-    mod_net_kwargs=mod_net_kwargs,
-    mod_randomizer=image_randomizer
+obs_encoder.register_obs_key(
+    name="camera1",
+    shape=camera1_shape,
+    net_class=net_class,
+    net_kwargs=net_kwargs,
+    randomizer=image_randomizer
 )
 
 # We could mix low-dimensional observation, e.g., proprioception signal, in the encoder
 proprio_shape = [12]
-mod_net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
-obs_encoder.register_modality(
-    mod_name="proprio",
-    mod_shape=proprio_shape,
-    mod_net=mod_net
+net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
+obs_encoder.register_obs_key(
+    name="proprio",
+    shape=proprio_shape,
+    net=net
 )
 ```
 

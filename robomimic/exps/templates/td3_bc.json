@@ -114,11 +114,11 @@
                 "low_dim": [
                     "flat"
                 ],
-                "image": []
+                "rgb": []
             },
             "goal": {
                 "low_dim": [],
-                "image": []
+                "rgb": []
             }
         },
         "encoder": {

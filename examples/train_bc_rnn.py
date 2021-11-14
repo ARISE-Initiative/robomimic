@@ -146,33 +146,33 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
         "robot0_gripper_qpos", 
         "object",
     ]
-    config.observation.modalities.obs.image = []                # no image observations
+    config.observation.modalities.obs.rgb = []                # no image observations
     config.observation.modalities.goal.low_dim = []             # no low-dim goals
-    config.observation.modalities.goal.image = []               # no image goals
+    config.observation.modalities.goal.rgb = []               # no image goals
 
     # observation encoder architecture - applies to all networks that take observation dicts as input
 
-    config.observation.encoder.image.feature_dimension = 64
-    config.observation.encoder.image.core_class = "VisualCore"
-    config.observation.encoder.image.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
-    config.observation.encoder.image.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
-    config.observation.encoder.image.core_kwargs.backbone_kwargs.input_coord_conv = False
+    config.observation.encoder.rgb.feature_dimension = 64
+    config.observation.encoder.rgb.core_class = "VisualCore"
+    config.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
+    config.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
+    config.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
 
     # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
-    config.observation.encoder.image.obs_randomizer_class = None
+    config.observation.encoder.rgb.obs_randomizer_class = None
 
     # kwargs for observation randomizers (for the CropRandomizer, this is size and number of crops)
-    config.observation.encoder.image.obs_randomizer_kwargs.crop_height = 76
-    config.observation.encoder.image.obs_randomizer_kwargs.crop_width = 76
-    config.observation.encoder.image.obs_randomizer_kwargs.num_crops = 1
-    config.observation.encoder.image.obs_randomizer_kwargs.pos_enc = False
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1
+    config.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False
 
     # kwargs for pooling
-    config.observation.encoder.image.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-    config.observation.encoder.image.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.image.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.image.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.image.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+    config.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
 
     ### Algo Config ###
 

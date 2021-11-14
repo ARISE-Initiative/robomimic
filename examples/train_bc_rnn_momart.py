@@ -145,10 +145,10 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
     config.observation.modalities.obs.low_dim = [               # specify low-dim observations for agent
         "proprio",
     ]
-    config.observation.modalities.obs.image = [
-        # "rgb",
-        # "rgb_wrist",
-    ]                # no image observations
+    config.observation.modalities.obs.rgb = [
+        "rgb",
+        "rgb_wrist",
+    ]
 
     config.observation.modalities.obs.depth = [
         "depth",
@@ -158,7 +158,7 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
         "scan",
     ]
     config.observation.modalities.goal.low_dim = []             # no low-dim goals
-    config.observation.modalities.goal.image = []               # no image goals
+    config.observation.modalities.goal.rgb = []               # no rgb image goals
 
     ### Algo Config ###
 

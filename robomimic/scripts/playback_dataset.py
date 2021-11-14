@@ -150,7 +150,7 @@ def playback_trajectory_with_obs(
     first=False,
 ):
     """
-    This function reads all "image" observations in the dataset trajectory and
+    This function reads all "rgb" observations in the dataset trajectory and
     writes them into a video.
 
     Args:

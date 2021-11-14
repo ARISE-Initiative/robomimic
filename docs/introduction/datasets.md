@@ -30,15 +30,15 @@ data (group)
 
   - `dones` (dataset) - done signal, equal to 1 if playing the corresponding action in the state should terminate the episode. Shape (N,) where N is the length of the trajectory.
 
-  - `obs` (group) - group for the observation modalities. Each modality is stored as a dataset.
+  - `obs` (group) - group for the observation keys. Each key is stored as a dataset.
 
-    - `<modality_1>` (dataset) - the first observation modality. Note that the name of this dataset and shape will vary. As an example, the name could be "agentview_image", and the shape could be (N, 84, 84, 3). 
+    - `<obs_key_1>` (dataset) - the first observation key. Note that the name of this dataset and shape will vary. As an example, the name could be "agentview_image", and the shape could be (N, 84, 84, 3). 
 
       ...
 
   - `next_obs` (group) - group for the next observations.
 
-    - `<modality_1>` (dataset) - the first observation modality.
+    - `<obs_key_1>` (dataset) - the first observation key.
 
       ...
 

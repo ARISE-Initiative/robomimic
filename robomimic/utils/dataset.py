@@ -127,7 +127,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 # only store low-dim observations
                 obs_keys_in_memory = []
                 for k in self.obs_keys:
-                    if ObsUtils.key_is_obs_type(k, "low_dim"):
+                    if ObsUtils.key_is_obs_modality(k, "low_dim"):
                         obs_keys_in_memory.append(k)
             self.obs_keys_in_memory = obs_keys_in_memory
 
@@ -354,12 +354,12 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def get_obs_normalization_stats(self):
         """
-        Returns dictionary of mean and std for each observation modality if using
+        Returns dictionary of mean and std for each observation key if using
         observation normalization, otherwise None.
 
         Returns:
             obs_normalization_stats (dict): a dictionary for observation
-                normalization. This maps observation modality keys to dicts
+                normalization. This maps observation keys to dicts
                 with a "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the observation.
         """

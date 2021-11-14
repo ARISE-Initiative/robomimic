@@ -37,21 +37,21 @@ class ActorNetwork(MIMO_MLP):
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             ac_dim (int): dimension of action space.
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes.
 
-            goal_shapes (OrderedDict): a dictionary that maps modality to
+            goal_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for goal observations.
 
             encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
-                be nested dictionary containing relevant per-modality information for encoder networks.
+                be nested dictionary containing relevant per-observation key information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -61,7 +61,7 @@ class ActorNetwork(MIMO_MLP):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         assert isinstance(obs_shapes, OrderedDict)
@@ -126,7 +126,7 @@ class PerturbationActorNetwork(ActorNetwork):
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             ac_dim (int): dimension of action space.
@@ -144,7 +144,7 @@ class PerturbationActorNetwork(ActorNetwork):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -154,7 +154,7 @@ class PerturbationActorNetwork(ActorNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         self.perturbation_scale = perturbation_scale
@@ -255,7 +255,7 @@ class GaussianActorNetwork(ActorNetwork):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -265,7 +265,7 @@ class GaussianActorNetwork(ActorNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
 
@@ -442,7 +442,7 @@ class GMMActorNetwork(ActorNetwork):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -452,7 +452,7 @@ class GMMActorNetwork(ActorNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
 
@@ -599,7 +599,7 @@ class RNNActorNetwork(RNN_MIMO_MLP):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -609,7 +609,7 @@ class RNNActorNetwork(RNN_MIMO_MLP):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         self.ac_dim = ac_dim
@@ -775,7 +775,7 @@ class RNNGMMActorNetwork(RNNActorNetwork):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -785,7 +785,7 @@ class RNNGMMActorNetwork(RNNActorNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
 
@@ -1016,7 +1016,7 @@ class VAEActor(Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -1026,7 +1026,7 @@ class VAEActor(Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(VAEActor, self).__init__()

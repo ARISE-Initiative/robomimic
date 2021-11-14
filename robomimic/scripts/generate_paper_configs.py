@@ -72,24 +72,24 @@ def modify_config_for_default_low_dim_exp(config):
         ]
         # handle hierarchical observation configs
         if config.algo_name == "hbc":
-            mod_configs_to_set = [
+            configs_to_set = [
                 config.observation.actor.modalities.obs,
                 config.observation.planner.modalities.obs,
                 config.observation.planner.modalities.subgoal,
             ]
         elif config.algo_name == "iris":
-            mod_configs_to_set = [
+            configs_to_set = [
                 config.observation.actor.modalities.obs,
                 config.observation.value_planner.planner.modalities.obs,
                 config.observation.value_planner.planner.modalities.subgoal,
                 config.observation.value_planner.value.modalities.obs,
             ]
         else:
-            mod_configs_to_set = [config.observation.modalities.obs]
+            configs_to_set = [config.observation.modalities.obs]
         # set all observations / subgoals to use the correct low-dim modalities
-        for mod_config in mod_configs_to_set:
-            mod_config.low_dim = list(default_low_dim_obs)
-            mod_config.image = []
+        for config in configs_to_set:
+            config.low_dim = list(default_low_dim_obs)
+            config.rgb = []
 
     return config
 
@@ -140,12 +140,12 @@ def modify_config_for_default_image_exp(config):
             "robot0_eef_quat", 
             "robot0_gripper_qpos", 
         ]
-        config.observation.modalities.obs.image = [
+        config.observation.modalities.obs.rgb = [
             "agentview_image",
             "robot0_eye_in_hand_image",
         ]
         config.observation.modalities.goal.low_dim = []
-        config.observation.modalities.goal.image = []
+        config.observation.modalities.goal.rgb = []
 
         # default image encoder architecture is ResNet with spatial softmax
         config.observation.encoder.visual_core = 'ResNet18Conv'
@@ -236,7 +236,7 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
 
             if task_name == "tool_hang_real":
                 # side and wrist camera
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "image_side",
                     "image_wrist",
                 ]
@@ -245,15 +245,15 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 config.observation.encoder.obs_randomizer_kwargs.crop_width = 216
             else:
                 # front and wrist camera
-                config.observation.modalities.obs.image = [
-                    "image",
+                config.observation.modalities.obs.rgb = [
+                    "rgb",
                     "image_wrist",
                 ]
                 # 120x120 images -> crops should be 108x108
                 config.observation.encoder.obs_randomizer_kwargs.crop_height = 108
                 config.observation.encoder.obs_randomizer_kwargs.crop_width = 108
 
-        elif hdf5_type in ["image", "image_sparse", "image_dense"]:
+        elif hdf5_type in ["rgb", "image_sparse", "image_dense"]:
             if task_name == "transport":
                 # robot proprioception per arm
                 config.observation.modalities.obs.low_dim = [
@@ -266,7 +266,7 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
 
                 # shoulder and wrist cameras per arm
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "shouldercamera0_image",
                     "robot0_eye_in_hand_image",
                     "shouldercamera1_image",
@@ -274,7 +274,7 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
             elif task_name == "tool_hang":
                 # side and wrist camera
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "sideview_image",
                     "robot0_eye_in_hand_image",
                 ]
@@ -296,24 +296,24 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
                 # handle hierarchical observation configs
                 if config.algo_name == "hbc":
-                    mod_configs_to_set = [
+                    configs_to_set = [
                         config.observation.actor.modalities.obs,
                         config.observation.planner.modalities.obs,
                         config.observation.planner.modalities.subgoal,
                     ]
                 elif config.algo_name == "iris":
-                    mod_configs_to_set = [
+                    configs_to_set = [
                         config.observation.actor.modalities.obs,
                         config.observation.value_planner.planner.modalities.obs,
                         config.observation.value_planner.planner.modalities.subgoal,
                         config.observation.value_planner.value.modalities.obs,
                     ]
                 else:
-                    mod_configs_to_set = [config.observation.modalities.obs]
+                    configs_to_set = [config.observation.modalities.obs]
                 # set all observations / subgoals to use the correct low-dim modalities
-                for mod_config in mod_configs_to_set:
-                    mod_config.low_dim = list(default_low_dim_obs)
-                    mod_config.image = []
+                for obs_key_config in configs_to_set:
+                    obs_key_config.low_dim = list(default_low_dim_obs)
+                    obs_key_config.rgb = []
 
     return config
 
@@ -722,7 +722,7 @@ def generate_experiment_config(
 
     algo_config_name = "bc" if algo_name == "bc_rnn" else algo_name
     config = config_factory(algo_name=algo_config_name)
-    # turn into default config for observation type (low-dim or image)
+    # turn into default config for observation modalities (e.g.: low-dim or rgb)
     config = modifier_for_obs(config)
     # add in config based on the dataset
     config = modify_config_for_dataset(
@@ -860,11 +860,11 @@ def generate_subopt_configs(
         # only generate configs for multi-human data subsets
         for dataset_type in ["mh"]:
             # only low-dim / image
-            for hdf5_type in ["low_dim", "image"]:
+            for hdf5_type in ["low_dim", "rgb"]:
 
                 # get list of algorithms to generate configs for, for this hdf5 dataset
                 algos_to_generate = ["bc", "bc_rnn", "bcq", "cql", "hbc", "iris"]
-                if hdf5_type == "image":
+                if hdf5_type == "rgb":
                     # no hbc or iris for image runs
                     algos_to_generate = algos_to_generate[:-2]
 
@@ -919,7 +919,7 @@ def generate_dataset_size_configs(
     size_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["lift", "can", "square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "image"]:
+            for hdf5_type in ["low_dim", "rgb"]:
 
                 # only bc-rnn
                 algo_name = "bc_rnn"
@@ -991,8 +991,8 @@ def generate_obs_ablation_configs(
 
     def remove_wrist(config):
         with config.observation.values_unlocked():
-            old_image_mods = list(config.observation.modalities.obs.image)
-            config.observation.modalities.obs.image = [m for m in old_image_mods if "eye_in_hand" not in m]
+            old_image_mods = list(config.observation.modalities.obs.rgb)
+            config.observation.modalities.obs.rgb = [m for m in old_image_mods if "eye_in_hand" not in m]
         return config
 
     def remove_rand(config):
@@ -1003,7 +1003,7 @@ def generate_obs_ablation_configs(
     obs_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "image"]:
+            for hdf5_type in ["low_dim", "rgb"]:
 
                 # observation modifiers to apply
                 if hdf5_type == "low_dim":
@@ -1096,7 +1096,7 @@ def generate_hyper_ablation_configs(
     hyper_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "image"]:
+            for hdf5_type in ["low_dim", "rgb"]:
 
                 # observation modifiers to apply
                 if hdf5_type == "low_dim":

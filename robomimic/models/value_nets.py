@@ -32,7 +32,7 @@ class ValueNetwork(MIMO_MLP):
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes. 
@@ -41,14 +41,14 @@ class ValueNetwork(MIMO_MLP):
                 that the network should be possible of generating. The network will rescale outputs
                 using a tanh layer to lie within these bounds. If None, no tanh re-scaling is done.
 
-            goal_shapes (OrderedDict): a dictionary that maps modality to
+            goal_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for goal observations.
 
             encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
-                be nested dictionary containing relevant per-modality information for encoder networks.
+                be nested dictionary containing relevant per-observation key information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -58,7 +58,7 @@ class ValueNetwork(MIMO_MLP):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         self.value_bounds = value_bounds
@@ -142,7 +142,7 @@ class ActionValueNetwork(ValueNetwork):
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             ac_dim (int): dimension of action space.
@@ -153,14 +153,14 @@ class ActionValueNetwork(ValueNetwork):
                 that the network should be possible of generating. The network will rescale outputs
                 using a tanh layer to lie within these bounds. If None, no tanh re-scaling is done.
 
-            goal_shapes (OrderedDict): a dictionary that maps modality to
+            goal_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for goal observations.
 
             encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
-                be nested dictionary containing relevant per-modality information for encoder networks.
+                be nested dictionary containing relevant per-observation key information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -170,7 +170,7 @@ class ActionValueNetwork(ValueNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
 
@@ -239,7 +239,7 @@ class DistributionalActionValueNetwork(ActionValueNetwork):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -249,7 +249,7 @@ class DistributionalActionValueNetwork(ActionValueNetwork):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
 

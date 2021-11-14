@@ -77,13 +77,13 @@ def get_example_model(dataset_path, device):
     # default BC config
     config = config_factory(algo_name="bc")
 
-    # read config to set up metadata for observation types (e.g. detecting image observations)
+    # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # read dataset to get some metadata for constructing model
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
         dataset_path=dataset_path, 
-        all_modalities=sorted((
+        all_obs_keys=sorted((
             "robot0_eef_pos", 
             "robot0_eef_quat", 
             "robot0_gripper_qpos", 
@@ -95,7 +95,7 @@ def get_example_model(dataset_path, device):
     model = algo_factory(
         algo_name=config.algo_name,
         config=config,
-        modality_shapes=shape_meta["all_shapes"],
+        obs_key_shapes=shape_meta["all_shapes"],
         ac_dim=shape_meta["ac_dim"],
         device=device,
     )
@@ -107,8 +107,8 @@ def print_batch_info(batch):
     for k in batch:
         if k in ["obs", "next_obs"]:
             print("key {}".format(k))
-            for mod in batch[k]:
-                print("    modality {} with shape {}".format(mod, batch[k][mod].shape))
+            for obs_key in batch[k]:
+                print("    obs key {} with shape {}".format(obs_key, batch[k][obs_key].shape))
         else:
             print("key {} with shape {}".format(k, batch[k].shape))
     print("")

@@ -24,7 +24,7 @@ from robomimic.scripts.run_trained_agent import run_trained_agent
 def get_checkpoint_to_test():
     """
     Run a quick training run to get a checkpoint. This function runs a basic bc-image
-    training run. Image modality is used for a harder test case for the run agent
+    training run. RGB modality is used for a harder test case for the run agent
     script, which will need to also try writing image observations to the rollout
     dataset.
     """
@@ -38,9 +38,9 @@ def get_checkpoint_to_test():
         conf.train.num_data_workers = 0
         conf.train.batch_size = 16
 
-        # replace object with image modality
+        # replace object with rgb modality
         conf.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
-        conf.observation.modalities.obs.image = ["agentview_image"]
+        conf.observation.modalities.obs.rgb = ["agentview_image"]
 
         # set up visual encoders
         conf.observation.encoder.visual_core = 'ResNet18Conv'

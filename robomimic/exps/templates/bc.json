@@ -146,11 +146,11 @@
                     "robot0_gripper_qpos",
                     "object"
                 ],
-                "image": []
+                "rgb": []
             },
             "goal": {
                 "low_dim": [],
-                "image": []
+                "rgb": []
             }
         },
         "encoder": {

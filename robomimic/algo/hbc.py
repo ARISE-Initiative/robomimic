@@ -46,7 +46,7 @@ class HBC(HierarchicalAlgo):
         algo_config,
         obs_config,
         global_config,
-        modality_shapes,
+        obs_key_shapes,
         ac_dim,
         device,
     ):
@@ -64,7 +64,7 @@ class HBC(HierarchicalAlgo):
 
             global_config (Config object): global training config
 
-            modality_shapes (dict): dictionary that maps input/output modality keys to shapes
+            obs_key_shapes (dict): dictionary that maps input/output observation keys to shapes
 
             ac_dim (int): action dimension
 
@@ -90,7 +90,7 @@ class HBC(HierarchicalAlgo):
             algo_config=algo_config.planner,
             obs_config=obs_config.planner,
             global_config=global_config,
-            modality_shapes=modality_shapes,
+            obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )
@@ -102,26 +102,26 @@ class HBC(HierarchicalAlgo):
             self.actor_goal_shapes = OrderedDict(latent_subgoal=(self.planner.algo_config.vae.latent_dim,))
 
         # only for the actor: override goal modalities and shapes to match the subgoal set by the planner
-        actor_modality_shapes = deepcopy(modality_shapes)
-        # make sure we are not modifying existing modality shapes
+        actor_obs_key_shapes = deepcopy(obs_key_shapes)
+        # make sure we are not modifying existing observation key shapes
         for k in self.actor_goal_shapes:
-            if k in actor_modality_shapes:
-                assert actor_modality_shapes[k] == self.actor_goal_shapes[k]
-        actor_modality_shapes.update(self.actor_goal_shapes)
+            if k in actor_obs_key_shapes:
+                assert actor_obs_key_shapes[k] == self.actor_goal_shapes[k]
+        actor_obs_key_shapes.update(self.actor_goal_shapes)
 
-        goal_modalities = {obs_type: [] for obs_type in ObsUtils.OBS_MODALITY_CLASSES.keys()}
+        goal_obs_keys = {obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()}
         for k in self.actor_goal_shapes.keys():
-            goal_modalities[ObsUtils.OBS_MODALITIES_TO_TYPE[k]].append(k)
+            goal_obs_keys[ObsUtils.OBS_KEYS_TO_MODALITIES[k]].append(k)
 
         actor_obs_config = deepcopy(obs_config.actor)
         with actor_obs_config.unlocked():
-            actor_obs_config["goal"] = Config(**goal_modalities)
+            actor_obs_config["goal"] = Config(**goal_obs_keys)
 
         self.actor = policy_algo_class(
             algo_config=algo_config.actor,
             obs_config=actor_obs_config,
             global_config=global_config,
-            modality_shapes=actor_modality_shapes,
+            obs_key_shapes=actor_obs_key_shapes,
             ac_dim=ac_dim,
             device=device,
         )

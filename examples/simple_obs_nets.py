@@ -14,18 +14,18 @@ import robomimic.utils.tensor_utils as TensorUtils
 def simple_obs_example():
     obs_encoder = ObservationEncoder(feature_activation=torch.nn.ReLU)
 
-    # There are two ways to construct the network for processing a input modality.
+    # There are two ways to construct the network for processing a input observation.
 
     # 1. Construct through keyword args and class name
 
     # Assume we are processing image input of shape (3, 224, 224).
     camera1_shape = [3, 224, 224]
 
-    # We will use a reconfigurable image processing backbone VisualCore to process the input image modality
-    mod_net_class = "VisualCore"  # this is defined in models/base_nets.py
+    # We will use a reconfigurable image processing backbone VisualCore to process the input image observation key
+    net_class = "VisualCore"  # this is defined in models/base_nets.py
 
     # kwargs for VisualCore network
-    mod_net_kwargs = {
+    net_kwargs = {
         "input_shape": camera1_shape,
         "visual_core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
         "visual_core_kwargs": {"pretrained": False, "input_coord_conv": False},
@@ -33,48 +33,48 @@ def simple_obs_example():
         "pool_kwargs": {"num_kp": 32}
     }
 
-    # register the network for processing the modality
-    obs_encoder.register_modality(
-        mod_name="camera1",
-        mod_shape=camera1_shape,
-        mod_net_class=mod_net_class,
-        mod_net_kwargs=mod_net_kwargs
+    # register the network for processing the observation key
+    obs_encoder.register_obs_key(
+        name="camera1",
+        shape=camera1_shape,
+        net_class=net_class,
+        net_kwargs=net_kwargs,
     )
 
-    # 2. Alternatively, we could initialize the modality network outside of the ObservationEncoder
+    # 2. Alternatively, we could initialize the observation key network outside of the ObservationEncoder
 
     # The image doesn't have to be of the same shape
     camera2_shape = [3, 160, 240]
 
-    # We could also attach an observation randomizer to perturb the input modality before sending to the network
+    # We could also attach an observation randomizer to perturb the input observation key before sending to the network
     image_randomizer = CropRandomizer(input_shape=camera2_shape, crop_height=140, crop_width=220)
 
     # the cropper will alter the input shape
-    mod_net_kwargs["input_shape"] = image_randomizer.output_shape_in(camera2_shape)
-    mod_net = eval(mod_net_class)(**mod_net_kwargs)
+    net_kwargs["input_shape"] = image_randomizer.output_shape_in(camera2_shape)
+    net = eval(net_class)(**net_kwargs)
 
-    obs_encoder.register_modality(
-        mod_name="camera2",
-        mod_shape=camera2_shape,
-        mod_net=mod_net,
-        mod_randomizer=image_randomizer
+    obs_encoder.register_obs_key(
+        name="camera2",
+        shape=camera2_shape,
+        net=net,
+        randomizer=image_randomizer,
     )
 
-    # ObservationEncoder also supports weight sharing between modalities
+    # ObservationEncoder also supports weight sharing between keys
     camera3_shape = [3, 224, 224]
-    obs_encoder.register_modality(
-        mod_name="camera3",
-        mod_shape=camera3_shape,
-        share_mod_net_from="camera1"
+    obs_encoder.register_obs_key(
+        name="camera3",
+        shape=camera3_shape,
+        share_net_from="camera1",
     )
 
     # We could mix low-dimensional observation, e.g., proprioception signal, in the encoder
     proprio_shape = [12]
-    mod_net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
-    obs_encoder.register_modality(
-        mod_name="proprio",
-        mod_shape=proprio_shape,
-        mod_net=mod_net
+    net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
+    obs_encoder.register_obs_key(
+        name="proprio",
+        shape=proprio_shape,
+        net=net,
     )
 
     # Finally, construct the observation encoder
@@ -99,8 +99,8 @@ def simple_obs_example():
         inputs = TensorUtils.to_device(inputs, torch.device("cuda:0"))
         obs_encoder.cuda()
 
-    # output from each modality network is concatenated as a flat vector.
-    # The concatenation order is the same as the modalities are registered
+    # output from each obs key network is concatenated as a flat vector.
+    # The concatenation order is the same as the keys are registered
     obs_feature = obs_encoder(inputs)
 
     print(obs_feature.shape)

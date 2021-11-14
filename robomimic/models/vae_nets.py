@@ -83,7 +83,7 @@ class Prior(Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -93,7 +93,7 @@ class Prior(Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(Prior, self).__init__()
@@ -290,7 +290,7 @@ class GaussianPrior(Prior):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -300,7 +300,7 @@ class GaussianPrior(Prior):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         self.device = device
@@ -568,7 +568,7 @@ class CategoricalPrior(Prior):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -578,7 +578,7 @@ class CategoricalPrior(Prior):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         self.device = device
@@ -903,7 +903,7 @@ class VAE(torch.nn.Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -913,7 +913,7 @@ class VAE(torch.nn.Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(VAE, self).__init__()

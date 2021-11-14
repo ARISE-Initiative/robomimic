@@ -141,7 +141,7 @@ config, _ = config_from_checkpoint(algo_name=algo_name, ckpt_dict=ckpt_dict)
 model = algo_factory(
     algo_name,
     config,
-    modality_shapes=ckpt_dict["shape_metadata"]["all_shapes"],
+    obs_key_shapes=ckpt_dict["shape_metadata"]["all_shapes"],
     ac_dim=ckpt_dict["shape_metadata"]["ac_dim"],
     device=device,
 )

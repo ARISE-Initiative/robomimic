@@ -117,8 +117,8 @@ if __name__ == "__main__":
             if k in ["obs", "next_obs"]:
                 print("    key: {}".format(k))
                 for mod in f["data/{}/{}".format(ep, k)]:
-                    mod_shape = f["data/{}/{}/{}".format(ep, k, mod)].shape
-                    print("        mod {} with shape {}".format(mod, mod_shape))
+                    shape = f["data/{}/{}/{}".format(ep, k, mod)].shape
+                    print("        mod {} with shape {}".format(mod, shape))
             elif isinstance(f["data/{}/{}".format(ep, k)], h5py.Dataset):
                 key_shape = f["data/{}/{}".format(ep, k)].shape
                 print("    key: {} with shape {}".format(k, key_shape))

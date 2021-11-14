@@ -118,11 +118,11 @@
                     "robot0_gripper_qpos",
                     "object"
                 ],
-                "image": []
+                "rgb": []
             },
             "goal": {
                 "low_dim": [],
-                "image": []
+                "rgb": []
             },
             "subgoal": {
                 "low_dim": [
@@ -131,7 +131,7 @@
                     "robot0_gripper_qpos",
                     "object"
                 ],
-                "image": []
+                "rgb": []
             }
         },
         "encoder": {

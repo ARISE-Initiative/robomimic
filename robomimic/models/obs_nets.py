@@ -2,10 +2,10 @@
 Contains torch Modules that help deal with inputs consisting of multiple
 modalities. This is extremely common when networks must deal with one or 
 more observation dictionaries, where each input dictionary can have
-modality keys of a certain type and shape. 
+observation keys of a certain modality and shape.
 
-As an example, an observation could consist of a flat "robot0_eef_pos" modality, 
-and a 3-channel RGB "agentview_image" modality.
+As an example, an observation could consist of a flat "robot0_eef_pos" observation key,
+and a 3-channel RGB "agentview_image" observation key.
 """
 import sys
 import numpy as np
@@ -34,7 +34,7 @@ def obs_encoder_factory(
     Utility function to create an @ObservationEncoder from kwargs specified in config.
 
     Args:
-        obs_shapes (OrderedDict): a dictionary that maps modality to
+        obs_shapes (OrderedDict): a dictionary that maps observation key to
             expected shapes for observations.
 
         feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
@@ -44,7 +44,7 @@ def obs_encoder_factory(
             nested dictionary containing relevant per-modality information for encoder networks.
             Should be of form:
 
-            obs_type1: dict
+            obs_modality1: dict
                 feature_dimension: int
                 core_class: str
                 core_kwargs: dict
@@ -54,14 +54,14 @@ def obs_encoder_factory(
                 obs_randomizer_kwargs: dict
                     ...
                     ...
-            obs_type2: dict
+            obs_modality2: dict
                 ...
     """
     enc = ObservationEncoder(feature_activation=feature_activation)
     for k, obs_shape in obs_shapes.items():
-        obs_type = ObsUtils.OBS_MODALITIES_TO_TYPE[k]
-        enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_type]) if encoder_kwargs is None else \
-            deepcopy(encoder_kwargs[obs_type])
+        obs_modality = ObsUtils.OBS_KEYS_TO_MODALITIES[k]
+        enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
+            deepcopy(encoder_kwargs[obs_modality])
 
         for group in ("core", "obs_randomizer"):
             # Sanity check for kwargs in case they don't exist / are None
@@ -81,12 +81,12 @@ def obs_encoder_factory(
         randomizer = None if enc_kwargs["obs_randomizer_class"] is None else \
             enc_kwargs["obs_randomizer_class"](**enc_kwargs["obs_randomizer_kwargs"])
 
-        enc.register_modality(
-            mod_name=k,
-            mod_shape=obs_shape,
-            mod_net_class=enc_kwargs["core_class"],
-            mod_net_kwargs=enc_kwargs["core_kwargs"],
-            mod_randomizer=randomizer,
+        enc.register_obs_key(
+            name=k,
+            shape=obs_shape,
+            net_class=enc_kwargs["core_class"],
+            net_kwargs=enc_kwargs["core_kwargs"],
+            randomizer=randomizer,
         )
 
     enc.make()
@@ -95,9 +95,9 @@ def obs_encoder_factory(
 
 class ObservationEncoder(Module):
     """
-    Module that processes inputs by modality and then concatenates the processed
-    modalities together. Each modality is processed with an encoder head network.
-    Call @register_modality to register modalities with the encoder and then
+    Module that processes inputs by observation key and then concatenates the processed
+    observation keys together. Each key is processed with an encoder head network.
+    Call @register_obs_key to register observation keys with the encoder and then
     finally call @make to create the encoder networks. 
     """
     def __init__(self, feature_activation=nn.ReLU):
@@ -116,60 +116,60 @@ class ObservationEncoder(Module):
         self.feature_activation = feature_activation
         self._locked = False
 
-    def register_modality(
+    def register_obs_key(
         self, 
-        mod_name,
-        mod_shape, 
-        mod_net_class=None, 
-        mod_net_kwargs=None, 
-        mod_net=None, 
-        mod_randomizer=None,
-        share_mod_net_from=None,
+        name,
+        shape, 
+        net_class=None, 
+        net_kwargs=None, 
+        net=None, 
+        randomizer=None,
+        share_net_from=None,
     ):
         """
-        Register a modality that this encoder should be responsible for.
+        Register an observation key that this encoder should be responsible for.
 
         Args:
-            mod_name (str): modality name
-            mod_shape (int tuple): shape of modality
-            mod_net_class (str): name of class in base_nets.py that should be used
-                to process this modality before concatenation. Pass None to flatten
-                and concatenate the modality directly.
-            mod_net_kwargs (dict): arguments to pass to @mod_net_class
-            mod_net (Module instance): if provided, use this Module to process the modality
+            name (str): modality name
+            shape (int tuple): shape of modality
+            net_class (str): name of class in base_nets.py that should be used
+                to process this observation key before concatenation. Pass None to flatten
+                and concatenate the observation key directly.
+            net_kwargs (dict): arguments to pass to @net_class
+            net (Module instance): if provided, use this Module to process the observation key
                 instead of creating a different net
-            mod_randomizer (Randomizer instance): if provided, use this Module to augment modalities
+            randomizer (Randomizer instance): if provided, use this Module to augment observation keys
                 coming in to the encoder, and possibly augment the processed output as well
-            share_mod_net_from (str): if provided, use the same instance of @mod_net_class 
-                as another modality. This modality must already exist in this encoder.
-                Warning: Note that this does not share the modality randomizer
+            share_net_from (str): if provided, use the same instance of @net_class 
+                as another observation key. This observation key must already exist in this encoder.
+                Warning: Note that this does not share the observation key randomizer
         """
-        assert not self._locked, "ObservationEncoder: @register_modality called after @make"
-        assert mod_name not in self.obs_shapes, "ObservationEncoder: modality {} already exists".format(mod_name)
+        assert not self._locked, "ObservationEncoder: @register_obs_key called after @make"
+        assert name not in self.obs_shapes, "ObservationEncoder: modality {} already exists".format(name)
 
-        if mod_net is not None:
-            assert isinstance(mod_net, Module), "ObservationEncoder: @mod_net must be instance of Module class"
-            assert (mod_net_class is None) and (mod_net_kwargs is None) and (share_mod_net_from is None), \
-                "ObservationEncoder: @mod_net provided - ignore other net creation options"
+        if net is not None:
+            assert isinstance(net, Module), "ObservationEncoder: @net must be instance of Module class"
+            assert (net_class is None) and (net_kwargs is None) and (share_net_from is None), \
+                "ObservationEncoder: @net provided - ignore other net creation options"
 
-        if share_mod_net_from is not None:
+        if share_net_from is not None:
             # share processing with another modality
-            assert (mod_net_class is None) and (mod_net_kwargs is None)
-            assert share_mod_net_from in self.obs_shapes
+            assert (net_class is None) and (net_kwargs is None)
+            assert share_net_from in self.obs_shapes
 
-        mod_net_kwargs = deepcopy(mod_net_kwargs) if mod_net_kwargs is not None else {}
-        if mod_randomizer is not None:
-            assert isinstance(mod_randomizer, Randomizer)
-            if mod_net_kwargs is not None:
+        net_kwargs = deepcopy(net_kwargs) if net_kwargs is not None else {}
+        if randomizer is not None:
+            assert isinstance(randomizer, Randomizer)
+            if net_kwargs is not None:
                 # update input shape to visual core
-                mod_net_kwargs["input_shape"] = mod_randomizer.output_shape_in(mod_shape)
+                net_kwargs["input_shape"] = randomizer.output_shape_in(shape)
 
-        self.obs_shapes[mod_name] = mod_shape
-        self.obs_nets_classes[mod_name] = mod_net_class
-        self.obs_nets_kwargs[mod_name] = mod_net_kwargs
-        self.obs_nets[mod_name] = mod_net
-        self.obs_randomizers[mod_name] = mod_randomizer
-        self.obs_share_mods[mod_name] = share_mod_net_from
+        self.obs_shapes[name] = shape
+        self.obs_nets_classes[name] = net_class
+        self.obs_nets_kwargs[name] = net_kwargs
+        self.obs_nets[name] = net
+        self.obs_randomizers[name] = randomizer
+        self.obs_share_mods[name] = share_net_from
 
     def make(self):
         """
@@ -292,7 +292,7 @@ class ObservationDecoder(Module):
     ):
         """
         Args:
-            decode_shapes (OrderedDict): a dictionary that maps observation modality to 
+            decode_shapes (OrderedDict): a dictionary that maps observation key to
                 expected shape. This is used to generate output modalities from the
                 input features.
 
@@ -380,7 +380,7 @@ class ObservationGroupEncoder(Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -390,7 +390,7 @@ class ObservationGroupEncoder(Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(ObservationGroupEncoder, self).__init__()
@@ -506,7 +506,7 @@ class MIMO_MLP(Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -516,7 +516,7 @@ class MIMO_MLP(Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(MIMO_MLP, self).__init__()
@@ -649,7 +649,7 @@ class RNN_MIMO_MLP(Module):
                 be nested dictionary containing relevant per-modality information for encoder networks.
                 Should be of form:
 
-                obs_type1: dict
+                obs_modality1: dict
                     feature_dimension: int
                     core_class: str
                     core_kwargs: dict
@@ -659,7 +659,7 @@ class RNN_MIMO_MLP(Module):
                     obs_randomizer_kwargs: dict
                         ...
                         ...
-                obs_type2: dict
+                obs_modality2: dict
                     ...
         """
         super(RNN_MIMO_MLP, self).__init__()

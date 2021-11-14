@@ -24,7 +24,7 @@ def register_dataset_link(task, dataset_type, hdf5_type, link, horizon):
     Args:
         task (str): name of task for this dataset
         dataset_type (str): type of dataset (usually identifies the dataset source)
-        hdf5_type (str): type of hdf5 - usually one of "raw", "low_dim", or "image",
+        hdf5_type (str): type of hdf5 - usually one of "raw", "low_dim", or "rgb",
             to identify the kind of observations in the dataset
         link (str): download link for the dataset
         horizon (int): evaluation rollout horizon that should be used with this dataset
@@ -52,7 +52,7 @@ def register_all_links():
         if "real" not in task:
             register_dataset_link(task=task, dataset_type="ph", hdf5_type="low_dim", horizon=horizon,
                 link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/ph/low_dim.hdf5".format(task))
-            register_dataset_link(task=task, dataset_type="ph", hdf5_type="image", horizon=horizon,
+            register_dataset_link(task=task, dataset_type="ph", hdf5_type="rgb", horizon=horizon,
                 link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/ph/image.hdf5".format(task))
 
     # all multi human datasets
@@ -63,7 +63,7 @@ def register_all_links():
             link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/demo.hdf5".format(task))
         register_dataset_link(task=task, dataset_type="mh", hdf5_type="low_dim", horizon=horizon,
             link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/low_dim.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mh", hdf5_type="image", horizon=horizon,
+        register_dataset_link(task=task, dataset_type="mh", hdf5_type="rgb", horizon=horizon,
             link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/image.hdf5".format(task))
 
     # all machine generated datasets
@@ -84,7 +84,7 @@ def register_all_links():
         link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo.hdf5")
     register_dataset_link(task="can", dataset_type="paired", hdf5_type="low_dim", horizon=400,
         link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim.hdf5")
-    register_dataset_link(task="can", dataset_type="paired", hdf5_type="image", horizon=400,
+    register_dataset_link(task="can", dataset_type="paired", hdf5_type="rgb", horizon=400,
         link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/image.hdf5")
 
 

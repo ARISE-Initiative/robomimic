@@ -156,7 +156,7 @@ if __name__ == "__main__":
         ep = demos[ep_ind]
 
         # get name of all image observations
-        image_keys = [k for k in f["data/{}/obs".format(ep)] if "image" in k]
+        image_keys = [k for k in f["data/{}/obs".format(ep)] if "rgb" in k]
         assert len(image_keys) > 0
         num_images = f["data/{}/obs/{}".format(ep, image_keys[0])].shape[0]
 

@@ -75,22 +75,22 @@ class HBCConfig(BaseConfig):
         """
         return len(
             self.observation.planner.modalities.goal.low_dim +
-            self.observation.planner.modalities.goal.image) > 0
+            self.observation.planner.modalities.goal.rgb) > 0
 
     @property
-    def all_modalities(self):
+    def all_obs_keys(self):
         """
         Update from superclass to include modalities from planner and actor.
         """
         return sorted(tuple(set(
             self.observation.planner.modalities.obs.low_dim +
-            self.observation.planner.modalities.obs.image +
+            self.observation.planner.modalities.obs.rgb +
             self.observation.planner.modalities.subgoal.low_dim +
-            self.observation.planner.modalities.subgoal.image +
+            self.observation.planner.modalities.subgoal.rgb +
             self.observation.planner.modalities.goal.low_dim +
-            self.observation.planner.modalities.goal.image +
+            self.observation.planner.modalities.goal.rgb +
             self.observation.actor.modalities.obs.low_dim +
-            self.observation.actor.modalities.obs.image +
+            self.observation.actor.modalities.obs.rgb +
             self.observation.actor.modalities.goal.low_dim +
-            self.observation.actor.modalities.goal.image
+            self.observation.actor.modalities.goal.rgb
         )))
