@@ -55,6 +55,16 @@ def register_randomizer(target_class):
     OBS_RANDOMIZERS[target_class.__name__] = target_class
 
 
+class ObservationKeyToModalityDict(dict):
+    def __getitem__(self, item):
+        # If a key doesn't already exist, warn the user and add default mapping
+        if item not in self.keys():
+            print(f"ObservationKeyToModalityDict: {item} not found,"
+                  f" adding {item} to mapping with assumed low_dim modality!")
+            self.__setitem__(item, "low_dim")
+        return super(ObservationKeyToModalityDict, self).__getitem__(item)
+
+
 def obs_encoder_kwargs_from_config(obs_encoder_config):
     """
     Generate a set of args used to create visual backbones for networks
@@ -138,7 +148,7 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
     """
     global OBS_KEYS_TO_MODALITIES, OBS_MODALITIES_TO_KEYS
 
-    OBS_KEYS_TO_MODALITIES = {}
+    OBS_KEYS_TO_MODALITIES = ObservationKeyToModalityDict()
 
     # accept one or more spec dictionaries - if it's just one, account for this
     if isinstance(obs_modality_specs, dict):
@@ -200,16 +210,19 @@ def initialize_obs_utils_with_config(config):
             config.observation.planner.modalities, 
             config.observation.actor.modalities,
         ]
+        obs_encoder_config = config.observation.actor.encoder
     elif config.algo_name == "iris":
         obs_modality_specs = [
             config.observation.value_planner.planner.modalities, 
             config.observation.value_planner.value.modalities, 
             config.observation.actor.modalities,
         ]
+        obs_encoder_config = config.observation.actor.encoder
     else:
         obs_modality_specs = [config.observation.modalities]
+        obs_encoder_config = config.observation.encoder
     initialize_obs_utils_with_obs_specs(obs_modality_specs=obs_modality_specs)
-    initialize_default_obs_encoder(obs_encoder_config=config.observation.encoder)
+    initialize_default_obs_encoder(obs_encoder_config=obs_encoder_config)
 
 
 def key_is_obs_modality(key, obs_modality):

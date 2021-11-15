@@ -121,11 +121,15 @@ MODIFIERS.update(image_modifiers)
 @register_mod("cql-image-crop")
 def cql_image_crop_modifier(config):
     config = convert_config_for_images(config)
-    config.observation.encoder.obs_randomizer_class = 'CropRandomizer'  # observation randomizer class
-    config.observation.encoder.obs_randomizer_kwargs.crop_height = 76
-    config.observation.encoder.obs_randomizer_kwargs.crop_width = 76
-    config.observation.encoder.obs_randomizer_kwargs.num_crops = 1
-    config.observation.encoder.obs_randomizer_kwargs.pos_enc = False
+
+    # observation randomizer class - using Crop randomizer
+    config.observation.encoder.rgb.obs_randomizer_class = "CropRandomizer"
+
+    # kwargs for observation randomizers (for the CropRandomizer, this is size and number of crops)
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1
+    config.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False
     return config
 
 

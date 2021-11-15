@@ -7,7 +7,8 @@ functionality.
 from collections import OrderedDict
 
 import torch
-from robomimic.models.obs_nets import ObservationEncoder, CropRandomizer, MLP, VisualCore, ObservationDecoder
+from robomimic.models.obs_nets import ObservationEncoder, MLP, ObservationDecoder
+from robomimic.models.base_nets import CropRandomizer
 import robomimic.utils.tensor_utils as TensorUtils
 
 
@@ -27,8 +28,8 @@ def simple_obs_example():
     # kwargs for VisualCore network
     net_kwargs = {
         "input_shape": camera1_shape,
-        "core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
-        "core_kwargs": {"pretrained": False, "input_coord_conv": False},
+        "backbone_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
+        "backbone_kwargs": {"pretrained": False, "input_coord_conv": False},
         "pool_class": "SpatialSoftmax",  # use spatial softmax to regularize the model output
         "pool_kwargs": {"num_kp": 32}
     }
@@ -110,6 +111,10 @@ def simple_obs_example():
         input_feat_dim=obs_encoder.output_shape()[0],
         decode_shapes=OrderedDict({"action": (7,)})
     )
+
+    # Send to GPU if applicable
+    if torch.cuda.is_available():
+        obs_decoder.cuda()
 
     print(obs_decoder(obs_feature))
 

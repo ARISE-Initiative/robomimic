@@ -292,9 +292,9 @@ class HBC(HierarchicalAlgo):
         for k, v in sg.items():
             if not self.algo_config.latent_subgoal.enabled:
                 # subgoal should only match subgoal shapes if not using latent subgoals
-                assert v.shape[1:] == self.planner.subgoal_shapes[k]
+                assert list(v.shape[1:]) == list(self.planner.subgoal_shapes[k])
             # subgoal shapes should always match actor goal shapes
-            assert v.shape[1:] == self.actor_goal_shapes[k]
+            assert list(v.shape[1:]) == list(self.actor_goal_shapes[k])
         self._current_subgoal = { k : sg[k].clone() for k in sg }
 
     def get_action(self, obs_dict, goal_dict=None):

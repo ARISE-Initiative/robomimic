@@ -63,14 +63,15 @@ def obs_encoder_factory(
         enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
             deepcopy(encoder_kwargs[obs_modality])
 
-        for group in ("core", "obs_randomizer"):
+        for group, cls_mapping in zip(("core", "obs_randomizer"),
+                                      (ObsUtils.OBS_ENCODER_CORES, ObsUtils.OBS_RANDOMIZERS)):
             # Sanity check for kwargs in case they don't exist / are None
             if enc_kwargs.get(f"{group}_kwargs", None) is None:
                 enc_kwargs[f"{group}_kwargs"] = {}
             # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
             if enc_kwargs[f"{group}_class"] is not None:
                 enc_kwargs[f"{group}_kwargs"] = extract_class_init_kwargs_from_dict(
-                    cls=ObsUtils.OBS_ENCODER_CORES[enc_kwargs[f"{group}_class"]],
+                    cls=cls_mapping[enc_kwargs[f"{group}_class"]],
                     dic=enc_kwargs[f"{group}_kwargs"],
                     copy=False,
                 )
@@ -79,7 +80,7 @@ def obs_encoder_factory(
 
         # Add in input shape info
         randomizer = None if enc_kwargs["obs_randomizer_class"] is None else \
-            enc_kwargs["obs_randomizer_class"](**enc_kwargs["obs_randomizer_kwargs"])
+            ObsUtils.OBS_RANDOMIZERS[enc_kwargs["obs_randomizer_class"]](**enc_kwargs["obs_randomizer_kwargs"])
 
         enc.register_obs_key(
             name=k,
