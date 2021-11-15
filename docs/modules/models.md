@@ -41,12 +41,12 @@ from robomimic.models.base_nets import VisualCore, ResNet18Conv, SpatialSoftmax
 
 vis_net = VisualCore(
   input_shape=(3, 224, 224),
-  visual_core_class="ResNet18Conv",  # use ResNet18 as the visualcore backbone
-  visual_core_kwargs={"pretrained": False, "input_coord_conv": False},  # kwargs for the ResNet18Conv class
+  core_class="ResNet18Conv",  # use ResNet18 as the visualcore backbone
+  core_kwargs={"pretrained": False, "input_coord_conv": False},  # kwargs for the ResNet18Conv class
   pool_class="SpatialSoftmax",  # use spatial softmax to regularize the model output
   pool_kwargs={"num_kp": 32},  # kwargs for the SpatialSoftmax --- use 32 keypoints
   flatten=True,  # flatten the output of the spatial softmax layer
-  visual_feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
+  feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
 )
 ```
 
@@ -81,8 +81,8 @@ net_class = "VisualCore"  # this is defined in models/base_nets.py
 # kwargs for VisualCore network
 net_kwargs = {
     "input_shape": camera1_shape,
-    "visual_core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
-    "visual_core_kwargs": {"pretrained": False, "input_coord_conv": False},
+    "core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
+    "core_kwargs": {"pretrained": False, "input_coord_conv": False},
     "pool_class": "SpatialSoftmax",  # use spatial softmax to regularize the model output
     "pool_kwargs": {"num_kp": 32}
 }

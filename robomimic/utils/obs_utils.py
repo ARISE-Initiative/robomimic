@@ -84,7 +84,7 @@ def obs_encoder_kwargs_from_config(obs_encoder_config):
         encoder_kwargs.core_kwargs = dict() if encoder_kwargs.core_kwargs is None else \
             deepcopy(encoder_kwargs.core_kwargs)
 
-        # Make sure feature_dimension does not exist in visual_core_kwargs
+        # Make sure feature_dimension does not exist in core_kwargs
         assert "feature_dimension" not in encoder_kwargs.core_kwargs, "feature_dimension should not exist in obs_encoder core_kwargs!"
 
         encoder_kwargs.obs_randomizer_kwargs = dict() if encoder_kwargs.obs_randomizer_kwargs is None else \

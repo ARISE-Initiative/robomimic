@@ -43,15 +43,21 @@ def get_checkpoint_to_test():
         conf.observation.modalities.obs.rgb = ["agentview_image"]
 
         # set up visual encoders
-        conf.observation.encoder.visual_core = 'ResNet18Conv'
-        conf.observation.encoder.visual_core_kwargs = Config()
-        conf.observation.encoder.obs_randomizer_class = None
-        conf.observation.encoder.visual_feature_dimension = 64
-        conf.observation.encoder.use_spatial_softmax = True
-        conf.observation.encoder.spatial_softmax_kwargs.num_kp = 32
-        conf.observation.encoder.spatial_softmax_kwargs.learnable_temperature = False
-        conf.observation.encoder.spatial_softmax_kwargs.temperature = 1.0
-        conf.observation.encoder.spatial_softmax_kwargs.noise_std = 0.0
+        conf.observation.encoder.rgb.feature_dimension = 64
+        conf.observation.encoder.rgb.core_class = "VisualCore"
+        conf.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
+        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
+        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+
+        # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
+        conf.observation.encoder.rgb.obs_randomizer_class = None
+
+        # kwargs for pooling
+        conf.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+        conf.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+        conf.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+        conf.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+        conf.observation.encoder.rgb.pool_kwargs.noise_std = 0.0
         return conf
 
     config = TestUtils.config_from_modifier(base_config=config, config_modifier=image_modifier)

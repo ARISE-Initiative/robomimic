@@ -27,8 +27,8 @@ def simple_obs_example():
     # kwargs for VisualCore network
     net_kwargs = {
         "input_shape": camera1_shape,
-        "visual_core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
-        "visual_core_kwargs": {"pretrained": False, "input_coord_conv": False},
+        "core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
+        "core_kwargs": {"pretrained": False, "input_coord_conv": False},
         "pool_class": "SpatialSoftmax",  # use spatial softmax to regularize the model output
         "pool_kwargs": {"num_kp": 32}
     }
