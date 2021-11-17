@@ -87,9 +87,9 @@ def modify_config_for_default_low_dim_exp(config):
         else:
             configs_to_set = [config.observation.modalities.obs]
         # set all observations / subgoals to use the correct low-dim modalities
-        for config in configs_to_set:
-            config.low_dim = list(default_low_dim_obs)
-            config.rgb = []
+        for cfg in configs_to_set:
+            cfg.low_dim = list(default_low_dim_obs)
+            cfg.rgb = []
 
     return config
 
@@ -246,8 +246,8 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                     "image_wrist",
                 ]
                 # 240x240 images -> crops should be 216x216
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 216
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 216
             else:
                 # front and wrist camera
                 config.observation.modalities.obs.rgb = [
@@ -255,8 +255,8 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                     "image_wrist",
                 ]
                 # 120x120 images -> crops should be 108x108
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 108
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 108
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 108
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 108
 
         elif hdf5_type in ["rgb", "image_sparse", "image_dense"]:
             if task_name == "transport":
@@ -284,8 +284,8 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                     "robot0_eye_in_hand_image",
                 ]
                 # 240x240 images -> crops should be 216x216
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 216
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 216
 
         elif hdf5_type in ["low_dim", "low_dim_sparse", "low_dim_dense"]:
             if task_name == "transport":
@@ -1002,7 +1002,7 @@ def generate_obs_ablation_configs(
 
     def remove_rand(config):
         with config.observation.values_unlocked():
-            config.observation.encoder.obs_randomizer_class = None
+            config.observation.encoder.rgb.obs_randomizer_class = None
         return config
 
     obs_ablation_json_paths = Config() # use for convenient nested dict
