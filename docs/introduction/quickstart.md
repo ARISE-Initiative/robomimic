@@ -111,3 +111,27 @@ python run_trained_agent.py --agent /path/to/model.pth --n_rollouts 50 --horizon
 
 
 
+## Features Overview
+
+In this section, we briefly summarize some key features and where you should look to learn more about them.
+
+- Datasets supported by robomimic
+- Visualizing datasets
+- Making your own dataset
+- Using filter keys to easily train on subsets of a dataset
+- Running hyperparameter scans easily
+- Using pretrained models in the model zoo
+- Getting familiar with configs
+- Getting familiar with operations over tensor collections
+- Creating your own observation modalities
+- Creating custom network modules
+- Creating your own algorithm
+
+## Supported Datasets
+
+- robomimic
+- robosuite
+- MOMART
+- D4RL
+- RoboTurk Pilot
+
