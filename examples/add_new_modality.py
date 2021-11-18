@@ -108,9 +108,116 @@ class CustomImageEncoderCore(EncoderCore):
         # just a pass through again
         return inputs
 
+
 class CustomImageRandomizer(Randomizer):
-    # TODO: Ajay: Can you add an example of a custom Randomizer here? Read through the forward_in / forward_out but still confused as to what they do
-    pass
+    """
+    A simple example of a randomizer - we make @num_rand copies of each image in the batch,
+    and add some small uniform noise to each. All randomized images will then get passed
+    through the network, resulting in outputs corresponding to each copy - we will pool
+    these outputs across the copies with a simple average.
+    """
+    def __init__(
+        self,
+        input_shape,
+        num_rand=1,
+        noise_scale=0.01,
+    ):
+        """
+        Args:
+            input_shape (tuple, list): shape of input (not including batch dimension)
+            num_rand (int): number of random images to create on each forward pass
+            noise_scale (float): magnitude of uniform noise to apply
+        """
+        super(CustomImageRandomizer, self).__init__()
+
+        assert len(input_shape) == 3 # (C, H, W)
+
+        self.input_shape = input_shape
+        self.num_rand = num_rand
+        self.noise_scale = noise_scale
+
+    def output_shape_in(self, input_shape=None):
+        """
+        Function to compute output shape from inputs to this module. Corresponds to
+        the @forward_in operation, where raw inputs (usually observation modalities)
+        are passed in.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+
+        # @forward_in takes (B, C, H, W) -> (B, N, C, H, W) -> (B * N, C, H, W).
+        # since only the batch dimension changes, and @input_shape does not include batch
+        # dimension, we indicate that the non-batch dimensions don't change
+        return list(input_shape)
+
+    def output_shape_out(self, input_shape=None):
+        """
+        Function to compute output shape from inputs to this module. Corresponds to
+        the @forward_out operation, where processed inputs (usually encoded observation
+        modalities) are passed in.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        
+        # since the @forward_out operation splits [B * N, ...] -> [B, N, ...]
+        # and then pools to result in [B, ...], only the batch dimension changes,
+        # and so the other dimensions retain their shape.
+        return list(input_shape)
+
+    def forward_in(self, inputs):
+        """
+        Make N copies of each image, add random noise to each, and move
+        copies into batch dimension to ensure compatibility with rest
+        of network.
+        """
+
+        # note the use of @self.training to ensure no randomization at test-time
+        if self.training:
+
+            # make N copies of the images [B, C, H, W] -> [B, N, C, H, W]
+            out = TensorUtils.unsqueeze_expand_at(inputs, size=self.num_rand, dim=1)
+
+            # add random noise to each copy
+            out = out + self.noise_scale * (2. * torch.rand_like(out) - 1.)
+
+            # reshape [B, N, C, H, W] -> [B * N, C, H, W] to ensure network forward pass is unchanged
+            return TensorUtils.join_dimensions(out, 0, 1)
+        return inputs
+
+    def forward_out(self, inputs):
+        """
+        Pools outputs across the copies by averaging them. It does this by splitting
+        the outputs from shape [B * N, ...] -> [B, N, ...] and then averaging across N
+        to result in shape [B, ...] to make sure the network output is consistent with
+        what would have happened if there were no randomization.
+        """
+
+        # note the use of @self.training to ensure no randomization at test-time
+        if self.training:
+            batch_size = (inputs.shape[0] // self.num_rand)
+            out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0, 
+                target_dims=(batch_size, self.num_rand))
+            return out.mean(dim=1)
+        return inputs
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        msg = header + "(input_shape={}, num_rand={}, noise_scale={})".format(
+            self.input_shape, self.num_rand, self.noise_scale)
+        return msg
 
 
 # Now, we can directly reference the classes in our config!
