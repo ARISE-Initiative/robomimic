@@ -10,6 +10,7 @@ import torch
 from robomimic.models.obs_nets import ObservationEncoder, MLP, ObservationDecoder
 from robomimic.models.base_nets import CropRandomizer
 import robomimic.utils.tensor_utils as TensorUtils
+import robomimic.utils.obs_utils as ObsUtils
 
 
 def simple_obs_example():
@@ -52,7 +53,7 @@ def simple_obs_example():
 
     # the cropper will alter the input shape
     net_kwargs["input_shape"] = image_randomizer.output_shape_in(camera2_shape)
-    net = eval(net_class)(**net_kwargs)
+    net = ObsUtils.OBS_ENCODER_CORES[net_class](**net_kwargs)
 
     obs_encoder.register_obs_key(
         name="camera2",

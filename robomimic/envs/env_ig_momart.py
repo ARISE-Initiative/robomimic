@@ -312,7 +312,7 @@ class EnvGibsonMOMART(EB.EnvBase):
 
     def get_state(self):
         """Get iG flattened state"""
-        return PBU.WorldSaver(exclude_body_ids=self.exclude_body_ids).serialize()
+        return {"states": PBU.WorldSaver(exclude_body_ids=self.exclude_body_ids).serialize()}
 
     def get_reward(self):
         return self.env.task.get_reward(self.env)[0]
@@ -393,7 +393,7 @@ class EnvGibsonMOMART(EB.EnvBase):
     @property
     def type(self):
         """Environment type"""
-        return self.IGIBSON_TYPE
+        return EB.EnvType.IG_MOMART_TYPE
 
     def serialize(self):
         """Serialize to dictionary"""
