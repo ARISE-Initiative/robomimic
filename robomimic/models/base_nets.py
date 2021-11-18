@@ -905,10 +905,14 @@ class FeatureAggregator(Module):
 Encoder Core Networks (Abstract class)
 ================================================
 """
-class EncoderCore:
+class EncoderCore(Module):
     """
     Abstract class used to categorize all cores used to encode observations
     """
+    def __init__(self, input_shape):
+        self.input_shape = input_shape
+        super(EncoderCore, self).__init__()
+
     def __init_subclass__(cls, **kwargs):
         """
         Hook method to automatically register all valid subclasses so we can keep track of valid observation encoders
@@ -948,8 +952,7 @@ class VisualCore(ConvBase, EncoderCore):
             feature_dimension (int): if not None, add a Linear layer to
                 project output into a desired feature dimension
         """
-        super(VisualCore, self).__init__()
-        self.input_shape = input_shape
+        super(VisualCore, self).__init__(input_shape=input_shape)
         self.flatten = flatten
 
         # extract only relevant kwargs for this specific backbone
@@ -1078,8 +1081,7 @@ class ScanCore(ConvBase, EncoderCore):
             feature_dimension (int): if not None, add a Linear layer to
                 project output into a desired feature dimension (note: flatten must be set to True!)
         """
-        super(ScanCore, self).__init__()
-        self.input_shape = input_shape
+        super(ScanCore, self).__init__(input_shape=input_shape)
         self.flatten = flatten
         self.feature_dimension = feature_dimension
 
