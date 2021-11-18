@@ -266,9 +266,10 @@ class ObservationEncoder(Module):
         header = '{}'.format(str(self.__class__.__name__))
         msg = ''
         for k in self.obs_shapes:
-            msg += textwrap.indent('\nModality(\n', ' ' * 4)
+            msg += textwrap.indent('\nKey(\n', ' ' * 4)
             indent = ' ' * 8
             msg += textwrap.indent("name={}\nshape={}\n".format(k, self.obs_shapes[k]), indent)
+            msg += textwrap.indent("modality={}\n".format(ObsUtils.OBS_KEYS_TO_MODALITIES[k]), indent)
             msg += textwrap.indent("randomizer={}\n".format(self.obs_randomizers[k]), indent)
             msg += textwrap.indent("net={}\n".format(self.obs_nets[k]), indent)
             msg += textwrap.indent("sharing_from={}\n".format(self.obs_share_mods[k]), indent)

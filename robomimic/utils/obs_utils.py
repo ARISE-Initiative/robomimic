@@ -36,6 +36,11 @@ OBS_MODALITY_CLASSES = {}
 
 # DO NOT MODIFY THIS
 # This global dict stores mapping from observation encoder / randomizer network name to class.
+# We keep track of these registries to enable automated class inference at runtime, allowing
+# users to simply extend our base encoder / randomizer class and refer to that class in string form
+# in their config, without having to manually register their class internally.
+# This also future-proofs us for any additional encoder / randomizer classes we would
+# like to add ourselves.
 OBS_ENCODER_CORES = {"None": None}          # Include default None
 OBS_RANDOMIZERS = {"None": None}            # Include default None
 
