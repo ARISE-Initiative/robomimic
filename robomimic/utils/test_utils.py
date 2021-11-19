@@ -64,7 +64,7 @@ def example_momart_dataset_path():
     from a server if it does not exist.
     """
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
-    dataset_path = os.path.join(dataset_folder, "momart_test.hdf5")
+    dataset_path = os.path.join(dataset_folder, "test_momart.hdf5")
     if not os.path.exists(dataset_path):
         user_response = input("\nWARNING: momart test hdf5 does not exist! We will download sample dataset. "
                               "This will take 1.6GB space. Proceed? y/n\n")
@@ -74,7 +74,7 @@ def example_momart_dataset_path():
 
         os.makedirs(dataset_folder, exist_ok=True)
         FileUtils.download_url(
-            url="http://downloads.cs.stanford.edu/downloads/rt_mm/sample/table_setup_from_dishwasher_sample.hdf5",
+            url="http://downloads.cs.stanford.edu/downloads/rt_mm/sample/test_momart.hdf5",
             download_dir=dataset_folder,
         )
     return dataset_path
