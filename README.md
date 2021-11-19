@@ -15,8 +15,8 @@
 
 -------
 ## Latest Updates
-[11/23/2021] **v0.2.0**: TODO: Josiah (summary of release)
-[08/09/2021] **v0.1.0**: Initial code and paper release
+- [11/23/2021] **v0.2.0**: TODO: Josiah (summary of release)
+- [08/09/2021] **v0.1.0**: Initial code and paper release
 
 -------
 
