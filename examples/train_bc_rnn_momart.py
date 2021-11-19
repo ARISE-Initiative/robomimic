@@ -30,7 +30,7 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
     Construct config for training.
 
     Args:
-        dataset_path (str): path to hdf5 dataset. Pass None to use a small default dataset.
+        dataset_path (str or None): path to hdf5 dataset. Pass None to use a small default dataset.
         output_dir (str): path to output folder, where logs, model checkpoints, and videos
             will be written. If it doesn't exist, the directory will be created. Pass
             None to use a default directory in /tmp.
@@ -38,12 +38,12 @@ def get_config(dataset_path=None, output_dir=None, debug=False):
             run quickly.
     """
     # Get task name
-    task = dataset_path.split(".")[-2].split("/")[-1]
+    task = "sample" if dataset_path is None else dataset_path.split(".")[-2].split("/")[-1]
 
     # handle args
     if dataset_path is None:
         # small dataset with a handful of trajectories
-        dataset_path = TestUtils.example_dataset_path()
+        dataset_path = TestUtils.example_momart_dataset_path()
 
     if output_dir is None:
         # default output directory created in /tmp
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        required=True,
+        default=None,
         help="absolute path to input hdf5 dataset.",
     )
 
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Get task name
-    task = args.dataset.split(".")[-2].split("/")[-1]
+    task = "sample" if args.dataset is None else args.dataset.split(".")[-2].split("/")[-1]
 
     # config for training
     config = get_config(dataset_path=args.dataset, output_dir=args.output, debug=args.debug)
