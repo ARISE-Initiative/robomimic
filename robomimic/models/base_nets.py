@@ -925,7 +925,7 @@ class EncoderCore(Module):
 Visual Core Networks (Backbone + Pool)
 ================================================
 """
-class VisualCore(ConvBase, EncoderCore):
+class VisualCore(EncoderCore, ConvBase):
     """
     A network block that combines a visual backbone network with optional pooling
     and linear layers.
@@ -1050,7 +1050,7 @@ class VisualCore(ConvBase, EncoderCore):
 Scan Core Networks (Conv1D Sequential + Pool)
 ================================================
 """
-class ScanCore(ConvBase, EncoderCore):
+class ScanCore(EncoderCore, ConvBase):
     """
     A network block that combines a Conv1D backbone network with optional pooling
     and linear layers.

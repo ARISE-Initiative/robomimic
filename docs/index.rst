@@ -26,6 +26,7 @@ Welcome to robomimic's documentation!
 
    modules/overview
    modules/dataset
+   modules/observations
    modules/algorithms
    modules/models
    modules/configs
