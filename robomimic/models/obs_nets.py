@@ -68,6 +68,8 @@ def obs_encoder_factory(
             # Sanity check for kwargs in case they don't exist / are None
             if enc_kwargs.get(f"{group}_kwargs", None) is None:
                 enc_kwargs[f"{group}_kwargs"] = {}
+            # Add in input shape info
+            enc_kwargs[f"{group}_kwargs"]["input_shape"] = obs_shape
             # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
             if enc_kwargs[f"{group}_class"] is not None:
                 enc_kwargs[f"{group}_kwargs"] = extract_class_init_kwargs_from_dict(
@@ -75,8 +77,6 @@ def obs_encoder_factory(
                     dic=enc_kwargs[f"{group}_kwargs"],
                     copy=False,
                 )
-            # Add in input shape info
-            enc_kwargs[f"{group}_kwargs"]["input_shape"] = obs_shape
 
         # Add in input shape info
         randomizer = None if enc_kwargs["obs_randomizer_class"] is None else \

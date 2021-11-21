@@ -142,6 +142,9 @@ class Algo(object):
         self.obs_shapes = OrderedDict()
         self.goal_shapes = OrderedDict()
         self.subgoal_shapes = OrderedDict()
+
+        # We check across all modality groups (obs, goal, subgoal), and see if the inputted observation key exists
+        # across all modalitie specified in the config. If so, we store its corresponding shape internally
         for k in obs_key_shapes:
             if "obs" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.obs.values() for obs_key in modality]:
                 self.obs_shapes[k] = obs_key_shapes[k]

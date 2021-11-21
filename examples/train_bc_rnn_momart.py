@@ -21,6 +21,7 @@ import argparse
 import robomimic
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.test_utils as TestUtils
+import robomimic.utils.macros as Macros
 from robomimic.config import config_factory
 from robomimic.scripts.train import train
 
@@ -237,6 +238,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # Turn debug mode on possibly
+    if args.debug:
+        Macros.DEBUG = True
 
     # Get task name
     task = "sample" if args.dataset is None else args.dataset.split(".")[-2].split("/")[-1]

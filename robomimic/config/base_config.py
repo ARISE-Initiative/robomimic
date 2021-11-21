@@ -276,9 +276,19 @@ class BaseConfig(Config):
 
     @property
     def all_obs_keys(self):
+        """
+        This grabs the union of observation keys over all modalities (e.g.: low_dim, rgb, depth, etc.) and over all
+        modality groups (e.g: obs, goal, subgoal, etc...)
+
+        Returns:
+            n-array: all observation keys used for this model
+        """
         # pool all modalities
         return sorted(tuple(set([
-            obs_key for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values()]
+            obs_key for group in [
+                self.observation.modalities.obs.values(),
+                self.observation.modalities.goal.values()
+            ]
             for modality in group
             for obs_key in modality
          ])))

@@ -21,6 +21,7 @@ import argparse
 import robomimic
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.test_utils as TestUtils
+import robomimic.utils.macros as Macros
 from robomimic.config import config_factory
 from robomimic.scripts.train import train
 
@@ -252,6 +253,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # Turn debug mode on possibly
+    if args.debug:
+        Macros.DEBUG = True
 
     # config for training
     config = get_config(dataset_path=args.dataset, output_dir=args.output, debug=args.debug)

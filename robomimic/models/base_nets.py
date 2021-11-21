@@ -955,10 +955,11 @@ class VisualCore(EncoderCore, ConvBase):
         super(VisualCore, self).__init__(input_shape=input_shape)
         self.flatten = flatten
 
-        # extract only relevant kwargs for this specific backbone
-        backbone_kwargs = extract_class_init_kwargs_from_dict(cls=eval(backbone_class), dic=backbone_kwargs, copy=True)
         # add input channel dimension to visual core inputs
         backbone_kwargs["input_channel"] = input_shape[0]
+
+        # extract only relevant kwargs for this specific backbone
+        backbone_kwargs = extract_class_init_kwargs_from_dict(cls=eval(backbone_class), dic=backbone_kwargs, copy=True)
 
         # visual backbone
         assert isinstance(backbone_class, str)
@@ -976,8 +977,8 @@ class VisualCore(EncoderCore, ConvBase):
             if pool_kwargs is None:
                 pool_kwargs = dict()
             # extract only relevant kwargs for this specific backbone
-            pool_kwargs = extract_class_init_kwargs_from_dict(cls=eval(pool_class), dic=pool_kwargs, copy=True)
             pool_kwargs["input_shape"] = feat_shape
+            pool_kwargs = extract_class_init_kwargs_from_dict(cls=eval(pool_class), dic=pool_kwargs, copy=True)
             self.pool = eval(pool_class)(**pool_kwargs)
             assert isinstance(self.pool, Module)
 

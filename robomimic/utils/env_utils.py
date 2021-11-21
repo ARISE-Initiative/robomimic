@@ -181,9 +181,6 @@ def create_env_from_metadata(
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
 
-    # # TODO: Remove once dataset is cleaned up
-    # env_kwargs["ig_config"] = env_meta["ig_config"]
-
     env = create_env(
         env_type=env_type,
         env_name=env_name,  
