@@ -52,7 +52,7 @@ from robomimic import DATASET_REGISTRY
 
 ALL_TASKS = ["lift", "can", "square", "transport", "tool_hang", "lift_real", "can_real", "tool_hang_real"]
 ALL_DATASET_TYPES = ["ph", "mh", "mg", "paired"]
-ALL_HDF5_TYPES = ["raw", "low_dim", "rgb", "low_dim_sparse", "low_dim_dense", "image_sparse", "image_dense"]
+ALL_HDF5_TYPES = ["raw", "low_dim", "image", "low_dim_sparse", "low_dim_dense", "image_sparse", "image_dense"]
 
 
 def make_dataset_dirs(base_dir):

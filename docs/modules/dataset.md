@@ -11,7 +11,7 @@ dataset = SequenceDataset(
     obs_keys=(                      # observations we want to appear in batches
         "robot0_eef_pos", 
         "robot0_eef_quat", 
-        "rgb", 
+        "image", 
         "object",
     ),
     dataset_keys=(                  # can optionally specify more keys here if they should appear in batches

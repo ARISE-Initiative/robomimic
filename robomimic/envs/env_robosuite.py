@@ -184,7 +184,7 @@ class EnvRobosuite(EB.EnvBase):
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
                 ret[k] = di[k][::-1]
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_modality="rgb")
+                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
 
         # "object" key contains object information
         ret["object"] = np.array(di["object-state"])

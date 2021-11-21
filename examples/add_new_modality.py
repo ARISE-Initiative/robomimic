@@ -10,7 +10,8 @@ import torch
 import robomimic
 from robomimic.models import EncoderCore, Randomizer
 from robomimic.utils.obs_utils import Modality, ScanModality
-from robomimic.config.base_config import BaseConfig
+from robomimic.config.bc_config import BCConfig
+import robomimic.utils.tensor_utils as TensorUtils
 
 
 # Let's create a new modality to handle observation modalities, which will be interpreted as
@@ -221,8 +222,16 @@ class CustomImageRandomizer(Randomizer):
 
 
 # Now, we can directly reference the classes in our config!
-config = BaseConfig()
+config = BCConfig()
 config.observation.encoder.custom_image.core_class = "CustomImageEncoderCore"       # Custom class, in string form
 config.observation.encoder.custom_image.core_kwargs.welcome_str = "hi there!"       # Any custom arguments, of any primitive type that is json-able
 config.observation.encoder.custom_image.obs_randomizer_class = "CustomImageRandomizer"
-config.observation.encoder.custom_image.obs_randomizer_kwargs.XXX = "todo"      # todo Ajay
+config.observation.encoder.custom_image.obs_randomizer_kwargs.num_rand = 3
+config.observation.encoder.custom_image.obs_randomizer_kwargs.noise_scale = 0.05
+
+# We can also directly use this new modality and associate dataset / observation keys with it!
+config.observation.modalities.obs.custom_image = ["my_image1", "my_image2"]
+config.observation.modalities.goal.custom_image = ["my_image2", "my_image3"]
+
+# Let's view our config
+print(config)

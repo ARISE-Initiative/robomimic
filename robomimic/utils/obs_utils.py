@@ -23,7 +23,7 @@ OBS_MODALITIES_TO_KEYS = None
 # DO NOT MODIFY THIS!
 # This keeps track of observation types (modalities) - and is populated on call to @initialize_obs_utils_with_obs_specs.
 # This will be a dictionary that maps observation keys to their corresponding observation modality
-# (e.g. low_dim, image)
+# (e.g. low_dim, rgb)
 OBS_KEYS_TO_MODALITIES = None
 
 # DO NOT MODIFY THIS
@@ -61,6 +61,13 @@ def register_randomizer(target_class):
 
 
 class ObservationKeyToModalityDict(dict):
+    """
+    Custom dictionary class with the sole additional purpose of automatically registering new "keys" at runtime
+    without breaking. This is mainly for backwards compatibility, where certain keys such as "latent", "actions", etc.
+    are used automatically by certain models (e.g.: VAEs) but were never specified by the user externally in their
+    config. Thus, this dictionary will automatically handle those keys by implicitly associating them with the low_dim
+    modality.
+    """
     def __getitem__(self, item):
         # If a key doesn't already exist, warn the user and add default mapping
         if item not in self.keys():

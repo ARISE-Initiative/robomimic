@@ -238,7 +238,7 @@ class EnvGibsonMOMART(EB.EnvBase):
                 ret[k] = di[k]
                 # ret[k] = np.transpose(di[k], (2, 0, 1))
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_modality="rgb")
+                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_key=k)
 
             # Depth images
             elif "depth" in k:
@@ -246,13 +246,13 @@ class EnvGibsonMOMART(EB.EnvBase):
                 # Values can be corrupted (negative or > 1.0, so we clip values)
                 ret[k] = np.clip(di[k], 0.0, 1.0)
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k])[..., None], obs_modality="depth")
+                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k])[..., None], obs_key=k)
 
             # Segmentation Images
             elif "seg" in k:
                 ret[k] = di[k][..., None]
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_modality="seg")
+                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_key=k)
 
             # Scans
             elif "scan" in k:

@@ -70,6 +70,7 @@ class GLConfig(BaseConfig):
         self.observation.modalities.subgoal.rgb = []                      # specify rgb image subgoal observations for agent to predict
         self.observation.modalities.subgoal.depth = []
         self.observation.modalities.subgoal.scan = []
+        self.observation.modalities.subgoal.do_not_lock_keys()
 
     @property
     def all_obs_keys(self):

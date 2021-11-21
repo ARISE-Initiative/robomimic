@@ -77,7 +77,7 @@ The complete documentation of `robomimic.utils.tensor_utils.py` is available [he
     }
 
     ```
-    The function will create a mapping between observation names such as `'agentview_image'` and observation modalities such as `'rgb'`. The registry is stored in `OBS_MODALITIES_TO_KEYS` and can be accessed globally. Utility functions such as `key_is_image()` rely on this global registry to determine observation modalities.
+    The function will create a mapping between observation names such as `'agentview_image'` and observation modalities such as `'rgb'`. The registry is stored in `OBS_MODALITIES_TO_KEYS` and can be accessed globally. Utility functions such as `key_is_obs_modality()` rely on this global registry to determine observation modalities.
 
 - **process_obs(obs_dict)**
     

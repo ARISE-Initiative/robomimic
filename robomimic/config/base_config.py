@@ -218,6 +218,8 @@ class BaseConfig(Config):
         self.observation.modalities.goal.rgb = []             # specify rgb image goal observations to condition agent on
         self.observation.modalities.goal.depth = []
         self.observation.modalities.goal.scan = []
+        self.observation.modalities.obs.do_not_lock_keys()
+        self.observation.modalities.goal.do_not_lock_keys()
 
         # observation encoder architectures (per obs modality)
         # This applies to all networks that take observation dicts as input
@@ -233,7 +235,7 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs = Config()       # No kwargs by default
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
-        # =============== Image default encoder (ResNet backbone + linear layer output) ===============
+        # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
         self.observation.encoder.rgb.feature_dimension = 64
         self.observation.encoder.rgb.core_class = "VisualCore"
         self.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
@@ -241,7 +243,7 @@ class BaseConfig(Config):
         self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
         self.observation.encoder.rgb.core_kwargs.backbone_kwargs.do_not_lock_keys()
 
-        # Image: Obs Randomizer settings
+        # RGB: Obs Randomizer settings
         self.observation.encoder.rgb.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
         self.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76       # Default arguments for "CropRandomizer"
         self.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76        # Default arguments for "CropRandomizer"
@@ -249,13 +251,16 @@ class BaseConfig(Config):
         self.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
         self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
-        # Image: Pooling settings
+        # RGB: Pooling settings
         self.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
         self.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
         self.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
         self.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
         self.observation.encoder.rgb.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
         self.observation.encoder.rgb.pool_kwargs.do_not_lock_keys()
+
+        # Allow for other custom modalities to be specified
+        self.observation.encoder.do_not_lock_keys()
 
         # =============== Depth default encoder (same as rgb) ===============
         self.observation.encoder.depth = deepcopy(self.observation.encoder.rgb)

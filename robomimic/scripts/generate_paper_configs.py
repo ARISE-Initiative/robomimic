@@ -251,14 +251,14 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
             else:
                 # front and wrist camera
                 config.observation.modalities.obs.rgb = [
-                    "rgb",
+                    "image",
                     "image_wrist",
                 ]
                 # 120x120 images -> crops should be 108x108
                 config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 108
                 config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 108
 
-        elif hdf5_type in ["rgb", "image_sparse", "image_dense"]:
+        elif hdf5_type in ["image", "image_sparse", "image_dense"]:
             if task_name == "transport":
                 # robot proprioception per arm
                 config.observation.modalities.obs.low_dim = [
@@ -865,11 +865,11 @@ def generate_subopt_configs(
         # only generate configs for multi-human data subsets
         for dataset_type in ["mh"]:
             # only low-dim / image
-            for hdf5_type in ["low_dim", "rgb"]:
+            for hdf5_type in ["low_dim", "image"]:
 
                 # get list of algorithms to generate configs for, for this hdf5 dataset
                 algos_to_generate = ["bc", "bc_rnn", "bcq", "cql", "hbc", "iris"]
-                if hdf5_type == "rgb":
+                if hdf5_type == "image":
                     # no hbc or iris for image runs
                     algos_to_generate = algos_to_generate[:-2]
 
@@ -924,7 +924,7 @@ def generate_dataset_size_configs(
     size_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["lift", "can", "square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "rgb"]:
+            for hdf5_type in ["low_dim", "image"]:
 
                 # only bc-rnn
                 algo_name = "bc_rnn"
@@ -1008,7 +1008,7 @@ def generate_obs_ablation_configs(
     obs_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "rgb"]:
+            for hdf5_type in ["low_dim", "image"]:
 
                 # observation modifiers to apply
                 if hdf5_type == "low_dim":
@@ -1101,7 +1101,7 @@ def generate_hyper_ablation_configs(
     hyper_ablation_json_paths = Config() # use for convenient nested dict
     for task in ["square", "transport"]:
         for dataset_type in ["ph", "mh"]:
-            for hdf5_type in ["low_dim", "rgb"]:
+            for hdf5_type in ["low_dim", "image"]:
 
                 # observation modifiers to apply
                 if hdf5_type == "low_dim":
