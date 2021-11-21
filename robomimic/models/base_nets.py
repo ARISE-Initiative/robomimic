@@ -916,6 +916,14 @@ class EncoderCore(Module):
     def __init_subclass__(cls, **kwargs):
         """
         Hook method to automatically register all valid subclasses so we can keep track of valid observation encoders
+        in a global dict.
+
+        This global dict stores mapping from observation encoder network name to class.
+        We keep track of these registries to enable automated class inference at runtime, allowing
+        users to simply extend our base encoder class and refer to that class in string form
+        in their config, without having to manually register their class internally.
+        This also future-proofs us for any additional encoder classes we would
+        like to add ourselves.
         """
         ObsUtils.register_encoder_core(cls)
 
@@ -1187,6 +1195,14 @@ class Randomizer(Module):
     def __init_subclass__(cls, **kwargs):
         """
         Hook method to automatically register all valid subclasses so we can keep track of valid observation randomizers
+        in a global dict.
+
+        This global dict stores mapping from observation randomizer network name to class.
+        We keep track of these registries to enable automated class inference at runtime, allowing
+        users to simply extend our base randomizer class and refer to that class in string form
+        in their config, without having to manually register their class internally.
+        This also future-proofs us for any additional randomizer classes we would
+        like to add ourselves.
         """
         ObsUtils.register_randomizer(cls)
 
