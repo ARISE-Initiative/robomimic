@@ -63,18 +63,18 @@ def obs_encoder_factory(
         enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
             deepcopy(encoder_kwargs[obs_modality])
 
-        for group, cls_mapping in zip(("core", "obs_randomizer"),
+        for obs_module, cls_mapping in zip(("core", "obs_randomizer"),
                                       (ObsUtils.OBS_ENCODER_CORES, ObsUtils.OBS_RANDOMIZERS)):
             # Sanity check for kwargs in case they don't exist / are None
-            if enc_kwargs.get(f"{group}_kwargs", None) is None:
-                enc_kwargs[f"{group}_kwargs"] = {}
+            if enc_kwargs.get(f"{obs_module}_kwargs", None) is None:
+                enc_kwargs[f"{obs_module}_kwargs"] = {}
             # Add in input shape info
-            enc_kwargs[f"{group}_kwargs"]["input_shape"] = obs_shape
+            enc_kwargs[f"{obs_module}_kwargs"]["input_shape"] = obs_shape
             # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
-            if enc_kwargs[f"{group}_class"] is not None:
-                enc_kwargs[f"{group}_kwargs"] = extract_class_init_kwargs_from_dict(
-                    cls=cls_mapping[enc_kwargs[f"{group}_class"]],
-                    dic=enc_kwargs[f"{group}_kwargs"],
+            if enc_kwargs[f"{obs_module}_class"] is not None:
+                enc_kwargs[f"{obs_module}_kwargs"] = extract_class_init_kwargs_from_dict(
+                    cls=cls_mapping[enc_kwargs[f"{obs_module}_class"]],
+                    dic=enc_kwargs[f"{obs_module}_kwargs"],
                     copy=False,
                 )
 
