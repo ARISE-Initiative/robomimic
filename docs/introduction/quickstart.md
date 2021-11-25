@@ -116,22 +116,40 @@ python run_trained_agent.py --agent /path/to/model.pth --n_rollouts 50 --horizon
 In this section, we briefly summarize some key features and where you should look to learn more about them.
 
 - Datasets supported by robomimic
+  - See a list of supported datasets [here](./quickstart.html#supported-datasets)
 - Visualizing datasets
+  - Learn how to visualize dataset trajectories [here](./datasets.html#view-dataset-structure-and-videos)
+- Reproducing paper experiments
+  - Easily reproduce experiments from the following papers
+    - robomimic: [here](./results.html)
+    - MOMART: TODO
 - Making your own dataset
+  - Learn how to make your own collected dataset compatible with this repository [here](./datasets.html#dataset-structure)
+  - Note that all datasets collected through robosuite should also be readily compatible (see [here](./datasets.html#converting-robosuite-hdf5-datasets))
 - Using filter keys to easily train on subsets of a dataset
+  - See [this section](./datasets.html#filter-keys-and-train-valid-splits) on how to use filter keys
 - Running hyperparameter scans easily
+  - See [this guide](./advanced.html#using-the-hyperparameter-helper-to-launch-runs) on running hyperparameter scans
 - Using pretrained models in the model zoo
+  - See [this link](./model_zoo.html) to download and use pretrained models
 - Getting familiar with configs
+  - Learn about how configs work [here](../modules/configs.html)
 - Getting familiar with operations over tensor collections
+  - Learn about using useful tensor utilities [here](../modules/utils.html#tensorutils)
 - Creating your own observation modalities
+  - Learn how to make your own observation modalities and process them with appropriate network architectures here
+  - TODO: fill in link above
 - Creating custom network modules
+  - Learn how to create custom networks here
+  - TODO: fill in link above
 - Creating your own algorithm
+  - Learn how to implement your own learning algorithm [here](../modules/algorithms.html#building-your-own-algorithm)
 
 ## Supported Datasets
 
-- robomimic
-- robosuite
-- MOMART
-- D4RL
-- RoboTurk Pilot
+- [robomimic](./results.html#downloading-released-datasets)
+- [robosuite](./datasets.html#converting-robosuite-hdf5-datasets)
+- MOMART (TODO: link)
+- [D4RL](./results.html#d4rl)
+- [RoboTurk Pilot](./datasets.html#roboturk-pilot-datasets)
 
