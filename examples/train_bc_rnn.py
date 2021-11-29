@@ -316,11 +316,11 @@ def momart_hyperparameters(config):
 # Valid dataset types to use
 DATASET_TYPES = {
     "robosuite": {
-        "default_dataset": TestUtils.example_dataset_path(),
+        "default_dataset_func": TestUtils.example_dataset_path,
         "hp": robosuite_hyperparameters,
     },
     "momart": {
-        "default_dataset": TestUtils.example_momart_dataset_path(),
+        "default_dataset_func": TestUtils.example_momart_dataset_path,
         "hp": momart_hyperparameters,
     },
 }
@@ -345,7 +345,7 @@ def get_config(dataset_type="robosuite", dataset_path=None, output_dir=None, deb
     # handle args
     if dataset_path is None:
         # small dataset with a handful of trajectories
-        dataset_path = DATASET_TYPES[dataset_type]["default_dataset"]
+        dataset_path = DATASET_TYPES[dataset_type]["default_dataset_func"]()
 
     if output_dir is None:
         # default output directory created in /tmp
