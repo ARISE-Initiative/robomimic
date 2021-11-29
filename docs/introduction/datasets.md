@@ -169,6 +169,12 @@ For more details on how the released `demo.hdf5` dataset files were used to gene
 
 
 
+## MOMART Datasets
+
+This repository is fully compatible with [MOMART](https://sites.google.com/view/il-for-mm/home) datasets, a large collection of long-horizon, multi-stage simulated kitchen tasks executed by a mobile manipulator robot. See [this link](https://sites.google.com/view/il-for-mm/datasets) for a breakdown of the MOMART dataset structure, guide on downloading MOMART datasets, and running experiments using the datasets.
+
+
+
 ## D4RL Datasets
 
 This repository is fully compatible with most [D4RL](https://github.com/rail-berkeley/d4rl) datasets. See [this link](./results.html#d4rl) for a guide on downloading D4RL datasets and running D4RL experiments.

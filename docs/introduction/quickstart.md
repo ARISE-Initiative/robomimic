@@ -122,7 +122,7 @@ In this section, we briefly summarize some key features and where you should loo
 - Reproducing paper experiments
   - Easily reproduce experiments from the following papers
     - robomimic: [here](./results.html)
-    - MOMART: TODO
+    - MOMART: [here](https://sites.google.com/view/il-for-mm/datasets)
 - Making your own dataset
   - Learn how to make your own collected dataset compatible with this repository [here](./datasets.html#dataset-structure)
   - Note that all datasets collected through robosuite should also be readily compatible (see [here](./datasets.html#converting-robosuite-hdf5-datasets))
@@ -137,8 +137,7 @@ In this section, we briefly summarize some key features and where you should loo
 - Getting familiar with operations over tensor collections
   - Learn about using useful tensor utilities [here](../modules/utils.html#tensorutils)
 - Creating your own observation modalities
-  - Learn how to make your own observation modalities and process them with appropriate network architectures here
-  - TODO: fill in link above
+  - Learn how to make your own observation modalities and process them with custom network architectures [here](../modules/observations.html)
 - Creating custom network modules
   - Learn how to create custom networks here
   - TODO: fill in link above
@@ -149,7 +148,7 @@ In this section, we briefly summarize some key features and where you should loo
 
 - [robomimic](./results.html#downloading-released-datasets)
 - [robosuite](./datasets.html#converting-robosuite-hdf5-datasets)
-- MOMART (TODO: link)
+- [MOMART](./datasets.html#momart-datasets)
 - [D4RL](./results.html#d4rl)
 - [RoboTurk Pilot](./datasets.html#roboturk-pilot-datasets)
 
