@@ -138,9 +138,6 @@ In this section, we briefly summarize some key features and where you should loo
   - Learn about using useful tensor utilities [here](../modules/utils.html#tensorutils)
 - Creating your own observation modalities
   - Learn how to make your own observation modalities and process them with custom network architectures [here](../modules/observations.html)
-- Creating custom network modules
-  - Learn how to create custom networks here
-  - TODO: fill in link above
 - Creating your own algorithm
   - Learn how to implement your own learning algorithm [here](../modules/algorithms.html#building-your-own-algorithm)
 
