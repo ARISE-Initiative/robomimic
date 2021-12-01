@@ -225,7 +225,6 @@ class BaseConfig(Config):
         # This applies to all networks that take observation dicts as input
 
         # =============== Low Dim default encoder (no encoder) ===============
-        self.observation.encoder.low_dim.feature_dimension = None
         self.observation.encoder.low_dim.core_class = None
         self.observation.encoder.low_dim.core_kwargs = Config()                 # No kwargs by default
         self.observation.encoder.low_dim.core_kwargs.do_not_lock_keys()
@@ -236,12 +235,20 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
         # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
-        self.observation.encoder.rgb.feature_dimension = 64
         self.observation.encoder.rgb.core_class = "VisualCore"
+        self.observation.encoder.rgb.core_kwargs.feature_dimension = 64
+        self.observation.encoder.rgb.core_kwargs.flatten = True
         self.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
         self.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False
         self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
         self.observation.encoder.rgb.core_kwargs.backbone_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.output_variance = False          # Default arguments for "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.do_not_lock_keys()
 
         # RGB: Obs Randomizer settings
         self.observation.encoder.rgb.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
@@ -251,14 +258,6 @@ class BaseConfig(Config):
         self.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
         self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
-        # RGB: Pooling settings
-        self.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-        self.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.pool_kwargs.do_not_lock_keys()
-
         # Allow for other custom modalities to be specified
         self.observation.encoder.do_not_lock_keys()
 
@@ -267,9 +266,12 @@ class BaseConfig(Config):
 
         # =============== Scan default encoder (Conv1d backbone + linear layer output) ===============
         self.observation.encoder.scan = deepcopy(self.observation.encoder.rgb)
+        self.observation.encoder.scan.core_kwargs.pop("backbone_class")
+        self.observation.encoder.scan.core_kwargs.pop("backbone_kwargs")
 
         # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
         self.observation.encoder.scan.core_class = "ScanCore"
+        self.observation.encoder.scan.core_kwargs.conv_activation = "relu"
         self.observation.encoder.scan.core_kwargs.conv_kwargs.out_channels = [32, 64, 64]
         self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
         self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]

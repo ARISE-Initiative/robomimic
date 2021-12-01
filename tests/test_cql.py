@@ -53,21 +53,19 @@ def convert_config_for_images(config):
     config.observation.modalities.obs.rgb = ["agentview_image"]
 
     # set up visual encoders
-    config.observation.encoder.rgb.feature_dimension = 64
     config.observation.encoder.rgb.core_class = "VisualCore"
+    config.observation.encoder.rgb.core_kwargs.feature_dimension = 64
     config.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
     config.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
     config.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+    config.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0
 
     # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
     config.observation.encoder.rgb.obs_randomizer_class = None
-
-    # kwargs for pooling
-    config.observation.encoder.rgb.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-    config.observation.encoder.rgb.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.rgb.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.rgb.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-    config.observation.encoder.rgb.pool_kwargs.noise_std = 0.0
 
     return config
 

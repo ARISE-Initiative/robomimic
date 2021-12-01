@@ -82,15 +82,15 @@ class HBCConfig(BaseConfig):
         """
         Update from superclass to include modalities from planner and actor.
         """
-        return sorted(tuple(set(
-            self.observation.planner.modalities.obs.low_dim +
-            self.observation.planner.modalities.obs.rgb +
-            self.observation.planner.modalities.subgoal.low_dim +
-            self.observation.planner.modalities.subgoal.rgb +
-            self.observation.planner.modalities.goal.low_dim +
-            self.observation.planner.modalities.goal.rgb +
-            self.observation.actor.modalities.obs.low_dim +
-            self.observation.actor.modalities.obs.rgb +
-            self.observation.actor.modalities.goal.low_dim +
-            self.observation.actor.modalities.goal.rgb
-        )))
+        # pool all modalities
+        return sorted(tuple(set([
+            obs_key for group in [
+                self.observation.planner.modalities.obs.values(),
+                self.observation.planner.modalities.goal.values(),
+                self.observation.planner.modalities.subgoal.values(),
+                self.observation.actor.modalities.obs.values(),
+                self.observation.actor.modalities.goal.values(),
+            ]
+            for modality in group
+            for obs_key in modality
+        ])))

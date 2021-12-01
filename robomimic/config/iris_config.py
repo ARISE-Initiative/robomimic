@@ -83,19 +83,17 @@ class IRISConfig(HBCConfig):
         """
         Update from superclass to include modalities from value planner and actor.
         """
-        return sorted(tuple(set(
-            self.observation.value_planner.planner.modalities.obs.low_dim +
-            self.observation.value_planner.planner.modalities.obs.rgb +
-            self.observation.value_planner.planner.modalities.subgoal.low_dim +
-            self.observation.value_planner.planner.modalities.subgoal.rgb +
-            self.observation.value_planner.planner.modalities.goal.low_dim +
-            self.observation.value_planner.planner.modalities.goal.rgb +
-            self.observation.value_planner.value.modalities.obs.low_dim +
-            self.observation.value_planner.value.modalities.obs.rgb +
-            self.observation.value_planner.value.modalities.goal.low_dim +
-            self.observation.value_planner.value.modalities.goal.rgb +
-            self.observation.actor.modalities.obs.low_dim +
-            self.observation.actor.modalities.obs.rgb +
-            self.observation.actor.modalities.goal.low_dim +
-            self.observation.actor.modalities.goal.rgb
-        )))
+        # pool all modalities
+        return sorted(tuple(set([
+            obs_key for group in [
+                self.observation.value_planner.planner.modalities.obs.values(),
+                self.observation.value_planner.planner.modalities.goal.values(),
+                self.observation.value_planner.planner.modalities.subgoal.values(),
+                self.observation.value_planner.value.modalities.obs.values(),
+                self.observation.value_planner.value.modalities.goal.values(),
+                self.observation.actor.modalities.obs.values(),
+                self.observation.actor.modalities.goal.values(),
+            ]
+            for modality in group
+            for obs_key in modality
+        ])))

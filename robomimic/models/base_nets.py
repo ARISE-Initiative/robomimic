@@ -21,6 +21,13 @@ import robomimic.utils.obs_utils as ObsUtils
 from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
 
 
+CONV_ACTIVATIONS = {
+    "relu": nn.ReLU,
+    "None": None,
+    None: None,
+}
+
+
 def rnn_args_from_config(rnn_config):
     """
     Takes a Config object corresponding to RNN settings
@@ -127,7 +134,7 @@ class Unsqueeze(Module):
 
     def output_shape(self, input_shape=None):
         assert input_shape is not None
-        return input_shape[:self.dim] + [1] + input_shape[self.dim:]
+        return input_shape + [1] if self.dim == -1 else input_shape[:self.dim + 1] + [1] + input_shape[self.dim + 1:]
 
     def forward(self, x):
         return x.unsqueeze(dim=self.dim)
@@ -620,7 +627,8 @@ class Conv1dBase(Module):
 
     Args:
         input_channel (int): Number of channels for inputs to this network
-        activation (nn.Module): Per-layer activation to use. Defaults to nn.ReLU
+        activation (None or str): Per-layer activation to use. Defaults to "relu". Valid options are
+            currently {relu, None} for no activation
         conv_kwargs (dict): Specific nn.Conv1D args to use, in list form, where the ith element corresponds to the
             argument to be passed to the ith Conv1D layer.
             See https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html for specific possible arguments.
@@ -633,10 +641,13 @@ class Conv1dBase(Module):
     def __init__(
         self,
         input_channel=1,
-        activation=nn.ReLU,
+        activation="relu",
         **conv_kwargs,
     ):
         super(Conv1dBase, self).__init__()
+
+        # Get activation requested
+        activation = CONV_ACTIVATIONS[activation]
 
         # Make sure out_channels and kernel_size are specified
         for kwarg in ("out_channels", "kernel_size"):
@@ -651,7 +662,8 @@ class Conv1dBase(Module):
                 in_channels=input_channel,
                 **layer_kwargs,
             )
-            layers[f'act{i}'] = activation()
+            if activation is not None:
+                layers[f'act{i}'] = activation()
             input_channel = layer_kwargs["out_channels"]
 
         # Store network
@@ -1068,7 +1080,7 @@ class ScanCore(EncoderCore, ConvBase):
         self,
         input_shape,
         conv_kwargs,
-        conv_activation=nn.ReLU,
+        conv_activation="relu",
         pool_class=None,
         pool_kwargs=None,
         flatten=True,
@@ -1082,7 +1094,8 @@ class ScanCore(EncoderCore, ConvBase):
                 kernel_size (int)
                 stride (int)
                 ...
-            conv_activation (nn.Module): Activation to use between conv layers. Default is ReLU.
+            conv_activation (str or None): Activation to use between conv layers. Default is relu.
+                Currently, valid options are {relu}
             pool_class (str): class name for the visual feature pooler (optional)
                 Common options are "SpatialSoftmax" and "SpatialMeanPool"
             pool_kwargs (dict): kwargs for the visual feature pooler (optional)

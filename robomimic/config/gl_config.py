@@ -77,8 +77,13 @@ class GLConfig(BaseConfig):
         """
         Update from superclass to include subgoals.
         """
+        # pool all modalities
         return sorted(tuple(set([
-            obs_key for group in [self.observation.modalities.obs.values(), self.observation.modalities.goal.values(), self.observation.modalities.subgoal.values()]
+            obs_key for group in [
+                self.observation.modalities.obs.values(),
+                self.observation.modalities.goal.values(),
+                self.observation.modalities.subgoal.values(),
+            ]
             for modality in group
             for obs_key in modality
-         ])))
+        ])))
