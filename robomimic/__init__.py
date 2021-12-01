@@ -127,11 +127,11 @@ def register_all_momart_links():
     """
     # all tasks, mapped to their [exp, sub, gen, sam] sizes
     momart_tasks = {
-        "table_setup_from_dishwasher": [30, 32, 7.5, 1.6],
-        "table_setup_from_dresser": [35, 39, 6.9, 2.0],
-        "table_cleanup_to_dishwasher": [51, 81, 12, 2.8],
-        "table_cleanup_to_sink": [38, 63, 6.4, 2.1],
-        "unload_dishwasher": [48, 61, 13, 2.7],
+        "table_setup_from_dishwasher": [14, 14, 3.3, 0.6],
+        "table_setup_from_dresser": [16, 17, 3.1, 0.7],
+        "table_cleanup_to_dishwasher": [23, 36, 5.3, 1.1],
+        "table_cleanup_to_sink": [17, 28, 2.9, 0.8],
+        "unload_dishwasher": [21, 27, 5.4, 1.0],
     }
 
     momart_dataset_types = [

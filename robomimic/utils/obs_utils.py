@@ -864,14 +864,14 @@ class ImageModality(Modality):
     def _default_obs_unprocessor(cls, obs):
         """
         Given image prepared for network input, prepare for saving to dataset.
-        Inverse of @process_image.
+        Inverse of @process_frame.
 
         Args:
             obs (np.array or torch.Tensor): image array
 
         Returns:
             unprocessed_obs (np.array or torch.Tensor): image passed through
-                inverse operation of @process_image
+                inverse operation of @process_frame
         """
         return TU.to_uint8(unprocess_frame(frame=obs, channel_dim=3, scale=255.))
 

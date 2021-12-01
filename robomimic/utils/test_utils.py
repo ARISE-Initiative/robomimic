@@ -67,7 +67,7 @@ def example_momart_dataset_path():
     dataset_path = os.path.join(dataset_folder, "test_momart.hdf5")
     if not os.path.exists(dataset_path):
         user_response = input("\nWARNING: momart test hdf5 does not exist! We will download sample dataset. "
-                              "This will take 1.6GB space. Proceed? y/n\n")
+                              "This will take 0.6GB space. Proceed? y/n\n")
         assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
 
         print("\nDownloading from server...")

@@ -221,17 +221,18 @@ class CustomImageRandomizer(Randomizer):
         return msg
 
 
-# Now, we can directly reference the classes in our config!
-config = BCConfig()
-config.observation.encoder.custom_image.core_class = "CustomImageEncoderCore"       # Custom class, in string form
-config.observation.encoder.custom_image.core_kwargs.welcome_str = "hi there!"       # Any custom arguments, of any primitive type that is json-able
-config.observation.encoder.custom_image.obs_randomizer_class = "CustomImageRandomizer"
-config.observation.encoder.custom_image.obs_randomizer_kwargs.num_rand = 3
-config.observation.encoder.custom_image.obs_randomizer_kwargs.noise_scale = 0.05
+if __name__ == "__main__":
+    # Now, we can directly reference the classes in our config!
+    config = BCConfig()
+    config.observation.encoder.custom_image.core_class = "CustomImageEncoderCore"       # Custom class, in string form
+    config.observation.encoder.custom_image.core_kwargs.welcome_str = "hi there!"       # Any custom arguments, of any primitive type that is json-able
+    config.observation.encoder.custom_image.obs_randomizer_class = "CustomImageRandomizer"
+    config.observation.encoder.custom_image.obs_randomizer_kwargs.num_rand = 3
+    config.observation.encoder.custom_image.obs_randomizer_kwargs.noise_scale = 0.05
 
-# We can also directly use this new modality and associate dataset / observation keys with it!
-config.observation.modalities.obs.custom_image = ["my_image1", "my_image2"]
-config.observation.modalities.goal.custom_image = ["my_image2", "my_image3"]
+    # We can also directly use this new modality and associate dataset / observation keys with it!
+    config.observation.modalities.obs.custom_image = ["my_image1", "my_image2"]
+    config.observation.modalities.goal.custom_image = ["my_image2", "my_image3"]
 
-# Let's view our config
-print(config)
+    # Let's view our config
+    print(config)
