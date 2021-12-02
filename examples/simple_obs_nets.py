@@ -79,6 +79,14 @@ def simple_obs_example():
         net=net,
     )
 
+    # Before constructing the encoder, make sure we register all of our observation keys with corresponding modalities
+    # (this will determine how they are processed during training)
+    obs_modality_mapping = {
+        "low_dim": ["proprio"],
+        "rgb": ["camera1", "camera2", "camera3"],
+    }
+    ObsUtils.initialize_obs_modality_mapping_from_dict(modality_mapping=obs_modality_mapping)
+
     # Finally, construct the observation encoder
     obs_encoder.make()
 
