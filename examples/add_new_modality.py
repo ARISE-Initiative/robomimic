@@ -83,33 +83,6 @@ class CustomImageEncoderCore(EncoderCore):
 
 
 # Let's also create a custom randomizer class for randomizing our observations
-class CustomImageEncoderCore(EncoderCore):
-    # For simplicity, this will be a pass-through with some simple kwargs
-    def __init__(
-            self,
-            input_shape,        # Required, will be inferred automatically at runtime
-
-            # Any args below here you can specify arbitrarily
-            welcome_str,
-    ):
-        # Always need to run super init first and pass in input_shape
-        super().__init__(input_shape=input_shape)
-
-        # Anything else should can be custom to your class
-        # Let's print out the welcome string
-        print(f"Welcome! {welcome_str}")
-
-    # We need to always specify the output shape from this model, based on a given input_shape
-    def output_shape(self, input_shape=None):
-        # this is just a pass-through, so we return input_shape
-        return input_shape
-
-    # we also need to specify the forward pass for this network
-    def forward(self, inputs):
-        # just a pass through again
-        return inputs
-
-
 class CustomImageRandomizer(Randomizer):
     """
     A simple example of a randomizer - we make @num_rand copies of each image in the batch,
@@ -236,3 +209,6 @@ if __name__ == "__main__":
 
     # Let's view our config
     print(config)
+
+    # That's it! Now we can pass this config into our training script, and robomimic will directly use our
+    # custom modality + encoder network
