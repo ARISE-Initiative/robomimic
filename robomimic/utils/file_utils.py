@@ -369,7 +369,7 @@ def url_is_alive(url):
         return False
 
 
-def download_url(url, download_dir):
+def download_url(url, download_dir, check_overwrite=True):
     """
     First checks that @url is reachable, then downloads the file
     at that url into the directory specified by @download_dir.
@@ -381,6 +381,8 @@ def download_url(url, download_dir):
     Args:
         url (str): url string
         download_dir (str): path to directory where file should be downloaded
+        check_overwrite (bool): if True, will sanity check the download fpath to make sure a file of that name
+            doesn't already exist there
     """
 
     # check if url is reachable. We need the sleep to make sure server doesn't reject subsequent requests
@@ -390,6 +392,12 @@ def download_url(url, download_dir):
     # infer filename from url link
     fname = url.split("/")[-1]
     file_to_write = os.path.join(download_dir, fname)
+
+    # If we're checking overwrite and the path already exists,
+    # we ask the user to verify that they want to overwrite the file
+    if check_overwrite and os.path.exists(file_to_write):
+        user_response = input(f"Warning: file {file_to_write} already exists. Overwrite? y/n\n")
+        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
 
     with DownloadProgressBar(unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:

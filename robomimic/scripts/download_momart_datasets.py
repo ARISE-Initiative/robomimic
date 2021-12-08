@@ -173,24 +173,3 @@ if __name__ == "__main__":
                             download_dir=download_dir,
                         )
                     print("")
-
-    # download requested datasets
-    for task in MOMART_DATASET_REGISTRY:
-        if task in download_tasks:
-            for dataset_type in MOMART_DATASET_REGISTRY[task]:
-                if dataset_type in download_dataset_types:
-                    dataset_info = MOMART_DATASET_REGISTRY[task][dataset_type]
-                    download_dir = os.path.abspath(os.path.join(default_base_dir, task, dataset_type))
-                    print(f"\nDownloading dataset:\n"
-                          f"    task: {task}\n"
-                          f"    dataset type: {dataset_type}\n"
-                          f"    dataset size: {dataset_info['size']}GB\n"
-                          f"    download path: {download_dir}")
-                    if args.dry_run:
-                        print("\ndry run: skip download")
-                    else:
-                        FileUtils.download_url(
-                            url=dataset_info["url"],
-                            download_dir=download_dir,
-                        )
-                    print("")
