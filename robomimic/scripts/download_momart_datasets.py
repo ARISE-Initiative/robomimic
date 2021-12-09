@@ -67,21 +67,6 @@ ALL_DATASET_TYPES = [
 ]
 
 
-def make_dataset_dirs(base_dir):
-    """
-    Create directory structure for all datasets. The datasets are organized into 
-    subfolders by task (e.g. table_cleanup_to_dishwasher, table_setup_from_dishwasher) and dataset types
-    (expert, suboptimal, generalize, sample)
-
-    Args:
-        base_dir (str): base dataset directory where all subfolders should be created
-    """
-    for task in MOMART_DATASET_REGISTRY:
-        for dataset_type in MOMART_DATASET_REGISTRY[task]:
-            dataset_dir = os.path.join(base_dir, task, dataset_type)
-            os.makedirs(dataset_dir, exist_ok=True)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -123,11 +108,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # make directory structure
+    # set default base directory for downloads
     default_base_dir = args.download_dir
     if default_base_dir is None:
         default_base_dir = os.path.join(robomimic.__path__[0], "../datasets")
-    make_dataset_dirs(base_dir=default_base_dir)
 
     # load args
     download_tasks = args.tasks
@@ -168,6 +152,8 @@ if __name__ == "__main__":
                     if args.dry_run:
                         print("\ndry run: skip download")
                     else:
+                        # Make sure path exists and create if it doesn't
+                        os.makedirs(download_dir, exist_ok=True)
                         FileUtils.download_url(
                             url=dataset_info["url"],
                             download_dir=download_dir,
