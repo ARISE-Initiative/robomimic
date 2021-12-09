@@ -55,21 +55,6 @@ ALL_DATASET_TYPES = ["ph", "mh", "mg", "paired"]
 ALL_HDF5_TYPES = ["raw", "low_dim", "image", "low_dim_sparse", "low_dim_dense", "image_sparse", "image_dense"]
 
 
-def make_dataset_dirs(base_dir):
-    """
-    Create directory structure for all datasets. The datasets are organized into 
-    subfolders by task (e.g. lift, can, square, transport, tool hang) and dataset types 
-    (e.g. mg (machine generated), ph (proficient human), mh (multi-human)).
-
-    Args:
-        base_dir (str): base dataset directory where all subfolders should be created
-    """
-    for task in DATASET_REGISTRY:
-        for dataset_type in DATASET_REGISTRY[task]:
-            dataset_dir = os.path.join(base_dir, task, dataset_type)
-            os.makedirs(dataset_dir, exist_ok=True)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -122,11 +107,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # make directory structure
+    # set default base directory for downloads
     default_base_dir = args.download_dir
     if default_base_dir is None:
         default_base_dir = os.path.join(robomimic.__path__[0], "../datasets")
-    make_dataset_dirs(base_dir=default_base_dir)
 
     # load args
     download_tasks = args.tasks
@@ -163,6 +147,8 @@ if __name__ == "__main__":
                             if args.dry_run:
                                 print("\ndry run: skip download")
                             else:
+                                # Make sure path exists and create if it doesn't
+                                os.makedirs(download_dir, exist_ok=True)
                                 FileUtils.download_url(
                                     url=DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"], 
                                     download_dir=download_dir,
