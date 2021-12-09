@@ -104,12 +104,22 @@ class EnvGibsonMOMART(EB.EnvBase):
         # Make sure we have a valid environment class
         assert envClass is not None, "No valid environment for the requested task was found!"
 
+        # Set device idx for rendering
+        # ensure that we select the correct GPU device for rendering by testing for EGL rendering
+        # NOTE: this package should be installed from this link (https://github.com/StanfordVL/egl_probe)
+        import egl_probe
+        device_idx = 0
+        valid_gpu_devices = egl_probe.get_available_devices()
+        if len(valid_gpu_devices) > 0:
+            device_idx = valid_gpu_devices[0]
+
         # Create environment
         self.env = envClass(
             config_file=deepcopy(self.ig_config),
             mode=self.render_mode,
             physics_timestep=physics_timestep,
             action_timestep=action_timestep,
+            device_idx=device_idx,
         )
 
         # If we have a viewer, make sure to remove all bodies belonging to the visual markers
