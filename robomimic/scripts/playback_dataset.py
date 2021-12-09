@@ -212,7 +212,7 @@ def playback_dataset(args):
         dummy_spec = dict(
             obs=dict(
                     low_dim=["robot0_eef_pos"],
-                    image=[],
+                    rgb=[],
                 ),
         )
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs=dummy_spec)

@@ -169,67 +169,36 @@ class EnvGibsonMOMART(EB.EnvBase):
         # Return obs
         return self.get_observation()
 
-    def render(self, mode="human", camera_name="robotview", height=None, width=None):
+    def render(self, mode="human", camera_name="rgb", height=None, width=None):
         """
         Render
 
         Args:
-            mode (str or list of str): Mode(s) to render. Options are either 'human' or any combo of
-                ('rgb', 'normal', 'seg', '3d', 'scene_flow', 'optical_flow').
-
-            height (int):
+            mode (str): Mode(s) to render. Options are either 'human' (rendering onscreen) or 'rgb' (rendering to
+                frames offscreen)
+            camera_name (str): Name of the camera to use -- valid options are "rgb" or "rgb_wrist"
+            height (int): If specified with width, resizes the rendered image to this height
+            width (int): If specified with height, resizes the rendered image to this width
 
         Returns:
-            dict or array or None: If multiple frames rendered, is dict mapping modes to frames, if single mode,
-                directly returns array, otherwise None
+            array or None: If rendering to frame, returns the rendered frame. Otherwise, returns None
         """
         # Only robotview camera is currently supported
-        assert camera_name == "robotview", f"Only robotview camera currently supported, got {camera_name}."
+        assert camera_name in {"rgb", "rgb_wrist"}, \
+            f"Only rgb, rgb_wrist cameras currently supported, got {camera_name}."
 
         if mode == "human":
             assert self.render_onscreen, "Rendering has not been enabled for onscreen!"
             self.env.simulator.sync()
         else:
-            # Standardize mode and grab images from renderer
-            mode = [mode] if isinstance(mode, str) else mode
-
-            # For general compatibility, replace "rgb_array" with "rgb"
-            for i, m in enumerate(mode):
-                if m == "rgb_array":
-                    mode[i] = "rgb"
-
             assert self.env.simulator.renderer is not None, "No renderer enabled for this env!"
 
-            frames = self.env.sensors["vision"].get_obs(self.env)
+            frame = self.env.sensors["vision"].get_obs(self.env)[camera_name]
 
             # Reshape all frames
             if height is not None and width is not None:
-                for k, frame in frames.items():
-                    frames[k] = cv2.resize(frame, dsize=(height, width), interpolation=cv2.INTER_CUBIC)
-
-            # Either directly return frames or a dict
-            return frames[mode[0]] if len(mode) == 1 else {m: frames[m] for m in mode}
-
-    def render_with(self, info, mode="rgb", camera_name="robotview", height=None, width=None):
-        """
-        Render with extra info
-        Args:
-            info (dict): info to be rendered
-            mode (str): rendering mode
-            height (int): camera image height
-            width (int): camera image width
-            camera_name (str): name of the rendering camera
-        """
-        if "subgoal" in info:
-            # No support for subgoal yet
-            raise ValueError("No support for subgoal rendering yet for iG")
-        elif "goal" in info:
-            # No support for goal yet
-            raise ValueError("No support for goal rendering yet for iG")
-        else:
-            im = self.render(mode=mode, camera_name=camera_name, height=height, width=width)
-
-        return im
+                frame = cv2.resize(frame, dsize=(height, width), interpolation=cv2.INTER_CUBIC)
+                return frame
 
     def resize_obs_frame(self, frame):
         """
