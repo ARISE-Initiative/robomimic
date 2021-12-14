@@ -1,5 +1,5 @@
 """
-Script to download datasets used in MoMaRT paper (#todo: arxiv link). By default, all
+Script to download datasets used in MoMaRT paper (https://arxiv.org/abs/2112.05251). By default, all
 datasets will be stored at robomimic/datasets, unless the @download_dir
 argument is supplied. We recommend using the default, as most examples that
 use these datasets assume that they can be found there.
