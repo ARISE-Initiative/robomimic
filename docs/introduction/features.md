@@ -5,7 +5,7 @@
 In this section, we briefly summarize some key features and where you should look to learn more about them.
 
 1. **Datasets supported by robomimic**
-   - See a list of supported datasets [here](./quickstart.html#supported-datasets).<br><br>
+   - See a list of supported datasets [here](./features.html#supported-datasets).<br><br>
 2. **Visualizing datasets**
    - Learn how to visualize dataset trajectories [here](./datasets.html#view-dataset-structure-and-videos).<br><br>
 3. **Reproducing paper experiments**
