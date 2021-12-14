@@ -13,6 +13,7 @@ Welcome to robomimic's documentation!
    introduction/overview
    introduction/installation
    introduction/quickstart
+   introduction/features
    introduction/advanced
    introduction/examples
    introduction/datasets
