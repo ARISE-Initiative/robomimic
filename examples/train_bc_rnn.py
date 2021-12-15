@@ -441,10 +441,6 @@ if __name__ == "__main__":
         debug=args.debug
     )
 
-    # Save config
-    cfg_fname = f'{args.dataset_type}_bc_rnn_example_config.json'
-    config.dump(cfg_fname)
-
     # set torch device
     device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)
 
