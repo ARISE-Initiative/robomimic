@@ -126,15 +126,6 @@ def initialize_obs_modality_mapping_from_dict(modality_mapping):
     """
     global OBS_KEYS_TO_MODALITIES, OBS_MODALITIES_TO_KEYS
 
-    # Make sure both are none -- if not, something else (e.g.: initialize_obs_modality_mapping_from_dict) has already
-    # initialized the mappings
-    assert OBS_KEYS_TO_MODALITIES is None, \
-        f"Observation mappings from keys to modalities have already been initialized! Please check " \
-        f"to make sure that no other function has already been called initializing the mappings."
-    assert OBS_MODALITIES_TO_KEYS is None, \
-        f"Observation mappings from modalities to keys have already been initialized! Please check " \
-        f"to make sure that no other function has already been called initializing the mappings."
-
     OBS_KEYS_TO_MODALITIES = ObservationKeyToModalityDict()
     OBS_MODALITIES_TO_KEYS = dict()
 
@@ -184,15 +175,6 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
             situations where multiple modules may each have their own modality spec.
     """
     global OBS_KEYS_TO_MODALITIES, OBS_MODALITIES_TO_KEYS
-
-    # Make sure both are none -- if not, something else (e.g.: initialize_obs_modality_mapping_from_dict) has already
-    # initialized the mappings
-    assert OBS_KEYS_TO_MODALITIES is None, \
-        f"Observation mappings from keys to modalities have already been initialized! Please check " \
-        f"to make sure that no other function has already been called initializing the mappings."
-    assert OBS_MODALITIES_TO_KEYS is None, \
-        f"Observation mappings from modalities to keys have already been initialized! Please check " \
-        f"to make sure that no other function has already been called initializing the mappings."
 
     OBS_KEYS_TO_MODALITIES = ObservationKeyToModalityDict()
 
