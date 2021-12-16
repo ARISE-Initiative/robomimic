@@ -15,7 +15,7 @@
 
 -------
 ## Latest Updates
-- [11/23/2021] **v0.2.0**: Modular observation modalities and encoders :wrench:, support for [MOMART](https://sites.google.com/view/il-for-mm/home) datasets :open_file_folder:
+- [12/16/2021] **v0.2.0**: Modular observation modalities and encoders :wrench:, support for [MOMART](https://sites.google.com/view/il-for-mm/home) datasets :open_file_folder:
 - [08/09/2021] **v0.1.0**: Initial code and paper release
 
 -------
