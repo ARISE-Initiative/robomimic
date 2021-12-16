@@ -72,7 +72,7 @@ from robomimic.envs.env_base import EnvBase, EnvType
 # Define default cameras to use for each env type
 DEFAULT_CAMERAS = {
     EnvType.ROBOSUITE_TYPE: ["agentview"],
-    EnvType.IG_MOMART_TYPE: ["robotview"],
+    EnvType.IG_MOMART_TYPE: ["rgb"],
     EnvType.GYM_TYPE: ValueError("No camera names supported for gym type env!"),
 }
 
