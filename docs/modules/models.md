@@ -33,6 +33,19 @@ class ResNet18Conv(ConvBase):
       return [512, out_h, out_w]
 ```
 
+## EncoderCore
+We create the `EncoderCore` abstract class to encapsulate any network intended to encode a specific type of observation modality (e.g.: `VisualCore` for RGB and depth observations, and `ScanCore` for range scanner observations. See below for descriptions of both!). When a new encoder class is subclassed from `EncoderCore`, it will automatically be registered internally in robomimic, allowing the user to directly refer to their custom encoder classes in their config in string form. For example, if the user specifies a custom `EncoderCore`-based class named `MyCustomRGBEncoder` to encode RGB observations, they can directly set this in their config:
+
+```python
+config.observation.encoder.rgb.core_class = "MyCustomRGBEncoder"
+config.observation.encoder.rgb.core_kwargs = ...
+```
+
+Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](../introduction/examples.html#custom-observation-modalities-example).
+
+Below, we provide descriptions of specific EncoderCore-based classes used to encode RGB and depth observations (`VisualCore`) and range scanner observations (`ScanCore`).
+
+
 ## VisualCore
 We provide a `VisualCore` module for constructing custom vision architectures. A `VisualCore` consists of a backbone network that featurizes image input --- typically a `ConvBase` module --- and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is a `VisualCore` built from a `ResNet18Conv` backbone and a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module. 
 
@@ -51,6 +64,29 @@ vis_net = VisualCore(
 ```
 
 New vision backbone and pooling classes can be added by subclassing `ConvBase`. 
+
+
+## ScanCore
+We provide a `ScanCore` module for constructing custom range finder architectures. `ScanCore` consists of a 1D Convolution backbone network (`Conv1dBase`) that featurizes a high-dimensional 1D input, and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is an example of a `ScanCore` network with a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module.
+
+```python
+from robomimic.models.base_nets import ScanCore, SpatialSoftmax
+
+vis_net = VisualCore(
+  input_shape=(1, 120),
+  conv_kwargs={
+      "out_channels": [32, 64, 64],
+      "kernel_size": [8, 4, 2],
+      "stride": [4, 2, 1],
+  },    # kwarg settings to pass to individual Conv1d layers
+  conv_activation="relu",   # use relu in between each Conv1d layer
+  pool_class="SpatialSoftmax",  # use spatial softmax to regularize the model output
+  pool_kwargs={"num_kp": 32},  # kwargs for the SpatialSoftmax --- use 32 keypoints
+  flatten=True,  # flatten the output of the spatial softmax layer
+  feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
+)
+```
+
 
 ## Randomizers
 
