@@ -25,7 +25,7 @@ def get_algo_base_config():
     # low-level obs (note that we define it here because @observation structure might vary per algorithm, 
     # for example HBC)
     config.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.modalities.obs.image = []
+    config.observation.modalities.obs.rgb = []
 
     # by default, vanilla BC
     config.algo.gaussian.enabled = False
@@ -46,20 +46,24 @@ def convert_config_for_images(config):
     config.train.num_data_workers = 0
     config.train.batch_size = 16
 
-    # replace object with image modality
+    # replace object with rgb modality
     config.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
-    config.observation.modalities.obs.image = ["agentview_image"]
+    config.observation.modalities.obs.rgb = ["agentview_image"]
 
     # set up visual encoders
-    config.observation.encoder.visual_core = 'ResNet18Conv'
-    config.observation.encoder.visual_core_kwargs = Config()
-    config.observation.encoder.obs_randomizer_class = None
-    config.observation.encoder.visual_feature_dimension = 64
-    config.observation.encoder.use_spatial_softmax = True
-    config.observation.encoder.spatial_softmax_kwargs.num_kp = 32
-    config.observation.encoder.spatial_softmax_kwargs.learnable_temperature = False
-    config.observation.encoder.spatial_softmax_kwargs.temperature = 1.0
-    config.observation.encoder.spatial_softmax_kwargs.noise_std = 0.
+    config.observation.encoder.rgb.core_class = "VisualCore"
+    config.observation.encoder.rgb.core_kwargs.feature_dimension = 64
+    config.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
+    config.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
+    config.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+    config.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+    config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0
+
+    # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
+    config.observation.encoder.rgb.obs_randomizer_class = None
 
     return config
 
@@ -232,7 +236,7 @@ def bc_rnn_gmm_modifier(config):
 image_modifiers = OrderedDict()
 for test_name in MODIFIERS:
     lst = test_name.split("-")
-    name = "-".join(lst[:1] + ["image"] + lst[1:])
+    name = "-".join(lst[:1] + ["rgb"] + lst[1:])
     image_modifiers[name] = make_image_modifier(MODIFIERS[test_name])
 MODIFIERS.update(image_modifiers)
 
@@ -241,11 +245,15 @@ MODIFIERS.update(image_modifiers)
 @register_mod("bc-image-crop")
 def bc_image_crop_modifier(config):
     config = convert_config_for_images(config)
-    config.observation.encoder.obs_randomizer_class = 'CropRandomizer'  # observation randomizer class
-    config.observation.encoder.obs_randomizer_kwargs.crop_height = 76
-    config.observation.encoder.obs_randomizer_kwargs.crop_width = 76
-    config.observation.encoder.obs_randomizer_kwargs.num_crops = 1
-    config.observation.encoder.obs_randomizer_kwargs.pos_enc = False
+
+    # observation randomizer class - using Crop randomizer
+    config.observation.encoder.rgb.obs_randomizer_class = "CropRandomizer"
+
+    # kwargs for observation randomizers (for the CropRandomizer, this is size and number of crops)
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76
+    config.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1
+    config.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False
     return config
 
 

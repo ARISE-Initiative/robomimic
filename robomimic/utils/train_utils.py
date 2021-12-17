@@ -463,7 +463,7 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         ckpt_path (str): writes model checkpoint to this path
 
         obs_normalization_stats (dict): optionally pass a dictionary for observation
-            normalization. This should map observation modality keys to dicts
+            normalization. This should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
     """

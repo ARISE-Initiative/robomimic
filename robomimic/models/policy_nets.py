@@ -32,42 +32,37 @@ class ActorNetwork(MIMO_MLP):
         obs_shapes,
         ac_dim,
         mlp_layer_dims,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             ac_dim (int): dimension of action space.
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes.
 
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class.
-
-            obs_randomizer_class (str): specifies observation randomizer class
-
-            obs_randomizer_kwargs (dict): kwargs for observation randomizer (e.g., CropRandomizer)
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
-            goal_shapes (OrderedDict): a dictionary that maps modality to
+            goal_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-observation key information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         assert isinstance(obs_shapes, OrderedDict)
         self.obs_shapes = obs_shapes
@@ -91,13 +86,7 @@ class ActorNetwork(MIMO_MLP):
             input_obs_group_shapes=observation_group_shapes,
             output_shapes=output_shapes,
             layer_dims=mlp_layer_dims,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs, 
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _get_output_shapes(self):
@@ -132,18 +121,12 @@ class PerturbationActorNetwork(ActorNetwork):
         ac_dim,
         mlp_layer_dims,
         perturbation_scale=0.05,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
-            obs_shapes (OrderedDict): a dictionary that maps modality to
+            obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
             ac_dim (int): dimension of action space.
@@ -154,24 +137,25 @@ class PerturbationActorNetwork(ActorNetwork):
                 lie in +/- @perturbation_scale. The final action output is equal to the original 
                 input action added to the output perturbation (and clipped to lie in [-1, 1]).
 
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class.
-
-            obs_randomizer_class (str): specifies observation randomizer class
-
-            obs_randomizer_kwargs (dict): kwargs for observation randomizer (e.g., CropRandomizer)
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         self.perturbation_scale = perturbation_scale
 
@@ -184,14 +168,8 @@ class PerturbationActorNetwork(ActorNetwork):
             obs_shapes=new_obs_shapes,
             ac_dim=ac_dim,
             mlp_layer_dims=mlp_layer_dims,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            visual_feature_dimension=visual_feature_dimension,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def forward(self, obs_dict, acts, goal_dict=None):
@@ -229,14 +207,8 @@ class GaussianActorNetwork(ActorNetwork):
         std_limits=(0.007, 7.5),
         low_noise_eval=True,
         use_tanh=False,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -276,24 +248,25 @@ class GaussianActorNetwork(ActorNetwork):
 
             use_tanh (bool): if True, use a tanh-Gaussian distribution
 
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class.
-
-            obs_randomizer_class (str): specifies observation randomizer class
-
-            obs_randomizer_kwargs (dict): kwargs for observation randomizer (e.g., CropRandomizer)
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
 
         # parameters specific to Gaussian actor
@@ -324,14 +297,8 @@ class GaussianActorNetwork(ActorNetwork):
             obs_shapes=obs_shapes,
             ac_dim=ac_dim,
             mlp_layer_dims=mlp_layer_dims,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
         # If initialization weight was specified, make sure all final layer network weights are specified correctly
@@ -441,14 +408,8 @@ class GMMActorNetwork(ActorNetwork):
         std_activation="softplus",
         low_noise_eval=True,
         use_tanh=False,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -474,24 +435,25 @@ class GMMActorNetwork(ActorNetwork):
 
             use_tanh (bool): if True, use a tanh-Gaussian distribution
 
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class.
-
-            obs_randomizer_class (str): specifies observation randomizer class
-
-            obs_randomizer_kwargs (dict): kwargs for observation randomizer (e.g., CropRandomizer)
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
 
         # parameters specific to GMM actor
@@ -513,14 +475,8 @@ class GMMActorNetwork(ActorNetwork):
             obs_shapes=obs_shapes,
             ac_dim=ac_dim,
             mlp_layer_dims=mlp_layer_dims,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            visual_feature_dimension=visual_feature_dimension,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _get_output_shapes(self):
@@ -616,14 +572,8 @@ class RNNActorNetwork(RNN_MIMO_MLP):
         rnn_num_layers,
         rnn_type="LSTM",  # [LSTM, GRU]
         rnn_kwargs=None,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -642,24 +592,25 @@ class RNNActorNetwork(RNN_MIMO_MLP):
 
             rnn_kwargs (dict): kwargs for the torch.nn.LSTM / GRU
 
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class.
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         self.ac_dim = ac_dim
 
@@ -691,13 +642,7 @@ class RNNActorNetwork(RNN_MIMO_MLP):
             rnn_type=rnn_type,
             rnn_kwargs=rnn_kwargs,
             per_step=True,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs, 
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _get_output_shapes(self):
@@ -797,14 +742,8 @@ class RNNGMMActorNetwork(RNNActorNetwork):
         std_activation="softplus",
         low_noise_eval=True,
         use_tanh=False,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -831,6 +770,23 @@ class RNNGMMActorNetwork(RNNActorNetwork):
                 one of the GMM modes will be sampled (approximately)
 
             use_tanh (bool): if True, use a tanh-Gaussian distribution
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
 
         # parameters specific to GMM actor
@@ -856,14 +812,8 @@ class RNNGMMActorNetwork(RNNActorNetwork):
             rnn_num_layers=rnn_num_layers,
             rnn_type=rnn_type,
             rnn_kwargs=rnn_kwargs,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _get_output_shapes(self):
@@ -1049,14 +999,8 @@ class VAEActor(Module):
         prior_use_categorical=False,
         prior_categorical_dim=10,
         prior_categorical_gumbel_softmax_hard=False,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -1065,26 +1009,25 @@ class VAEActor(Module):
 
             ac_dim (int): dimension of action space.
 
-            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes. 
-
-            visual_feature_dimension (int): feature dimension to encode images into.
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images.
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class. 
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer.
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         super(VAEActor, self).__init__()
 
@@ -1118,14 +1061,8 @@ class VAEActor(Module):
             prior_use_categorical=prior_use_categorical,
             prior_categorical_dim=prior_categorical_dim,
             prior_categorical_gumbel_softmax_hard=prior_categorical_gumbel_softmax_hard,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def encode(self, actions, obs_dict, goal_dict=None):

@@ -84,13 +84,13 @@ def get_env_metadata_from_dataset(dataset_path):
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_modalities=None, verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False):
     """
     Retrieves shape metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
-        all_modalities (list): list of all modalities used by the model. If not provided, all modalities
+        all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
         verbose (bool): if True, include print statements
 
@@ -98,8 +98,8 @@ def get_shape_metadata_from_dataset(dataset_path, all_modalities=None, verbose=F
         shape_meta (dict): shape metadata. Contains the following keys:
 
             :`'ac_dim'`: action space dimension
-            :`'all_shapes'`: dictionary that maps observation modality string to modality shape
-            :`'all_modalities'`: list of all observation modalities used
+            :`'all_shapes'`: dictionary that maps observation key string to shape
+            :`'all_obs_keys'`: list of all observation modalities used
             :`'use_images'`: bool, whether or not image modalities are present
     """
 
@@ -117,24 +117,25 @@ def get_shape_metadata_from_dataset(dataset_path, all_modalities=None, verbose=F
     # observation dimensions
     all_shapes = OrderedDict()
 
-    if all_modalities is None:
+    if all_obs_keys is None:
         # use all modalities present in the file
-        all_modalities = [k for k in demo["obs"]]
+        all_obs_keys = [k for k in demo["obs"]]
 
-    for k in sorted(all_modalities):
-        all_shapes[k] = demo["obs/{}".format(k)].shape[1:]
+    for k in sorted(all_obs_keys):
+        initial_shape = demo["obs/{}".format(k)].shape[1:]
         if verbose:
-            print("obs modality {} with shape {}".format(k, all_shapes[k]))
-
-    for k in all_shapes:
-        if ObsUtils.key_is_image(k):
-            all_shapes[k] = ObsUtils.process_image_shape(all_shapes[k])
+            print("obs key {} with shape {}".format(k, initial_shape))
+        # Store processed shape for each obs key
+        all_shapes[k] = ObsUtils.get_processed_shape(
+            obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
+            input_shape=initial_shape,
+        )
 
     f.close()
 
     shape_meta['all_shapes'] = all_shapes
-    shape_meta['all_modalities'] = all_modalities
-    shape_meta['use_images'] = ObsUtils.has_image(all_modalities)
+    shape_meta['all_obs_keys'] = all_obs_keys
+    shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
 
     return shape_meta
 
@@ -263,7 +264,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     algo_name, _ = algo_name_from_checkpoint(ckpt_dict=ckpt_dict)
     config, _ = config_from_checkpoint(algo_name=algo_name, ckpt_dict=ckpt_dict, verbose=verbose)
 
-    # read config to set up metadata for observation types (e.g. detecting image observations)
+    # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # env meta from model dict to get info needed to create model
@@ -286,7 +287,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     model = algo_factory(
         algo_name,
         config,
-        modality_shapes=shape_meta["all_shapes"],
+        obs_key_shapes=shape_meta["all_shapes"],
         ac_dim=shape_meta["ac_dim"],
         device=device,
     )
@@ -368,7 +369,7 @@ def url_is_alive(url):
         return False
 
 
-def download_url(url, download_dir):
+def download_url(url, download_dir, check_overwrite=True):
     """
     First checks that @url is reachable, then downloads the file
     at that url into the directory specified by @download_dir.
@@ -380,6 +381,8 @@ def download_url(url, download_dir):
     Args:
         url (str): url string
         download_dir (str): path to directory where file should be downloaded
+        check_overwrite (bool): if True, will sanity check the download fpath to make sure a file of that name
+            doesn't already exist there
     """
 
     # check if url is reachable. We need the sleep to make sure server doesn't reject subsequent requests
@@ -389,6 +392,12 @@ def download_url(url, download_dir):
     # infer filename from url link
     fname = url.split("/")[-1]
     file_to_write = os.path.join(download_dir, fname)
+
+    # If we're checking overwrite and the path already exists,
+    # we ask the user to verify that they want to overwrite the file
+    if check_overwrite and os.path.exists(file_to_write):
+        user_response = input(f"Warning: file {file_to_write} already exists. Overwrite? y/n\n")
+        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
 
     with DownloadProgressBar(unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:

@@ -43,7 +43,7 @@ class IRIS(HBC, ValueAlgo):
         algo_config,
         obs_config,
         global_config,
-        modality_shapes,
+        obs_key_shapes,
         ac_dim,
         device,
     ):
@@ -61,7 +61,7 @@ class IRIS(HBC, ValueAlgo):
 
             global_config (Config object): global training config
 
-            modality_shapes (OrderedDict): dictionary that maps input/output modality keys to shapes
+            obs_key_shapes (OrderedDict): dictionary that maps input/output observation keys to shapes
 
             ac_dim (int): action dimension
 
@@ -89,7 +89,7 @@ class IRIS(HBC, ValueAlgo):
             algo_config=algo_config.value_planner,
             obs_config=obs_config.value_planner,
             global_config=global_config,
-            modality_shapes=modality_shapes,
+            obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )
@@ -98,19 +98,16 @@ class IRIS(HBC, ValueAlgo):
         assert not algo_config.latent_subgoal.enabled, "IRIS does not support latent subgoals"
 
         # only for the actor: override goal modalities and shapes to match the subgoal set by the planner
-        actor_modality_shapes = deepcopy(modality_shapes)
-        # make sure we are not modifying existing modality shapes
+        actor_obs_key_shapes = deepcopy(obs_key_shapes)
+        # make sure we are not modifying existing observation key shapes
         for k in self.actor_goal_shapes:
-            if k in actor_modality_shapes:
-                assert actor_modality_shapes[k] == self.actor_goal_shapes[k]
-        actor_modality_shapes.update(self.actor_goal_shapes)
+            if k in actor_obs_key_shapes:
+                assert actor_obs_key_shapes[k] == self.actor_goal_shapes[k]
+        actor_obs_key_shapes.update(self.actor_goal_shapes)
 
-        goal_modalities = {"low_dim": [], "image": []}
+        goal_modalities = {obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()}
         for k in self.actor_goal_shapes.keys():
-            if ObsUtils.key_is_image(k):
-                goal_modalities["image"].append(k)
-            else:
-                goal_modalities["low_dim"].append(k)
+            goal_modalities[ObsUtils.OBS_KEYS_TO_MODALITIES[k]].append(k)
 
         actor_obs_config = deepcopy(obs_config.actor)
         with actor_obs_config.unlocked():
@@ -120,7 +117,7 @@ class IRIS(HBC, ValueAlgo):
             algo_config=algo_config.actor,
             obs_config=actor_obs_config,
             global_config=global_config,
-            modality_shapes=actor_modality_shapes,
+            obs_key_shapes=actor_obs_key_shapes,
             ac_dim=ac_dim,
             device=device
         )

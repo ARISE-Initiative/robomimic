@@ -116,9 +116,9 @@ if __name__ == "__main__":
         for k in f["data/{}".format(ep)]:
             if k in ["obs", "next_obs"]:
                 print("    key: {}".format(k))
-                for mod in f["data/{}/{}".format(ep, k)]:
-                    mod_shape = f["data/{}/{}/{}".format(ep, k, mod)].shape
-                    print("        mod {} with shape {}".format(mod, mod_shape))
+                for obs_k in f["data/{}/{}".format(ep, k)]:
+                    shape = f["data/{}/{}/{}".format(ep, k, obs_k)].shape
+                    print("        observation key {} with shape {}".format(obs_k, shape))
             elif isinstance(f["data/{}/{}".format(ep, k)], h5py.Dataset):
                 key_shape = f["data/{}/{}".format(ep, k)].shape
                 print("    key: {} with shape {}".format(k, key_shape))

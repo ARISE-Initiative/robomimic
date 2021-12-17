@@ -22,6 +22,24 @@ $ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
 
 See the [downloading released datasets](./results.html#downloading-released-datasets) section below for more information on downloading different datasets, and the [results on released datasets](./results.html#results-on-released-datasets) section below for more detailed information on reproducing different results from the study.
 
+## Quick Example
+
+In this section, we show a simple example of how to reproduce one of the results from the study - the BC-RNN result on the Lift (Proficient-Human) low-dim dataset.
+
+```sh
+# default behavior for download script - just download lift proficient-human low-dim dataset to robomimic/../datasets
+$ python download_datasets.py
+
+# generate json configs for running all experiments at robomimic/exps/paper
+$ python generate_paper_configs.py --output_dir /tmp/experiment_results
+
+# the training command can be found in robomimic/exps/paper/core.sh
+# Training results can be viewed at /tmp/experiment_results (--output_dir when generating paper configs).
+$ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
+```
+
+See the [downloading released datasets](./results.html#downloading-released-datasets) section below for more information on downloading different datasets, and the [results on released datasets](./results.html#results-on-released-datasets) section below for more detailed information on reproducing different results from the study.
+
 ## Downloading Released Datasets
 
 Released datasets can be downloaded easily by using the `download_datasets.py` script. **This is the preferred method for downloading the datasets**, because the script will also set up a directory structure for the datasets that works out of the box with examples for reproducing some benchmark results with the repository. A few examples of using this script are provided below.

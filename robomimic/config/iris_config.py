@@ -76,26 +76,24 @@ class IRISConfig(HBCConfig):
         """
         return len(
             self.observation.value_planner.planner.modalities.goal.low_dim +
-            self.observation.value_planner.planner.modalities.goal.image) > 0
+            self.observation.value_planner.planner.modalities.goal.rgb) > 0
 
     @property
-    def all_modalities(self):
+    def all_obs_keys(self):
         """
         Update from superclass to include modalities from value planner and actor.
         """
-        return sorted(tuple(set(
-            self.observation.value_planner.planner.modalities.obs.low_dim +
-            self.observation.value_planner.planner.modalities.obs.image +
-            self.observation.value_planner.planner.modalities.subgoal.low_dim +
-            self.observation.value_planner.planner.modalities.subgoal.image +
-            self.observation.value_planner.planner.modalities.goal.low_dim +
-            self.observation.value_planner.planner.modalities.goal.image +
-            self.observation.value_planner.value.modalities.obs.low_dim +
-            self.observation.value_planner.value.modalities.obs.image +
-            self.observation.value_planner.value.modalities.goal.low_dim +
-            self.observation.value_planner.value.modalities.goal.image +
-            self.observation.actor.modalities.obs.low_dim +
-            self.observation.actor.modalities.obs.image +
-            self.observation.actor.modalities.goal.low_dim +
-            self.observation.actor.modalities.goal.image
-        )))
+        # pool all modalities
+        return sorted(tuple(set([
+            obs_key for group in [
+                self.observation.value_planner.planner.modalities.obs.values(),
+                self.observation.value_planner.planner.modalities.goal.values(),
+                self.observation.value_planner.planner.modalities.subgoal.values(),
+                self.observation.value_planner.value.modalities.obs.values(),
+                self.observation.value_planner.value.modalities.goal.values(),
+                self.observation.actor.modalities.obs.values(),
+                self.observation.actor.modalities.goal.values(),
+            ]
+            for modality in group
+            for obs_key in modality
+        ])))

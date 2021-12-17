@@ -1,7 +1,10 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
-# stores released dataset links and rollout horizons in global dictionary. Structure is given below:
+# stores released dataset links and rollout horizons in global dictionary.
+# Structure is given below for each type of dataset:
+
+# robosuite / real
 # {
 #   task:
 #       dataset_type:
@@ -13,6 +16,17 @@ __version__ = "0.1.0"
 #   ...
 # }
 DATASET_REGISTRY = {}
+
+# momart
+# {
+#   task:
+#       dataset_type:
+#           url: link
+#           size: value
+#       ...
+#   ...
+# }
+MOMART_DATASET_REGISTRY = {}
 
 
 def register_dataset_link(task, dataset_type, hdf5_type, link, horizon):
@@ -88,4 +102,55 @@ def register_all_links():
         link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/image.hdf5")
 
 
+def register_momart_dataset_link(task, dataset_type, link, dataset_size):
+    """
+    Helper function to register dataset link in global dictionary.
+    Also takes a @horizon parameter - this corresponds to the evaluation
+    rollout horizon that should be used during training.
+
+    Args:
+        task (str): name of task for this dataset
+        dataset_type (str): type of dataset (usually identifies the dataset source)
+        link (str): download link for the dataset
+        dataset_size (float): size of the dataset, in GB
+    """
+    if task not in MOMART_DATASET_REGISTRY:
+        MOMART_DATASET_REGISTRY[task] = {}
+    if dataset_type not in MOMART_DATASET_REGISTRY[task]:
+        MOMART_DATASET_REGISTRY[task][dataset_type] = {}
+    MOMART_DATASET_REGISTRY[task][dataset_type] = dict(url=link, size=dataset_size)
+
+
+def register_all_momart_links():
+    """
+    Record all dataset links in this function.
+    """
+    # all tasks, mapped to their [exp, sub, gen, sam] sizes
+    momart_tasks = {
+        "table_setup_from_dishwasher": [14, 14, 3.3, 0.6],
+        "table_setup_from_dresser": [16, 17, 3.1, 0.7],
+        "table_cleanup_to_dishwasher": [23, 36, 5.3, 1.1],
+        "table_cleanup_to_sink": [17, 28, 2.9, 0.8],
+        "unload_dishwasher": [21, 27, 5.4, 1.0],
+    }
+
+    momart_dataset_types = [
+        "expert",
+        "suboptimal",
+        "generalize",
+        "sample",
+    ]
+
+    # Iterate over all combos and register the link
+    for task, dataset_sizes in momart_tasks.items():
+        for dataset_type, dataset_size in zip(momart_dataset_types, dataset_sizes):
+            register_momart_dataset_link(
+                task=task,
+                dataset_type=dataset_type,
+                link=f"http://downloads.cs.stanford.edu/downloads/rt_mm/{dataset_type}/{task}_{dataset_type}.hdf5",
+                dataset_size=dataset_size,
+            )
+
+
 register_all_links()
+register_all_momart_links()

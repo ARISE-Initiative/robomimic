@@ -108,6 +108,3 @@ Instead of storing the observations, which can consist of high-dimensional image
 ```sh
 python run_trained_agent.py --agent /path/to/model.pth --n_rollouts 50 --horizon 400 --seed 0 --dataset_path /path/to/output.hdf5
 ```
-
-
-

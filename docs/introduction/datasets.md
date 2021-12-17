@@ -30,15 +30,15 @@ data (group)
 
   - `dones` (dataset) - done signal, equal to 1 if playing the corresponding action in the state should terminate the episode. Shape (N,) where N is the length of the trajectory.
 
-  - `obs` (group) - group for the observation modalities. Each modality is stored as a dataset.
+  - `obs` (group) - group for the observation keys. Each key is stored as a dataset.
 
-    - `<modality_1>` (dataset) - the first observation modality. Note that the name of this dataset and shape will vary. As an example, the name could be "agentview_image", and the shape could be (N, 84, 84, 3). 
+    - `<obs_key_1>` (dataset) - the first observation key. Note that the name of this dataset and shape will vary. As an example, the name could be "agentview_image", and the shape could be (N, 84, 84, 3). 
 
       ...
 
   - `next_obs` (group) - group for the next observations.
 
-    - `<modality_1>` (dataset) - the first observation modality.
+    - `<obs_key_1>` (dataset) - the first observation key.
 
       ...
 
@@ -166,6 +166,25 @@ $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name ima
 ```
 
 For more details on how the released `demo.hdf5` dataset files were used to generate the `low_dim.hdf5` and `image.hdf5` files, please see the `extract_obs_from_raw_datasets.sh` script, which contains the commands that were used for our released datasets.
+
+
+
+## MOMART Datasets
+
+<p align="center">
+  <img width="19.0%" src="../images/momart_table_setup_from_dishwasher_overview.png">
+  <img width="19.0%" src="../images/momart_table_setup_from_dresser_overview.png">
+  <img width="19.0%" src="../images/momart_table_cleanup_to_dishwasher_overview.png">
+  <img width="19.0%" src="../images/momart_table_cleanup_to_sink_overview.png">
+  <img width="19.0%" src="../images/momart_unload_dishwasher_to_dresser_overview.png">
+  <img width="19.0%" src="../images/momart_bowl_in_sink.png">
+  <img width="19.0%" src="../images/momart_dump_trash.png">
+  <img width="19.0%" src="../images/momart_grab_bowl.png">
+  <img width="19.0%" src="../images/momart_open_dishwasher.png">
+  <img width="19.0%" src="../images/momart_open_dresser.png">
+ </p>
+
+This repository is fully compatible with [MOMART](https://sites.google.com/view/il-for-mm/home) datasets, a large collection of long-horizon, multi-stage simulated kitchen tasks executed by a mobile manipulator robot. See [this link](https://sites.google.com/view/il-for-mm/datasets) for a breakdown of the MOMART dataset structure, guide on downloading MOMART datasets, and running experiments using the datasets.
 
 
 

@@ -30,7 +30,7 @@ dataset = SequenceDataset(
 - `hdf5_path`
 	- The absolute / relative path to the hdf5 file containing training demonstrations. See [datasets](../introduction/datasets.html) page for the expected data structure.
 - `obs_keys`
-	- A list of strings specifying which observation modalities to read from the dataset. This is typically read from the config file: our implementation pools observation keys from `config.observation.modalities.obs.low_dim` and `config.observation.modalities.obs.images`.
+	- A list of strings specifying which observation modalities to read from the dataset. This is typically read from the config file: our implementation pools observation keys from `config.observation.modalities.obs.low_dim` and `config.observation.modalities.obs.rgb`.
 - `dataset_keys`
 	- Keys of non-observation data to read from a demonstration. Typically include `actions`, `rewards`, `dones`.
 - `seq_length`

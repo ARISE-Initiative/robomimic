@@ -57,6 +57,29 @@ def example_dataset_path():
     return dataset_path
 
 
+def example_momart_dataset_path():
+    """
+    Path to momart dataset to use for testing and example purposes. It should
+    exist under the tests/assets directory, and will be downloaded
+    from a server if it does not exist.
+    """
+    dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
+    dataset_path = os.path.join(dataset_folder, "test_momart.hdf5")
+    if not os.path.exists(dataset_path):
+        user_response = input("\nWARNING: momart test hdf5 does not exist! We will download sample dataset. "
+                              "This will take 0.6GB space. Proceed? y/n\n")
+        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
+
+        print("\nDownloading from server...")
+
+        os.makedirs(dataset_folder, exist_ok=True)
+        FileUtils.download_url(
+            url="http://downloads.cs.stanford.edu/downloads/rt_mm/sample/test_momart.hdf5",
+            download_dir=dataset_folder,
+        )
+    return dataset_path
+
+
 def temp_model_dir_path():
     """
     Path to a temporary model directory to write to for testing and example purposes.

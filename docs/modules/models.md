@@ -33,7 +33,20 @@ class ResNet18Conv(ConvBase):
       return [512, out_h, out_w]
 ```
 
-## VisualCore
+## EncoderCore
+We create the `EncoderCore` abstract class to encapsulate any network intended to encode a specific type of observation modality (e.g.: `VisualCore` for RGB and depth observations, and `ScanCore` for range scanner observations. See below for descriptions of both!). When a new encoder class is subclassed from `EncoderCore`, it will automatically be registered internally in robomimic, allowing the user to directly refer to their custom encoder classes in their config in string form. For example, if the user specifies a custom `EncoderCore`-based class named `MyCustomRGBEncoder` to encode RGB observations, they can directly set this in their config:
+
+```python
+config.observation.encoder.rgb.core_class = "MyCustomRGBEncoder"
+config.observation.encoder.rgb.core_kwargs = ...
+```
+
+Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](../introduction/examples.html#custom-observation-modalities-example).
+
+Below, we provide descriptions of specific EncoderCore-based classes used to encode RGB and depth observations (`VisualCore`) and range scanner observations (`ScanCore`).
+
+
+### VisualCore
 We provide a `VisualCore` module for constructing custom vision architectures. A `VisualCore` consists of a backbone network that featurizes image input --- typically a `ConvBase` module --- and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is a `VisualCore` built from a `ResNet18Conv` backbone and a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module. 
 
 ```python
@@ -41,16 +54,39 @@ from robomimic.models.base_nets import VisualCore, ResNet18Conv, SpatialSoftmax
 
 vis_net = VisualCore(
   input_shape=(3, 224, 224),
-  visual_core_class="ResNet18Conv",  # use ResNet18 as the visualcore backbone
-  visual_core_kwargs={"pretrained": False, "input_coord_conv": False},  # kwargs for the ResNet18Conv class
+  core_class="ResNet18Conv",  # use ResNet18 as the visualcore backbone
+  core_kwargs={"pretrained": False, "input_coord_conv": False},  # kwargs for the ResNet18Conv class
   pool_class="SpatialSoftmax",  # use spatial softmax to regularize the model output
   pool_kwargs={"num_kp": 32},  # kwargs for the SpatialSoftmax --- use 32 keypoints
   flatten=True,  # flatten the output of the spatial softmax layer
-  visual_feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
+  feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
 )
 ```
 
 New vision backbone and pooling classes can be added by subclassing `ConvBase`. 
+
+
+### ScanCore
+We provide a `ScanCore` module for constructing custom range finder architectures. `ScanCore` consists of a 1D Convolution backbone network (`Conv1dBase`) that featurizes a high-dimensional 1D input, and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is an example of a `ScanCore` network with a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module.
+
+```python
+from robomimic.models.base_nets import ScanCore, SpatialSoftmax
+
+vis_net = VisualCore(
+  input_shape=(1, 120),
+  conv_kwargs={
+      "out_channels": [32, 64, 64],
+      "kernel_size": [8, 4, 2],
+      "stride": [4, 2, 1],
+  },    # kwarg settings to pass to individual Conv1d layers
+  conv_activation="relu",   # use relu in between each Conv1d layer
+  pool_class="SpatialSoftmax",  # use spatial softmax to regularize the model output
+  pool_kwargs={"num_kp": 32},  # kwargs for the SpatialSoftmax --- use 32 keypoints
+  flatten=True,  # flatten the output of the spatial softmax layer
+  feature_dimension=64,  # project the flattened feature into a 64-dim vector through a linear layer 
+)
+```
+
 
 ## Randomizers
 
@@ -62,7 +98,7 @@ Randomizers are `Modules` that perturb network inputs during training, and optio
 
 
 ## Observation Encoder and Decoder
- `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_modality` function.
+ `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_obs_key` function.
 
 ```python
 from robomimic.models.obs_nets import ObservationEncoder, CropRandomizer, MLP, VisualCore, ObservationDecoder
@@ -76,33 +112,33 @@ camera1_shape = [3, 224, 224]
 image_randomizer = CropRandomizer(input_shape=camera2_shape, crop_height=200, crop_width=200)
 
 # We will use a reconfigurable image processing backbone VisualCore to process the input image modality
-mod_net_class = "VisualCore"  # this is defined in models/base_nets.py
+net_class = "VisualCore"  # this is defined in models/base_nets.py
 
 # kwargs for VisualCore network
-mod_net_kwargs = {
+net_kwargs = {
     "input_shape": camera1_shape,
-    "visual_core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
-    "visual_core_kwargs": {"pretrained": False, "input_coord_conv": False},
+    "core_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
+    "core_kwargs": {"pretrained": False, "input_coord_conv": False},
     "pool_class": "SpatialSoftmax",  # use spatial softmax to regularize the model output
     "pool_kwargs": {"num_kp": 32}
 }
 
 # register the network for processing the modality
-obs_encoder.register_modality(
-    mod_name="camera1",
-    mod_shape=camera1_shape,
-    mod_net_class=mod_net_class,
-    mod_net_kwargs=mod_net_kwargs,
-    mod_randomizer=image_randomizer
+obs_encoder.register_obs_key(
+    name="camera1",
+    shape=camera1_shape,
+    net_class=net_class,
+    net_kwargs=net_kwargs,
+    randomizer=image_randomizer
 )
 
 # We could mix low-dimensional observation, e.g., proprioception signal, in the encoder
 proprio_shape = [12]
-mod_net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
-obs_encoder.register_modality(
-    mod_name="proprio",
-    mod_shape=proprio_shape,
-    mod_net=mod_net
+net = MLP(input_dim=12, output_dim=32, layer_dims=(128,), output_activation=None)
+obs_encoder.register_obs_key(
+    name="proprio",
+    shape=proprio_shape,
+    net=net
 )
 ```
 
