@@ -49,7 +49,7 @@ class EnvRobosuite(EB.EnvBase):
         # robosuite version check
         self._is_v1 = (robosuite.__version__.split(".")[0] == "1")
         if self._is_v1:
-            assert (robosuite.__version__.split(".")[1] == "2"), "only support robosuite v0.3 and v1.2+"
+            assert (robosuite.__version__.split(".")[1] in ["2", "3"]), "only support robosuite v0.3 and v1.2+"
 
         kwargs = deepcopy(kwargs)
 
@@ -132,6 +132,10 @@ class EnvRobosuite(EB.EnvBase):
         if "model" in state:
             self.reset()
             xml = postprocess_model_xml(state["model"])
+
+            if robosuite.__version__.split(".")[1] in ["3"]:
+                xml = postprocess_xml_for_v_1_3(xml)
+
             self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
@@ -364,3 +368,53 @@ class EnvRobosuite(EB.EnvBase):
         Pretty-print env description.
         """
         return self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4)
+
+
+import xml.etree.ElementTree as ET
+
+def postprocess_xml_for_v_1_3(xml_str):
+    root = ET.fromstring(xml_str)
+
+    worldbody = root.find('worldbody')
+
+    bodies_to_process = []
+    for body in worldbody.iter('body'):
+        for site in body.findall('site'):
+            if 'grip_site' in site.get('name'):
+                print("removing {site} from {body}".format(
+                    site=site.get('name'),
+                    body=body.get('name'),
+                ))
+                body.remove(site)
+                if body not in bodies_to_process:
+                    bodies_to_process.append(body)
+
+    for body in bodies_to_process:
+        prefix = body.get("name").split('_')[0]
+        eef_tree = get_eef_panda_element(prefix)
+        body.append(eef_tree.getroot())
+
+    xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+    return xml_str
+
+def get_eef_panda_element(prefix):
+    eef_panda = """
+    <body name="eef" pos="0 0 0.097" quat="1 0 0 0">
+        <site name="grip_site" pos="0 0 0" size="0.01 0.01 0.01" rgba="1 0 0 0.5" type="sphere" group="1"/>
+        <site name="ee_x" pos="0.1 0 0" size="0.005 .1"  quat="0.707105  0 0.707108 0 " rgba="1 0 0 0" type="cylinder" group="1"/>
+        <site name="ee_y" pos="0 0.1 0" size="0.005 .1" quat="0.707105 0.707108 0 0" rgba="0 1 0 0" type="cylinder" group="1"/>
+        <site name="ee_z" pos="0 0 0.1" size="0.005 .1" quat="1 0 0 0" rgba="0 0 1 0" type="cylinder" group="1"/>
+        <!-- This site was added for visualization. -->
+        <site name="grip_site_cylinder" pos="0 0 0" size="0.005 10" rgba="0 1 0 0.3" type="cylinder" group="1"/>
+    </body>
+    """
+
+    tree = ET.ElementTree(ET.fromstring(eef_panda))
+    root = tree.getroot()
+    for elem in root.iter():
+        elem.attrib["name"] = "{}_{}".format(prefix, elem.get("name"))
+
+    xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
+    # print(xml_str)
+
+    return tree
