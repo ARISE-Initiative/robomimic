@@ -51,8 +51,7 @@ def train(config, device):
     np.random.seed(config.train.seed)
     torch.manual_seed(config.train.seed)
 
-    # set num workers
-    torch.set_num_threads(1)
+    torch.set_num_threads(2)
 
     print("\n============= New Training Run with Config =============")
     print(config)
