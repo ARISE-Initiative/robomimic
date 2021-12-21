@@ -4,7 +4,7 @@
 # to our processed low-dim and image hdf5 files.
 
 BASE_DATASET_DIR="../../datasets"
-POST_FIX="_offline_study_mj211"
+POST_FIX="_v_1_3_mj211"
 echo "Using base dataset directory: $BASE_DATASET_DIR"
 
 
@@ -13,21 +13,21 @@ echo "Using base dataset directory: $BASE_DATASET_DIR"
 # square - ph
 python dataset_states_to_obs.py --done_mode 2 \
 --dataset $BASE_DATASET_DIR/square/ph/demo.hdf5 \
---output_name low_dim_{$POST_FIX}.hdf5 &
+--output_name low_dim$POST_FIX.hdf5 &
 python dataset_states_to_obs.py --done_mode 2 \
 --dataset $BASE_DATASET_DIR/square/ph/demo.hdf5 \
---output_name image_{$POST_FIX}.hdf5 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 &
+--output_name image$POST_FIX.hdf5 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 &
 
 
 ### mh ###
 
-# can - mh
-python dataset_states_to_obs.py --done_mode 2 \
---dataset $BASE_DATASET_DIR/can/mh/demo.hdf5 \
---output_name low_dim_{$POST_FIX}.hdf5 &
+## can - mh
+#python dataset_states_to_obs.py --done_mode 2 \
+#--dataset $BASE_DATASET_DIR/can/mh/demo.hdf5 \
+#--output_name low_dim$POST_FIX.hdf5 &
 
-# square - mh
-python dataset_states_to_obs.py --done_mode 2 \
---dataset $BASE_DATASET_DIR/square/mh/demo.hdf5 \
---output_name low_dim_{$POST_FIX}.hdf5 &
+## square - mh
+#python dataset_states_to_obs.py --done_mode 2 \
+#--dataset $BASE_DATASET_DIR/square/mh/demo.hdf5 \
+#--output_name low_dim$POST_FIX.hdf5 &
 wait
