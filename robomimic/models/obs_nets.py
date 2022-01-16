@@ -796,7 +796,7 @@ class RNN_MIMO_MLP(Module):
 
         assert outputs.ndim == 3 # [B, T, D]
         if self._has_mlp:
-            outputs = self.nets["decoder"](self.mlp(outputs[:, -1]))
+            outputs = self.nets["decoder"](self.nets["mlp"](outputs[:, -1]))
         else:
             outputs = self.nets["decoder"](outputs[:, -1])
 
