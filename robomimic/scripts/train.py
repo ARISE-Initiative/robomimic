@@ -118,6 +118,10 @@ def train(config, device):
         ac_dim=shape_meta["ac_dim"],
         device=device,
     )
+    
+    # save the config as a json file
+    with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
+        json.dump(config, outfile, indent=4)
 
     print("\n============= Model Summary =============")
     print(model)  # print model summary
