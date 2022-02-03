@@ -90,7 +90,7 @@ class BCQ(PolicyAlgo, ValueAlgo):
             mlp_layer_dims=self.algo_config.critic.layer_dims,
             value_bounds=self.algo_config.critic.value_bounds,
             goal_shapes=self.goal_shapes,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         # Q network ensemble and target ensemble
@@ -115,8 +115,8 @@ class BCQ(PolicyAlgo, ValueAlgo):
             ac_dim=self.ac_dim,
             device=self.device,
             goal_shapes=self.goal_shapes,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **VAENets.vae_args_from_config(self.algo_config.action_sampler.vae),
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
         )
 
     def _create_actor(self):
@@ -131,7 +131,7 @@ class BCQ(PolicyAlgo, ValueAlgo):
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor.layer_dims,
             perturbation_scale=self.algo_config.actor.perturbation_scale,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets["actor"] = actor_class(**actor_args)
@@ -848,7 +848,7 @@ class BCQ_GMM(BCQ):
             min_std=self.algo_config.action_sampler.gmm.min_std,
             std_activation=self.algo_config.action_sampler.gmm.std_activation,
             low_noise_eval=self.algo_config.action_sampler.gmm.low_noise_eval,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
     def _train_action_sampler_on_batch(self, batch, epoch, no_backprop=False):
@@ -927,7 +927,7 @@ class BCQ_Distributional(BCQ):
             value_bounds=self.algo_config.critic.value_bounds,
             num_atoms=self.algo_config.critic.distributional.num_atoms,
             goal_shapes=self.goal_shapes,
-            **ObsNets.obs_encoder_args_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         # Q network ensemble and target ensemble

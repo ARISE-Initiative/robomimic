@@ -24,13 +24,13 @@ def get_algo_base_config():
     # low-level obs (note that we define it here because @observation structure might vary per algorithm, 
     # for example HBC)
     config.observation.planner.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.planner.modalities.obs.image = []
+    config.observation.planner.modalities.obs.rgb = []
 
     config.observation.planner.modalities.subgoal.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.planner.modalities.subgoal.image = []
+    config.observation.planner.modalities.subgoal.rgb = []
 
     config.observation.actor.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.actor.modalities.obs.image = []
+    config.observation.actor.modalities.obs.rgb = []
 
     # by default, planner is deterministic prediction
     config.algo.planner.vae.enabled = False

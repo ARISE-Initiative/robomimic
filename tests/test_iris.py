@@ -24,16 +24,16 @@ def get_algo_base_config():
     # low-level obs (note that we define it here because @observation structure might vary per algorithm, 
     # for example iris)
     config.observation.value_planner.planner.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.value_planner.planner.modalities.obs.image = []
+    config.observation.value_planner.planner.modalities.obs.rgb = []
 
     config.observation.value_planner.planner.modalities.subgoal.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.value_planner.planner.modalities.subgoal.image = []
+    config.observation.value_planner.planner.modalities.subgoal.rgb = []
 
     config.observation.value_planner.value.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.value_planner.value.modalities.obs.image = []
+    config.observation.value_planner.value.modalities.obs.rgb = []
 
     config.observation.actor.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos", "object"]
-    config.observation.actor.modalities.obs.image = []
+    config.observation.actor.modalities.obs.rgb = []
 
     # by default, basic N(0, 1) prior for both planner VAE and BCQ cVAE
     config.algo.value_planner.planner.vae.enabled = True

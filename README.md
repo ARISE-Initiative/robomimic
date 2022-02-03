@@ -15,7 +15,8 @@
 
 -------
 ## Latest Updates
-[08/09/2021] **v0.1.0**: Initial code and paper release
+- [12/16/2021] **v0.2.0**: Modular observation modalities and encoders :wrench:, support for [MOMART](https://sites.google.com/view/il-for-mm/home) datasets :open_file_folder:
+- [08/09/2021] **v0.1.0**: Initial code and paper release
 
 -------
 
@@ -24,10 +25,11 @@
 Imitating human demonstrations is a promising approach to endow robots with various manipulation capabilities. While recent advances have been made in imitation learning and batch (offline) reinforcement learning, a lack of open-source human datasets and reproducible learning methods make assessing the state of the field difficult. The overarching goal of **robomimic** is to provide researchers and practitioners with:
 
 - a **standardized set of large demonstration datasets** across several benchmarking tasks to facilitate fair comparisons, with a focus on learning from human-provided demonstrations
+- a **standardized set of large demonstration datasets** across several benchmarking tasks to facilitate fair comparisons, with a focus on learning from human-provided demonstrations (see [this link](https://arise-initiative.github.io/robomimic-web/docs/introduction/quickstart.html#supported-datasets) for a list of supported datasets)
 - **high-quality implementations of several learning algorithms** for training closed-loop policies from offline datasets to make reproducing results easy and lower the barrier to entry
 - a **modular design** that offers great flexibility in extending algorithms and designing new algorithms
 
-This release of **robomimic** contains seven offline learning [algorithms](https://arise-initiative.github.io/robomimic-web/docs/modules/algorithms.html) and standardized [datasets](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) collected across five simulated and three real-world multi-stage manipulation tasks of varying complexity. We highlight some features below:
+This release of **robomimic** contains seven offline learning [algorithms](https://arise-initiative.github.io/robomimic-web/docs/modules/algorithms.html) and standardized [datasets](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) collected across five simulated and three real-world multi-stage manipulation tasks of varying complexity. We highlight some features below (for a more thorough list of features, see [this link](https://arise-initiative.github.io/robomimic-web/docs/introduction/quickstart.html#features-overview)):
 
 - **standardized datasets:** a set of datasets collected from different sources (single proficient human, multiple humans, and machine-generated) across several simulated and real-world tasks, along with a plug-and-play [Dataset class](https://arise-initiative.github.io/robomimic-web/docs/modules/datasets.html) to easily use the datasets outside of this project
 - **algorithm implementations:** several high-quality implementations of offline learning algorithms, including BC, BC-RNN, HBC, IRIS, BCQ, CQL, and TD3-BC

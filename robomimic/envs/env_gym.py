@@ -224,7 +224,7 @@ class EnvGym(EB.EnvBase):
         obs_modality_specs = {
             "obs": {
                 "low_dim": ["flat"],
-                "image": [],
+                "rgb": [],
             }
         }
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs)

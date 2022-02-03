@@ -154,3 +154,9 @@ Please see the [Config documentation](../modules/configs.html) for more informat
 ## Observation Networks Example
 
 The example script in `examples/simple_obs_net.py` discusses how to construct networks for taking observation dictionaries as input, and that produce dictionaries as outputs. See [this section](../modules/models.html#observation-encoder-and-decoder) in the documentation for more details.
+
+
+
+## Custom Observation Modalities Example
+
+The example script in `examples/add_new_modality.py` discusses how to (a) modify pre-existing observation modalities, and (b) add your own custom observation modalities with custom encoding. See [this section](../modules/models.html#observation-encoder-and-decoder) in the documentation for more details about the encoding and decoding process.

@@ -57,14 +57,8 @@ class Prior(Module):
         param_obs_dependent,
         obs_shapes=None,
         mlp_layer_dims=(),
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -82,24 +76,25 @@ class Prior(Module):
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layer sizes
 
-            visual_feature_dimension (int): feature dimension to encode images into
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         super(Prior, self).__init__()
 
@@ -111,14 +106,8 @@ class Prior(Module):
         net_kwargs = dict(
             obs_shapes=obs_shapes,
             mlp_layer_dims=mlp_layer_dims,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
         self._create_layers(net_kwargs)
 
@@ -156,11 +145,7 @@ class Prior(Module):
                 input_obs_group_shapes=obs_group_shapes,
                 output_shapes=mlp_output_shapes,
                 layer_dims=net_kwargs["mlp_layer_dims"],
-                visual_feature_dimension=net_kwargs["visual_feature_dimension"],
-                visual_core_class=net_kwargs["visual_core_class"],
-                visual_core_kwargs=net_kwargs["visual_core_kwargs"],
-                use_spatial_softmax=net_kwargs["use_spatial_softmax"],
-                spatial_softmax_kwargs=net_kwargs["spatial_softmax_kwargs"], 
+                encoder_kwargs=net_kwargs["encoder_kwargs"],
             )
 
     def sample(self, n, obs_dict=None, goal_dict=None):
@@ -265,14 +250,8 @@ class GaussianPrior(Prior):
         gmm_learn_weights=False,
         obs_shapes=None,
         mlp_layer_dims=(),
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -304,24 +283,25 @@ class GaussianPrior(Prior):
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layer sizes
 
-            visual_feature_dimension (int): feature dimension to encode images into
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         self.device = device
         self.latent_dim = latent_dim
@@ -371,14 +351,8 @@ class GaussianPrior(Prior):
             param_obs_dependent=param_obs_dependent,
             obs_shapes=obs_shapes,
             mlp_layer_dims=mlp_layer_dims,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _create_layers(self, net_kwargs):
@@ -564,14 +538,8 @@ class CategoricalPrior(Prior):
         learnable=False,
         obs_shapes=None,
         mlp_layer_dims=(),
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
 
     ):
         """
@@ -593,24 +561,25 @@ class CategoricalPrior(Prior):
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layer sizes
 
-            visual_feature_dimension (int): feature dimension to encode images into
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         self.device = device
         self.latent_dim = latent_dim
@@ -640,14 +609,8 @@ class CategoricalPrior(Prior):
             param_obs_dependent=param_obs_dependent,
             obs_shapes=obs_shapes,
             mlp_layer_dims=mlp_layer_dims,
-            visual_feature_dimension=visual_feature_dimension,
-            visual_core_class=visual_core_class,
-            visual_core_kwargs=visual_core_kwargs,
-            obs_randomizer_class=obs_randomizer_class,
-            obs_randomizer_kwargs=obs_randomizer_kwargs,
-            use_spatial_softmax=use_spatial_softmax,
-            spatial_softmax_kwargs=spatial_softmax_kwargs,
             goal_shapes=goal_shapes,
+            encoder_kwargs=encoder_kwargs,
         )
 
     def _create_layers(self, net_kwargs):
@@ -832,14 +795,8 @@ class VAE(torch.nn.Module):
         prior_use_categorical=False,
         prior_categorical_dim=10,
         prior_categorical_gumbel_softmax_hard=False,
-        visual_feature_dimension=64,
-        visual_core_class='ResNet18Conv',
-        visual_core_kwargs=None,
-        obs_randomizer_class=None,
-        obs_randomizer_kwargs=None,
-        use_spatial_softmax=False,
-        spatial_softmax_kwargs=None,
         goal_shapes=None,
+        encoder_kwargs=None,
     ):
         """
         Args:
@@ -936,27 +893,28 @@ class VAE(torch.nn.Module):
             prior_categorical_gumbel_softmax_hard (bool): if True, use the "hard" version of
                 Gumbel Softmax for reparametrization. Only used if @prior_use_categorical is True.
 
-            visual_feature_dimension (int): feature dimension to encode images into
-
-            visual_core_class (str): specifies Visual Backbone network for encoding images
-
-            visual_core_kwargs (dict): arguments to pass to @visual_core_class
-
-            use_spatial_softmax (bool): if True, introduce a spatial softmax layer at
-                the end of the visual backbone network, resulting in a sharp bottleneck
-                representation for visual inputs.
-
-            obs_randomizer_class (str): specifies a Randomizer class for the input modality
-
-            obs_randomizer_kwargs (dict): kwargs for the observation randomizer
-
-            spatial_softmax_kwargs (dict): arguments to pass to spatial softmax layer
-
             goal_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for goal observations. Goals are treates as additional
                 conditioning inputs. They are usually specified separately because
                 they have duplicate modalities as the conditioning inputs (otherwise
                 they could just be added to the set of conditioning inputs).
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs being applied. Otherwise, should
+                be nested dictionary containing relevant per-modality information for encoder networks.
+                Should be of form:
+
+                obs_modality1: dict
+                    feature_dimension: int
+                    core_class: str
+                    core_kwargs: dict
+                        ...
+                        ...
+                    obs_randomizer_class: str
+                    obs_randomizer_kwargs: dict
+                        ...
+                        ...
+                obs_modality2: dict
+                    ...
         """
         super(VAE, self).__init__()
 
@@ -1018,14 +976,8 @@ class VAE(torch.nn.Module):
         self.prior_categorical_gumbel_softmax_hard = prior_categorical_gumbel_softmax_hard
         assert np.sum([self.prior_use_gmm, self.prior_use_categorical]) <= 1
 
-        # for visual obs core
-        self._visual_feature_dimension = visual_feature_dimension
-        self._visual_core_class = visual_core_class
-        self._visual_core_kwargs = visual_core_kwargs if visual_core_kwargs is not None else OrderedDict()
-        self._obs_randomizer_class = obs_randomizer_class
-        self._obs_randomizer_kwargs = obs_randomizer_kwargs
-        self._use_spatial_softmax = use_spatial_softmax
-        self._spatial_softmax_kwargs = spatial_softmax_kwargs if spatial_softmax_kwargs is not None else OrderedDict()
+        # for obs core
+        self._encoder_kwargs = encoder_kwargs
 
         if self.prior_use_gmm:
             assert self.prior_learn, "GMM must be learned"
@@ -1043,27 +995,16 @@ class VAE(torch.nn.Module):
         """
         self.nets = nn.ModuleDict()
 
-        # args for observation encoders
-        obs_enc_args = dict(
-            visual_feature_dimension=self._visual_feature_dimension,
-            visual_core_class=self._visual_core_class,
-            visual_core_kwargs=self._visual_core_kwargs,
-            obs_randomizer_class=self._obs_randomizer_class,
-            obs_randomizer_kwargs=self._obs_randomizer_kwargs,
-            use_spatial_softmax=self._use_spatial_softmax,
-            spatial_softmax_kwargs=self._spatial_softmax_kwargs,
-        )
-
         # VAE Encoder
-        self._create_encoder(obs_encoder_args=obs_enc_args)
+        self._create_encoder()
 
         # VAE Decoder
-        self._create_decoder(obs_encoder_args=obs_enc_args)
+        self._create_decoder()
 
         # VAE Prior.
-        self._create_prior(obs_encoder_args=obs_enc_args)
+        self._create_prior()
 
-    def _create_encoder(self, obs_encoder_args):
+    def _create_encoder(self):
         """
         Helper function to create encoder.
         """
@@ -1091,10 +1032,10 @@ class VAE(torch.nn.Module):
             input_obs_group_shapes=encoder_obs_group_shapes,
             output_shapes=encoder_output_shapes, 
             layer_dims=self.encoder_layer_dims,
-            **obs_encoder_args
+            encoder_kwargs=self._encoder_kwargs,
         )
 
-    def _create_decoder(self, obs_encoder_args):
+    def _create_decoder(self):
         """
         Helper function to create decoder.
         """
@@ -1114,10 +1055,10 @@ class VAE(torch.nn.Module):
             input_obs_group_shapes=decoder_obs_group_shapes,
             output_shapes=self.output_shapes, 
             layer_dims=self.decoder_layer_dims,
-            **obs_encoder_args
+            encoder_kwargs=self._encoder_kwargs,
         )
 
-    def _create_prior(self, obs_encoder_args):
+    def _create_prior(self):
         """
         Helper function to create prior.
         """
@@ -1138,7 +1079,7 @@ class VAE(torch.nn.Module):
                 obs_shapes=prior_obs_group_shapes["condition"],
                 mlp_layer_dims=self.prior_layer_dims,
                 goal_shapes=prior_obs_group_shapes["goal"],
-                **obs_encoder_args
+                encoder_kwargs=self._encoder_kwargs,
             )
         else:
             self.nets["prior"] = GaussianPrior(
@@ -1152,7 +1093,7 @@ class VAE(torch.nn.Module):
                 obs_shapes=prior_obs_group_shapes["condition"],
                 mlp_layer_dims=self.prior_layer_dims,
                 goal_shapes=prior_obs_group_shapes["goal"],
-                **obs_encoder_args
+                encoder_kwargs=self._encoder_kwargs,
             )
 
     def encode(self, inputs, conditions=None, goals=None):

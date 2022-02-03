@@ -52,10 +52,26 @@ robomimic.utils.loss\_utils module
    :undoc-members:
    :show-inheritance:
 
+robomimic.utils.macros module
+-----------------------------
+
+.. automodule:: robomimic.utils.macros
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.utils.obs\_utils module
 ---------------------------------
 
 .. automodule:: robomimic.utils.obs_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+robomimic.utils.python\_utils module
+------------------------------------
+
+.. automodule:: robomimic.utils.python_utils
    :members:
    :undoc-members:
    :show-inheritance:

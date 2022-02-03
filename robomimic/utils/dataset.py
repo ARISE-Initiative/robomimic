@@ -127,7 +127,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 # only store low-dim observations
                 obs_keys_in_memory = []
                 for k in self.obs_keys:
-                    if not (ObsUtils.key_is_image(k)):
+                    if ObsUtils.key_is_obs_modality(k, "low_dim"):
                         obs_keys_in_memory.append(k)
             self.obs_keys_in_memory = obs_keys_in_memory
 
@@ -336,12 +336,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         # with the previous statistics.
         ep = self.demos[0]
         obs_traj = {k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in self.obs_keys}
-        obs_traj = ObsUtils.process_obs(obs_traj)
+        obs_traj = ObsUtils.process_obs_dict(obs_traj)
         merged_stats = _compute_traj_stats(obs_traj)
         print("SequenceDataset: normalizing observations...")
         for ep in LogUtils.custom_tqdm(self.demos[1:]):
             obs_traj = {k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in self.obs_keys}
-            obs_traj = ObsUtils.process_obs(obs_traj)
+            obs_traj = ObsUtils.process_obs_dict(obs_traj)
             traj_stats = _compute_traj_stats(obs_traj)
             merged_stats = _aggregate_traj_stats(merged_stats, traj_stats)
 
@@ -354,12 +354,12 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def get_obs_normalization_stats(self):
         """
-        Returns dictionary of mean and std for each observation modality if using
+        Returns dictionary of mean and std for each observation key if using
         observation normalization, otherwise None.
 
         Returns:
             obs_normalization_stats (dict): a dictionary for observation
-                normalization. This maps observation modality keys to dicts
+                normalization. This maps observation keys to dicts
                 with a "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the observation.
         """
@@ -544,7 +544,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             obs["pad_mask"] = pad_mask
 
         # prepare image observations from dataset
-        return ObsUtils.process_obs(obs)
+        return ObsUtils.process_obs_dict(obs)
 
     def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, seq_length=1):
         """

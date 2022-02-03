@@ -64,7 +64,7 @@ def train(config, device):
         sys.stdout = logger
         sys.stderr = logger
 
-    # read config to set up metadata for observation types (e.g. detecting image observations)
+    # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # make sure the dataset exists
@@ -77,7 +77,7 @@ def train(config, device):
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=config.train.data)
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
         dataset_path=config.train.data,
-        all_modalities=config.all_modalities,
+        all_obs_keys=config.all_obs_keys,
         verbose=True
     )
 
@@ -116,10 +116,14 @@ def train(config, device):
     model = algo_factory(
         algo_name=config.algo_name,
         config=config,
-        modality_shapes=shape_meta["all_shapes"],
+        obs_key_shapes=shape_meta["all_shapes"],
         ac_dim=shape_meta["ac_dim"],
         device=device,
     )
+    
+    # save the config as a json file
+    with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
+        json.dump(config, outfile, indent=4)
 
     print("\n============= Model Summary =============")
     print(model)  # print model summary
@@ -127,7 +131,7 @@ def train(config, device):
 
     # load training data
     trainset, validset = TrainUtils.load_data_for_training(
-        config, obs_keys=shape_meta["all_modalities"])
+        config, obs_keys=shape_meta["all_obs_keys"])
     train_sampler = trainset.get_dataset_sampler()
     print("\n============= Training Dataset =============")
     print(trainset)

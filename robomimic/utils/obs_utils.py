@@ -11,27 +11,144 @@ import torch.nn.functional as F
 
 import robomimic.utils.tensor_utils as TU
 
+# MACRO FOR VALID IMAGE CHANNEL SIZES
+VALID_IMAGE_CHANNEL_DIMS = {1, 3}       # depth, rgb
 
 # DO NOT MODIFY THIS!
-# This keeps track of observation types - and is populated on call to @initialize_obs_utils_with_obs_specs.
-# This will be a dictionary that maps observation type (e.g. low_dim, image) to a list of observation
-# modalities under that observation type.
-OBS_TYPE_TO_MODALITIES = None
+# This keeps track of observation types (modalities) - and is populated on call to @initialize_obs_utils_with_obs_specs.
+# This will be a dictionary that maps observation modality (e.g. low_dim, rgb) to a list of observation
+# keys under that observation modality.
+OBS_MODALITIES_TO_KEYS = None
+
+# DO NOT MODIFY THIS!
+# This keeps track of observation types (modalities) - and is populated on call to @initialize_obs_utils_with_obs_specs.
+# This will be a dictionary that maps observation keys to their corresponding observation modality
+# (e.g. low_dim, rgb)
+OBS_KEYS_TO_MODALITIES = None
+
+# DO NOT MODIFY THIS
+# This holds the default encoder kwargs that will be used if none are passed at runtime for any given network
+DEFAULT_ENCODER_KWARGS = None
+
+# DO NOT MODIFY THIS
+# This holds the registered observation modality classes
+OBS_MODALITY_CLASSES = {}
+
+# DO NOT MODIFY THIS
+# This global dict stores mapping from observation encoder / randomizer network name to class.
+# We keep track of these registries to enable automated class inference at runtime, allowing
+# users to simply extend our base encoder / randomizer class and refer to that class in string form
+# in their config, without having to manually register their class internally.
+# This also future-proofs us for any additional encoder / randomizer classes we would
+# like to add ourselves.
+OBS_ENCODER_CORES = {"None": None}          # Include default None
+OBS_RANDOMIZERS = {"None": None}            # Include default None
+
+
+def register_obs_key(target_class):
+    assert target_class not in OBS_MODALITY_CLASSES, f"Already registered modality {target_class}!"
+    OBS_MODALITY_CLASSES[target_class.name] = target_class
+
+
+def register_encoder_core(target_class):
+    assert target_class not in OBS_ENCODER_CORES, f"Already registered obs encoder core {target_class}!"
+    OBS_ENCODER_CORES[target_class.__name__] = target_class
+
+
+def register_randomizer(target_class):
+    assert target_class not in OBS_RANDOMIZERS, f"Already registered obs randomizer {target_class}!"
+    OBS_RANDOMIZERS[target_class.__name__] = target_class
+
+
+class ObservationKeyToModalityDict(dict):
+    """
+    Custom dictionary class with the sole additional purpose of automatically registering new "keys" at runtime
+    without breaking. This is mainly for backwards compatibility, where certain keys such as "latent", "actions", etc.
+    are used automatically by certain models (e.g.: VAEs) but were never specified by the user externally in their
+    config. Thus, this dictionary will automatically handle those keys by implicitly associating them with the low_dim
+    modality.
+    """
+    def __getitem__(self, item):
+        # If a key doesn't already exist, warn the user and add default mapping
+        if item not in self.keys():
+            print(f"ObservationKeyToModalityDict: {item} not found,"
+                  f" adding {item} to mapping with assumed low_dim modality!")
+            self.__setitem__(item, "low_dim")
+        return super(ObservationKeyToModalityDict, self).__getitem__(item)
+
+
+def obs_encoder_kwargs_from_config(obs_encoder_config):
+    """
+    Generate a set of args used to create visual backbones for networks
+    from the observation encoder config.
+
+    Args:
+        obs_encoder_config (Config): Config object containing relevant encoder information. Should be equivalent to
+            config.observation.encoder
+
+    Returns:
+        dict: Processed encoder kwargs
+    """
+    # Loop over each obs modality
+    # Unlock encoder config
+    obs_encoder_config.unlock()
+    for obs_modality, encoder_kwargs in obs_encoder_config.items():
+        # First run some sanity checks and store the classes
+        for cls_name, cores in zip(("core", "obs_randomizer"), (OBS_ENCODER_CORES, OBS_RANDOMIZERS)):
+            # Make sure the requested encoder for each obs_modality exists
+            cfg_cls = encoder_kwargs[f"{cls_name}_class"]
+            if cfg_cls is not None:
+                assert cfg_cls in cores, f"No {cls_name} class with name {cfg_cls} found, must register this class before" \
+                    f"creating model!"
+                # encoder_kwargs[f"{cls_name}_class"] = cores[cfg_cls]
+
+        # Process core and randomizer kwargs
+        encoder_kwargs.core_kwargs = dict() if encoder_kwargs.core_kwargs is None else \
+            deepcopy(encoder_kwargs.core_kwargs)
+        encoder_kwargs.obs_randomizer_kwargs = dict() if encoder_kwargs.obs_randomizer_kwargs is None else \
+            deepcopy(encoder_kwargs.obs_randomizer_kwargs)
+
+    # Re-lock keys
+    obs_encoder_config.lock()
+
+    return dict(obs_encoder_config)
+
+
+def initialize_obs_modality_mapping_from_dict(modality_mapping):
+    """
+    This function is an alternative to @initialize_obs_utils_with_obs_specs, that allows manually setting of modalities.
+    NOTE: Only one of these should be called at runtime -- not both! (Note that all training scripts that use a config)
+        automatically handle obs modality mapping, so using this function is usually unnecessary)
+
+    Args:
+        modality_mapping (dict): Maps modality string names (e.g.: rgb, low_dim, etc.) to a list of observation
+            keys that should belong to that modality
+    """
+    global OBS_KEYS_TO_MODALITIES, OBS_MODALITIES_TO_KEYS
+
+    OBS_KEYS_TO_MODALITIES = ObservationKeyToModalityDict()
+    OBS_MODALITIES_TO_KEYS = dict()
+
+    for mod, keys in modality_mapping.items():
+        OBS_MODALITIES_TO_KEYS[mod] = deepcopy(keys)
+        OBS_KEYS_TO_MODALITIES.update({k: mod for k in keys})
 
 
 def initialize_obs_utils_with_obs_specs(obs_modality_specs):
     """
-    This function should be called before using any modality-specific
+    This function should be called before using any observation key-specific
     functions in this file, in order to make sure that all utility
-    functions are aware of the observation types (e.g. which ones
-    are low-dimensional, and which ones are images). It constructs
-    a dictionary that map observation type (e.g. low_dim, image) to
-    a list of observation modalities under that type.
+    functions are aware of the observation modalities (e.g. which ones
+    are low-dimensional, which ones are rgb, etc.).
+
+    It constructs two dictionaries: (1) that map observation modality (e.g. low_dim, rgb) to
+    a list of observation keys under that modality, and (2) that maps the inverse, specific
+    observation keys to their corresponding observation modality.
 
     Input should be a nested dictionary (or list of such dicts) with the following structure:
 
         obs_variant (str):
-            obs_type (str): modalities (list)
+            obs_modality (str): observation keys (list)
             ...
         ...
 
@@ -39,25 +156,27 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
         {
             "obs": {
                 "low_dim": ["robot0_eef_pos", "robot0_eef_quat"],
-                "image": ["agentview_image", "robot0_eye_in_hand"],
+                "rgb": ["agentview_image", "robot0_eye_in_hand"],
             }
             "goal": {
                 "low_dim": ["robot0_eef_pos"],
-                "image": ["agentview_image"]
+                "rgb": ["agentview_image"]
             }
         }
 
-    In the example, raw observations consist of low-dim and image types, with
+    In the example, raw observations consist of low-dim and rgb modalities, with
     the robot end effector pose under low-dim, and the agentview and wrist camera
-    images under image, while goal observations also consist of low-dim and image
-    types, with a subset of the raw observation modalities per type.
+    images under rgb, while goal observations also consist of low-dim and rgb modalities,
+    with a subset of the raw observation keys per modality.
 
     Args:
         obs_modality_specs (dict or list): A nested dictionary (see docstring above for an example)
             or a list of nested dictionaries. Accepting a list as input makes it convenient for
             situations where multiple modules may each have their own modality spec.
     """
-    global OBS_TYPE_TO_MODALITIES
+    global OBS_KEYS_TO_MODALITIES, OBS_MODALITIES_TO_KEYS
+
+    OBS_KEYS_TO_MODALITIES = ObservationKeyToModalityDict()
 
     # accept one or more spec dictionaries - if it's just one, account for this
     if isinstance(obs_modality_specs, dict):
@@ -66,28 +185,50 @@ def initialize_obs_utils_with_obs_specs(obs_modality_specs):
         obs_modality_spec_list = obs_modality_specs
 
     # iterates over observation specs
-    obs_type_mapping = {}
+    obs_modality_mapping = {}
     for obs_modality_spec in obs_modality_spec_list:
         # iterates over observation variants (e.g. observations, goals, subgoals)
-        for obs_variant in obs_modality_spec:
-            for obs_type in obs_modality_spec[obs_variant]:
-                # add all modalities for each obs-type to the corresponding list in obs_type_mapping
-                if obs_type not in obs_type_mapping:
-                    obs_type_mapping[obs_type] = []
-                obs_type_mapping[obs_type] += obs_modality_spec[obs_variant][obs_type]
+        for obs_modalities in obs_modality_spec.values():
+            for obs_modality, obs_keys in obs_modalities.items():
+                # add all keys for each obs modality to the corresponding list in obs_modality_mapping
+                if obs_modality not in obs_modality_mapping:
+                    obs_modality_mapping[obs_modality] = []
+                obs_modality_mapping[obs_modality] += obs_keys
+                # loop over each modality, and add to global dict if it doesn't exist yet
+                for obs_key in obs_keys:
+                    if obs_key not in OBS_KEYS_TO_MODALITIES:
+                        OBS_KEYS_TO_MODALITIES[obs_key] = obs_modality
+                    # otherwise, run sanity check to make sure we don't have conflicting, duplicate entries
+                    else:
+                        assert OBS_KEYS_TO_MODALITIES[obs_key] == obs_modality, \
+                            f"Cannot register obs key {obs_key} with modality {obs_modality}; " \
+                            f"already exists with corresponding modality {OBS_KEYS_TO_MODALITIES[obs_key]}"
 
     # remove duplicate entries and store in global mapping
-    OBS_TYPE_TO_MODALITIES = { obs_type : list(set(obs_type_mapping[obs_type])) for obs_type in obs_type_mapping }
+    OBS_MODALITIES_TO_KEYS = { obs_modality : list(set(obs_modality_mapping[obs_modality])) for obs_modality in obs_modality_mapping }
 
     print("\n============= Initialized Observation Utils with Obs Spec =============\n")
-    for obs_type in OBS_TYPE_TO_MODALITIES:
-        print("using obs type: {} with modalities: {}".format(obs_type, OBS_TYPE_TO_MODALITIES[obs_type]))
+    for obs_modality, obs_keys in OBS_MODALITIES_TO_KEYS.items():
+        print("using obs modality: {} with keys: {}".format(obs_modality, obs_keys))
+
+
+def initialize_default_obs_encoder(obs_encoder_config):
+    """
+    Initializes the default observation encoder kwarg information to be used by all networks if no values are manually
+    specified at runtime.
+
+    Args:
+        obs_encoder_config (Config): Observation encoder config to use.
+            Should be equivalent to config.observation.encoder
+    """
+    global DEFAULT_ENCODER_KWARGS
+    DEFAULT_ENCODER_KWARGS = obs_encoder_kwargs_from_config(obs_encoder_config)
 
 
 def initialize_obs_utils_with_config(config):
     """
-    Utility function to parse config and call @initialize_obs_utils_with_obs_specs with the
-    correct arguments.
+    Utility function to parse config and call @initialize_obs_utils_with_obs_specs and
+    @initialize_default_obs_encoder_kwargs with the correct arguments.
 
     Args:
         config (BaseConfig instance): config object
@@ -97,34 +238,31 @@ def initialize_obs_utils_with_config(config):
             config.observation.planner.modalities, 
             config.observation.actor.modalities,
         ]
+        obs_encoder_config = config.observation.actor.encoder
     elif config.algo_name == "iris":
         obs_modality_specs = [
             config.observation.value_planner.planner.modalities, 
             config.observation.value_planner.value.modalities, 
             config.observation.actor.modalities,
         ]
+        obs_encoder_config = config.observation.actor.encoder
     else:
         obs_modality_specs = [config.observation.modalities]
+        obs_encoder_config = config.observation.encoder
     initialize_obs_utils_with_obs_specs(obs_modality_specs=obs_modality_specs)
+    initialize_default_obs_encoder(obs_encoder_config=obs_encoder_config)
 
 
-def key_is_obs_type(key, obs_type):
+def key_is_obs_modality(key, obs_modality):
     """
-    Check if observation key corresponds to a type @obs_type.
+    Check if observation key corresponds to modality @obs_modality.
 
     Args:
-        key (str): modality name to check
-        obs_type (str): observation type - usually one of "low_dim" or "image"
+        key (str): obs key name to check
+        obs_modality (str): observation modality - e.g.: "low_dim", "rgb"
     """
-    assert OBS_TYPE_TO_MODALITIES is not None, "error: must call ObsUtils.initialize_obs_utils_with_obs_config first"
-    return (key in OBS_TYPE_TO_MODALITIES[obs_type])
-
-
-def key_is_image(key):
-    """
-    Check if observation key corresponds to image observation.
-    """
-    return key_is_obs_type(key, obs_type="image")
+    assert OBS_KEYS_TO_MODALITIES is not None, "error: must call ObsUtils.initialize_obs_utils_with_obs_config first"
+    return OBS_KEYS_TO_MODALITIES[key] == obs_modality
 
 
 def center_crop(im, t_h, t_w):
@@ -187,117 +325,152 @@ def batch_image_chw_to_hwc(im):
         return im.permute(start_dims + [s + 2, s + 3, s + 1])
 
 
-def process_obs(obs_dict):
+def process_obs(obs, obs_modality=None, obs_key=None):
     """
-    Process image observations in observation dictionary to prepare for network input.
+    Process observation @obs corresponding to @obs_modality modality (or implicitly inferred from @obs_key)
+    to prepare for network input.
+
+    Note that either obs_modality OR obs_key must be specified!
+
+    If both are specified, obs_key will override obs_modality
 
     Args:
-        obs_dict (dict): dictionary mappping observation modality to np.array or
+        obs (np.array or torch.Tensor): Observation to process. Leading batch dimension is optional
+        obs_modality (str): Observation modality (e.g.: depth, image, low_dim, etc.)
+        obs_key (str): Name of observation from which to infer @obs_modality
+
+    Returns:
+        processed_obs (np.array or torch.Tensor): processed observation
+    """
+    assert obs_modality is not None or obs_key is not None, "Either obs_modality or obs_key must be specified!"
+    if obs_key is not None:
+        obs_modality = OBS_KEYS_TO_MODALITIES[obs_key]
+    return OBS_MODALITY_CLASSES[obs_modality].process_obs(obs)
+
+
+def process_obs_dict(obs_dict):
+    """
+    Process observations in observation dictionary to prepare for network input.
+
+    Args:
+        obs_dict (dict): dictionary mapping observation keys to np.array or
             torch.Tensor. Leading batch dimensions are optional.
 
     Returns:
-        new_dict (dict): dictionary where image modalities have been processsed by
-            @process_image
+        new_dict (dict): dictionary where observation keys have been processed by their corresponding processors
     """
-    new_dict = { k : obs_dict[k] for k in obs_dict } # shallow copy
-    for k in new_dict:
-        if key_is_image(k):
-            new_dict[k] = process_image(new_dict[k])
-    return new_dict
+    return { k : process_obs(obs=obs, obs_key=k) for k, obs in obs_dict.items() } # shallow copy
 
 
-def process_image(image):
+def process_frame(frame, channel_dim, scale):
     """
-    Given image fetched from dataset, process for network input. Converts array 
-    to float (from uint8), normalizes pixels to [0, 1], and channel swaps
+    Given frame fetched from dataset, process for network input. Converts array
+    to float (from uint8), normalizes pixels from range [0, @scale] to [0, 1], and channel swaps
     from (H, W, C) to (C, H, W).
 
     Args:
-        image (np.array or torch.Tensor): image array
+        frame (np.array or torch.Tensor): frame array
+        channel_dim (int): Number of channels to sanity check for
+        scale (float): Value to normalize inputs by
 
     Returns:
-        processed_image (np.array or torch.Tensor): processed image
+        processed_frame (np.array or torch.Tensor): processed frame
     """
-    assert image.shape[-1] == 3 # check for channel dimensions
+    # Channel size should either be 3 (RGB) or 1 (depth)
+    assert (frame.shape[-1] == channel_dim)
+    frame = TU.to_float(frame)
+    frame /= scale
+    frame = frame.clip(0.0, 1.0)
+    frame = batch_image_hwc_to_chw(frame)
 
-    image = TU.to_float(image)
-    image /= 255.
-    image = batch_image_hwc_to_chw(image)
-
-    return image
+    return frame
 
 
-def unprocess_obs(obs_dict):
+def unprocess_obs(obs, obs_modality=None, obs_key=None):
     """
-    Prepare processed image observations for saving to dataset. Inverse of
+    Prepare observation @obs corresponding to @obs_modality modality (or implicitly inferred from @obs_key)
+    to prepare for deployment.
+
+    Note that either obs_modality OR obs_key must be specified!
+
+    If both are specified, obs_key will override obs_modality
+
+    Args:
+        obs (np.array or torch.Tensor): Observation to unprocess. Leading batch dimension is optional
+        obs_modality (str): Observation modality (e.g.: depth, image, low_dim, etc.)
+        obs_key (str): Name of observation from which to infer @obs_modality
+
+    Returns:
+        unprocessed_obs (np.array or torch.Tensor): unprocessed observation
+    """
+    assert obs_modality is not None or obs_key is not None, "Either obs_modality or obs_key must be specified!"
+    if obs_key is not None:
+        obs_modality = OBS_KEYS_TO_MODALITIES[obs_key]
+    return OBS_MODALITY_CLASSES[obs_modality].unprocess_obs(obs)
+
+
+def unprocess_obs_dict(obs_dict):
+    """
+    Prepare processed observation dictionary for saving to dataset. Inverse of
     @process_obs.
 
     Args:
-        obs_dict (dict): dictionary mappping observation modality to np.array or
+        obs_dict (dict): dictionary mapping observation keys to np.array or
             torch.Tensor. Leading batch dimensions are optional.
 
     Returns:
-        new_dict (dict): dictionary where image modalities have been processsed by
-            @unprocess_image
+        new_dict (dict): dictionary where observation keys have been unprocessed by
+            their respective unprocessor methods
     """
-    new_dict = { k : obs_dict[k] for k in obs_dict } # shallow copy
-    for k in new_dict:
-        if key_is_image(k):
-            new_dict[k] = unprocess_image(new_dict[k])
-    return new_dict
+    return { k : unprocess_obs(obs=obs, obs_key=k) for k, obs in obs_dict.items() } # shallow copy
 
 
-def unprocess_image(image):
+def unprocess_frame(frame, channel_dim, scale):
     """
-    Given image prepared for network input, prepare for saving to dataset.
-    Inverse of @process_image.
+    Given frame prepared for network input, prepare for saving to dataset.
+    Inverse of @process_frame.
 
     Args:
-        image (np.array or torch.Tensor): image array
+        frame (np.array or torch.Tensor): frame array
+        channel_dim (int): What channel dimension should be (used for sanity check)
+        scale (float): Scaling factor to apply during denormalization
 
     Returns:
-        unprocessed_image (np.array or torch.Tensor): image passed through
-            inverse operation of @process_image
+        unprocessed_frame (np.array or torch.Tensor): frame passed through
+            inverse operation of @process_frame
     """
-    assert image.shape[-3] == 3 # check for channel dimension
-    image = batch_image_chw_to_hwc(image)
-    image *= 255.
-    image = TU.to_uint8(image)
-    return image
+    assert frame.shape[-3] == channel_dim # check for channel dimension
+    frame = batch_image_chw_to_hwc(frame)
+    frame *= scale
+    return frame
 
 
-def process_image_shape(image_shape):
+def get_processed_shape(obs_modality, input_shape):
     """
-    Given image shape in dataset, infer the network input shape. This accounts
-    for the channel swap to prepare images for torch training (see @process_image).
+    Given observation modality @obs_modality and expected inputs of shape @input_shape (excluding batch dimension), return the
+    expected processed observation shape resulting from process_{obs_modality}.
 
     Args:
-        image_shape (tuple or list): tuple or list of size 3 or 4, corresponding
-            to the image shape to process
+        obs_modality (str): Observation modality to use (e.g.: low_dim, rgb, depth, etc...)
+        input_shape (list of int): Expected input dimensions, excluding the batch dimension
 
     Returns:
-        processed_image_shape (tuple): image shape that would result from the 
-            output of @process_image
+        list of int: expected processed input shape
     """
-    if len(image_shape) == 3:
-        return image_shape[2], image_shape[0], image_shape[1]
-    elif len(image_shape) == 4:
-        return image_shape[0], image_shape[3], image_shape[1], image_shape[2]
-    else:
-        raise ValueError("cannot handle image shape {}".format(image_shape))
+    return list(process_obs(obs=np.zeros(input_shape), obs_modality=obs_modality).shape)
 
 
 def normalize_obs(obs_dict, obs_normalization_stats):
     """
     Normalize observations using the provided "mean" and "std" entries 
-    for each observation modality. The observation dictionary will be 
+    for each observation key. The observation dictionary will be
     modified in-place.
 
     Args:
-        obs_dict (dict): dictionary mappping observation modality to np.array or
+        obs_dict (dict): dictionary mapping observation key to np.array or
             torch.Tensor. Leading batch dimensions are optional.
 
-        obs_normalization_stats (dict): this should map observation modality keys to dicts
+        obs_normalization_stats (dict): this should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
 
@@ -327,15 +500,16 @@ def normalize_obs(obs_dict, obs_normalization_stats):
     return obs_dict
 
 
-def has_image(obs_keys):
+def has_modality(modality, obs_keys):
     """
-    Returns True if image modalities are present in the list of modalities.
+    Returns True if @modality is present in the list of observation keys @obs_keys.
 
     Args:
-        obs_key (list): list of modalities
+        modality (str): modality to check for, e.g.: rgb, depth, etc.
+        obs_keys (list): list of observation keys
     """
     for k in obs_keys:
-        if key_is_image(k):
+        if key_is_obs_modality(k, obs_modality=modality):
             return True
     return False
 
@@ -352,7 +526,7 @@ def repeat_and_stack_observation(obs_dict, n):
     each modality.
 
     Args:
-        obs_dict (dict): dictionary mappping observation modality to np.array or
+        obs_dict (dict): dictionary mapping observation key to np.array or
             torch.Tensor. Leading batch dimensions are optional.
 
         n (int): number to repeat by
@@ -521,3 +695,265 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
     )
 
     return crops, crop_inds
+
+
+class Modality:
+    """
+    Observation Modality class to encapsulate necessary functions needed to
+    process observations of this modality
+    """
+    # observation keys to associate with this modality
+    keys = set()
+
+    # Custom processing function that should prepare raw observations of this modality for training
+    _custom_obs_processor = None
+
+    # Custom unprocessing function that should prepare observations of this modality used during training for deployment
+    _custom_obs_unprocessor = None
+
+    # Name of this modality -- must be set by subclass!
+    name = None
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Hook method to automatically register all valid subclasses so we can keep track of valid modalities
+        """
+        assert cls.name is not None, f"Name of modality {cls.__name__} must be specified!"
+        register_obs_key(cls)
+
+    @classmethod
+    def set_keys(cls, keys):
+        """
+        Sets the observation keys associated with this modality.
+
+        Args:
+            keys (list or set): observation keys to associate with this modality
+        """
+        cls.keys = {k for k in keys}
+
+    @classmethod
+    def add_keys(cls, keys):
+        """
+        Adds the observation @keys associated with this modality to the current set of keys.
+
+        Args:
+            keys (list or set): observation keys to add to associate with this modality
+        """
+        for key in keys:
+            cls.keys.add(key)
+
+    @classmethod
+    def set_obs_processor(cls, processor=None):
+        """
+        Sets the processor for this observation modality. If @processor is set to None, then
+        the obs processor will use the default one (self.process_obs(...)). Otherwise, @processor
+        should be a function to process this corresponding observation modality.
+
+        Args:
+            processor (function or None): If not None, should be function that takes in either a
+                np.array or torch.Tensor and output the processed array / tensor. If None, will reset
+                to the default processor (self.process_obs(...))
+        """
+        cls._custom_obs_processor = processor
+
+    @classmethod
+    def set_obs_unprocessor(cls, unprocessor=None):
+        """
+        Sets the unprocessor for this observation modality. If @unprocessor is set to None, then
+        the obs unprocessor will use the default one (self.unprocess_obs(...)). Otherwise, @unprocessor
+        should be a function to process this corresponding observation modality.
+
+        Args:
+            unprocessor (function or None): If not None, should be function that takes in either a
+                np.array or torch.Tensor and output the unprocessed array / tensor. If None, will reset
+                to the default unprocessor (self.unprocess_obs(...))
+        """
+        cls._custom_obs_unprocessor = unprocessor
+
+    @classmethod
+    def _default_obs_processor(cls, obs):
+        """
+        Default processing function for this obs modality.
+
+        Note that this function is overridden by self.custom_obs_processor (a function with identical inputs / outputs)
+        if it is not None.
+
+        Args:
+            obs (np.array or torch.Tensor): raw observation, which may include a leading batch dimension
+
+        Returns:
+            np.array or torch.Tensor: processed observation
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def _default_obs_unprocessor(cls, obs):
+        """
+        Default unprocessing function for this obs modality.
+
+        Note that this function is overridden by self.custom_obs_unprocessor
+        (a function with identical inputs / outputs) if it is not None.
+
+        Args:
+            obs (np.array or torch.Tensor): processed observation, which may include a leading batch dimension
+
+        Returns:
+            np.array or torch.Tensor: unprocessed observation
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def process_obs(cls, obs):
+        """
+        Prepares an observation @obs of this modality for network input.
+
+        Args:
+            obs (np.array or torch.Tensor): raw observation, which may include a leading batch dimension
+
+        Returns:
+            np.array or torch.Tensor: processed observation
+        """
+        processor = cls._custom_obs_processor if \
+            cls._custom_obs_processor is not None else cls._default_obs_processor
+        return processor(obs)
+
+    @classmethod
+    def unprocess_obs(cls, obs):
+        """
+        Prepares an observation @obs of this modality for deployment.
+
+        Args:
+            obs (np.array or torch.Tensor): processed observation, which may include a leading batch dimension
+
+        Returns:
+            np.array or torch.Tensor: unprocessed observation
+        """
+        unprocessor = cls._custom_obs_unprocessor if \
+            cls._custom_obs_unprocessor is not None else cls._default_obs_unprocessor
+        return unprocessor(obs)
+
+    @classmethod
+    def process_obs_from_dict(cls, obs_dict, inplace=True):
+        """
+        Receives a dictionary of keyword mapped observations @obs_dict, and processes the observations with keys
+        corresponding to this modality. A copy will be made of the received dictionary unless @inplace is True
+
+        Args:
+            obs_dict (dict): Dictionary mapping observation keys to observations
+            inplace (bool): If True, will modify @obs_dict in place, otherwise, will create a copy
+
+        Returns:
+            dict: observation dictionary with processed observations corresponding to this modality
+        """
+        if inplace:
+            obs_dict = deepcopy(obs_dict)
+        # Loop over all keys and process the ones corresponding to this modality
+        for key, obs in obs_dict.values():
+            if key in cls.keys:
+                obs_dict[key] = cls.process_obs(obs)
+
+        return obs_dict
+
+
+class ImageModality(Modality):
+    """
+    Modality for RGB image observations
+    """
+    name = "rgb"
+
+    @classmethod
+    def _default_obs_processor(cls, obs):
+        """
+        Given image fetched from dataset, process for network input. Converts array
+        to float (from uint8), normalizes pixels from range [0, 255] to [0, 1], and channel swaps
+        from (H, W, C) to (C, H, W).
+
+        Args:
+            obs (np.array or torch.Tensor): image array
+
+        Returns:
+            processed_obs (np.array or torch.Tensor): processed image
+        """
+        return process_frame(frame=obs, channel_dim=3, scale=255.)
+
+    @classmethod
+    def _default_obs_unprocessor(cls, obs):
+        """
+        Given image prepared for network input, prepare for saving to dataset.
+        Inverse of @process_frame.
+
+        Args:
+            obs (np.array or torch.Tensor): image array
+
+        Returns:
+            unprocessed_obs (np.array or torch.Tensor): image passed through
+                inverse operation of @process_frame
+        """
+        return TU.to_uint8(unprocess_frame(frame=obs, channel_dim=3, scale=255.))
+
+
+class DepthModality(Modality):
+    """
+    Modality for depth observations
+    """
+    name = "depth"
+
+    @classmethod
+    def _default_obs_processor(cls, obs):
+        """
+        Given depth fetched from dataset, process for network input. Converts array
+        to float (from uint8), normalizes pixels from range [0, 1] to [0, 1], and channel swaps
+        from (H, W, C) to (C, H, W).
+
+        Args:
+            obs (np.array or torch.Tensor): depth array
+
+        Returns:
+            processed_obs (np.array or torch.Tensor): processed depth
+        """
+        return process_frame(frame=obs, channel_dim=1, scale=1.)
+
+    @classmethod
+    def _default_obs_unprocessor(cls, obs):
+        """
+        Given depth prepared for network input, prepare for saving to dataset.
+        Inverse of @process_depth.
+
+        Args:
+            obs (np.array or torch.Tensor): depth array
+
+        Returns:
+            unprocessed_obs (np.array or torch.Tensor): depth passed through
+                inverse operation of @process_depth
+        """
+        return TU.to_uint8(unprocess_frame(frame=obs, channel_dim=1, scale=1.))
+
+
+class ScanModality(Modality):
+    """
+    Modality for scan observations
+    """
+    name = "scan"
+
+    @classmethod
+    def _default_obs_processor(cls, obs):
+        return obs
+
+    @classmethod
+    def _default_obs_unprocessor(cls, obs):
+        return obs
+
+
+class LowDimModality(Modality):
+    """
+    Modality for low dimensional observations
+    """
+    name = "low_dim"
+
+    @classmethod
+    def _default_obs_processor(cls, obs):
+        return obs
+
+    @classmethod
+    def _default_obs_unprocessor(cls, obs):
+        return obs

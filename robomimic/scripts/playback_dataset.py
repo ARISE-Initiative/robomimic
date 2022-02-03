@@ -66,7 +66,15 @@ import robomimic
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
-from robomimic.envs.env_base import EnvBase
+from robomimic.envs.env_base import EnvBase, EnvType
+
+
+# Define default cameras to use for each env type
+DEFAULT_CAMERAS = {
+    EnvType.ROBOSUITE_TYPE: ["agentview"],
+    EnvType.IG_MOMART_TYPE: ["rgb"],
+    EnvType.GYM_TYPE: ValueError("No camera names supported for gym type env!"),
+}
 
 
 def playback_trajectory_with_env(
@@ -150,7 +158,7 @@ def playback_trajectory_with_obs(
     first=False,
 ):
     """
-    This function reads all "image" observations in the dataset trajectory and
+    This function reads all "rgb" observations in the dataset trajectory and
     writes them into a video.
 
     Args:
@@ -181,9 +189,18 @@ def playback_dataset(args):
     # some arg checking
     write_video = (args.video_path is not None)
     assert not (args.render and write_video) # either on-screen or video but not both
+
+    # Auto-fill camera rendering info if not specified
+    if args.render_image_names is None:
+        # We fill in the automatic values
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
+        env_type = EnvUtils.get_env_type(env_meta=env_meta)
+        args.render_image_names = DEFAULT_CAMERAS[env_type]
+
     if args.render:
         # on-screen rendering can only support one camera
         assert len(args.render_image_names) == 1
+
     if args.use_obs:
         assert write_video, "playback with observations can only write to video"
         assert not args.use_actions, "playback with observations is offline and does not support action playback"
@@ -195,7 +212,7 @@ def playback_dataset(args):
         dummy_spec = dict(
             obs=dict(
                     low_dim=["robot0_eef_pos"],
-                    image=[],
+                    rgb=[],
                 ),
         )
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs=dummy_spec)
@@ -331,8 +348,9 @@ if __name__ == "__main__":
         "--render_image_names",
         type=str,
         nargs='+',
-        default=["agentview"],
-        help="(optional) camera name(s) / image observation(s) to use for rendering on-screen or to video",
+        default=None,
+        help="(optional) camera name(s) / image observation(s) to use for rendering on-screen or to video. Default is"
+             "None, which corresponds to a predefined camera for each env type",
     )
 
     # Only use the first frame of each episode

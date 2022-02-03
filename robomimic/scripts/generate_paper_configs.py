@@ -72,24 +72,24 @@ def modify_config_for_default_low_dim_exp(config):
         ]
         # handle hierarchical observation configs
         if config.algo_name == "hbc":
-            mod_configs_to_set = [
+            configs_to_set = [
                 config.observation.actor.modalities.obs,
                 config.observation.planner.modalities.obs,
                 config.observation.planner.modalities.subgoal,
             ]
         elif config.algo_name == "iris":
-            mod_configs_to_set = [
+            configs_to_set = [
                 config.observation.actor.modalities.obs,
                 config.observation.value_planner.planner.modalities.obs,
                 config.observation.value_planner.planner.modalities.subgoal,
                 config.observation.value_planner.value.modalities.obs,
             ]
         else:
-            mod_configs_to_set = [config.observation.modalities.obs]
+            configs_to_set = [config.observation.modalities.obs]
         # set all observations / subgoals to use the correct low-dim modalities
-        for mod_config in mod_configs_to_set:
-            mod_config.low_dim = list(default_low_dim_obs)
-            mod_config.image = []
+        for cfg in configs_to_set:
+            cfg.low_dim = list(default_low_dim_obs)
+            cfg.rgb = []
 
     return config
 
@@ -140,30 +140,33 @@ def modify_config_for_default_image_exp(config):
             "robot0_eef_quat", 
             "robot0_gripper_qpos", 
         ]
-        config.observation.modalities.obs.image = [
+        config.observation.modalities.obs.rgb = [
             "agentview_image",
             "robot0_eye_in_hand_image",
         ]
         config.observation.modalities.goal.low_dim = []
-        config.observation.modalities.goal.image = []
+        config.observation.modalities.goal.rgb = []
 
         # default image encoder architecture is ResNet with spatial softmax
-        config.observation.encoder.visual_core = 'ResNet18Conv'
-        config.observation.encoder.visual_core_kwargs = Config()
-        config.observation.encoder.visual_feature_dimension = 64
+        config.observation.encoder.rgb.core_class = "VisualCore"
+        config.observation.encoder.rgb.core_kwargs.feature_dimension = 64
+        config.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
+        config.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
+        config.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+        config.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
+        config.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
+        config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
+        config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+        config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0
 
-        config.observation.encoder.use_spatial_softmax = True
-        config.observation.encoder.spatial_softmax_kwargs.num_kp = 32
-        config.observation.encoder.spatial_softmax_kwargs.learnable_temperature = False
-        config.observation.encoder.spatial_softmax_kwargs.temperature = 1.0
-        config.observation.encoder.spatial_softmax_kwargs.noise_std = 0.
+        # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
+        config.observation.encoder.rgb.obs_randomizer_class = "CropRandomizer"
 
-        # use crop randomization as well
-        config.observation.encoder.obs_randomizer_class = 'CropRandomizer'  # observation randomizer class
-        config.observation.encoder.obs_randomizer_kwargs.crop_height = 76
-        config.observation.encoder.obs_randomizer_kwargs.crop_width = 76
-        config.observation.encoder.obs_randomizer_kwargs.num_crops = 1
-        config.observation.encoder.obs_randomizer_kwargs.pos_enc = False
+        # kwargs for observation randomizers (for the CropRandomizer, this is size and number of crops)
+        config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76
+        config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76
+        config.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1
+        config.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False
 
     return config
 
@@ -236,22 +239,22 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
 
             if task_name == "tool_hang_real":
                 # side and wrist camera
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "image_side",
                     "image_wrist",
                 ]
                 # 240x240 images -> crops should be 216x216
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 216
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 216
             else:
                 # front and wrist camera
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "image",
                     "image_wrist",
                 ]
                 # 120x120 images -> crops should be 108x108
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 108
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 108
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 108
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 108
 
         elif hdf5_type in ["image", "image_sparse", "image_dense"]:
             if task_name == "transport":
@@ -266,7 +269,7 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
 
                 # shoulder and wrist cameras per arm
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "shouldercamera0_image",
                     "robot0_eye_in_hand_image",
                     "shouldercamera1_image",
@@ -274,13 +277,13 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
             elif task_name == "tool_hang":
                 # side and wrist camera
-                config.observation.modalities.obs.image = [
+                config.observation.modalities.obs.rgb = [
                     "sideview_image",
                     "robot0_eye_in_hand_image",
                 ]
                 # 240x240 images -> crops should be 216x216
-                config.observation.encoder.obs_randomizer_kwargs.crop_height = 216
-                config.observation.encoder.obs_randomizer_kwargs.crop_width = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 216
+                config.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 216
 
         elif hdf5_type in ["low_dim", "low_dim_sparse", "low_dim_dense"]:
             if task_name == "transport":
@@ -296,24 +299,24 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
                 ]
                 # handle hierarchical observation configs
                 if config.algo_name == "hbc":
-                    mod_configs_to_set = [
+                    configs_to_set = [
                         config.observation.actor.modalities.obs,
                         config.observation.planner.modalities.obs,
                         config.observation.planner.modalities.subgoal,
                     ]
                 elif config.algo_name == "iris":
-                    mod_configs_to_set = [
+                    configs_to_set = [
                         config.observation.actor.modalities.obs,
                         config.observation.value_planner.planner.modalities.obs,
                         config.observation.value_planner.planner.modalities.subgoal,
                         config.observation.value_planner.value.modalities.obs,
                     ]
                 else:
-                    mod_configs_to_set = [config.observation.modalities.obs]
+                    configs_to_set = [config.observation.modalities.obs]
                 # set all observations / subgoals to use the correct low-dim modalities
-                for mod_config in mod_configs_to_set:
-                    mod_config.low_dim = list(default_low_dim_obs)
-                    mod_config.image = []
+                for obs_key_config in configs_to_set:
+                    obs_key_config.low_dim = list(default_low_dim_obs)
+                    obs_key_config.rgb = []
 
     return config
 
@@ -722,7 +725,7 @@ def generate_experiment_config(
 
     algo_config_name = "bc" if algo_name == "bc_rnn" else algo_name
     config = config_factory(algo_name=algo_config_name)
-    # turn into default config for observation type (low-dim or image)
+    # turn into default config for observation modalities (e.g.: low-dim or rgb)
     config = modifier_for_obs(config)
     # add in config based on the dataset
     config = modify_config_for_dataset(
@@ -991,13 +994,13 @@ def generate_obs_ablation_configs(
 
     def remove_wrist(config):
         with config.observation.values_unlocked():
-            old_image_mods = list(config.observation.modalities.obs.image)
-            config.observation.modalities.obs.image = [m for m in old_image_mods if "eye_in_hand" not in m]
+            old_image_mods = list(config.observation.modalities.obs.rgb)
+            config.observation.modalities.obs.rgb = [m for m in old_image_mods if "eye_in_hand" not in m]
         return config
 
     def remove_rand(config):
         with config.observation.values_unlocked():
-            config.observation.encoder.obs_randomizer_class = None
+            config.observation.encoder.rgb.obs_randomizer_class = None
         return config
 
     obs_ablation_json_paths = Config() # use for convenient nested dict
@@ -1079,8 +1082,8 @@ def generate_hyper_ablation_configs(
 
     def change_conv(config):
         with config.observation.values_unlocked():
-            config.observation.encoder.visual_core = 'ShallowConv'
-            config.observation.encoder.visual_core_kwargs = Config()
+            config.observation.encoder.rgb.core_class = 'ShallowConv'
+            config.observation.encoder.rgb.core_kwargs = Config()
         return config
 
     def change_rnnd_low_dim(config):
