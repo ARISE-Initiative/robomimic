@@ -68,6 +68,61 @@ def convert_xml(xml_str):
         prefix = body.get("name").split('_')[0]
         eef_tree = get_eef_panda_element(prefix)
         body.append(eef_tree.getroot())
+        
+        
+    asset = root.find("asset") 
+    for ent in asset.iter("texture"):
+    	ent_name = ent.get("name")
+
+    	if ent_name in [
+    		"Milk_tex-ceramic",
+    		"Cereal_tex-cereal",
+    		"Can_tex-can",
+    	]:
+    		ent.attrib["type"] = "2d"
+
+    	# replace can.png -> soda.png for texture path
+    	if ent_name == "Can_tex-can":
+    		ent_file = ent.get("file")
+    		ent_file_split = ent_file.split("/")
+    		ent_file_split[-1] = "soda.png"
+    		ent.attrib["file"] = '/'.join(ent_file_split)
+
+    for ent in asset.iter("mesh"):
+    	ent_name = ent.get("name")
+    	if ent_name in [
+    		"Milk_milk_mesh",
+    		"Cereal_cereal_mesh",
+    		"Can_can_mesh",
+    	]:
+    		ent_file = ent.get("file")
+    		ent_file_split = ent_file.split("/")
+    		ent_file_split[-1] = ent_file_split[-1][:-4] + ".msh"
+    		ent.attrib["file"] = '/'.join(ent_file_split)
+
+
+    for body in worldbody.iter("body"):
+    	body_name = body.get("name")
+    	if body_name in ["Milk_main", "Cereal_main", "Can_main"]:
+    		inertial = body.find("inertial")
+    	else:
+    		continue
+
+    	if body_name == "Milk_main":
+    		inertial.attrib["pos"] = "6.98306e-10 -6.03326e-11 0.00397309"
+    		inertial.attrib["mass"] = "0.0191848"
+    		inertial.attrib["diaginertia"] = "2.86564e-05 2.83923e-05 4.8063e-06"
+    	elif body_name == "Cereal_main":
+    		inertial.attrib["pos"] = "2.03178e-07 2.33411e-07 1.28831e-06"
+    		inertial.attrib["quat"] = "0.707106 -5.73859e-05 6.76848e-05 0.707107"
+    		inertial.attrib["mass"] = "0.0674562"
+    		inertial.attrib["diaginertia"] = "0.000182561 0.000131413 6.1265e-05"
+    	elif body_name == "Can_main":
+    		inertial.attrib["pos"] = "5.89018e-05 -0.000133654 0.0003584"
+    		inertial.attrib["quat"] = "0.999769 0.000893507 -3.22198e-05 0.0214535"
+    		inertial.attrib["mass"] = "0.0143387"
+    		inertial.attrib["diaginertia"] = "9.49915e-06 9.49389e-06 4.38241e-06"
+    
 
     xml_str = ET.tostring(root, encoding="utf8").decode("utf8")
     return xml_str
