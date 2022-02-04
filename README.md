@@ -47,7 +47,7 @@ Please see the [troubleshooting](https://arise-initiative.github.io/robomimic-we
 
 ## Reproducing study results
 
-The **robomimic** framework also makes reproducing the results from this [study](https://arise-initiative.github.io/robomimic-web/study.) easy. See the [results documentation](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) for more information.
+The **robomimic** framework also makes reproducing the results from this [study](https://arise-initiative.github.io/robomimic-web/study) easy. See the [results documentation](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) for more information.
 
 ## Citations
 
