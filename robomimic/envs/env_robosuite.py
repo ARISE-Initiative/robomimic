@@ -196,7 +196,7 @@ class EnvRobosuite(EB.EnvBase):
                 pf = robot.robot_model.naming_prefix
                 for k in di:
                     if k.startswith(pf) and (k not in ret) and \
-                            (not k.endswith("proprio-state")) and (k in ObsUtils.OBS_KEYS_TO_MODALITIES):
+                            (not k.endswith("proprio-state")):
                         ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
@@ -274,13 +274,25 @@ class EnvRobosuite(EB.EnvBase):
         """
         return EB.EnvType.ROBOSUITE_TYPE
 
+    @property
+    def version(self):
+        """
+        Returns version of robosuite used for this environment, eg. 1.2.0
+        """
+        return robosuite.__version__
+
     def serialize(self):
         """
         Save all information needed to re-instantiate this environment in a dictionary.
         This is the same as @env_meta - environment metadata stored in hdf5 datasets,
         and used in utils/env_utils.py.
         """
-        return dict(env_name=self.name, type=self.type, env_kwargs=deepcopy(self._init_kwargs))
+        return dict(
+            env_name=self.name,
+            env_version=self.version,
+            type=self.type,
+            env_kwargs=deepcopy(self._init_kwargs)
+        )
 
     @classmethod
     def create_for_data_processing(
