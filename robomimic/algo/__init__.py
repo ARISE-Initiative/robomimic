@@ -8,3 +8,4 @@ from robomimic.algo.gl import GL, GL_VAE, ValuePlanner
 from robomimic.algo.hbc import HBC
 from robomimic.algo.iris import IRIS
 from robomimic.algo.td3_bc import TD3_BC
+from robomimic.algo.awopt import CEM, AWAC, AWAC_P, AWAC_P_ELRS, AWAC_P_ELRS_CEM, AWAC_P_ELRS_PI_MEAN, AWAC_P_ELRS_PI_CAND
