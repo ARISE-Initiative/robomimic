@@ -1,5 +1,7 @@
 # Getting Started
 
+TODO: this section needs to be modified - train_bc_rnn.py is not our preferred entrypoint, and the test.hdf5 is only meant for testing purposes, compared to one of the default robomimic datasets (e.g. Lift PH). We should move things around appropriately.
+
 This section discusses how to get started with the robomimic repository, by providing examples of how to train and evaluate models.
 
 ## Training Models
@@ -108,3 +110,4 @@ Instead of storing the observations, which can consist of high-dimensional image
 ```sh
 python run_trained_agent.py --agent /path/to/model.pth --n_rollouts 50 --horizon 400 --seed 0 --dataset_path /path/to/output.hdf5
 ```
+

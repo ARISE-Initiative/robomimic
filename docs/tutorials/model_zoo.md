@@ -1,4 +1,4 @@
-# Using the Model Zoo
+# Using Pretrained Models from Model Zoo
 
 This section provides several proficient trained policy models that can be downloaded and used as-is. See the ["Evaluating Trained Policies"](./quickstart.html#evaluating-trained-policies) section for instructions on loading these agents. The model zoo will be updated over time to include more tasks and policies. All success rates listed below are approximate - they may vary.
 

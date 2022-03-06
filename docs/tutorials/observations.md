@@ -1,5 +1,7 @@
 # Observations
 
+TODO: decide if more observation-related examples (modalities, nets, etc.) should go here instead of elsewhere, like in modules/models docs.
+
 **robomimic** natively supports multiple different observation modalities, and provides integrated support for modifying observations and adding your own custom ones.
 
 First, we highlight semantic distinctions when referring to different aspects of observations:

@@ -79,7 +79,7 @@ To run a much more thorough test of several algorithms and scripts, navigate to 
 $ bash test.sh
 ```
 
-## Installing released datasets
+## Downloading released datasets
 
 To download and get started with the suite of released datasets, please see [this section](./results.html#downloading-released-datasets).
 

@@ -1,6 +1,7 @@
-# Utils
+# Operations over Tensor Collections
 
-This section highlights some important utility functions / classes used in the codebase.
+This section highlights some important utility functions and classes used in the codebase for working with
+collections of tensors.
 
 ## TensorUtils
 

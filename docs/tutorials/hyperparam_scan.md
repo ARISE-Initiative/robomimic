@@ -1,6 +1,4 @@
-# Advanced Features
-
-This section discusses some advanced features of **robomimic**.
+# Running Hyperparameter Scans
 
 ## Using the Hyperparameter Helper to launch runs
 

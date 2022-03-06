@@ -21,7 +21,7 @@ Imitating human demonstrations is a promising approach to endow robots with vari
 
 This release of **robomimic** contains seven offline learning [algorithms](../modules/algorithms.html) and standardized [datasets](./results.html) collected across five simulated and three real-world multi-stage manipulation tasks of varying complexity. We highlight some features below (for a more thorough list of features, see [this link](./features.html#features-overview)):
 
-- **standardized datasets:** a set of datasets collected from different sources (single proficient human, multiple humans, and machine-generated) across several simulated and real-world tasks, along with a plug-and-play [Dataset class](../modules/datasets.html) to easily use the datasets outside of this project
+- **standardized datasets:** a set of datasets collected from different sources (single proficient human, multiple humans, and machine-generated) across several simulated and real-world tasks, along with a plug-and-play [Dataset class](../modules/dataset.html) to easily use the datasets outside of this project
 - **algorithm implementations:** several high-quality implementations of offline learning algorithms, including BC, BC-RNN, HBC, IRIS, BCQ, CQL, and TD3-BC
 - **multiple observation spaces:** support for learning both low-dimensional and visuomotor policies, with support for observation tensor dictionaries throughout the codebase, making it easy to specify different subsets of observations to train a policy. This includes a set of useful tensor utilities to work with nested dictionaries of torch Tensors and numpy arrays.
 - **visualization utilities:** utilities for visualizing demonstration data, playing back actions, visualizing trained policies, and collecting new datasets using trained policies
@@ -37,7 +37,7 @@ Please see the [troubleshooting](../miscellaneous/troubleshooting.html) section 
 
 ## Reproducing study results
 
-The **robomimic** framework also makes reproducing the results from this [study](https://arise-initiative.github.io/robomimic-web/study.) easy. See the [reproducing results documentation](./results.html) for more information.
+The **robomimic** framework also makes reproducing the results from this [study](https://arise-initiative.github.io/robomimic-web/study) easy. See the [reproducing results documentation](./results.html) for more information.
 
 ## Citations
 
