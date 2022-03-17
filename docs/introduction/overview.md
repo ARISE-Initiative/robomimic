@@ -22,7 +22,7 @@ High-quality implementations of offline learning algorithms, including BC, BC-RN
 2. **Standardized Datasets**
 Datasets collected from different sources (single proficient human, multiple humans, and machine-generated) across simulated and real-world tasks spanning multiple robots and environments
 3. **Modular Design**
-Support for learning both low-dimensional and visuomotor policies, diverse network architectures, interface to easily use external datasets
+Support for learning both low-dimensional and visuomotor policies, diverse network architectures, and interface to easily use external datasets
 4. **Flexible Experiment Workflow**
 Utilities for running hyperparameter sweeps, visualizing demonstration data and trained policies, and collecting new datasets using trained policies
 
