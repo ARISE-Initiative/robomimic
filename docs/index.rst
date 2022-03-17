@@ -30,6 +30,7 @@ Welcome to robomimic's documentation!
    :caption: Tutorials
 
    tutorials/understanding_dataset_contents
+   tutorials/reproducing_experiments
    tutorials/making_your_own_dataset
    tutorials/hyperparam_scan
    tutorials/model_zoo
