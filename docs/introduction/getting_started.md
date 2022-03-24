@@ -1,7 +1,7 @@
 # Getting Started
 
 ## Running experiments
-Let's start with a quick tutorial on how to download datasets and run experiments.
+We begin with a quick tutorial on how to download datasets and run experiments.
 
 Before beginning, make sure you are at the base repo path:
 ```sh
@@ -34,8 +34,8 @@ Experiment outputs comprise the following:
 ```
 config.json               # config used for this experiment
 logs                      # experiment log files
-  log.txt                 # terminal output
-  tb                      # tensorboard logs
+  log.txt                    # terminal output
+  tb                         # tensorboard logs
     ...
 videos                    # videos of robot rollouts during training
   ...
@@ -52,7 +52,7 @@ $ tensorboard --logdir bc_trained_models/test --bind_all
 Next, we preview some useful features and examples for running custom experiments. 
 
 ### Overview of codebase 
-To begin, here is a high-level overview of the main `robomimic` code directory (with selected files):
+Here is a high-level overview of the `robomimic` directory (highlighting selected files):
 ```
 algo                      # algorithms
   bc.py                      # bc implementation

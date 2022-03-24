@@ -11,10 +11,9 @@
   <img width="24.0%" src="../images/task_transport.gif">
  </p>
 
-**robomimic** is a framework for robot learning from demonstration.
-It offers a broad set of demonstration datasets collected on robot manipulation domains and learning algorithms to learn from these datasets.
-While recent advances have been made in imitation learning and batch (offline) reinforcement learning, a lack of open-source human datasets and reproducible learning methods make assessing the state of the field difficult.
-robomimic is an open-source effort that allows researchers and practitioners to benchmark tasks and algorithms to facilitate fair comparisons, with a focus on learning from human-provided demonstrations.
+**robomimic** is a framework for robot learning from demonstration, with a focus on learning from human demonstrations.
+It offers a broad set of demonstration datasets collected on robot manipulation domains and offline learning algorithms to learn from these datasets.
+**robomimic** aims to make robot learning broadly *accessible* and *reproducible*, allowing researchers and practitioners to benchmark tasks and algorithms fairly and to develop the next generation of robot learning algorithms.
 
 ## Core Features
 
@@ -123,7 +122,7 @@ robomimic is an open-source effort that allows researchers and practitioners to 
 
 <div class="row">
   <div class="column" style="background-color:#DEEEFB;">
-    <h4>Offline Learning Algorithms</h4>
+    <h4>Suite of Learning Algorithms</h4>
     <p>High-quality implementations of offline learning algorithms, including BC, BC-RNN, HBC, IRIS, BCQ, CQL, and TD3-BC</p>
   </div>
   <div class="column" style="background-color:#DEEEFB;">
