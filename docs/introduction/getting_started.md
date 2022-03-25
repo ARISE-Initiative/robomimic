@@ -33,14 +33,11 @@ After the script finishes, we can check the training outputs in the output direc
 Experiment outputs comprise the following:
 ```
 config.json               # config used for this experiment
-logs                      # experiment log files
+logs/                     # experiment log files
   log.txt                    # terminal output
-  tb                         # tensorboard logs
-    ...
-videos                    # videos of robot rollouts during training
-  ...
-models                    # saved model checkpoints
-  ...
+  tb/                        # tensorboard logs
+videos/                   # videos of robot rollouts during training
+models/                   # saved model checkpoints
 ```
 
 The experiment results can be viewed using tensorboard:
@@ -54,26 +51,26 @@ Next, we preview some useful features and examples for running custom experiment
 ### Overview of codebase 
 Here is a high-level overview of the `robomimic` directory (highlighting selected files):
 ```
-algo                      # algorithms
+algo/                     # algorithms
   bc.py                      # bc implementation
   ...
-config                    # default algorithm configs
+config/                   # default algorithm configs
   bc_config.py               # default config for bc
   ...
-envs                      # environment wrappers
+envs/                     # environment wrappers
   ...
-exps                      # custom experiment configs (overriding default algorithm configs)
-  templates                  # template experiment configs
+exps/                     # custom experiment configs (overriding default algorithm configs)
+  templates/                 # template experiment configs
     bc.json                     # template config for bc
     ...
-models                    # network architectures
+models/                   # network architectures
   ...
-scripts                   # scripts
+scripts/                  # scripts
   train.py                   # main script for running experiments
   download_datasets.py       # downloading robomimic v0.1 datasets
   playback_dataset.py        # visualizing dataset trajectories
   ...
-utils                     # utils for training, evaluation, visualization, hp sweeps, etc
+utils/                    # utils for training, evaluation, visualization, hp sweeps, etc
   ...
 ```
 

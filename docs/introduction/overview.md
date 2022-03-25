@@ -153,16 +153,16 @@ Utilities for running hyperparameter sweeps, visualizing demonstration data and 
 
 The robomimic framework also makes reproducing the results from this [benchmark study](https://arise-initiative.github.io/robomimic-web/study) easy. See the [reproducing results documentation](./results.html) for more information.
 
+## Troubleshooting
+
+Please see the [troubleshooting](../miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
+
 ## Contributing to robomimic
 This project is part of the broader [Advancing Robot Intelligence through Simulated Environments (ARISE) Initiative](https://github.com/ARISE-Initiative), with the aim of lowering the barriers of entry for cutting-edge research at the intersection of AI and Robotics.
 The project originally began development in late 2018 by researchers in the [Stanford Vision and Learning Lab](http://svl.stanford.edu/) (SVL).
 Now it is actively maintained and used for robotics research projects across multiple labs.
 We welcome community contributions to this project.
 For details please check our [contributing guidelines](../miscellaneous/contributing.html).
-
-## Troubleshooting
-
-Please see the [troubleshooting](../miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
 
 ## Citation
 
