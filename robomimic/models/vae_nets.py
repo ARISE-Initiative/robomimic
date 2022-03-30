@@ -140,7 +140,7 @@ class Prior(Module):
             obs_group_shapes["obs"] = OrderedDict(obs_shapes)
             if goal_shapes is not None and len(goal_shapes) > 0:
                 assert isinstance(goal_shapes, OrderedDict)
-                obs_group_shapes["goal"] = OrderedDict(self.goal_shapes)
+                obs_group_shapes["goal"] = OrderedDict(goal_shapes)
             self.prior_module = MIMO_MLP(
                 input_obs_group_shapes=obs_group_shapes,
                 output_shapes=mlp_output_shapes,
