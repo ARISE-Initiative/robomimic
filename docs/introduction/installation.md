@@ -18,6 +18,74 @@ $ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
 
 Next, we'll install the repository and its requirements. We provide two options - installing from source, and installing from pip. **We strongly recommend installing from source**, as it allows greater flexibility and easier access to scripts and examples.
 
+## Testing
+<div class="admonition important">
+<p class="admonition-title">Careful, this may change your GPU drivers!</p>
+There are several system dependencies to correctly run iGibson on Linux, mostly related to Nvidia drivers and Cuda.
+In case your system is a clean Ubuntu 20.04, you can run the following commands as root/superuser to install all required dependencies:
+
+<details>
+  <summary>Click to expand the code to install the dependencies including Nvidia drivers in headless mode to use for example in a cluster:</summary>
+<p>
+
+```bash
+# Add the nvidia ubuntu repositories
+apt-get update && apt-get install -y --no-install-recommends \
+    gnupg2 curl ca-certificates && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub | apt-key add - && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
+
+# The following cuda libraries are required to compile igibson
+apt-get update && apt-get update && apt-get install -y --no-install-recommends \
+    nvidia-headless-470 \
+    cuda-cudart-11-1=11.1.74-1 \
+    cuda-compat-11-1 \
+    cuda-command-line-tools-11-1=11.1.1-1 \
+    cuda-libraries-dev-11-1=11.1.1-1 \
+
+# For building and running igibson
+apt-get update && apt-get install -y --no-install-recommends \
+    cmake \
+    git \
+    g++ \
+    libegl-dev
+```
+</p>
+</details>
+<details>
+  <summary>Click to expand the code to install the dependencies including Nvidia drivers to render on screen for example on a desktop computer:</summary>
+<p>
+
+```bash
+# Add the nvidia ubuntu repositories
+apt-get update && apt-get install -y --no-install-recommends \
+    gnupg2 curl ca-certificates && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub | apt-key add - && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list
+
+# The following cuda libraries are required to compile igibson
+apt-get update && apt-get update && apt-get install -y --no-install-recommends \
+    xserver-xorg-video-nvidia-470 \
+    cuda-cudart-11-1=11.1.74-1 \
+    cuda-compat-11-1 \
+    cuda-command-line-tools-11-1=11.1.1-1 \
+    cuda-libraries-dev-11-1=11.1.1-1 \
+
+# For building and running igibson
+apt-get update && apt-get install -y --no-install-recommends \
+    cmake \
+    git \
+    g++ \
+    libegl-dev
+```
+
+</p>
+</details>
+
+</div>
+
 ## Install from source (preferred)
 
 First, clone the repository from github.
