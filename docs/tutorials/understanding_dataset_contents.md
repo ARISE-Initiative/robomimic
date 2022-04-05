@@ -1,12 +1,22 @@
 # Understanding Dataset Contents
 
-This section contains information on some easy ways to understand the contents of each hdf5 dataset.
+This tutorial shows some easy ways to understand the contents of each hdf5 dataset.
+
+<div class="admonition tip">
+<p class="admonition-title">Jupyter Notebook: A Deep Dive into Dataset Structure</p>
+
+The rest of this tutorial shows how to use utility scripts to work with robomimic datasets. While this should suffice for most users, any user wishing to write custom code that works with robomimic datasets should look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets. These code snippets are used under-the-hood in our codebase. 
+
+</div>
 
 ## View Dataset Structure and Videos
 
-**Note:** The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test.hdf5`, but you can run these examples with any dataset hdf5.
+<div class="admonition note">
+<p class="admonition-title">Note: These examples are compatible with any robomimic dataset.</p>
 
-**Warning:** If you are using the default dataset, please make sure that robosuite is on the `offline_study` branch of robosuite -- this is necessary for the playback scripts to function properly.
+The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test.hdf5`, but you can run these examples with any robomimic hdf5 dataset. If you are using the default dataset, please make sure that robosuite is on the `offline_study` branch of robosuite -- this is necessary for the playback scripts to function properly.
+
+</div>
 
 The repository offers a simple utility script (`get_dataset_info.py`) to view the hdf5 dataset structure and some statistics of hdf5 datasets. The script will print out some statistics about the trajectories, the filter keys present in the dataset, the environment metadata in the dataset, and the dataset structure for the first demonstration. Pass the `--verbose` argument to print the list of demonstration keys under each filter key, and the dataset structure for all demonstrations.
 
