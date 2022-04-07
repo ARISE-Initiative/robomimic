@@ -11,7 +11,7 @@
   <img width="24.0%" src="../images/task_transport.gif">
  </p>
 
-**robomimic** is a framework for robot learning from demonstration, with a focus on learning from human demonstrations.
+**robomimic** is a framework for robot learning from demonstration.
 It offers a broad set of demonstration datasets collected on robot manipulation domains and offline learning algorithms to learn from these datasets.
 **robomimic** aims to make robot learning broadly *accessible* and *reproducible*, allowing researchers and practitioners to benchmark tasks and algorithms fairly and to develop the next generation of robot learning algorithms.
 
