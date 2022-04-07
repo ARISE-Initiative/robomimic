@@ -1,26 +1,80 @@
 # Installation
 
-**robomimic** officially supports Mac OS X and Linux on Python 3. We strongly recommend using a virtual environment with [conda](https://www.anaconda.com/products/individual) ([virtualenv](https://virtualenv.pypa.io/en/latest/) is also an acceptable alternative). To get started, create a virtual env (we use conda in our examples below).
+## Requirements
 
+- Mac OS X or Linux machine
+- Python >= 3.6 (recommended 3.7.9)
+- [conda](https://www.anaconda.com/products/individual) 
+  - [virtualenv](https://virtualenv.pypa.io/en/latest/) is also an acceptable alternative, but we assume you have conda installed in our examples below
+
+## Installation Steps
+1. Create and activate conda environment
 ```sh
-# create a python 3.7 virtual environment
 $ conda create -n robomimic_venv python=3.7.9
-# activate virtual env
 $ conda activate robomimic_venv
 ```
 
-Next, install [PyTorch](https://pytorch.org/) (in our example below, we chose to use version `1.6.0` with CUDA `10.2`). You can omit the `cudatoolkit=10.2` if you're on a machine without a CUDA-capable GPU (such as a Macbook).
+2. Install [PyTorch](https://pytorch.org/)
+<details>
+  <summary><b>Mac</b></summary>
+<p>
 
 ```sh
-# install pytorch with specific version of cuda
+# Can change pytorch, torchvision versions
+# We don't install cudatoolkit since Mac does not have NVIDIA GPU
+$ conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
+```
+
+</p>
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+<p>
+
+```sh
+# Can change pytorch, torchvision versions
 $ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
 ```
 
-Next, we'll install the repository and its requirements. We provide two options - installing from source, and installing from pip. **We strongly recommend installing from source**, as it allows greater flexibility and easier access to scripts and examples.
+</p>
+</details>
+
+
+3. Install robomimic
+
+<details>
+  <summary><b>Option 1: Install from source <i>(recommended)</i></b></summary>
+<p>
+
+```sh
+$ cd <PATH_TO_YOUR_INSTALL_DIRECTORY>
+$ git clone https://github.com/ARISE-Initiative/robomimic.git
+$ cd robomimic
+$ pip install -e .
+```
+
+</p>
+</details>
+
+<details>
+  <summary><b>Option 2: Install via pip</b></summary>
+<p>
+
+```sh
+$ pip install robomimic
+```
+
+</p>
+</details>
+
 
 ## Testing
-<div class="admonition important">
+
+
+<div class="admonition note">
 <p class="admonition-title">Careful, this may change your GPU drivers!</p>
+
 There are several system dependencies to correctly run iGibson on Linux, mostly related to Nvidia drivers and Cuda.
 In case your system is a clean Ubuntu 20.04, you can run the following commands as root/superuser to install all required dependencies:
 
