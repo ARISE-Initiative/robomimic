@@ -25,7 +25,9 @@ Now, we will run an experiment using `train.py`. In this case we would like to r
 $ python robomimic/scripts/train.py --config robomimic/exps/templates/bc.json --dataset datasets/lift/ph/low_dim.hdf5 --debug
 ```
 
-**Note:** This example [requires robosuite](./installation.html#robosuite) to be installed (under the `offline_study` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
+<div class="admonition important">
+Note: This example [requires robosuite](./installation.html#robosuite) to be installed (under the `offline_study` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
+</div>
 
 ### Step 3: View experiment results
 
