@@ -1,0 +1,117 @@
+# Overview
+
+## Dataset Pipeline
+
+Datasets capture recorded environment data and are used as inputs to a given offline RL or IL algorithm in **robomimic**. In general, you can use datasets with **robomimic** by:
+
+1. **Downloading** the desired dataset
+2. **Postprocessing** the dataset to guarantee compatibility with robomimic
+3. **Training** agent(s) in robomimic with dataset
+
+**robomimic** currently supports the following datasets out of the box. Click on the corresponding **1. Downloading** link to download the dataset and the corresponding **2. Postprocessing** link for postprocessing that dataset.
+
+|          **Dataset**          | Task Type | **1. Downloading** | **2. Postprocessing**  |
+| ----------------------------- | ------------- | ------------- | ------------- |
+| [**robomimic v0.1 (CoRL 2021)**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
+| [**D4RL**](d4rl.html)                      | Sim Locomotion | [Link](d4rl.html#downloading)  | [Link](d4rl.html#postprocessing)  |
+| [**MOMART**](momart.html)                    | Sim Robot Mobile Manipulation | [Link](momart.html#downloading)  | [Link](momart.html#postprocessing)  |
+| [**RoboTurk Pilot**](roboturk_pilot.html)            | Sim + Real Robot Manipulation | [Link](roboturk_pilot.html#downloading)  | [Link](roboturk_pilot.html#postprocessing)  |
+
+After downloading and postprocessing, **3. Training** with the dataset is straightforward and unified across all datasets:
+
+```sh
+python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONFIG>
+```
+
+## Generating Your Own Dataset
+
+**robomimic** provides tutorials for collecting custom datasets for specific environment platforms. Click on any of the links below for more information for the specific environment setup:
+
+|          **Environment Platform**          | **Task Types** |
+| ----------------------------- | ------------- |
+| [**robosuite**](.robosuite.html)| Robot Manipulation  |
+
+
+## Dataset Structure
+
+All postprocessed **robomimic** compatible datasets share the same data structure. A single dataset is a single HDF5 file with the following structure:
+
+- **`data`** (group)
+
+  - **`total`** (attribute) - number of state-action samples in the dataset
+
+  - **`env_args`** (attribute) - a json string that contains metadata on the environment and relevant arguments used for collecting data. Three keys: `env_name`, the name of the environment or task to create, `env_type`, one of robomimic's supported [environment types](https://github.com/ARISE-Initiative/robomimic/blob/master/robomimic/envs/env_base.py#L9), and `env_kwargs`, a dictionary of keyword-arguments to be passed into the environment of type `env_name`.
+
+  - **`mask`** (group) - this group will exist in hdf5 datasets that contain filter keys
+
+    - **`<filter_key_1>`** (dataset) - the first filter key. Note that the name of this dataset and length will vary. As an example, this could be the "valid" filter key, and contain the list ["demo_0", "demo_19", "demo_35"], corresponding to 3 validation trajectories.
+
+      ...
+
+  - **`demo_0`** (group) - group for the first trajectory (every trajectory has a group)
+
+    - **`num_samples`** (attribute) - the number of state-action samples in this trajectory
+
+    - **`model_file`** (attribute) - the xml string corresponding to the MJCF MuJoCo model. Only present for robosuite datasets.
+
+    - **`states`** (dataset) - flattened raw MuJoCo states, ordered by time. Shape (N, D) where N is the length of the trajectory, and D is the dimension of the state vector. Should be empty or have dummy values for non-robosuite datasets.
+
+    - **`actions`** (dataset) - environment actions, ordered by time. Shape (N, A) where N is the length of the trajectory, and A is the action space dimension
+
+    - **`rewards`** (dataset) - environment rewards, ordered by time. Shape (N,) where N is the length of the trajectory.
+
+    - **`dones`** (dataset) - done signal, equal to 1 if playing the corresponding action in the state should terminate the episode. Shape (N,) where N is the length of the trajectory.
+
+    - **`obs`** (group) - group for the observation keys. Each key is stored as a dataset.
+
+      - **`<obs_key_1>`** (dataset) - the first observation key. Note that the name of this dataset and shape will vary. As an example, the name could be "agentview_image", and the shape could be (N, 84, 84, 3). 
+
+        ...
+
+    - **`next_obs`** (group) - group for the next observations.
+
+      - **`<obs_key_1>`** (dataset) - the first observation key.
+
+        ...
+
+  - **`demo_1`** (group) - group for the second trajectory
+
+    ...
+
+### Data Conventions
+
+**robomimic**-compatible datasets expect certain values (such as images and actions) to be formatted a specific way. See the below sections for further details:
+
+<details>
+  <summary><b>Storing images</b></summary>
+<p>
+<div class="admonition warning">
+<p class="admonition-title">Warning!</p>
+
+Dataset images should be of type `np.uint8` and be stored in channel-last `(H, W, C)` format. This is because:
+
+- **(1)** this is a common format that many `gym` environments and all `robosuite` environments return image observations in
+- **(2)** using `np.uint8` (vs floats) saves space in dataset storage
+
+Note that the robosuite observation extraction script (`dataset_states_to_obs.py`) already stores images in the correct format.
+
+</div>
+
+</p>
+</details>
+
+
+<details>
+  <summary><b>Storing actions</b></summary>
+<p>
+<div class="admonition warning">
+<p class="admonition-title">Warning!</p>
+
+Actions should be **normalized between -1 and 1**. This is because this range enables easier policy learning the use of `tanh` layers).
+
+The `get_dataset_info.py` script can be used to sanity check stored actions, and will throw an `Exception` if there is a violation.
+
+</div>
+
+</p>
+</details>

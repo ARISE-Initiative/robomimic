@@ -18,7 +18,7 @@ Welcome to robomimic's documentation!
    :maxdepth: 1
    :caption: Datasets
 
-   datasets/structure
+   datasets/overview
    datasets/robomimic_v0.1
    datasets/robosuite
    datasets/d4rl
