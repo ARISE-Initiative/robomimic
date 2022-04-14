@@ -52,7 +52,7 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 </div> -->
 
 <p align="center">
-  <img style="width:80.0%;height:auto;" src="../_images/core_features.png">
+  <img style="width:100.0%;height:auto;" src="../_images/core_features.png">
  </p>
 
 <!--
