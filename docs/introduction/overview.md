@@ -18,7 +18,7 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 ## Core Features
 
 
-<div style="box-sizing:border-box;" >
+<!-- <div style="box-sizing:border-box;" >
 <section class="page-section" style="box-sizing:border-box;display:block;" >
     <div class="container" style="box-sizing:border-box;width:100%;padding-right:0.75rem;padding-left:0.75rem;margin-right:auto;margin-left:auto;" >
         <div class="row text-center" style="box-sizing:border-box;display:flex;flex-wrap:wrap;margin-right:-0.75rem;margin-left:-0.75rem;" >
@@ -49,7 +49,11 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
         </div>
     </div>
 </section>
-</div>
+</div> -->
+
+<p align="center">
+  <img style="width:80.0%;height:auto;" src="../_images/core_features.png">
+ </p>
 
 <!--
 <style>
