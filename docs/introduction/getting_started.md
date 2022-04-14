@@ -1,7 +1,7 @@
 # Getting Started
 
 ## Running experiments
-We begin with a quick tutorial on how to download datasets and run experiments.
+We begin with a quick tutorial on downloading datasets and running experiments.
 
 Before beginning, make sure you are at the base repo path:
 ```sh
@@ -31,7 +31,7 @@ Note: This example [requires robosuite](./installation.html#robosuite) to be ins
 
 ### Step 3: View experiment results
 
-After the script finishes, we can check the training outputs in the output directory `bc_trained_models/test`.
+After the script finishes, we can check the training outputs in the directory `bc_trained_models/test`.
 Experiment outputs comprise the following:
 ```
 config.json               # config used for this experiment
@@ -48,10 +48,8 @@ $ tensorboard --logdir bc_trained_models/test --bind_all
 ```
 
 ## Next steps
-Next, we preview some useful features and examples for running custom experiments. 
-
-### Overview of codebase 
-Here is a high-level overview of the `robomimic` directory (highlighting selected files):
+<!--
+High-level overview of the `robomimic` directory (highlighting selected files):
 ```
 algo/                     # algorithms
   bc.py                      # bc implementation
@@ -75,6 +73,9 @@ scripts/                  # scripts
 utils/                    # utils for training, evaluation, visualization, hp sweeps, etc
   ...
 ```
-
-### Useful References
-TODO
+-->
+For next steps, please refer to the remaining documentation sections: 
+- **Datasets section**: downloading and benchmarking datasets
+- **Tutorials section**: creating datasets and algorithms, and running experiments
+- **Modules section**: detailed information on robomimic modules, eg. algorithms, architectures, experiments configs, etc
+- [Troubleshooting](../miscellaneous/troubleshooting.html) and [Contributing guidelines](../miscellaneous/contributing.html)
