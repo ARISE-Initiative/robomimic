@@ -14,18 +14,18 @@ Datasets capture recorded environment data and are used as inputs to a given off
 2. **Postprocessing** the dataset to guarantee compatibility with robomimic
 3. **Training** agent(s) in robomimic with dataset
 
-**robomimic** currently supports the following datasets out of the box. Click on the corresponding **1. Downloading** link to download the dataset and the corresponding **2. Postprocessing** link for postprocessing that dataset.
+**robomimic** currently supports the following datasets out of the box. Click on the corresponding **(1) Downloading** link to download the dataset and the corresponding **(2) Postprocessing** link for postprocessing that dataset.
 
 
-|          **Dataset**          | **Task Types** | **1.Downloading** | **2.Postprocessing**  |
+|          **Dataset**          | **Task Types** | **Downloading** | **Postprocessing**  |
 | ----------------------------- | :-------------: | :-------------: | :-------------: |
-| [**robomimic v0.1 <br>(CoRL 2021)**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
+| [**robomimic v0.1**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
 | [**D4RL**](d4rl.html)                      | Sim Locomotion | [Link](d4rl.html#downloading)  | [Link](d4rl.html#postprocessing)  |
-| [**MOMART**](momart.html)                    | Sim Robot Mobile Manipulation | [Link](momart.html#downloading)  | [Link](momart.html#postprocessing)  |
-| [**RoboTurk Pilot**](roboturk_pilot.html)            | Sim + Real Robot Manipulation | [Link](roboturk_pilot.html#downloading)  | [Link](roboturk_pilot.html#postprocessing)  |
+| [**MOMART**](momart.html)                    | Sim Mobile Manipulation | [Link](momart.html#downloading)  | [Link](momart.html#postprocessing)  |
+| [**RoboTurk Pilot**](roboturk_pilot.html)            | Sim Robot Manipulation | [Link](roboturk_pilot.html#downloading)  | [Link](roboturk_pilot.html#postprocessing)  |
 
 
-After downloading and postprocessing, **3. Training** with the dataset is straightforward and unified across all datasets:
+After downloading and postprocessing, **(3) Training** with the dataset is straightforward and unified across all datasets:
 
 ```sh
 python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONFIG>
@@ -43,6 +43,10 @@ python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONF
 ## Dataset Structure
 
 All postprocessed **robomimic** compatible datasets share the same data structure. A single dataset is a single HDF5 file with the following structure:
+
+<details>
+  <summary><b>HDF5 Structure</b></summary>
+<p>
 
 - **`data`** (group)
 
@@ -85,6 +89,10 @@ All postprocessed **robomimic** compatible datasets share the same data structur
   - **`demo_1`** (group) - group for the second trajectory
 
     ...
+
+
+</p>
+</details>
 
 ### Data Conventions
 
