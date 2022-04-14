@@ -27,13 +27,19 @@ Welcome to robomimic's documentation!
 
 .. toctree::
    :maxdepth: 1
+   :caption: Pretrained Models
+
+   model_zoo/robomimic_v0.1
+
+.. toctree::
+   :maxdepth: 1
    :caption: Tutorials
 
    tutorials/understanding_dataset_contents
+   tutorials/using_pretrained_models
    tutorials/reproducing_experiments
    tutorials/making_your_own_dataset
    tutorials/hyperparam_scan
-   tutorials/model_zoo
    tutorials/configs
    tutorials/observations
    tutorials/custom_algorithms

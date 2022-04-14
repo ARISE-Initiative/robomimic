@@ -8,7 +8,12 @@ This section discusses how to get started with the robomimic repository, by prov
 
 This section discusses how models can be trained.
 
-**Note:** These examples [require robosuite](./installation.html#robosuite) to be installed, but they can run without robosuite by disabling rollouts in `robomimic/configs/base_config.py`, `robomimic/exps/templates/bc.json`, and `examples/train_bc_rnn.py`. 
+<div class="admonition warning">
+<p class="admonition-title">Warning: examples use robosuite</p>
+
+These examples [require robosuite](./installation.html#robosuite) to be installed, but they can run without robosuite by disabling rollouts in `robomimic/configs/base_config.py`, `robomimic/exps/templates/bc.json`, and `examples/train_bc_rnn.py`. 
+
+</div>
 
 ### Run a quick example
 
@@ -20,7 +25,12 @@ $ python train_bc_rnn.py --debug
 
 The default dataset used is the one in `tests/assets/test.hdf5` and the default directory where results are saved for the example training run is in `tests/tmp_model_dir`. Both can be overridden by passing arguments to the above script. 
 
-**Warning:** If you are using the default dataset (and rollouts are enabled), please make sure that robosuite is on the `offline_study` branch of robosuite.
+<div class="admonition warning">
+<p class="admonition-title">Warning: use correct robosuite branch!</p>
+
+If you are using the default dataset (and rollouts are enabled), please make sure that robosuite is on the `offline_study` branch of robosuite.
+
+</div>
 
 After the script finishes, you can check the training outputs in the output directory (`tests/tmp_model_dir/bc_rnn_example` by default). See the "Viewing Training Results" section below for more information on interpreting the output.
 
