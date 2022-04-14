@@ -2,6 +2,12 @@
 
 ## Dataset Pipeline
 
+<style>
+table{
+margin: auto;
+}
+</style>
+
 Datasets capture recorded environment data and are used as inputs to a given offline RL or IL algorithm in **robomimic**. In general, you can use datasets with **robomimic** by:
 
 1. **Downloading** the desired dataset
@@ -10,12 +16,14 @@ Datasets capture recorded environment data and are used as inputs to a given off
 
 **robomimic** currently supports the following datasets out of the box. Click on the corresponding **1. Downloading** link to download the dataset and the corresponding **2. Postprocessing** link for postprocessing that dataset.
 
-|          **Dataset**          | Task Type | **1. Downloading** | **2. Postprocessing**  |
-| ----------------------------- | ------------- | ------------- | ------------- |
-| [**robomimic v0.1 (CoRL 2021)**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
+
+|          **Dataset**          | **Task Types** | **1.Downloading** | **2.Postprocessing**  |
+| ----------------------------- | :-------------: | :-------------: | :-------------: |
+| [**robomimic v0.1 <br>(CoRL 2021)**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
 | [**D4RL**](d4rl.html)                      | Sim Locomotion | [Link](d4rl.html#downloading)  | [Link](d4rl.html#postprocessing)  |
 | [**MOMART**](momart.html)                    | Sim Robot Mobile Manipulation | [Link](momart.html#downloading)  | [Link](momart.html#postprocessing)  |
 | [**RoboTurk Pilot**](roboturk_pilot.html)            | Sim + Real Robot Manipulation | [Link](roboturk_pilot.html#downloading)  | [Link](roboturk_pilot.html#postprocessing)  |
+
 
 After downloading and postprocessing, **3. Training** with the dataset is straightforward and unified across all datasets:
 
@@ -28,7 +36,7 @@ python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONF
 **robomimic** provides tutorials for collecting custom datasets for specific environment platforms. Click on any of the links below for more information for the specific environment setup:
 
 |          **Environment Platform**          | **Task Types** |
-| ----------------------------- | ------------- |
+| ----------------------------- | :---------------------: |
 | [**robosuite**](.robosuite.html)| Robot Manipulation  |
 
 
