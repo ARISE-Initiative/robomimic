@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'robomimic'
-copyright = '2021, Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
+copyright = '2022, Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
 author = 'Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
 
 # The version info for the project you're documenting, acts as replacement for
