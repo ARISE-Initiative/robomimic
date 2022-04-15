@@ -1,0 +1,9 @@
+include robomimic/exps/templates/*.json
+include robomimic/scripts/*.py
+include robomimic/scripts/*.sh
+include robomimic/scripts/conversion/*.py
+include robomimic/scripts/conversion/*.sh
+recursive-include examples/ *.py
+recursive-include tests/ *.py
+recursive-include tests/ *.sh
+recursive-include tests/assets/ *
