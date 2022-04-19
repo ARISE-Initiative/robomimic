@@ -12,6 +12,15 @@ $ python conversion/convert_robosuite.py --dataset /path/to/demo.hdf5
 
 Afterwards, observations should be extracted from the `demo.hdf5` dataset (see below).
 
+
+<div class="admonition warning">
+<p class="admonition-title">Train-Validation Data Splits</p>
+
+For robosuite datasets, if attempting to create your own train-val splits, we recommend running the `split_train_val.py` script on the `demo.hdf5` file before extracting observations, since filter keys are copied from the source hdf5 during observation extraction (see more details below on robosuite hdf5s). This will ensure that all postprocessed hdf5s generated from the `demo.hdf5` inherits the same filter keys.
+
+</p>
+</details>
+
 ## Structure of raw collected demonstrations
 
 The structure of these converted raw `demo.hdf5` files is very similar to the normal hdf5 dataset structure, and is compatible with scripts such as `get_dataset_info.py` and `playback_dataset.py`, but it is missing observations (such as proprioception, object poses, and images),, rewards, and dones, which are necessary for training policies. Keeping these raw `demo.hdf5` datasets around is a good idea -- it **allows flexibility in extracting different kinds of observations and rewards** (see below section on extracting observations). The structure of these raw datasets is shown below.

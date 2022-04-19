@@ -131,3 +131,17 @@ The `get_dataset_info.py` script can be used to sanity check stored actions, and
 
 </p>
 </details>
+
+### Filter Keys
+
+Filter keys enable arbitrary splitting of a dataset into sub-groups, and allow training on a specific subset of the data.
+
+A common use-case is to split data into train-validation splits. We provide a convenience script for doing this in the `robomimic/scripts` directory:
+
+```sh
+$ python split_train_val.py --dataset /path/to/dataset.hdf5 --ratio 0.1 --filter_key <FILTER_KEY_NAME>
+```
+
+If `--filter_key` is not set, this script creates `train` / `valid` filter keys under `mask/` in the HDF5 dataset, which contain 90% / 10% of the dataset's demo IDs, respectively. If `config.experiment.validate=True` in the training config, only the `train` demos will be used for training and `valid` demos used for validation. Setting `--filter_key` prepends `<FILTER_KEY_NAME>_` to both `train` and `val`.
+
+If a custom `<FILTER_KEY_NAME>` is used, set `config.train.hdf5_filter_key=<FILTER_KEY_NAME>` in the training config to use that train / val split generated (assuming `config.experiment.validate=True`).
