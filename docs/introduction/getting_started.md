@@ -78,7 +78,7 @@ utils/                    # utils for training, evaluation, visualization, hp sw
 ```
 -->
 For next steps, please refer to the remaining documentation sections: 
-- **Datasets section**: downloading and benchmarking datasets
-- **Tutorials section**: creating datasets and algorithms, and running experiments
-- **Modules section**: detailed information on robomimic modules, eg. algorithms, architectures, experiments configs, etc
+- [Datasets](../datasets/overview.html): downloading and benchmarking datasets
+- [Tutorials](../tutorials/understanding_dataset_contents.html): creating datasets and algorithms, and running experiments
+- [Modules](../modules/overview.html): detailed information on robomimic modules, eg. algorithms, architectures, experiments configs, etc
 - [Troubleshooting](../miscellaneous/troubleshooting.html) and [Contributing guidelines](../miscellaneous/contributing.html)
