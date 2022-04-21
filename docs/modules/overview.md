@@ -1,6 +1,8 @@
 # Overview
 
-![overview](../images/module_overview.png)
+<p align="center">
+  <img width="100.0%" src="../images/module_overview.png">
+ </p>
 
 The **robomimic** framework consists of several modular components that interact to train and evaluate a policy:
 - **Experiment config**: a config object defines all settings for a training run
