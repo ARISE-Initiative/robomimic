@@ -4,7 +4,9 @@
 
 The first [RoboTurk paper](https://arxiv.org/abs/1811.02790) released [large-scale pilot datasets](https://roboturk.stanford.edu/dataset_sim.html) collected with robosuite `v0.3`. These datasets consist of over 1000 task demonstrations each on several Sawyer `PickPlace` and `NutAssembly` task variants, collected by several human operators. This repository is fully compatible with these datasets. 
 
-![roboturk_pilot](../images/roboturk_pilot.png)
+<p align="center">
+  <img width="100.0%" src="../images/roboturk_pilot.png">
+ </p>
 
 
 ## Downloading
