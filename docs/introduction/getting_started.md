@@ -5,12 +5,12 @@ We begin with a quick tutorial on downloading datasets and running experiments.
 
 Before beginning, make sure you are at the base repo path:
 ```sh
-$ cd {/base/repo/path}
+$ cd {/path/to/robomimic}
 ```
 
 ### Step 1: Download dataset
 
-Download the robosuite lift proficient human dataset:
+Download the robosuite **Lift (PH)** dataset (see [this link](../datasets/robomimic_v0.1.html#proficient-human-ph) for more information on this dataset):
 ```sh
 $ python robomimic/scripts/download_datasets.py --tasks lift --dataset_types ph
 ```
@@ -78,7 +78,7 @@ utils/                    # utils for training, evaluation, visualization, hp sw
 ```
 -->
 For next steps, please refer to the remaining documentation sections: 
-- [Datasets](../datasets/overview.html): downloading and benchmarking datasets
-- [Tutorials](../tutorials/understanding_dataset_contents.html): creating datasets and algorithms, and running experiments
+- [Datasets](../datasets/overview.html): downloading datasets and reproducing experiments
+- [Tutorials](../tutorials/understanding_dataset_contents.html): working with datasets, running experiments, using trained models, and more
 - [Modules](../modules/overview.html): detailed information on robomimic modules, eg. algorithms, architectures, experiments configs, etc
 - [Troubleshooting](../miscellaneous/troubleshooting.html) and [Contributing guidelines](../miscellaneous/contributing.html)

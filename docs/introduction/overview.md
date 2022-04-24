@@ -122,9 +122,9 @@ Support for learning both low-dimensional and visuomotor policies, diverse netwo
 4. **Flexible Experiment Workflow**
 Utilities for running hyperparameter sweeps, visualizing demonstration data and trained policies, and collecting new datasets using trained policies -->
 
-## Reproducing benchmark study results
+## Reproducing benchmarks
 
-The robomimic framework also makes reproducing the results from this [benchmark study](https://arise-initiative.github.io/robomimic-web/study) easy. See the [reproducing results documentation](./results.html) for more information.
+The robomimic framework also makes reproducing the results from different benchmarks and datasets easy. See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
 ## Troubleshooting
 

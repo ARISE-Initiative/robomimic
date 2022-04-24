@@ -41,7 +41,7 @@ We value readability and adhere to the following coding conventions:
 
 We also list additional suggested contributing guidelines that we adhered to during development.
 
-- When creating new networks (e.g. subclasses of `Module` in `models/base_nets.py`), always sub-modules into a property called `self.nets`, and if there is more than one sub-module, make it a module collection (such as a `torch.nn.ModuleDict`). This is to ensure that the pattern `model.to(device)` works as expected with multiple levels of nested torch modules. As an example of nesting, see the `_create_networks` function in the `VAE` class (`models/vae_nets.py`) and the `MIMO_MLP` class (`models/obs_nets.py`).
+- When creating new networks (e.g. subclasses of `Module` in `models/base_nets.py`), always put sub-modules into a property called `self.nets`, and if there is more than one sub-module, make it a module collection (such as a `torch.nn.ModuleDict`). This is to ensure that the pattern `model.to(device)` works as expected with multiple levels of nested torch modules. As an example of nesting, see the `_create_networks` function in the `VAE` class (`models/vae_nets.py`) and the `MIMO_MLP` class (`models/obs_nets.py`).
 
 - Do not use default mutable arguments -- they can lead to terrible bugs and unexpected behavior (see [this link](https://florimond.dev/blog/articles/2018/08/python-mutable-defaults-are-the-source-of-all-evil/) for more information). For this reason, in functions that expect optional dictionaries and lists (for example, the `core_kwargs` argument in the  `obs_encoder_factory` function, or the `layer_dims` argument in the `MLP` class constructor), we use a default argument of `core_kwargs=None` or an empty tuple (since tuples are immutable) `layer_dims=()`.
 

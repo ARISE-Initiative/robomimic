@@ -1,9 +1,5 @@
 # Getting Familiar with Configs
 
-TODO: what parts should go here vs. in modules/configs?
-
-## Config Example
-
 The simple config example script at `examples/simple_config.py` shows how the `Config` object can easily be instantiated and modified safely with different levels of locking. We reproduce certain portions of the script. First, we can create a `Config` object and call `lock` when we think we won't need to change it anymore.
 
 ```python

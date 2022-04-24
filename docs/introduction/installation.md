@@ -94,7 +94,7 @@ OR
 $ pip install robosuite
 ```
 
-**(Optional)** to use our released datasets and reproduce our experiments, switch to our `offline_study` branch (requires installing robousite from source):
+**(Optional)** to use our released datasets and reproduce our experiments, switch to our `offline_study` branch (requires installing robosuite from source):
 
 ```sh
 git checkout offline_study
@@ -140,11 +140,11 @@ $ cd <PATH_TO_ROBOMIMIC_INSTALL_DIR>/tests
 $ bash test.sh
 ```
 
-For additional intro scripts, see [Getting Started](./quickstart.html#run-a-quick-example).
+To run some easy examples, see the [Getting Started](./getting_started.html) section.
 
 ## Downloading released datasets
 
-See [this section](./results.html#downloading-released-datasets).
+See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
 ## Install doc dependencies
 

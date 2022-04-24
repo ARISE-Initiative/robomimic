@@ -2,7 +2,7 @@
 
 ## Using the Hyperparameter Helper to launch runs
 
-While copying an algorithm's template json from `exps/templates` and modifying it manually is a perfectly valid way to run experiments, we also provide the `hyperparam_helper.py` script to easily generate config jsons to use with the `train.py` script. **This is the preferred way to launch training runs using the repository.** It also makes hyperparameter scans a breeze. We'll walk through an example below, by reproducing sections of the `hyperparam_helper.py` script.
+While copying an algorithm's template json from `exps/templates` and modifying it manually is a perfectly valid way to run experiments, we also provide the `hyperparam_helper.py` script to easily generate config jsons to use with the `train.py` script. **This is the preferred way to launch multiple training runs using the repository.** It also makes hyperparameter scans a breeze. We'll walk through an example below, by reproducing sections of the `hyperparam_helper.py` script.
 
 The first step is to start with a base config json. A common choice is to copy one of the templates in `exps/templates` (such as `exps/templates/bc.json`) into a new folder (where additional config jsons will be generated). 
 

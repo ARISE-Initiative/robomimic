@@ -37,7 +37,7 @@ python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONF
 
 |          **Environment Platform**          | **Task Types** |
 | ----------------------------- | :---------------------: |
-| [**robosuite**](.robosuite.html)| Robot Manipulation  |
+| [**robosuite**](robosuite.html)| Robot Manipulation  |
 
 <div class="admonition note">
 <p class="admonition-title">Create Your Own Environment Wrapper!</p>
@@ -130,7 +130,7 @@ Note that the robosuite observation extraction script (`dataset_states_to_obs.py
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
 
-Actions should be **normalized between -1 and 1**. This is because this range enables easier policy learning the use of `tanh` layers).
+Actions should be **normalized between -1 and 1**. This is because this range enables easier policy learning via the use of `tanh` layers).
 
 The `get_dataset_info.py` script can be used to sanity check stored actions, and will throw an `Exception` if there is a violation.
 
@@ -149,6 +149,19 @@ A common use-case is to split data into train-validation splits. We provide a co
 $ python split_train_val.py --dataset /path/to/dataset.hdf5 --ratio 0.1 --filter_key <FILTER_KEY_NAME>
 ```
 
-If `--filter_key` is not set, this script creates `train` / `valid` filter keys under `mask/` in the HDF5 dataset, which contain 90% / 10% of the dataset's demo IDs, respectively. If `config.experiment.validate=True` in the training config, only the `train` demos will be used for training and `valid` demos used for validation. Setting `--filter_key` prepends `<FILTER_KEY_NAME>_` to both `train` and `val`.
+- `--dataset` specifies the path to the hdf5 dataset
+- `--ratio` specifies the amount of validation data you would like to create. In the example above, 10% of the demonstrations will be put into the validation group.
+- `--filter_key` (optional) By default, this script splits all demonstration keys in the hdf5 into 2 new hdf5 groups - one under `mask/train`, and one under `mask/valid`. If this argument is provided, the demonstration keys corresponding to this filter key (under `mask/<FILTER_KEY_NAME>`) will be split into 2 groups - `mask/<FILTER_KEY_NAME>_train` and `mask/<FILTER_KEY_NAME>_valid`.
 
-If a custom `<FILTER_KEY_NAME>` is used, set `config.train.hdf5_filter_key=<FILTER_KEY_NAME>` in the training config to use that train / val split generated (assuming `config.experiment.validate=True`).
+<div class="admonition note">
+<p class="admonition-title">Note!.</p>
+
+You can easily list the filter keys present in a dataset with the `get_dataset_info.py` script (see [this link](../tutorials/understanding_dataset_contents.html#view-dataset-structure-and-videos)), and you can even pass a `--verbose` flag to list the exact demonstrations that each filter key corresponds to.
+
+</div>
+
+Using filter keys during training is easy. To use the generated train-valid split, you can set `config.experiment.validate=True` so that the demos under `mask/train` are used for training, and the demos under `mask/valid` are used for validation. 
+
+You can also use a custom filter key for training by setting `config.train.hdf5_filter_key=<FILTER_KEY_NAME>`. This ensures that only the demos under `mask/<FILTER_KEY_NAME>` are used during training. If you also set `config.experiment.validate=True`, this filter key's train-valid split will be used.
+
+

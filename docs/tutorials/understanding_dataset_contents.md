@@ -5,7 +5,7 @@ This tutorial shows some easy ways to understand the contents of each hdf5 datas
 <div class="admonition tip">
 <p class="admonition-title">Jupyter Notebook: A Deep Dive into Dataset Structure</p>
 
-The rest of this tutorial shows how to use utility scripts to work with robomimic datasets. While this should suffice for most users, any user wishing to write custom code that works with robomimic datasets should look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets. These code snippets are used under-the-hood in our codebase. 
+The rest of this tutorial shows how to use utility scripts to work with robomimic datasets. While this should suffice for most users, any user wishing to write custom code that works with robomimic datasets should look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets.
 
 </div>
 

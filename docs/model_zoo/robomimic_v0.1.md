@@ -1,8 +1,13 @@
 # robomimic-v0.1
 
-We provide links below to several pretrained models that were trained with robomimic-v0.1 for our CoRL 2021 study. See the ["Using Pretrained Models"](../tutorials/using_pretrained_models.html) tutorial for instructions on using these models. All success rates listed below are approximate - they may vary.
+We provide links below to several pretrained models that were trained with robomimic-v0.1 for our CoRL 2021 study. All success rates listed below are approximate - they may vary.
 
-**Warning:** When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite.
+<div class="admonition note">
+<p class="admonition-title">Note: see tutorial on using these models</p>
+
+See the ["Using Pretrained Models"](../tutorials/using_pretrained_models.html) tutorial for instructions on using these models.
+
+</div>
 
 <div class="admonition warning">
 <p class="admonition-title">Warning: use correct robosuite branch!</p>
