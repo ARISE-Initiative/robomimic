@@ -17,7 +17,7 @@ Datasets capture recorded environment data and are used as inputs to a given off
 **robomimic** currently supports the following datasets out of the box. Click on the corresponding **(1) Downloading** link to download the dataset and the corresponding **(2) Postprocessing** link for postprocessing that dataset.
 
 
-|          **Dataset**          | **Task Types** | **Downloading** | **Postprocessing**  |
+|          **Dataset**          | <center>**Task Types**</center> | **Downloading** | **Postprocessing**  |
 | ----------------------------- | :-------------: | :-------------: | :-------------: |
 | [**robomimic v0.1**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
 | [**D4RL**](d4rl.html)                      | Sim Locomotion | [Link](d4rl.html#downloading)  | [Link](d4rl.html#postprocessing)  |
