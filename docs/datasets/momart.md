@@ -43,3 +43,15 @@ For each type of dataset, we also provide a direct download links that will down
 ## Postprocessing
 
 No postprocessing is needed for these datasets!
+
+## Citation
+```sh
+@inproceedings{wong2022error,
+  title={Error-Aware Imitation Learning from Teleoperation Data for Mobile Manipulation},
+  author={Wong, Josiah and Tung, Albert and Kurenkov, Andrey and Mandlekar, Ajay and Fei-Fei, Li and Savarese, Silvio and Mart{\'\i}n-Mart{\'\i}n, Roberto},
+  booktitle={Conference on Robot Learning},
+  pages={1367--1378},
+  year={2022},
+  organization={PMLR}
+}
+```
