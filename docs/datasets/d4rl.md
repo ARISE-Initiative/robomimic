@@ -1,7 +1,7 @@
 # D4RL
 
 ## Overview
-The [D4RL](https://arxiv.org/abs/2004.07219) benchmark set of tasks provide a set of locomotion tasks and collected demonstration data.
+The [D4RL](https://arxiv.org/abs/2004.07219) benchmark provides a set of locomotion tasks and demonstration datasets.
 
 ## Downloading
 

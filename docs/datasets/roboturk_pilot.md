@@ -4,8 +4,9 @@
 
 The first [RoboTurk paper](https://arxiv.org/abs/1811.02790) released [large-scale pilot datasets](https://roboturk.stanford.edu/dataset_sim.html) collected with robosuite `v0.3`. These datasets consist of over 1000 task demonstrations each on several Sawyer `PickPlace` and `NutAssembly` task variants, collected by several human operators. This repository is fully compatible with these datasets. 
 
-![roboturk_pilot](../images/roboturk_pilot.png)
-
+<p align="center">
+  <img width="100.0%" src="../images/roboturk_pilot.png">
+</p>
 
 ## Downloading
 
@@ -16,11 +17,11 @@ When working with these datasets, please make sure that you have installed [robo
 
 </div>
 
-Download the dataset (~9GB) [here](http://cvgl.stanford.edu/projects/roboturk/RoboTurkPilot.zip) (~9 GB download), and unzip the file, resulting in a `RoboTurkPilot` folder.
+Download the dataset [here](http://cvgl.stanford.edu/projects/roboturk/RoboTurkPilot.zip) (~9 GB download), and unzip the file, resulting in a `RoboTurkPilot` folder.
 
 ## Postprocessing
 
-First, the dataset must be updated to a format compatible with **robomimic**. Run (kwargs given as an example):
+First, the dataset must be updated to a format compatible with **robomimic**. Run the following script (these arguments are provided as an example):
 ```sh
 # convert the Can demonstrations, and also create a "fastest_225" filter_key (prior work such as IRIS has trained on this subset)
 $ python conversion/convert_roboturk_pilot.py --folder /path/to/RoboTurkPilot/bins-Can --n 225
