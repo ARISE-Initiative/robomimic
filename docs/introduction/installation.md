@@ -68,11 +68,18 @@ $ pip install robomimic
 </p>
 </details>
 
-That's it!
+<div class="admonition note">
+<p class="admonition-title">Note: Additional dependencies might be required.</p>
+
+This is all you need for using the suite of algorithms and utilities packaged with robomimic. However, to use our demonstration datasets, you may need additional dependencies. Please see the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments, and see [the simulators section below](installation.html#install-simulators).
+</div>
 
 
 # Optional Installations
 
+## Downloading datasets and reproducing experiments
+
+See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
 ## Install simulators
 
@@ -142,11 +149,7 @@ $ bash test.sh
 
 To run some easy examples, see the [Getting Started](./getting_started.html) section.
 
-## Downloading released datasets
-
-See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
-
-## Install doc dependencies
+## Install documentation dependencies
 
 If you plan to contribute to the repository and add new features, you must install the additional requirements required to build the documentation locally:
 
