@@ -154,7 +154,7 @@ $ python split_train_val.py --dataset /path/to/dataset.hdf5 --ratio 0.1 --filter
 - `--filter_key` (optional) By default, this script splits all demonstration keys in the hdf5 into 2 new hdf5 groups - one under `mask/train`, and one under `mask/valid`. If this argument is provided, the demonstration keys corresponding to this filter key (under `mask/<FILTER_KEY_NAME>`) will be split into 2 groups - `mask/<FILTER_KEY_NAME>_train` and `mask/<FILTER_KEY_NAME>_valid`.
 
 <div class="admonition note">
-<p class="admonition-title">Note!.</p>
+<p class="admonition-title">Note!</p>
 
 You can easily list the filter keys present in a dataset with the `get_dataset_info.py` script (see [this link](../tutorials/understanding_dataset_contents.html#view-dataset-structure-and-videos)), and you can even pass a `--verbose` flag to list the exact demonstrations that each filter key corresponds to.
 
