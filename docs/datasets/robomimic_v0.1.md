@@ -48,7 +48,7 @@ $ python download_datasets.py --download_dir /tmp/datasets
 
 ### Method 2: Using Direct Download Links
 
-We also provide direct download links for each hdf5 dataset (The download links for the raw dataset is also included – it allows flexibility in extracting different kinds of observations and rewards):
+We also provide direct download links for each hdf5 dataset (the download links for the raw datasets are also included – they allow flexibility in extracting different kinds of observations and rewards during postprocessing):
 
 **Proficient-Human (PH)** [**info**](robomimic_v0.1.html#proficient-human-ph)
 

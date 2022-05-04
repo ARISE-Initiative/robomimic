@@ -26,7 +26,7 @@ For robosuite datasets, if attempting to create your own train-val splits, we re
 The structure of these converted raw `demo.hdf5` files is very similar to the normal hdf5 dataset structure, and is compatible with scripts such as `get_dataset_info.py` and `playback_dataset.py`, but it is missing observations (such as proprioception, object poses, and images),, rewards, and dones, which are necessary for training policies. Keeping these raw `demo.hdf5` datasets around is a good idea -- it **allows flexibility in extracting different kinds of observations and rewards** (see below section on extracting observations). The structure of these raw datasets is shown below.
 
 <details>
-  <summary><b>Dataset Structure</b></summary>
+  <summary><b>Dataset Structure <span style="color:red;">(click to expand)</span></b></summary>
 <p>
 
 - `data` (group)

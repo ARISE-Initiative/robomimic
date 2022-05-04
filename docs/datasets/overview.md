@@ -52,7 +52,7 @@ If you want to generate your own dataset in a custom environment platform that i
 All postprocessed **robomimic** compatible datasets share the same data structure. A single dataset is a single HDF5 file with the following structure:
 
 <details>
-  <summary><b>HDF5 Structure</b></summary>
+  <summary><b>HDF5 Structure <span style="color:red;">(click to expand)</span></b></summary>
 <p>
 
 - **`data`** (group)
