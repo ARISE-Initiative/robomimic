@@ -38,6 +38,7 @@ Welcome to robomimic's documentation!
    tutorials/understanding_dataset_contents
    tutorials/using_pretrained_models
    tutorials/reproducing_experiments
+   tutorials/viewing_results
    tutorials/hyperparam_scan
    tutorials/configs
    tutorials/observations
