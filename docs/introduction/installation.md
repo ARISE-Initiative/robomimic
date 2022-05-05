@@ -8,15 +8,24 @@
   - [virtualenv](https://virtualenv.pypa.io/en/latest/) is also an acceptable alternative, but we assume you have conda installed in our examples below
 
 ## Install robomimic
-1. Create and activate conda environment
+
+<div class="admonition note">
+<p class="admonition-title">1. Create and activate conda environment</p>
+
 ```sh
 $ conda create -n robomimic_venv python=3.7.9
 $ conda activate robomimic_venv
 ```
 
-2. Install [PyTorch](https://pytorch.org/)
+</div>
+
+<div class="admonition note">
+<p class="admonition-title">2. Install PyTorch</p>
+
+[PyTorch](https://pytorch.org/) reference
+
 <details>
-  <summary><b>Mac</b></summary>
+  <summary><b>Option 1: Mac</b></summary>
 <p>
 
 ```sh
@@ -29,7 +38,7 @@ $ conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
 </details>
 
 <details>
-  <summary><b>Linux</b></summary>
+  <summary><b>Option 2: Linux</b></summary>
 <p>
 
 ```sh
@@ -40,8 +49,11 @@ $ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
 </p>
 </details>
 
+</div>
 
-3. Install robomimic
+
+<div class="admonition note">
+<p class="admonition-title">3. Install robomimic</p>
 
 <details>
   <summary><b>Option 1: Install from source <i>(recommended)</i></b></summary>
@@ -68,8 +80,10 @@ $ pip install robomimic
 </p>
 </details>
 
-<div class="admonition note">
-<p class="admonition-title">Note: Additional dependencies might be required.</p>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning! Additional dependencies might be required</p>
 
 This is all you need for using the suite of algorithms and utilities packaged with robomimic. However, to use our demonstration datasets, you may need additional dependencies. Please see the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments, and see [the simulators section below](installation.html#install-simulators).
 </div>
