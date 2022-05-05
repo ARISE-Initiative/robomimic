@@ -19,11 +19,18 @@ The dataset can be found at `datasets/lift/ph/low_dim.hdf5`
 
 ### Step 2: Launch experiment
 
-Now, we will run an experiment using `train.py`. In this case we would like to run behavior cloning (BC) for the lift dataset we just downloaded. We add the flag `--debug` to run a quick sample experiment:
+Now, we will run an experiment using `train.py`. In this case we would like to run behavior cloning (BC) for the lift dataset we just downloaded.
 
 ```sh
 $ python robomimic/scripts/train.py --config robomimic/exps/templates/bc.json --dataset datasets/lift/ph/low_dim.hdf5 --debug
 ```
+
+<div class="admonition note">
+<p class="admonition-title">Running quick sanity check experiments</p>
+
+Make sure to add the `--debug` flag to your experiments as a sanity check that your implementation works.
+
+</div>
 
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
@@ -77,7 +84,7 @@ utils/                    # utils for training, evaluation, visualization, hp sw
   ...
 ```
 -->
-For next steps, please refer to the remaining documentation sections. In particular, the following pages are helpful for starting out:
+Please refer to the remaining documentation sections. In particular, the following pages are helpful:
 - [Overview of Modules](../modules/overview.html)
 - [Logging and Viewing Training Results](../tutorials/viewing_results.html)
 - [Running Hyperparameter Scans](../tutorials/hyperparam_scan.html)
