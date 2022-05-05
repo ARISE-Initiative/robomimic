@@ -1,63 +1,49 @@
-# Getting Familiar with Configs
+# Configuring and Launching Training Runs
 
-The simple config example script at `examples/simple_config.py` shows how the `Config` object can easily be instantiated and modified safely with different levels of locking. We reproduce certain portions of the script. First, we can create a `Config` object and call `lock` when we think we won't need to change it anymore.
+Robomimic uses a centralized [configuration system](../modules/configs.html) to specify (hyper)parameters at all levels. Below we walk through two ways to configure and launching training runs.
 
-```python
-from robomimic.config.base_config import Config
 
-# create config
-config = Config()
 
-# add nested attributes to the config
-config.train.batch_size = 100
-config.train.learning_rate = 1e-3
-config.algo.actor_network_size = [1000, 1000]
-config.lock()  # prevent accidental changes
+<div class="admonition warning">
+<p class="admonition-title">Do not directly modify the default configs such as `config/bc_config.py`, especially if using the codebase with version control (e.g. git). Modifying these files modifies the default settings, and it’s easy to forget that these changes were made, or unintentionally commit these changes so that they become the new defaults. </p>
+</div>
+
+#### Using a config json (preferred)
+
+The preferred way to specify training parameters is to pass a config json to the main training script`train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument. The example below runs a default template json for the BC algorithm. **This is the preferred way to launch training runs.**
+
+```sh
+$ python train.py --config ../exps/templates/bc.json --dataset ../../tests/assets/test.hdf5
 ```
 
-Now, when we try to add a new key (or modify the value of an existing key), the config will throw an error.
+Please see the [hyperparameter helper docs](./advanced.html#using-the-hyperparameter-helper-to-launch-runs) to see how to easily generate json configs for launching training runs.
+
+#### Constructing a config object in code
+
+Another way to launch a training run is to make a default config (with a line like `config = config_factory(algo_name="bc")`), modify the config in python code, and then call the train function, like in the `examples/train_bc_rnn.py` script.
 
 ```python
-# the config is locked --- cannot add new keys or modify existing keys
-try:
-    config.train.optimizer = "Adam"
-except RuntimeError as e:
-    print(e)
+import robomimic
+import robomimic.utils.torch_utils as TorchUtils
+from robomimic.config import config_factory
+from robomimic.scripts.train import train
+
+# make default BC config
+config = config_factory(algo_name="bc")
+
+# set config attributes here that you would like to update
+config.experiment.name = "bc_rnn_example"
+config.train.data = "/path/to/dataset.hdf5"
+config.train.output_dir = "/path/to/desired/output_dir"
+config.train.batch_size = 256
+config.train.num_epochs = 500
+config.algo.gmm.enabled = False
+
+# get torch device
+device = TorchUtils.get_torch_device(try_to_use_cuda=True)
+
+# launch training run
+train(config, device=device)
 ```
 
-However, the config can be safely modified using appropriate contexts.
-
-```python
-# values_unlocked scope allows modifying values of existing keys, but not adding keys
-with config.values_unlocked():
-    config.train.batch_size = 200
-print("batch_size={}".format(config.train.batch_size))
-
-# unlock config within the scope, allowing new keys to be inserted
-with config.unlocked():
-    config.test.num_eval = 10
-
-# verify that the config remains locked outside of the scope
-assert config.is_locked
-assert config.test.is_locked
-```
-
-Finally, the config can also be updated by using external dictionaries - this is helpful for loading config jsons.
-
-```python
-# update this config with external config from a dict
-ext_config = {
-    "train": {
-        "learning_rate": 1e-3
-    },
-    "algo": {
-        "actor_network_size": [1000, 1000]
-    }
-}
-with config.values_unlocked():
-    config.update(ext_config)
-
-print(config)
-```
-
-Please see the [Config documentation](../modules/configs.html) for more information on Config objects.
+Please see the [Config documentation](../modules/configs.html) for more information on Config objects, and the [hyperparameter scan tutorial](../tutorials/hyperparam_scan.html) for configuring hyperparameter sweeps.

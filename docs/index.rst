@@ -39,9 +39,9 @@ Welcome to robomimic's documentation!
    tutorials/understanding_dataset_contents
    tutorials/using_pretrained_models
    tutorials/reproducing_experiments
+   tutorials/configs
    tutorials/viewing_results
    tutorials/hyperparam_scan
-   tutorials/configs
    tutorials/observations
    tutorials/custom_algorithms
    tutorials/tensor_collections
