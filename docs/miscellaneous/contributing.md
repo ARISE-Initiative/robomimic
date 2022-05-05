@@ -1,7 +1,5 @@
 # Contributing Guidelines
 
-We are so happy to see you reading this page!
-
 Our team wholeheartedly welcomes the community to contribute to robomimic. Contributions from members of the community will help ensure the long-term success of this project. Before you plan to make contributions, here are important resources to get started with:
 
 - Read the robomimic [documentation](https://arise-initiative.github.io/robomimic-web/docs/overview.html) and [paper](https://arxiv.org/abs/2108.03298)
