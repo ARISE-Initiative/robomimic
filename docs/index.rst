@@ -12,6 +12,7 @@ Welcome to robomimic's documentation!
 
    introduction/overview
    introduction/installation
+   introduction/implemented_algorithms
    introduction/getting_started
 
 .. toctree::

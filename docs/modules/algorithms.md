@@ -179,7 +179,7 @@ for step_i in range(horizon):
 
 
 
-## Implemented Algorithms
+<!-- ## Implemented Algorithms
 
 ### BC
 
@@ -207,7 +207,7 @@ for step_i in range(horizon):
 
 ### TD3-BC
 
-- A recent algorithm from [this paper](https://arxiv.org/abs/2106.06860). We implemented it as an example (see section below on building your own algorithm). Implemented in the `TD3_BC` class in `algo/td3_bc.py`.
+- A recent algorithm from [this paper](https://arxiv.org/abs/2106.06860). We implemented it as an example (see section below on building your own algorithm). Implemented in the `TD3_BC` class in `algo/td3_bc.py`. -->
 
 
 
