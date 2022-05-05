@@ -6,6 +6,28 @@ In this section, we describe how to configure the logging and evaluations that o
 
 TODO: describe different parts of config for logging (e.g. log terminal to text), setting whether rollouts happen and frequency, saving videos
 
+### Saving Experiment Logs 
+Configured under `experiment.logging`:
+- **Saving terminal outputs**: set `terminal_output_to_txt` to `true`. Saved logs are located in `logs/log.txt` under the experiment folder. 
+- **Saving logs to tensorboard**: set `logging.log_tb` to `true`. Saved logs are located in `logs/tb` under the experiment folder. 
+
+### Saving Model Checkpoints
+Configured under `experiment.save`:
+- **Enable saving model checkpoints**: set `enabled` to `true`
+- **Control frequency of checkpoints**: `every_n_epochs`, `every_n_seconds`, `epochs` (list)
+- **Save best checkpoints**: `on_best_validation`, `on_best_rollout_return` `on_best_rollout_success_rate`
+
+### Evaluating Rollouts and Saving Videos
+#### Evaluating Rollouts
+Configured under `experiment.rollout`:
+- **Enable evaluation rollouts**: set `enabled` to `true`
+- **Number of rollouts per evaluation**: `n`
+- **Rollout horizon**: `horizon`
+- **Frequency of evaluation (in epochs)**: `rate`
+- **Terminating rollouts on task success**: `terminate_on_success`
+#### Saving Videos
+To save videos of the rollouts, set `experiment.render_video` to `true`.
+
 ## Viewing Training Results
 
 TODO: put some information from https://arise-initiative.github.io/robomimic-web/docs/introduction/quickstart.html#logs-models-and-rollout-videos 
