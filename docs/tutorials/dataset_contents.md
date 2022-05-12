@@ -1,15 +1,37 @@
 # Dataset Contents and Visualization
 
-This tutorial shows some easy ways to understand the contents of each hdf5 dataset.
+This tutorial shows how to view contents of robomimic hdf5 datasets.
+
+## Viewing HDF5 Dataset Structure
+
+<div class="admonition note">
+<p class="admonition-title">Note: HDF5 Dataset Structure.</p>
+
+[This link](../datasets/overview.html#dataset-structure) shows the expected structure of each hdf5 dataset.
+
+</div>
+
+The repository offers a simple utility script (`get_dataset_info.py`) to view the hdf5 dataset structure and some statistics of hdf5 datasets. The script displays the following information:
+
+- statistics about the trajectories (number, average length, etc.)
+- the [filter keys](../datasets/overview.html#filter-keys) in the dataset
+- the [environment metadata](../modules/environments.html#initialize-an-environment-from-a-dataset) in the dataset, which is used to construct the same simulator environment that the data was collected on
+- the dataset structure for the first demonstration
+
+Pass the `--verbose` argument to print the list of demonstration keys under each filter key, and the dataset structure for all demonstrations. An example, using the small hdf5 dataset packaged with the repository in `tests/assets/test.hdf5` is shown below.
+
+```sh
+$ python get_dataset_info.py --dataset ../../tests/assets/test.hdf5
+```
 
 <div class="admonition tip">
 <p class="admonition-title">Jupyter Notebook: A Deep Dive into Dataset Structure</p>
 
-The rest of this tutorial shows how to use utility scripts to work with robomimic datasets. While this should suffice for most users, any user wishing to write custom code that works with robomimic datasets should look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets.
+Any user wishing to write custom code that works with robomimic datasets should also look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets.
 
 </div>
 
-## View Dataset Structure and Videos
+## Visualize Dataset Trajectories
 
 <div class="admonition note">
 <p class="admonition-title">Note: These examples are compatible with any robomimic dataset.</p>
@@ -18,32 +40,18 @@ The examples in this section use the small hdf5 dataset packaged with the reposi
 
 </div>
 
-The repository offers a simple utility script (`get_dataset_info.py`) to view the hdf5 dataset structure and some statistics of hdf5 datasets. The script will print out some statistics about the trajectories, the filter keys present in the dataset, the environment metadata in the dataset, and the dataset structure for the first demonstration. Pass the `--verbose` argument to print the list of demonstration keys under each filter key, and the dataset structure for all demonstrations.
+Use the `playback_dataset.py` script to easily view dataset trajectories.
 
 ```sh
-$ python get_dataset_info.py --dataset ../../tests/assets/test.hdf5
-```
-
-The repository also offers a utility script (`playback_dataset.py`) that allows you to easily view dataset trajectories, and verify that the recorded dataset actions are reasonable. The example below loads the saved MuJoCo simulator states one by one in a simulation environment, and renders frames from some simulation cameras to generate a video, for the first 5 trajectories. This is an easy way to view trajectories from the dataset. After this script runs, you can view the video at `/tmp/playback_dataset.mp4`.
-
-```sh
+# For the first 5 trajectories, load environment simulator states one-by-one, and render "agentview" and "robot0_eye_in_hand" cameras to video at /tmp/playback_dataset.mp4
 $ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --render_image_names agentview robot0_eye_in_hand --video_path /tmp/playback_dataset.mp4 --n 5
-```
 
-An alternative way to view the demonstrations is to directly visualize the image observations in the dataset. This is especially useful for real robot datasets, where there is no simulator to use for rendering.
-
-```sh
+# Directly visualize the image observations in the dataset. This is especially useful for real robot datasets where there is no simulator to use for rendering.
 $ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --use-obs --render_image_names agentview_image --video_path /tmp/obs_trajectory.mp4
-```
 
-It's also easy to use the script to verify that the dataset actions are reasonable, by playing the actions back one by one in the environment.
-
-```sh
+# Play the dataset actions in the environment to verify that the recorded actions are reasonable.
 $ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --use-actions --render_image_names agentview --video_path /tmp/playback_dataset_with_actions.mp4
-```
 
-Finally, the script can be used to visualize the initial states in the demonstration data.
-
-```sh
+# Visualize only the initial demonstration frames.
 $ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --first --render_image_names agentview --video_path /tmp/dataset_task_inits.mp4
 ```
