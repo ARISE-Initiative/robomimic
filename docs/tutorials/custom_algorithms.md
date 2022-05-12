@@ -1,12 +1,14 @@
 # Implementing Custom Algorithms
 
-## Building your own Algorithm
+This tutorial provides an example of implementing a custom algorithm in robomimic. We choose to implement the recently proposed [TD3-BC](https://arxiv.org/abs/2106.06860) algorithm.
 
-In this section, we walk through an example of implementing a custom algorithm, to show how easy it is to extend the functionality in the repository. We choose to implement the recently proposed [TD3-BC](https://arxiv.org/abs/2106.06860) algorithm. 
+This consists of the following steps:
+1. Implement a custom `Config` class for TD3-BC.
+2. Implement a custom `Algo` class for TD3-BC.
 
-This requires implementing two new files - `algo/td3_bc.py` (which contains the `Algo` subclass implementation) and `config/td3_bc_config.py` (which contains the `Config` subclass implementation). We also make sure to add the line `from robomimic.algo.td3_bc import TD3_BC` to `algo/__init__.py` and `from robomimicL.config.td3_bc_config import TD3_BCConfig` to `config/__init__.py` to `config/__init__.py` to make sure the `Algo` and `Config` subclasses can be found.
+## Implementing the Config class
 
-We first describe the config implementation - we implement a `TD3_BCConfig` config class that subclasses from `BaseConfig`. Importantly, we set the class variable `ALGO_NAME = "td3_bc"` to register this config under that algo name. We implement the `algo_config` function to populate `config.algo` with the keys needed for the algorithm - it is extremely similar to the `BCQConfig` implementation. Portions of the code are reproduced below.
+We will implement the config class in `config/td3_bc_config.py`. We implement a `TD3_BCConfig` config class that subclasses from `BaseConfig`. Importantly, we set the class variable `ALGO_NAME = "td3_bc"` to register this config under that algo name. We implement the `algo_config` function to populate `config.algo` with the keys needed for the algorithm - it is extremely similar to the `BCQConfig` implementation. Portions of the code are reproduced below.
 
 ```python
 class TD3_BCConfig(BaseConfig):
@@ -62,7 +64,12 @@ class TD3_BCConfig(BaseConfig):
 
 Usually, we only need to implement the `algo_config` function to populate `config.algo` with the keys needed for the algorithm, but we also update the `experiment_config` function and `observation_config` function to make it easier to reproduce experiments on `gym` environments from the paper. See the source file for more details.
 
-Now we discuss the algorithm implementation. As described in the "Initialization" section above, we first need to implement the `algo_config_to_class` method - this is straightforward since we don't have multiple variants of this algorithm. We take special care to make sure we register this function with the same algo name that we used for defining the config (`"td3_bc"`).
+Finally, we add the line `from robomimic.config.td3_bc_config import TD3_BCConfig` to `config/__init__.py` to make sure this `Config` subclass is registered by `robomimic`.
+
+
+## Implementing the Algo class
+
+We will implement the algo class in `algo/td3_bc.py`. As described in the [Algorithm documentation](../modules/algorithms.html#initialization), we first need to implement the `algo_config_to_class` method - this is straightforward since we don't have multiple variants of this algorithm. We take special care to make sure we register this function with the same algo name that we used for defining the config (`"td3_bc"`).
 
 ```python
 @register_algo_factory_func("td3_bc")
@@ -81,7 +88,7 @@ def algo_config_to_class(algo_config):
     return TD3_BC, {}
 ```
 
-Next, we'll describe how we implement the methods outlined in the "Important Methods" section above. We omit several of the methods, since their implementation is extremely similar to the `BCQ` implementation. We start by defining the class and implementing `_create_networks`. The code uses helper functions `_create_critics` and `_create_actor` to create the critic and actor networks, as in the `BCQ` implementation.
+Next, we'll describe how we implement the methods outlined in the [Algorithm documentation](../modules/algorithms.html#important-class-methods). We omit several of the methods, since their implementation is extremely similar to the `BCQ` implementation. We start by defining the class and implementing `_create_networks`. The code uses helper functions `_create_critics` and `_create_actor` to create the critic and actor networks, as in the `BCQ` implementation.
 
 ```python
 class TD3_BC(PolicyAlgo, ValueAlgo):
@@ -350,6 +357,8 @@ Finally, we describe the `get_action` implementation - which is used at test-tim
 
         return self.nets["actor"](obs_dict=obs_dict, goal_dict=goal_dict)
 ```
+
+Finally, we add the line `from robomimic.algo.td3_bc import TD3_BC` to `algo/__init__.py` to make sure this `Algo` subclass is registered by `robomimic`.
 
 That's it! See `algo/td3_bc.py` for the complete implementation, and compare it to `algo/bcq.py` to see the similarity between the two implementations. 
 

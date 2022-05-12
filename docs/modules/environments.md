@@ -72,7 +72,7 @@ env = EnvUtils.create_env_from_metadata(
 )
 ```
 
-The repo offers simple utility tool `robomimic/scripts/get_dataset_info.py` to view the environment metadata included in a dataset. For example:
+The repo offers a simple utility tool `robomimic/scripts/get_dataset_info.py` to view the environment metadata included in a dataset. For example:
 ```bash
 $ python robomimic/scripts/get_dataset_info.py --dataset path/to/the/dataset.hdf5
 
