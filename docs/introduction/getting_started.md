@@ -84,9 +84,10 @@ utils/                    # utils for training, evaluation, visualization, hp sw
   ...
 ```
 -->
-Please refer to the remaining documentation sections. In particular, the following pages are helpful:
-- [Overview of Modules](../modules/overview.html)
+Please refer to the remaining documentation sections. Some helpful suggestions on pages to view next:
+- [Configuring and Launching Training Runs](../tutorials/configs.html)
 - [Logging and Viewing Training Results](../tutorials/viewing_results.html)
 - [Running Hyperparameter Scans](../tutorials/hyperparam_scan.html)
 - [Overview of Datasets](../datasets/overview.html)
-- [Understanding Dataset Contents](../tutorials/understanding_dataset_contents.html)
+- [Dataset Contents and Visualization](../tutorials/dataset_contents.html)
+- [Overview of Modules](../modules/overview.html)

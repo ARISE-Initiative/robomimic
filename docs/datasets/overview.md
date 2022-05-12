@@ -156,7 +156,7 @@ $ python split_train_val.py --dataset /path/to/dataset.hdf5 --ratio 0.1 --filter
 <div class="admonition note">
 <p class="admonition-title">Note!</p>
 
-You can easily list the filter keys present in a dataset with the `get_dataset_info.py` script (see [this link](../tutorials/understanding_dataset_contents.html#view-dataset-structure-and-videos)), and you can even pass a `--verbose` flag to list the exact demonstrations that each filter key corresponds to.
+You can easily list the filter keys present in a dataset with the `get_dataset_info.py` script (see [this link](../tutorials/dataset_contents.html#view-dataset-structure-and-videos)), and you can even pass a `--verbose` flag to list the exact demonstrations that each filter key corresponds to.
 
 </div>
 

@@ -1,4 +1,4 @@
-# Understanding Dataset Contents
+# Dataset Contents and Visualization
 
 This tutorial shows some easy ways to understand the contents of each hdf5 dataset.
 

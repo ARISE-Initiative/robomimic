@@ -36,7 +36,7 @@ Welcome to robomimic's documentation!
    :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/understanding_dataset_contents
+   tutorials/dataset_contents
    tutorials/using_pretrained_models
    tutorials/reproducing_experiments
    tutorials/configs
