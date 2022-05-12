@@ -3,14 +3,14 @@
 Robomimic uses a centralized [configuration system](../modules/configs.html) to specify (hyper)parameters at all levels. Below we walk through two ways to configure and launching training runs.
 
 
+#### Best practices
+*WARNING*: Do not directly modify the default configs such as `config/bc_config.py`, especially if using the codebase with version control (e.g. git). Modifying these files modifies the default settings, and it’s easy to forget that these changes were made, or unintentionally commit these changes so that they become the new defaults.
 
-<div class="admonition warning">
-<p class="admonition-title">Do not directly modify the default configs such as `config/bc_config.py`, especially if using the codebase with version control (e.g. git). Modifying these files modifies the default settings, and it’s easy to forget that these changes were made, or unintentionally commit these changes so that they become the new defaults. </p>
-</div>
+Please see the [Config documentation](../modules/configs.html) for more information on Config objects, and the [hyperparameter scan tutorial](../tutorials/hyperparam_scan.html) for configuring hyperparameter sweeps.
 
 #### Using a config json (preferred)
 
-The preferred way to specify training parameters is to pass a config json to the main training script`train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument. The example below runs a default template json for the BC algorithm. **This is the preferred way to launch training runs.**
+The preferred way to specify training parameters is to pass a config json to the main training script `train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument. The example below runs a default template json for the BC algorithm. **This is the preferred way to launch training runs.**
 
 ```sh
 $ python train.py --config ../exps/templates/bc.json --dataset ../../tests/assets/test.hdf5
@@ -45,5 +45,3 @@ device = TorchUtils.get_torch_device(try_to_use_cuda=True)
 # launch training run
 train(config, device=device)
 ```
-
-Please see the [Config documentation](../modules/configs.html) for more information on Config objects, and the [hyperparameter scan tutorial](../tutorials/hyperparam_scan.html) for configuring hyperparameter sweeps.
