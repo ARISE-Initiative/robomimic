@@ -1,4 +1,4 @@
-# Observations
+# Multimodal Observations
 
 TODO: decide if more observation-related examples (modalities, nets, etc.) should go here instead of elsewhere, like in modules/models docs.
 

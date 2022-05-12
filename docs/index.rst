@@ -36,12 +36,12 @@ Welcome to robomimic's documentation!
    :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/dataset_contents
-   tutorials/using_pretrained_models
-   tutorials/reproducing_experiments
    tutorials/configs
    tutorials/viewing_results
    tutorials/hyperparam_scan
+   tutorials/reproducing_experiments
+   tutorials/dataset_contents
+   tutorials/using_pretrained_models
    tutorials/observations
    tutorials/custom_algorithms
    tutorials/tensor_collections
