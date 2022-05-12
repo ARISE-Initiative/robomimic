@@ -8,7 +8,7 @@ Robomimic uses a centralized [configuration system](../modules/configs.html) to 
 
 Please see the [Config documentation](../modules/configs.html) for more information on Config objects, and the [hyperparameter scan tutorial](../tutorials/hyperparam_scan.html) for configuring hyperparameter sweeps.
 
-#### Using a config json (preferred)
+#### 1. Using a config json (preferred)
 
 The preferred way to specify training parameters is to pass a config json to the main training script `train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument. The example below runs a default template json for the BC algorithm. **This is the preferred way to launch training runs.**
 
@@ -18,7 +18,7 @@ $ python train.py --config ../exps/templates/bc.json --dataset ../../tests/asset
 
 Please see the [hyperparameter helper docs](./advanced.html#using-the-hyperparameter-helper-to-launch-runs) to see how to easily generate json configs for launching training runs.
 
-#### Constructing a config object in code
+#### 2. Constructing a config object in code
 
 Another way to launch a training run is to make a default config (with a line like `config = config_factory(algo_name="bc")`), modify the config in python code, and then call the train function, like in the `examples/train_bc_rnn.py` script.
 
