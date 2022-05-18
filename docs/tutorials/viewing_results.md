@@ -7,40 +7,45 @@ In this section, we describe how to configure the logging and evaluations that o
 ### Saving Experiment Logs 
 Configured under `experiment.logging`:
 ```
-# save terminal outputs under `logs/log.txt` in experiment folder
-terminal_output_to_txt (bool)
-
-# save tensorboard logs under `logs/tb` in experiment folder
-log_tb (bool)
+"logging": {
+    # save terminal outputs under `logs/log.txt` in experiment folder
+    "terminal_output_to_txt": true,
+    
+    # save tensorboard logs under `logs/tb` in experiment folder
+    "log_tb": true
+},
 ```
 
 ### Saving Model Checkpoints
 Configured under `experiment.save`:
 ```
-# enable saving model checkpoints
-enabled (bool)
-
-# controlling frequency of checkpoints
-every_n_epochs (int)
-every_n_seconds (int)
-epochs (list)
-
-# saving the best checkpoints
-on_best_validation (bool)
-on_best_rollout_return (bool)
-on_best_rollout_success_rate (bool)
+"save": {
+    # enable saving model checkpoints
+    "enabled": true,
+    
+    # controlling frequency of checkpoints
+    "every_n_seconds": null,
+    "every_n_epochs": 50,
+    "epochs": [],
+    
+    # saving the best checkpoints
+    "on_best_validation": false,
+    "on_best_rollout_return": false,
+    "on_best_rollout_success_rate": true
+},
 ```
 
 ### Evaluating Rollouts and Saving Videos
 #### Evaluating Rollouts
 Configured under `experiment.rollout`:
 ```
-enabled (bool)                # enable evaluation rollouts
-
-n (int)                       # number of rollouts per evaluation
-horizon (int)                 # number of timesteps per rollout
-rate (int)                    # frequency of evaluation (in epochs)
-terminate_on_success (bool)   # terminating rollouts upon task success
+"rollout": {
+    "enabled": true,              # enable evaluation rollouts
+    "n": 50,                      # number of rollouts per evaluation
+    "horizon": 400,               # number of timesteps per rollout
+    "rate": 50,                   # frequency of evaluation (in epochs)
+    "terminate_on_success": true  # terminating rollouts upon task success
+}
 ```
 
 #### Saving Videos
@@ -72,13 +77,16 @@ The experiment results can be viewed using tensorboard:
 $ tensorboard --logdir <experiment-log-dir> --bind_all
 ```
 Below is a snapshot of the tensorboard dashboard:
+<a href="../images/tensorboard.png" target="_blank">
 <p align="center">
   <img width="99.0%" src="../images/tensorboard.png">
 </p>
+</a>
 
 Experiment results (y-axis) are logged across epochs (x-axis).
 You may find the following logging metrics useful:
 - `Rollout/`: evaluation rollout metrics, eg. success rate, rewards, etc.
+  - `Rollout/Success_Rate/{envname}-max`: maximum success rate over time (this is the metric the [study paper](https://arxiv.org/abs/2108.03298) uses to evaluate baselines)
 - `Timing_Stats/`: time spent by the algorithm loading data, training, performing rollouts, etc.
 - `Timing_Stats/`: time spent by the algorithm loading data, training, performing rollouts, etc.
 - `Train/`: training stats
