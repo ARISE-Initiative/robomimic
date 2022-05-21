@@ -61,12 +61,6 @@ All postprocessed **robomimic** compatible datasets share the same data structur
 
   - **`env_args`** (attribute) - a json string that contains metadata on the environment and relevant arguments used for collecting data. Three keys: `env_name`, the name of the environment or task to create, `env_type`, one of robomimic's supported [environment types](https://github.com/ARISE-Initiative/robomimic/blob/master/robomimic/envs/env_base.py#L9), and `env_kwargs`, a dictionary of keyword-arguments to be passed into the environment of type `env_name`.
 
-  - **`mask`** (group) - this group will exist in hdf5 datasets that contain filter keys
-
-    - **`<filter_key_1>`** (dataset) - the first filter key. Note that the name of this dataset and length will vary. As an example, this could be the "valid" filter key, and contain the list ["demo_0", "demo_19", "demo_35"], corresponding to 3 validation trajectories.
-
-      ...
-
   - **`demo_0`** (group) - group for the first trajectory (every trajectory has a group)
 
     - **`num_samples`** (attribute) - the number of state-action samples in this trajectory
@@ -96,7 +90,12 @@ All postprocessed **robomimic** compatible datasets share the same data structur
   - **`demo_1`** (group) - group for the second trajectory
 
     ...
+    
+- **`mask`** (group) - this group will exist in hdf5 datasets that contain filter keys
 
+  - **`<filter_key_1>`** (dataset) - the first filter key. Note that the name of this dataset and length will vary. As an example, this could be the "valid" filter key, and contain the list ["demo_0", "demo_19", "demo_35"], corresponding to 3 validation trajectories.
+
+    ...
 
 </p>
 </details>
