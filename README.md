@@ -27,11 +27,11 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 
 ## Core Features
 
-<!-- <p align="center">
+<p align="center">
   <img width="50.0%" src="docs/images/core_features.png">
- </p> -->
+ </p>
 
-**Standardized Datasets**
+<!-- **Standardized Datasets**
 - Simulated and real-world tasks
 - Multiple environments and robots
 - Diverse human-collected and machine-generated datasets
@@ -48,7 +48,7 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 **Flexible Workflow**
 - Hyperparameter sweep tools
 - Dataset visualization tools
-- Generating new datasets
+- Generating new datasets -->
 
 
 ## Reproducing benchmarks
