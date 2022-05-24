@@ -27,7 +27,7 @@ $ python get_dataset_info.py --dataset ../../tests/assets/test.hdf5
 <div class="admonition tip">
 <p class="admonition-title">Jupyter Notebook: A Deep Dive into Dataset Structure</p>
 
-Any user wishing to write custom code that works with robomimic datasets should also look at the jupyter notebook at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets.
+Any user wishing to write custom code that works with robomimic datasets should also look at the [jupyter notebook](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/notebooks/datasets.ipynb) at `examples/notebooks/datasets.ipynb`, which showcases several useful python code snippets for working with robomimic hdf5 datasets.
 
 </div>
 

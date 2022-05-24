@@ -141,7 +141,7 @@ For details please check our [contributing guidelines](../miscellaneous/contribu
 
 Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this framework in your work:
 
-```
+```bibtex
 @inproceedings{robomimic2021,
   title={What Matters in Learning from Offline Human Demonstrations for Robot Manipulation},
   author={Ajay Mandlekar and Danfei Xu and Josiah Wong and Soroush Nasiriany and Chen Wang and Rohun Kulkarni and Li Fei-Fei and Silvio Savarese and Yuke Zhu and Roberto Mart\'{i}n-Mart\'{i}n},

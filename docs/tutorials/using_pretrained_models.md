@@ -5,7 +5,7 @@ This tutorial shows how to use pretrained model checkpoints.
 <div class="admonition tip">
 <p class="admonition-title">Jupyter Notebook: Working with Pretrained Policies</p>
 
-The rest of this tutorial shows how to use utility scripts to load and rollout a trained policy. If you wish to do so via an interactive notebook, please refer to the jupyter notebook at `examples/notebooks/run_policy.ipynb`. The notebook tutorial shows how to download checkpoint from the model zoo, load the checkpoint in pytorch, and rollout the policy. 
+The rest of this tutorial shows how to use utility scripts to load and rollout a trained policy. If you wish to do so via an interactive notebook, please refer to the [jupyter notebook](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/notebooks/run_policy.ipynb) at `examples/notebooks/run_policy.ipynb`. The notebook tutorial shows how to download a checkpoint from the model zoo, load the checkpoint in pytorch, and rollout the policy. 
 
 </div>
 
