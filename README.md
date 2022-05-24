@@ -53,18 +53,18 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 
 ## Reproducing benchmarks
 
-The robomimic framework also makes reproducing the results from different benchmarks and datasets easy. See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
+The robomimic framework also makes reproducing the results from different benchmarks and datasets easy. See the [datasets page](https://robomimic.github.io/docs/datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
 ## Troubleshooting
 
-Please see the [troubleshooting](../miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
+Please see the [troubleshooting](https://robomimic.github.io/docs/miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
 
 ## Contributing to robomimic
 This project is part of the broader [Advancing Robot Intelligence through Simulated Environments (ARISE) Initiative](https://github.com/ARISE-Initiative), with the aim of lowering the barriers of entry for cutting-edge research at the intersection of AI and Robotics.
 The project originally began development in late 2018 by researchers in the [Stanford Vision and Learning Lab](http://svl.stanford.edu/) (SVL).
 Now it is actively maintained and used for robotics research projects across multiple labs.
 We welcome community contributions to this project.
-For details please check our [contributing guidelines](../miscellaneous/contributing.html).
+For details please check our [contributing guidelines](https://robomimic.github.io/docs/miscellaneous/contributing.html).
 
 ## Citation
 
