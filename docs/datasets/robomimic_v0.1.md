@@ -1,30 +1,28 @@
-# Reproducing Study Results
+# robomimic v0.1 (CoRL 2021)
 
-This section provides a guide on how to reproduce different experiment results from the study. Please see the [paper](https://arxiv.org/abs/2108.03298) and the [study website](https://arise-initiative.github.io/robomimic-web/study/) for more information. 
+## Overview
+robomimic v0.1 datasets is a large-scale, diverse collection of task demonstrations spanning:
 
-**Warning:** When working with the robosuite datasets, please make sure that you have installed [robosuite](https://robosuite.ai/), and that you are on the `offline_study` branch of robosuite.
+- multiple human demonstrators of varying quality
+- multiple robot manipulation tasks of varying difficulty
+- both simulated and real data
 
-## Quick Example
+## Downloading
 
-In this section, we show a simple example of how to reproduce one of the results from the study - the BC-RNN result on the Lift (Proficient-Human) low-dim dataset.
 
-```sh
-# default behavior for download script - just download lift proficient-human low-dim dataset to robomimic/../datasets
-$ python download_datasets.py
+<div class="admonition warning">
+<p class="admonition-title">Warning!</p>
 
-# generate json configs for running all experiments at robomimic/exps/paper
-$ python generate_paper_configs.py --output_dir /tmp/experiment_results
+When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `offline_study` branch.
 
-# the training command can be found in robomimic/exps/paper/core.sh
-# Training results can be viewed at /tmp/experiment_results (--output_dir when generating paper configs).
-$ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
-```
+</div>
 
-See the [downloading released datasets](./results.html#downloading-released-datasets) section below for more information on downloading different datasets, and the [results on released datasets](./results.html#results-on-released-datasets) section below for more detailed information on reproducing different results from the study.
+We provide two ways for downloading robomimic v0.1 datasets:
 
-## Downloading Released Datasets
+### Method 1: Using `download_datasets.py` (Recommended)
+`download_datasets.py` is a python script that provides a programmatic way of installing all datasets. This is the preferred method, because this script also sets up a directory structure for the datasets that works out of the box with examples for reproducing benchmark results.
 
-Released datasets can be downloaded easily by using the `download_datasets.py` script. **This is the preferred method for downloading the datasets**, because the script will also set up a directory structure for the datasets that works out of the box with examples for reproducing some benchmark results with the repository. A few examples of using this script are provided below.
+A few examples of using this script are provided below:
 
 ```sh
 # default behavior - just download lift proficient-human low-dim dataset
@@ -48,11 +46,15 @@ $ python download_datasets.py --tasks real
 $ python download_datasets.py --download_dir /tmp/datasets
 ```
 
-For convenience, we also provide links to each dataset below - to make it easy to manually download any dataset of interest. See the [study](https://arise-initiative.github.io/robomimic-web/study/) for more information on the datasets.
+### Method 2: Using Direct Download Links
 
-### Proficient-Human (PH)
+We also provide direct download links for each hdf5 dataset (the download links for the raw datasets are also included – they allow flexibility in extracting different kinds of observations and rewards during postprocessing):
 
-These datasets were collected by 1 operator using the [RoboTurk](https://roboturk.stanford.edu/) platform. Each dataset consists of 200 successful trajectories.
+**Proficient-Human (PH)** [**info**](robomimic_v0.1.html#proficient-human-ph)
+
+<details>
+  <summary><b>Download Links</b></summary>
+<p>
 
 <img src="../images/proficient_human.png" alt="proficient_human" style="zoom:33%;" />
 
@@ -68,12 +70,17 @@ These datasets were collected by 1 operator using the [RoboTurk](https://robotur
 |            ![lift_real](../images/lift_real.jpg)             |             ![can_real](../images/can_real.jpg)              |       ![tool_hang_real](../images/tool_hang_real.jpg)        |
 | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift_real/ph/demo.hdf5) (1.9 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can_real/ph/demo.hdf5) (5.3 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang_real/ph/demo.hdf5) (58 GB) |
 
+</p>
+</details>
 
+<br/>
+<br/>
 
-### Multi-Human (MH)
+**Multi-Human (MH)** [**info**](robomimic_v0.1.html#multi-human-mh)
 
-These datasets were collected by 6 operators using the [RoboTurk](https://roboturk.stanford.edu/) platform. Each dataset consists of 50 trajectories provided by each operator, for a total of 300 successful trajectories. The operators were varied in proficiency -- there were 2 "worse" operators, 2 "okay" operators, and 2 "better" operators, resulting in diverse, mixed quality datasets.
-
+<details>
+  <summary><b>Download Links</b></summary>
+<p>
 <img src="../images/multi_human.png" alt="multi_human" style="zoom:33%;" />
 
 |                      **Lift<br />(MH)**                      |                      **Can<br />(MH)**                       |                     **Square<br />(MH)**                     |                   **Transport<br />(MH)**                    |
@@ -83,11 +90,17 @@ These datasets were collected by 6 operators using the [RoboTurk](https://robotu
 | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/low_dim.hdf5)<br />(46 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/low_dim.hdf5)<br />(108 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/low_dim.hdf5)<br />(119 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/low_dim.hdf5)<br />(609 MB) |
 | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/image.hdf5)<br />(2.6 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/image.hdf5)<br />(5.1 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/image.hdf5)<br />(6.5 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/image.hdf5)<br />(32 GB) |
 
+</p>
+</details>
 
+<br/>
+<br/>
 
-### Machine-Generated (MG)
+**Machine-Generated (MG)** [**info**](robomimic_v0.1.html#machine-generated-mg)
 
-These datasets were generated by [training](https://github.com/ARISE-Initiative/robosuite-benchmark) an [SAC](https://arxiv.org/abs/1801.01290) agent for each task, and then using each policy checkpoint saved during training to generate a mixed quality dataset. 300 rollouts were collected for each checkpoint, with 5 checkpoints for the Lift dataset (total of 1500 trajectories), and 13 checkpoints for the Can dataset (total of 3900 trajectories).  
+<details>
+  <summary><b>Download Links</b></summary>
+<p>
 
 <img src="../images/machine_generated.png" alt="machine_generated" style="zoom:33%;" />
 
@@ -100,11 +113,17 @@ These datasets were generated by [training](https://github.com/ARISE-Initiative/
 | [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/image_sparse.hdf5)<br />(19 GB) | [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/image_sparse.hdf5)<br />(48 GB) |
 | [image (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/image_dense.hdf5)<br />(19 GB) | [image (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/image_dense.hdf5)<br />(48 GB) |
 
+</p>
+</details>
 
+<br/>
+<br/>
 
-### Paired
+**Paired** [**info**](robomimic_v0.1.html#paired)
 
-This is a diagnostic dataset to test the ability of algorithms to learn from mixed quality human data. A single experienced operator collected 2 demonstrations for each of 100 task initializations on the Can task, resulting in 200 total demonstrations. Each pair of demonstrations consists of a "good" trajectory, where the can is picked up and placed in the correct bin, and a "bad" trajectory, where the can is picked up, and tossed outside of the robot workspace. Since the task initializations are identical, and the first part of each trajectory leading up to the can grasp is similar, there is a strong expectation for algorithms that deal with suboptimal data, to be able to filter the good trajectories from the bad ones, and achieve near-perfect performance.
+<details>
+  <summary><b>Download Links</b></summary>
+<p>
 
 |                        **Can Paired**                        |
 | :----------------------------------------------------------: |
@@ -113,15 +132,39 @@ This is a diagnostic dataset to test the ability of algorithms to learn from mix
 | [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim.hdf5)<br />(39 MB) |
 | [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/image.hdf5)<br />(1.7 GB) |
 
+</p>
+</details>
 
+## Postprocessing
+If a **low_dim** or **image** dataset was downloaded, the dataset works out of the box! No postprocessing is needed.
 
-## Results on Released Datasets
+If a **raw** dataset was downloaded, the dataset must be postprocessed since there are no observations stored. You must run `dataset_states_to_obs.py`. For more information, see [this page](robosuite.html#extracting-observations-from-mujoco-states).
 
-This section discusses how to reproduce the results from the [study](https://arise-initiative.github.io/robomimic-web/study/).
+## Info
 
-### Reproducing Experiments
+Below, we provide information on each dataset provided:
 
-After downloading the appropriate datasets you're interested in using by running the `download_datasets.py` script, the `generate_paper_configs.py` script can be used to generate all training config json files necessary to reproduce the experiments in the [study](https://arise-initiative.github.io/robomimic-web/study/). The script takes 3 important arguments -- `--config_dir` can be used to specify where the config json files will be generated (defaults to `robomimic/exps/paper`). The `--dataset_dir` specifies where the released datasets can be found, and should be consistent with the `--download_dir` argument supplied to `download_datasets.py` earlier (if omitted, both scripts default to `robomimic/../datasets`). The `--output_dir` argument specifies where training results will be written (including model checkpoints, logs, and rollout videos). A few examples are below.
+### Proficient-Human (PH)
+
+These datasets were collected by 1 operator using the [RoboTurk](https://roboturk.stanford.edu/) platform. Each dataset consists of 200 successful trajectories.
+
+### Multi-Human (MH)
+
+These datasets were collected by 6 operators using the [RoboTurk](https://roboturk.stanford.edu/) platform. Each dataset consists of 50 trajectories provided by each operator, for a total of 300 successful trajectories. The operators were varied in proficiency -- there were 2 "worse" operators, 2 "okay" operators, and 2 "better" operators, resulting in diverse, mixed quality datasets.
+
+### Machine-Generated (MG)
+
+These datasets were generated by [training](https://github.com/ARISE-Initiative/robosuite-benchmark) an [SAC](https://arxiv.org/abs/1801.01290) agent for each task, and then using each policy checkpoint saved during training to generate a mixed quality dataset. 300 rollouts were collected for each checkpoint, with 5 checkpoints for the Lift dataset (total of 1500 trajectories), and 13 checkpoints for the Can dataset (total of 3900 trajectories).
+
+### Paired
+
+This is a diagnostic dataset to test the ability of algorithms to learn from mixed quality human data. A single experienced operator collected 2 demonstrations for each of 100 task initializations on the Can task, resulting in 200 total demonstrations. Each pair of demonstrations consists of a "good" trajectory, where the can is picked up and placed in the correct bin, and a "bad" trajectory, where the can is picked up, and tossed outside of the robot workspace. Since the task initializations are identical, and the first part of each trajectory leading up to the can grasp is similar, there is a strong expectation for algorithms that deal with suboptimal data, to be able to filter the good trajectories from the bad ones, and achieve near-perfect performance.
+
+## Reproduce [Study](https://arise-initiative.github.io/robomimic-web/study/) Results
+
+### Running Experiments
+
+After downloading the appropriate datasets you're interested in using by running the `download_datasets.py` script, the `generate_paper_configs.py` script can be used to generate all training config json files necessary to reproduce the experiments in the [study](https://arise-initiative.github.io/robomimic-web/study/). A few examples are below.
 
 ```sh
 # Assume datasets already exist in robomimic/../datasets folder. Configs will be generated under robomimic/exps/paper, and training results will be at /tmp/experiment_results when launching training runs.
@@ -131,7 +174,11 @@ $ python generate_paper_configs.py --output_dir /tmp/experiment_results
 $ python generate_paper_configs.py --config_dir /tmp/configs --dataset_dir /tmp/datasets --output_dir /tmp/experiment_results
 ```
 
-Then, to reproduce a specific set of training runs for different experiment groups (see below), we can simply navigate to the generated config directory, and copy training commands from the generated shell script there. As an example, we can reproduce the low-dim BC and BC-RNN training results on the Lift PH dataset, by looking for the correct set of commands in `robomimic/exps/paper/core.sh` and running them. The relevant section of the shell script is reproduced below.
+- `--config_dir` specifies where the config json files will be generated (defaults to `robomimic/exps/paper`)
+- `--dataset_dir` specifies where the released datasets can be found, and should be consistent with the `--download_dir` argument supplied to `download_datasets.py` earlier. (if omitted, both scripts default to `robomimic/../datasets`)
+- `--output_dir` specifies where training results will be written (including model checkpoints, logs, and rollout videos)
+
+Then, to reproduce a specific set of training runs for different experiment groups, we can simply navigate to the generated config directory, and copy training commands from the generated shell script there. As an example, we can reproduce the low-dim BC and BC-RNN training results on the Lift PH dataset, by looking for the correct set of commands in `robomimic/exps/paper/core.sh` and running them. The relevant section of the shell script is reproduced below.
 
 ```bash
 #  task: lift
@@ -141,7 +188,14 @@ python /path/to/robomimic/scripts/train.py --config /path/to/robomimic/exps/pape
 python /path/to/robomimic/scripts/train.py --config /path/to/robomimic/exps/paper/core/lift/ph/low_dim/bc_rnn.json
 ```
 
+<div class="admonition info">
+<p class="admonition-title">Want to Run Experiments on Custom Observations?</p>
 
+We provide the raw (observation-free) `demo.hdf5` datasets so that you can generate your own custom set of observations, such as additional camera viewpoints. For information, see [Extracting Observations from Datasets](robosuite.md#extracting-observations-from-mujoco-states).
+
+**NOTE**: To compare against how our paper's released datasets were generated, please see the `extract_obs_from_raw_datasets.sh` script.
+
+</div>
 
 ### Overview of Included Experiments
 
@@ -159,42 +213,30 @@ Each group of experiments below has a shell script (for example `core.sh`) and a
 
 - **d4rl:** results on D4RL datasets (see section below)
 
-  
 
-## D4RL
+### Quick Example
 
-Below, we provide a table of results on common D4RL datasets using the algorithms included in the released codebase. We follow the convention in the TD3-BC paper, where we average results over the final 10 rollout evaluations, but we use 50 rollouts instead of 10 for each evaluation. Apart from a small handful of the halfcheetah results, the results align with those presented in the [TD3_BC paper](https://arxiv.org/abs/2106.06860). We suspect the halfcheetah results are different because we used `mujoco-py` version `2.0.2.13` in our evaluations, as opposed to `1.5` in order to be consistent with the version we were using for robosuite datasets. The results below were generated with `gym` version `0.17.3` and this `d4rl` [commit](https://github.com/rail-berkeley/d4rl/tree/9b68f31bab6a8546edfb28ff0bd9d5916c62fd1f).
-
-|                               | **BCQ**       | **CQL**       | **TD3-BC**    |
-| ----------------------------- | ------------- | ------------- | ------------- |
-| **HalfCheetah-Medium**        | 40.8% (4791)  | 38.5% (4497)  | 41.7% (4902)  |
-| **Hopper-Medium**             | 36.9% (1181)  | 30.7% (980)   | 97.9% (3167)  |
-| **Walker2d-Medium**           | 66.4% (3050)  | 65.2% (2996)  | 77.0% (3537)  |
-| **HalfCheetah-Medium-Expert** | 74.9% (9016)  | 21.5% (2389)  | 79.4% (9578)  |
-| **Hopper-Medium-Expert**      | 83.8% (2708)  | 111.7% (3614) | 112.2% (3631) |
-| **Walker2d-Medium-Expert**    | 70.2% (3224)  | 77.4% (3554)  | 102.0% (4683) |
-| **HalfCheetah-Expert**        | 94.3% (11427) | 29.2% (3342)  | 95.4% (11569) |
-| **Hopper-Expert**             | 104.7% (3389) | 111.8% (3619) | 112.2% (3633) |
-| **Walker2d-Expert**           | 80.5% (3699)  | 108.0% (4958) | 105.3% (4837) |
-
-
-
-### Downloading D4RL Datasets
-
-To download and convert D4RL datasets to be compatible with this repository, use the following conversion script in the `scripts/conversion` folder, and specify the `--env` that the dataset corresponds to, and optionally the `--folder` where you want to download the dataset. If no folder is provided, the `datasets` folder at the top-level of the repository will be used. The example below downloads and converts the `walker2d-medium-expert-v0` dataset. This should be done for all D4RL datasets of interest.
+Below, we show a simple example of how to reproduce one of the results from the study - the BC-RNN result on the Lift (Proficient-Human) low-dim dataset:
 
 ```sh
-# by default, download to robomimic/datasets
-$ python convert_d4rl.py --env walker2d-medium-expert-v0
-# download to specific folder
-$ python convert_d4rl.py --env walker2d-medium-expert-v0 --folder /path/to/output/folder/
+# default behavior for download script - just download lift proficient-human low-dim dataset to robomimic/../datasets
+$ python download_datasets.py
+
+# generate json configs for running all experiments at robomimic/exps/paper
+$ python generate_paper_configs.py --output_dir /tmp/experiment_results
+
+# the training command can be found in robomimic/exps/paper/core.sh
+# Training results can be viewed at /tmp/experiment_results (--output_dir when generating paper configs).
+$ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
 ```
 
-The script will download the raw hdf5 dataset to the folder, and the converted one that is compatible with this repository into the `converted` subfolder.
+## Citation
 
-
-
-### Reproduce D4RL Results
-
-In order to reproduce the results above, first make sure that the `generate_paper_configs.py` script has been run, where the `--dataset_dir` argument is consistent with the folder where the D4RL datasets were downloaded using the `convert_d4rl.py` script. This is also the first step for reproducing results on the released robot manipulation datasets. The `--config_dir` directory used in the script (`robomimic/exps/paper` by default) will contain a `d4rl.sh` script, and a `d4rl` subdirectory that contains all the json configs. The table results above can be generated simply by running the training commands in the shell script.
-
+```sh
+@inproceedings{mandlekar2021matters,
+  title={What Matters in Learning from Offline Human Demonstrations for Robot Manipulation},
+  author={Mandlekar, Ajay and Xu, Danfei and Wong, Josiah and Nasiriany, Soroush and Wang, Chen and Kulkarni, Rohun and Fei-Fei, Li and Savarese, Silvio and Zhu, Yuke and Mart{\'\i}n-Mart{\'\i}n, Roberto},
+  booktitle={5th Annual Conference on Robot Learning},
+  year={2021}
+}
+```

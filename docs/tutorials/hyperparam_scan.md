@@ -1,22 +1,36 @@
-# Advanced Features
+# Running Hyperparameter Scans
 
-This section discusses some advanced features of **robomimic**.
+We provide the `ConfigGenerator` class under `utils/hyperparam_utils.py` to easily set and sweep over hyperparameters.
+**This is the preferred way to launch multiple training runs using the repository.** 
+Follow the steps below for running your own hyperparameter scan:
+1. [Create Base Config json](#step-1-create-base-config-json)
+2. [Create Config Generator](#step-2-create-config-generator)
+3. [Set Hyperparameter Values](#step-3-set-hyperparameter-values)
+4. [Run Hyperparameter Helper Script](#step-4-run-hyperparameter-helper-script)
 
-## Using the Hyperparameter Helper to launch runs
-
-While copying an algorithm's template json from `exps/templates` and modifying it manually is a perfectly valid way to run experiments, we also provide the `hyperparam_helper.py` script to easily generate config jsons to use with the `train.py` script. **This is the preferred way to launch training runs using the repository.** It also makes hyperparameter scans a breeze. We'll walk through an example below, by reproducing sections of the `hyperparam_helper.py` script.
-
-The first step is to start with a base config json. A common choice is to copy one of the templates in `exps/templates` (such as `exps/templates/bc.json`) into a new folder (where additional config jsons will be generated). 
+## Step 1: Create Base Config json
+The first step is to start with a base config json. A common choice is to copy one of the templates in `exps/templates` (such as `exps/templates/bc.json`) into a new folder (where additional config jsons will be generated).
 
 ```sh
 $ cp ../exps/templates/bc.json /tmp/gen_configs/base.json
 ```
 
-Sections of the config that are not involved in the scan and that do not differ from the default values in the template can also be omitted, if desired. For instance, in the example below, we don't need the `config.algo.gaussian`,  `config.algo.vae`, and `config.observation` portions (since we don't sweep over them, and we didn't want to set them to anything other than the default values), so we deleted them. We also added a base experiment name (`"bc_rnn_hyper"`) and specified the dataset path (`"/tmp/test.hdf5"`).
+<div class="admonition tip">
+<p class="admonition-title">Relevant settings in base json file</p>
+
+Sections of the config that are not involved in the scan and that do not differ from the default values in the template can also be omitted, if desired.
+
+</div>
+
+We modify `/tmp/gen_configs/base.json`, adding a base experiment name (`"bc_rnn_hyper"`) and specified the dataset path (`"/tmp/test.hdf5"`).
 
 ```sh
 $ cat /tmp/gen_configs/base.json
 ```
+
+<details>
+  <summary><b>Click to see output</b></summary>
+<p>
 
 ```json
 {
@@ -94,7 +108,16 @@ $ cat /tmp/gen_configs/base.json
 }
 ```
 
-The next step is to define a function that returns a `ConfigGenerator`. In our example, we would like to  run the BC-RNN algorithm with an RNN horizon of 10. This requires setting `config.train.seq_length = 10` and `config.algo.rnn.enabled = True` -- we could have modified our base json file directly (as mentioned above) but we opted to set it in the generator function below. The first three calls to `add_param` do exactly this. Leaving `name=""` ensures that the experiment name is not determined by these parameter values.
+</p>
+</details>
+
+## Step 2: Create Config Generator
+
+The next step is create a `ConfigGenerator` object which procedurally generates new configs (one config per unique hyperparameter combination).
+We provide an example in `scripts/hyperparam_helper.py` and for the remainder of this tutorial we will follow this script step-by-step.
+
+First, we define a function `make_generator` that creates a `ConfigGenerator` object.
+After this, our next step will be to set hyperparameter values.
 
 ```python
 import robomimic
@@ -108,7 +131,44 @@ def make_generator(config_file, script_file):
     generator = HyperparamUtils.ConfigGenerator(
         base_config_file=config_file, script_file=script_file
     )
+    
+    # next: set and sweep over hyperparameters
+    generator.add_param(...) # set / sweep hp1
+    generator.add_param(...) # set / sweep hp2
+    generator.add_param(...) # set / sweep hp3
+    ...
+    
+    return generator
 
+def main(args):
+
+    # make config generator
+    generator = make_generator(
+      config_file=args.config, # base config file from step 1
+      script_file=args.script  # explained later in step 4
+    )
+
+    # generate jsons and script
+    generator.generate()
+...
+```
+
+## Step 3: Set Hyperparameter Values
+
+Next, we use the `generator.add_param` function to set hyperparameter values, which takes the following arguments:
+- `key`: (string) full name of config key to sweep
+- `name`: (string) shorthand name for this key
+- `values`: (list) values to sweep for this key
+- `value_names` (list) (optional) shorthand names associated for each value in `values`
+- `group`: (integer) hp group identifier. hps with same group are swept together. hps with different groups are swept as a cartesian product 
+
+### Set fixed values
+Going back to our example, we first set hyperparameters that are fixed single values.
+We could have modified our base json file directly but we opted to set it in the generator function instead.
+
+In this case, we would like to run the BC-RNN algorithm with an RNN horizon of 10. This requires setting `config.train.seq_length = 10` and `config.algo.rnn.enabled = True`.
+
+```python
     # use RNN with horizon 10
     generator.add_param(
         key="algo.rnn.enabled",
@@ -130,9 +190,28 @@ def make_generator(config_file, script_file):
     )
 ```
 
-Now we define our scan - we could like to sweep the policy learning rate in [1e-3, 1e-4], whether to use a GMM policy or not, and whether to use an RNN dimension of 400 with an MLP of size (1024, 1024) or an RNN dimension of 1000 with an empty MLP. Notice that the learning rate goes in `group` 1, the GMM enabled parameter goes in `group` 2, and the RNN dimension and MLP layer dims both go in `group` 3. 
+<div class="admonition tip">
+<p class="admonition-title">Empty hyperparameter names</p>
 
-The `group` argument specifies which arguments should be modified together. The hyperparameter script will generate a training run for each hyperparameter setting in the cartesian product between all groups. Thus, putting the RNN dimension and MLP layer dims in the same group ensures that the parameters change together (RNN dimension 400 always occurs with MLP layer dims (1024, 1024), and RNN dimension 1000 always occurs with an empty MLP). Finally, notice the use of the `value_names` argument  -- by default, the generated config will have an experiment name consisting of the base name under `config.experiment.name` already present in the base json, and then the `name` specified for each parameter, along with the string representation of the selected value in `values`, but `value_names` allows you to override this with a custom string for the corresponding value. 
+Leaving `name=""` ensures that the experiment name is not determined by these parameter values.
+Only do this if you are sweeping over a single value!
+
+</div>
+
+### Define hyperparameter scan values
+Now we define our scan - we could like to sweep the following:
+- policy learning rate in [1e-3, 1e-4]
+- whether to use a GMM policy or not
+- whether to use an RNN dimension of 400 with an MLP of size (1024, 1024) or an RNN dimension of 1000 with an empty MLP
+
+Notice that the learning rate goes in `group` 1, the GMM enabled parameter goes in `group` 2, and the RNN dimension and MLP layer dims both go in `group` 3. 
+
+<div class="admonition tip">
+<p class="admonition-title">Sweeping hyperparameters together</p>
+
+We set the RNN dimension and MLP layer dims in the same group to ensure that the parameters change together (RNN dimension 400 always occurs with MLP layer dims (1024, 1024), and RNN dimension 1000 always occurs with an empty MLP).
+
+</div>
 
 ```python
     # LR - 1e-3, 1e-4
@@ -172,10 +251,9 @@ The `group` argument specifies which arguments should be modified together. The 
         ], 
         value_names=["1024", "0"],
     )
-
-    return generator
 ```
 
+## Step 4: Run Hyperparameter Helper Script
 Finally, we run the hyperparameter helper script (which contains the function we defined above).
 
 ```sh

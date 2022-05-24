@@ -199,6 +199,79 @@ def algo_name_from_checkpoint(ckpt_path=None, ckpt_dict=None):
     return algo_name, ckpt_dict
 
 
+def update_config(cfg):
+    """
+    Updates the config for backwards-compatibility if it uses outdated configurations.
+
+    See https://github.com/ARISE-Initiative/robomimic/releases/tag/v0.2.0 for more info.
+
+    Args:
+        cfg (dict): Raw dictionary of config values
+    """
+    # Check if image modality is defined -- this means we're using an outdated config
+    modalities = cfg["observation"]["modalities"]
+
+    found_img = False
+    for modality_group in ("obs", "subgoal", "goal"):
+        if modality_group in modalities:
+            img_modality = modalities[modality_group].pop("image", None)
+            if img_modality is not None:
+                found_img = True
+                cfg["observation"]["modalities"][modality_group]["rgb"] = img_modality
+
+    if found_img:
+        # Also need to map encoder kwargs correctly
+        old_encoder_cfg = cfg["observation"].pop("encoder")
+
+        # Create new encoder entry for RGB
+        rgb_encoder_cfg = {
+            "core_class": "VisualCore",
+            "core_kwargs": {
+                "backbone_kwargs": dict(),
+                "pool_kwargs": dict(),
+            },
+            "obs_randomizer_class": None,
+            "obs_randomizer_kwargs": dict(),
+        }
+
+        if "visual_feature_dimension" in old_encoder_cfg:
+            rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg["visual_feature_dimension"]
+
+        if "visual_core" in old_encoder_cfg:
+            rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg["visual_core"]
+
+        for kwarg in ("pretrained", "input_coord_conv"):
+            if "visual_core_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["visual_core_kwargs"]:
+                rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = old_encoder_cfg["visual_core_kwargs"][kwarg]
+
+        # Optionally add pooling info too
+        if old_encoder_cfg.get("use_spatial_softmax", True):
+            rgb_encoder_cfg["core_kwargs"]["pool_class"] = "SpatialSoftmax"
+
+        for kwarg in ("num_kp", "learnable_temperature", "temperature", "noise_std"):
+            if "spatial_softmax_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]:
+                rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
+
+        # Update obs randomizer as well
+        for kwarg in ("obs_randomizer_class", "obs_randomizer_kwargs"):
+            if kwarg in old_encoder_cfg:
+                rgb_encoder_cfg[kwarg] = old_encoder_cfg[kwarg]
+
+        # Store rgb config
+        cfg["observation"]["encoder"] = {"rgb": rgb_encoder_cfg}
+
+        # Also add defaults for low dim
+        cfg["observation"]["encoder"]["low_dim"] = {
+            "core_class": None,
+            "core_kwargs": {
+                "backbone_kwargs": dict(),
+                "pool_kwargs": dict(),
+            },
+            "obs_randomizer_class": None,
+            "obs_randomizer_kwargs": dict(),
+        }
+
+
 def config_from_checkpoint(algo_name=None, ckpt_path=None, ckpt_dict=None, verbose=False):
     """
     Helper function to restore config from a checkpoint file or loaded model dictionary.
@@ -222,13 +295,15 @@ def config_from_checkpoint(algo_name=None, ckpt_path=None, ckpt_dict=None, verbo
     if algo_name is None:
         algo_name, _ = algo_name_from_checkpoint(ckpt_dict=ckpt_dict)
 
+    # restore config from loaded model dictionary
+    config_dict = json.loads(ckpt_dict['config'])
+    update_config(cfg=config_dict)
+
     if verbose:
         print("============= Loaded Config =============")
-        print(ckpt_dict['config'])
+        print(json.dumps(config_dict, indent=4))
 
-    # restore config from loaded model dictionary
-    config_json = ckpt_dict['config']
-    config = config_factory(algo_name, dic=json.loads(config_json))
+    config = config_factory(algo_name, dic=config_dict)
 
     # lock config to prevent further modifications and ensure missing keys raise errors
     config.lock()
@@ -267,8 +342,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
-    # env meta from model dict to get info needed to create model
-    env_meta = ckpt_dict["env_metadata"]
+    # shape meta from model dict to get info needed to create model
     shape_meta = ckpt_dict["shape_metadata"]
 
     # maybe restore observation normalization stats

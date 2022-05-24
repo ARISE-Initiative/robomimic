@@ -20,7 +20,7 @@ c.experiment.save.enabled = True
 print("save enabled: {}".format(c.experiment.save.enabled))
 ```
 
-It's easy to go back and forth between`Config` objects and jsons as well, which is convenient when saving config objects to disk (this happens when generating new config jsons for training, and when saving the config in a model checkpoint), and loading configs from jsons.
+It's easy to go back and forth between `Config` objects and jsons as well, which is convenient when saving config objects to disk (this happens when generating new config jsons for training, and when saving the config in a model checkpoint), and loading configs from jsons.
 
 ```python
 # dump config as a json string
@@ -110,4 +110,4 @@ All `Config` objects that inherit the constructor of `BaseConfig` are _key-locke
 
 ## Minimum Example
 
-Please see the [examples section](../introduction/examples.html#config-example) for more information on how to use the Config object, and examples on how the locking mechanism works.
+Please see the [config tutorial](../tutorials/configs.html) for more information on how to use the Config object, and examples on how the locking mechanism works.
