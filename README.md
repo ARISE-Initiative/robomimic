@@ -28,7 +28,7 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 ## Core Features
 
 <p align="center">
-  <img style="width:100.0%;height:auto;" src="docs/images/core_features.png">
+  <img width="50.0%" src="docs/images/core_features.png">
  </p>
 
 
