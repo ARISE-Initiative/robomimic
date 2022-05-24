@@ -4,7 +4,13 @@ Robomimic uses a centralized [configuration system](../modules/configs.html) to 
 
 
 #### Best practices
-*WARNING*: Do not directly modify the default configs such as `config/bc_config.py`, especially if using the codebase with version control (e.g. git). Modifying these files modifies the default settings, and it’s easy to forget that these changes were made, or unintentionally commit these changes so that they become the new defaults.
+<div class="admonition warning">
+<p class="admonition-title">Warning! Do not modify default configs!</p>
+
+Do not directly modify the default configs such as `config/bc_config.py`, especially if using the codebase with version control (e.g. git). Modifying these files modifies the default settings, and it’s easy to forget that these changes were made, or unintentionally commit these changes so that they become the new defaults.
+
+</div>
+
 
 Please see the [Config documentation](../modules/configs.html) for more information on Config objects, and the [hyperparameter scan tutorial](../tutorials/hyperparam_scan.html) for configuring hyperparameter sweeps.
 
