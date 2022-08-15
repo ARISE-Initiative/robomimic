@@ -9,12 +9,15 @@ import abc
 import numpy as np
 import textwrap
 from copy import deepcopy
+import random
 from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models as vision_models
+from torchvision.transforms import Lambda, Compose
+import torchvision.transforms.functional as TVF
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
@@ -1259,15 +1262,27 @@ class Randomizer(Module):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
     def forward_in(self, inputs):
+        """
+        Randomize raw inputs if training.
+        """
+        return self._forward_in(inputs=inputs) if self.training else inputs
+
+    def forward_out(self, inputs):
+        """
+        Processing for network outputs.
+        """
+        return self._forward_out(inputs=inputs) if self.training else inputs
+
+    @abc.abstractmethod
+    def _forward_in(self, inputs):
         """
         Randomize raw inputs.
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def forward_out(self, inputs):
+    def _forward_out(self, inputs):
         """
         Processing for network outputs.
         """
@@ -1348,7 +1363,7 @@ class CropRandomizer(Randomizer):
         # and so the other dimensions retain their shape.
         return list(input_shape)
 
-    def forward_in(self, inputs):
+    def _forward_in(self, inputs):
         """
         Samples N random crops for each input in the batch, and then reshapes
         inputs to [B * N, ...].
@@ -1364,7 +1379,7 @@ class CropRandomizer(Randomizer):
         # [B, N, ...] -> [B * N, ...]
         return TensorUtils.join_dimensions(out, 0, 1)
 
-    def forward_out(self, inputs):
+    def _forward_out(self, inputs):
         """
         Splits the outputs from shape [B * N, ...] -> [B, N, ...] and then average across N
         to result in shape [B, ...] to make sure the network output is consistent with
@@ -1380,4 +1395,171 @@ class CropRandomizer(Randomizer):
         header = '{}'.format(str(self.__class__.__name__))
         msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
             self.input_shape, self.crop_height, self.crop_width, self.num_crops)
+        return msg
+
+
+class ColorRandomizer(Randomizer):
+    """
+    Randomly sample color jitter at input, and then average across color jtters at output.
+    """
+    def __init__(
+            self,
+            input_shape,
+            brightness=0.3,
+            contrast=0.3,
+            saturation=0.3,
+            hue=0.3,
+            num_colors=1,
+    ):
+        """
+        Args:
+            input_shape (tuple, list): shape of input (not including batch dimension)
+            brightness (None or float or 2-tuple): How much to jitter brightness. brightness_factor is chosen uniformly
+                from [max(0, 1 - brightness), 1 + brightness] or the given [min, max]. Should be non negative numbers.
+            contrast (None or float or 2-tuple): How much to jitter contrast. contrast_factor is chosen uniformly
+                from [max(0, 1 - contrast), 1 + contrast] or the given [min, max]. Should be non negative numbers.
+            saturation (None or float or 2-tuple): How much to jitter saturation. saturation_factor is chosen uniformly
+                from [max(0, 1 - saturation), 1 + saturation] or the given [min, max]. Should be non negative numbers.
+            hue (None or float or 2-tuple): How much to jitter hue. hue_factor is chosen uniformly from [-hue, hue] or
+                the given [min, max]. Should have 0<= hue <= 0.5 or -0.5 <= min <= max <= 0.5. To jitter hue, the pixel
+                values of the input image has to be non-negative for conversion to HSV space; thus it does not work
+                if you normalize your image to an interval with negative values, or use an interpolation that
+                generates negative values before using this function.
+            num_colors (int): number of random color jitters to take
+        """
+        super(ColorRandomizer, self).__init__()
+
+        assert len(input_shape) == 3 # (C, H, W)
+
+        self.input_shape = input_shape
+        self.brightness = [max(0, 1 - brightness), 1 + brightness] if type(brightness) in {float, int} else brightness
+        self.contrast = [max(0, 1 - contrast), 1 + contrast] if type(contrast) in {float, int} else contrast
+        self.saturation = [max(0, 1 - saturation), 1 + saturation] if type(saturation) in {float, int} else saturation
+        self.hue = [-hue, hue] if type(hue) in {float, int} else hue
+        self.num_colors = num_colors
+
+    @torch.jit.unused
+    def get_transform(self):
+        """
+        Get a randomized transform to be applied on image.
+
+        Implementation taken directly from:
+
+        https://github.com/pytorch/vision/blob/2f40a483d73018ae6e1488a484c5927f2b309969/torchvision/transforms/transforms.py#L1053-L1085
+
+        Returns:
+            Transform: Transform which randomly adjusts brightness, contrast and
+            saturation in a random order.
+        """
+        transforms = []
+
+        if self.brightness is not None:
+            brightness_factor = random.uniform(self.brightness[0], self.brightness[1])
+            transforms.append(Lambda(lambda img: TVF.adjust_brightness(img, brightness_factor)))
+
+        if self.contrast is not None:
+            contrast_factor = random.uniform(self.contrast[0], self.contrast[1])
+            transforms.append(Lambda(lambda img: TVF.adjust_contrast(img, contrast_factor)))
+
+        if self.saturation is not None:
+            saturation_factor = random.uniform(self.saturation[0], self.saturation[1])
+            transforms.append(Lambda(lambda img: TVF.adjust_saturation(img, saturation_factor)))
+
+        if self.hue is not None:
+            hue_factor = random.uniform(self.hue[0], self.hue[1])
+            transforms.append(Lambda(lambda img: TVF.adjust_hue(img, hue_factor)))
+
+        random.shuffle(transforms)
+        transform = Compose(transforms)
+
+        return transform
+
+    def get_batch_transform(self, N):
+        """
+        Generates a batch transform, where each set of sample(s) along the batch (first) dimension will have the same
+        @N unique ColorJitter transforms applied.
+
+        Args:
+            N (int): Number of ColorJitter transforms to apply per set of sample(s) along the batch (first) dimension
+
+        Returns:
+            Lambda: Aggregated transform which will autoamtically apply a different ColorJitter transforms to
+                each sub-set of samples along batch dimension, assumed to be the FIRST dimension in the inputted tensor
+                Note: This function will MULTIPLY the first dimension by N
+        """
+        return Lambda(lambda x: torch.stack([self.get_transform()(x_) for x_ in x for _ in range(N)]))
+
+    def output_shape_in(self, input_shape=None):
+        """
+        Function to compute output shape from inputs to this module. Corresponds to
+        the @forward_in operation, where raw inputs (usually observation modalities)
+        are passed in.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+
+        # outputs are shape (C, CH, CW), because
+        # the number of color randomizings are reshaped into the batch dimension, increasing the batch
+        # size from B to B * N
+        return [self.input_shape[0], self.crop_height, self.crop_width]
+
+    def output_shape_out(self, input_shape=None):
+        """
+        Function to compute output shape from inputs to this module. Corresponds to
+        the @forward_out operation, where processed inputs (usually encoded observation
+        modalities) are passed in.
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+
+        # since the forward_out operation splits [B * N, ...] -> [B, N, ...]
+        # and then pools to result in [B, ...], only the batch dimension changes,
+        # and so the other dimensions retain their shape.
+        return list(input_shape)
+
+    def _forward_in(self, inputs):
+        """
+        Samples N random color jitters for each input in the batch, and then reshapes
+        inputs to [B * N, ...].
+        """
+        assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+
+        # Make sure shape is exactly 4
+        if len(inputs.shape) == 3:
+            inputs = torch.unsqueeze(inputs, dim=0)
+
+        # TODO: Make more efficient other than implicit for-loop?
+        # Create lambda to aggregate all color randomizings at once
+        transform = self.get_batch_transform(N=self.num_colors)
+
+        return transform(inputs)
+
+    def _forward_out(self, inputs):
+        """
+        Splits the outputs from shape [B * N, ...] -> [B, N, ...] and then average across N
+        to result in shape [B, ...] to make sure the network output is consistent with
+        what would have happened if there were no randomization.
+        """
+        batch_size = (inputs.shape[0] // self.num_colors)
+        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
+                                             target_dims=(batch_size, self.num_colors))
+        return out.mean(dim=1)
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        msg = header + f"(input_shape={self.input_shape}, brightness={self.brightness}, contrast={self.contrast}, " \
+                       f"saturation={self.saturation}, hue={self.hue}, num_colors={self.num_colors})"
         return msg
