@@ -1409,7 +1409,7 @@ class ColorRandomizer(Randomizer):
             contrast=0.3,
             saturation=0.3,
             hue=0.3,
-            num_colors=1,
+            num_samples=1,
     ):
         """
         Args:
@@ -1425,7 +1425,7 @@ class ColorRandomizer(Randomizer):
                 values of the input image has to be non-negative for conversion to HSV space; thus it does not work
                 if you normalize your image to an interval with negative values, or use an interpolation that
                 generates negative values before using this function.
-            num_colors (int): number of random color jitters to take
+            num_samples (int): number of random color jitters to take
         """
         super(ColorRandomizer, self).__init__()
 
@@ -1436,7 +1436,7 @@ class ColorRandomizer(Randomizer):
         self.contrast = [max(0, 1 - contrast), 1 + contrast] if type(contrast) in {float, int} else contrast
         self.saturation = [max(0, 1 - saturation), 1 + saturation] if type(saturation) in {float, int} else saturation
         self.hue = [-hue, hue] if type(hue) in {float, int} else hue
-        self.num_colors = num_colors
+        self.num_samples = num_samples
 
     @torch.jit.unused
     def get_transform(self):
@@ -1490,40 +1490,10 @@ class ColorRandomizer(Randomizer):
         return Lambda(lambda x: torch.stack([self.get_transform()(x_) for x_ in x for _ in range(N)]))
 
     def output_shape_in(self, input_shape=None):
-        """
-        Function to compute output shape from inputs to this module. Corresponds to
-        the @forward_in operation, where raw inputs (usually observation modalities)
-        are passed in.
-
-        Args:
-            input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend
-                on the size of the input, or if they assume fixed size input.
-
-        Returns:
-            out_shape ([int]): list of integers corresponding to output shape
-        """
-
-        # outputs are shape (C, CH, CW), because
-        # the number of color randomizings are reshaped into the batch dimension, increasing the batch
-        # size from B to B * N
-        return [self.input_shape[0], self.crop_height, self.crop_width]
+        # outputs are same shape as inputs
+        return list(input_shape)
 
     def output_shape_out(self, input_shape=None):
-        """
-        Function to compute output shape from inputs to this module. Corresponds to
-        the @forward_out operation, where processed inputs (usually encoded observation
-        modalities) are passed in.
-
-        Args:
-            input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend
-                on the size of the input, or if they assume fixed size input.
-
-        Returns:
-            out_shape ([int]): list of integers corresponding to output shape
-        """
-
         # since the forward_out operation splits [B * N, ...] -> [B, N, ...]
         # and then pools to result in [B, ...], only the batch dimension changes,
         # and so the other dimensions retain their shape.
@@ -1542,7 +1512,7 @@ class ColorRandomizer(Randomizer):
 
         # TODO: Make more efficient other than implicit for-loop?
         # Create lambda to aggregate all color randomizings at once
-        transform = self.get_batch_transform(N=self.num_colors)
+        transform = self.get_batch_transform(N=self.num_samples)
 
         return transform(inputs)
 
@@ -1552,14 +1522,90 @@ class ColorRandomizer(Randomizer):
         to result in shape [B, ...] to make sure the network output is consistent with
         what would have happened if there were no randomization.
         """
-        batch_size = (inputs.shape[0] // self.num_colors)
+        batch_size = (inputs.shape[0] // self.num_samples)
         out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
-                                             target_dims=(batch_size, self.num_colors))
+                                             target_dims=(batch_size, self.num_samples))
         return out.mean(dim=1)
 
     def __repr__(self):
         """Pretty print network."""
         header = '{}'.format(str(self.__class__.__name__))
         msg = header + f"(input_shape={self.input_shape}, brightness={self.brightness}, contrast={self.contrast}, " \
-                       f"saturation={self.saturation}, hue={self.hue}, num_colors={self.num_colors})"
+                       f"saturation={self.saturation}, hue={self.hue}, num_samples={self.num_samples})"
         return msg
+
+
+class GaussianNoiseRandomizer(Randomizer):
+    """
+    Randomly sample gaussian noise at input, and then average across noises at output.
+    """
+    def __init__(
+            self,
+            input_shape,
+            noise_mean=0.0,
+            noise_std=0.3,
+            limits=None,
+            num_samples=1,
+    ):
+        """
+        Args:
+            input_shape (tuple, list): shape of input (not including batch dimension)
+            noise_mean (float): Mean of noise to apply
+            noise_std (float): Standard deviation of noise to apply
+            limits (None or 2-tuple): If specified, should be the (min, max) values to clamp all noisied samples to
+            num_samples (int): number of random color jitters to take
+        """
+        super(GaussianNoiseRandomizer, self).__init__()
+
+        self.input_shape = input_shape
+        self.noise_mean = noise_mean
+        self.noise_std = noise_std
+        self.limits = limits
+        self.num_samples = num_samples
+
+    def output_shape_in(self, input_shape=None):
+        # outputs are same shape as inputs
+        return list(input_shape)
+
+    def output_shape_out(self, input_shape=None):
+        # since the forward_out operation splits [B * N, ...] -> [B, N, ...]
+        # and then pools to result in [B, ...], only the batch dimension changes,
+        # and so the other dimensions retain their shape.
+        return list(input_shape)
+
+    def _forward_in(self, inputs):
+        """
+        Samples N random gaussian noises for each input in the batch, and then reshapes
+        inputs to [B * N, ...].
+        """
+        sizing = [1 for _ in inputs.shape]
+        sizing[0] = self.num_samples
+        out = torch.tile(inputs, sizing)
+
+        # Sample noise across all samples
+        out = torch.rand(size=out.shape) * self.noise_std + self.noise_mean + out
+
+        # Possibly clamp
+        if self.limits is not None:
+            out = torch.clip(out, min=self.limits[0], max=self.limits[1])
+
+        return out
+
+    def _forward_out(self, inputs):
+        """
+        Splits the outputs from shape [B * N, ...] -> [B, N, ...] and then average across N
+        to result in shape [B, ...] to make sure the network output is consistent with
+        what would have happened if there were no randomization.
+        """
+        batch_size = (inputs.shape[0] // self.num_samples)
+        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
+                                             target_dims=(batch_size, self.num_samples))
+        return out.mean(dim=1)
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        msg = header + f"(input_shape={self.input_shape}, noise_mean={self.noise_mean}, noise_std={self.noise_std}, " \
+                       f"limits={self.limits}, num_samples={self.num_samples})"
+        return msg
+
