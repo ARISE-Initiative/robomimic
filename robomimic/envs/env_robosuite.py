@@ -60,7 +60,7 @@ class EnvRobosuite(EB.EnvBase):
             ignore_done=True,
             use_object_obs=True,
             use_camera_obs=use_image_obs,
-            camera_depths=False,
+            # camera_depths=False, ## TODO(VS) check why this was always set to False by default
         )
         kwargs.update(update_kwargs)
 
@@ -203,7 +203,76 @@ class EnvRobosuite(EB.EnvBase):
             ret["eef_pos"] = np.array(di["eef_pos"])
             ret["eef_quat"] = np.array(di["eef_quat"])
             ret["gripper_qpos"] = np.array(di["gripper_qpos"])
+
+        # Adding 3D (x,y,z) points to observation dict.
+        #NOTE(VS)# obs keys are: any keys in ObsUtils.OBS_KEYS_TO_MODALITIES i.e. are images, object-state, and anything 
+        ## that comes from robot{i} (in that order) hence, agentview_depth is skipped 
+        ## TODO(VS) cleanup comment
+        for cam_name, cam_height, cam_width in zip(self.env.camera_names, self.env.camera_heights, self.env.camera_widths):
+            if f"{cam_name}_depth" in ret:
+                ret[f"{cam_name}_xyz"] = self.get_xyz_from_depth(ret[f"{cam_name}_depth"], cam_name, cam_height, cam_width)
         return ret
+
+    def get_real_depth_map(self, depth_map):
+        """
+        Source: https://github.com/RoboTurk-Platform/robomimic-internal/blob/benchmark/batchRL/envs/env_robosuite.py#L342
+        TODO(VS) doc string
+        TODO(VS) add unit tests
+
+        By default, robosuite will return a depth map that is normalized in [0, 1]. This
+        helper function converts the map so that the entries correspond to actual distances.
+        (see https://github.com/deepmind/dm_control/blob/master/dm_control/mujoco/engine.py#L742)
+        """
+        # NOTE: we assume this hasn't happened yet in robosuite internally, and assert
+        #       that all entries are in [0, 1]
+        assert np.all(depth_map >= 0.) and np.all(depth_map <= 1.)
+        extent = self.env.sim.model.stat.extent
+        far = self.env.sim.model.vis.map.zfar * extent
+        near = self.env.sim.model.vis.map.znear * extent
+        return near / (1. - depth_map * (1. - near / far))
+
+    def get_camera_intrinsic_matrix(self, camera_name, camera_height, camera_width):
+        """
+        Source: https://github.com/RoboTurk-Platform/robomimic-internal/blob/benchmark/batchRL/envs/env_robosuite.py#L296
+        TODO(VS) this code exists in robosuite/master/utils/camera_utils.py; see if it can go in in the offline_study branch to prevent code duplication
+        TODO(VS) doc string
+        TODO(VS) add unit tests
+        
+        Obtains camera internal matrix from other parameters. A 3X3 matrix.
+        """
+        cam_id = self.env.sim.model.camera_name2id(camera_name)
+        fovy = self.env.sim.model.cam_fovy[cam_id]
+        f = 0.5 * camera_height / np.tan(fovy * np.pi / 360)
+        K = np.array([[f, 0, camera_width / 2], [0, f, camera_height / 2], [0, 0, 1]])
+        return K
+
+    def get_xyz_from_depth(self, depth_map, camera_name, camera_height, camera_width):
+        """
+        TODO(VS) also add to camera_utils?
+        TODO(VS) doc string
+        TODO(VS) add unit tests
+
+        Converts uv-map (obtained using camera height and width) and depth-map to (x,y,z) coordinates
+        whose units are same as in the depth map.
+        Args:
+            camera_name (str)
+            camera_height (int)
+            camera_width (int)
+            depth_map (2x2 array): depth map (normalized returned by mujoco)
+        """
+        def parse_intrinsics(K):
+            fx = K[0, 0]
+            fy = K[1, 1]
+            cx = K[0, 2]
+            cy = K[1, 2]
+            return fx, fy, cx, cy
+        intrinsics = self.get_camera_intrinsic_matrix(camera_name, camera_height, camera_width)
+        depth_map = self.get_real_depth_map(depth_map).squeeze()
+        fx, fy, cx, cy = parse_intrinsics(intrinsics)
+        uv = np.mgrid[0:camera_width, 0:camera_height]
+        x = (uv[0] - cx) / fx * depth_map
+        y = (uv[1] - cy) / fy * depth_map
+        return np.stack((x, y, depth_map), axis=-1)
 
     def get_state(self):
         """
