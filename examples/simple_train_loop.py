@@ -155,6 +155,7 @@ def run_train_loop(model, data_loader):
 
             # process batch for training
             input_batch = model.process_batch_for_training(batch)
+            input_batch = model.postprocess_obs_for_training(input_batch, obs_normalization_stats=None)
 
             # forward and backward pass
             info = model.train_on_batch(batch=input_batch, epoch=epoch, validate=False)
