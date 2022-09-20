@@ -201,7 +201,9 @@ class BCQ(PolicyAlgo, ValueAlgo):
             if done_inds.shape[0] > 0:
                 input_batch["rewards"][done_inds] = input_batch["rewards"][done_inds] * (1. / (1. - self.discount))
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def _train_action_sampler_on_batch(self, batch, epoch, no_backprop=False):
         """
