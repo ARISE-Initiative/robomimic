@@ -8,6 +8,13 @@ from robomimic.config.base_config import BaseConfig
 class BCConfig(BaseConfig):
     ALGO_NAME = "bc"
 
+    def train_config(self):
+        """
+        BC algorithms don't need "next_obs" from hdf5 - so save on storage and compute by disabling it.
+        """
+        super(BCConfig, self).train_config()
+        self.train.hdf5_load_next_obs = False
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the 

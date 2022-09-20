@@ -155,6 +155,9 @@ class BaseConfig(Config):
         # used for parallel data loading
         self.train.hdf5_use_swmr = True
 
+        # whether to load "next_obs" group from hdf5 - only needed for batch / offline RL algorithms
+        self.train.hdf5_load_next_obs = True
+
         # if true, normalize observations at train and test time, using the global mean and standard deviation
         # of each observation in each dimension, computed across the training set. See SequenceDataset.normalize_obs
         # in utils/dataset.py for more information.
