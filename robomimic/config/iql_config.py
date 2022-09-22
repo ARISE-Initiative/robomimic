@@ -44,31 +44,31 @@ class IQLConfig(BaseConfig):
         # Actor network settings - shared
         self.algo.actor.net.common.std_activation = "softplus"              # Activation to use for std output from policy net
         self.algo.actor.net.common.low_noise_eval = True                    # Whether to use deterministic action sampling at eval stage
-        self.algo.actor.net.common.use_tanh = False
+        self.algo.actor.net.common.use_tanh = False                         # Whether to use tanh at output of actor network
 
         # Actor network settings - gaussian
         self.algo.actor.net.gaussian.init_last_fc_weight = 0.001            # If set, will override the initialization of the final fc layer to be uniformly sampled limited by this value
         self.algo.actor.net.gaussian.init_std = 0.3                         # Relative scaling factor for std from policy net
         self.algo.actor.net.gaussian.fixed_std = False                      # Whether to learn std dev or not
 
-        self.algo.actor.net.gmm.num_modes = 5
-        self.algo.actor.net.gmm.min_std = 0.0001
+        self.algo.actor.net.gmm.num_modes = 5                               # number of GMM modes
+        self.algo.actor.net.gmm.min_std = 0.0001                            # minimum std output from network
 
         self.algo.actor.layer_dims = (300, 400)                             # actor MLP layer dimensions
 
-        self.algo.actor.max_gradient_norm = None
+        self.algo.actor.max_gradient_norm = None                            # L2 gradient clipping for actor
 
         # ================== Critic Network Config ===================
         # critic ensemble parameters
         self.algo.critic.ensemble.n = 2                                     # number of Q networks in the ensemble
         self.algo.critic.layer_dims = (300, 400)                            # critic MLP layer dimensions
-        self.algo.critic.use_huber = False
-        self.algo.critic.max_gradient_norm = None
+        self.algo.critic.use_huber = False                                  # Huber Loss instead of L2 for critic
+        self.algo.critic.max_gradient_norm = None                           # L2 gradient clipping for actor
 
         # ================== Adv Config ==============================
-        self.algo.adv.filter_type = "exp"
-        self.algo.adv.use_final_clip = True
-        self.algo.adv.clip_adv_value = None
-        self.algo.adv.beta = 1.0
+        self.algo.adv.clip_adv_value = None                                 # whether to clip raw advantage estimates
+        self.algo.adv.filter_type = "exp"                                   # operator for converting raw advantage estimates to weights
+        self.algo.adv.beta = 1.0                                            # temperature for operator
+        self.algo.adv.use_final_clip = True                                 # whether to clip final weight calculations
 
         self.algo.vf_quantile = 0.9                                         # quantile factor in quantile regression

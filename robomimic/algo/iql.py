@@ -37,13 +37,14 @@ class IQL(PolicyAlgo, ValueAlgo):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # set loss function operator for critic
         self.td_loss_fcn = nn.SmoothL1Loss() if self.algo_config.critic.use_huber else nn.MSELoss()
 
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
 
-        Networks for this algo: critic (potentially ensemble), policy
+        Networks for this algo: critic (potentially ensemble), actor, value function
         """
 
         # Create nets
@@ -63,9 +64,9 @@ class IQL(PolicyAlgo, ValueAlgo):
             # Unsupported actor type!
             raise ValueError(f"Unsupported actor requested. "
                              f"Requested: {self.algo_config.actor.net.type}, "
-                             f"valid options are: {['gaussian']}")
+                             f"valid options are: {['gaussian', 'gmm']}")
 
-        # Policy
+        # Actor
         self.nets["actor"] = actor_cls(
             obs_shapes=self.obs_shapes,
             goal_shapes=self.goal_shapes,
@@ -89,6 +90,7 @@ class IQL(PolicyAlgo, ValueAlgo):
                 )
                 net_list.append(critic)
 
+        # Value function network
         self.nets["vf"] = ValueNets.ValueNetwork(
             obs_shapes=self.obs_shapes,
             mlp_layer_dims=self.algo_config.critic.layer_dims,
@@ -127,7 +129,6 @@ class IQL(PolicyAlgo, ValueAlgo):
         input_batch["next_obs"] = {k: batch["next_obs"][k][:, 0, :] for k in batch["next_obs"]}
         input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
-
         input_batch["dones"] = batch["dones"][:, 0]
         input_batch["rewards"] = batch["rewards"][:, 0]
 
@@ -157,15 +158,17 @@ class IQL(PolicyAlgo, ValueAlgo):
             # Always run super call first
             info = super().train_on_batch(batch, epoch, validate=validate)
 
-            # Train critic(s)
-            critic_info, critic_losses, vf_loss = self._compute_critic_loss(batch)
-            # Train actor
-            actor_info, policy_loss = self._compute_policy_loss(batch, critic_info)
+            # Compute loss for critic(s)
+            critic_losses, vf_loss, critic_info = self._compute_critic_loss(batch)
+            # Compute loss for actor
+            actor_loss, actor_info = self._compute_actor_loss(batch, critic_info)
 
-            # Critic update
-            self._update_critic(critic_losses, vf_loss, validate)
-            # Actor update
-            self._update_policy(policy_loss, validate)
+            if not validate:
+                # Critic update
+                self._update_critic(critic_losses, vf_loss)
+                
+                # Actor update
+                self._update_actor(actor_loss)
 
             # Update info
             info.update(actor_info)
@@ -174,63 +177,41 @@ class IQL(PolicyAlgo, ValueAlgo):
         # Return stats
         return info
 
-    def _compute_policy_loss(self, batch, critic_info):
-        info = OrderedDict()
-
-        dist = self.nets["actor"].forward_train(obs_dict=batch["obs"], goal_dict=batch["goal_obs"])
-        log_prob = dist.log_prob(batch["actions"])
-
-        info["actor/log_prob"] = log_prob.mean()
-
-        q_pred = critic_info["vf/q_pred"]
-        v_pred = critic_info["vf/v_pred"]
-        adv = q_pred - v_pred
-        weights, adv_clipped = self._apply_adv_filter(adv)
-
-        policy_loss = (-log_prob * weights.detach()).mean()
-
-        info["actor/loss"] = policy_loss
-
-        # log adv-related values
-        info["adv/adv_raw"] = adv
-        info["adv/adv_score"] = adv_clipped
-        info["adv/adv_weight"] = weights
-        info["adv/V_value"] = v_pred
-
-        # Return stats
-        return info, policy_loss
-
-    def _update_policy(self, policy_loss, validate=False):
-        if validate:
-            return
-
-        TorchUtils.backprop_for_loss(
-            net=self.nets["actor"],
-            optim=self.optimizers["actor"],
-            loss=policy_loss,
-            max_grad_norm=self.algo_config.actor.max_gradient_norm,
-        )
-
     def _compute_critic_loss(self, batch):
+        """
+        Helper function for computing Q and V losses. Called by @train_on_batch
+
+        Args:
+            batch (dict): dictionary with torch.Tensors sampled
+                from a data loader and filtered by @process_batch_for_training
+
+        Returns:
+            critic_losses (list): list of critic (Q function) losses
+            vf_loss (torch.Tensor): value function loss
+            info (dict): dictionary of Q / V predictions and losses
+        """
         info = OrderedDict()
 
-        rewards = torch.unsqueeze(batch["rewards"], 1)
-        dones = torch.unsqueeze(batch["dones"], 1)
+        # get batch values
         obs = batch["obs"]
         actions = batch["actions"]
         next_obs = batch["next_obs"]
         goal_obs = batch["goal_obs"]
+        rewards = torch.unsqueeze(batch["rewards"], 1)
+        dones = torch.unsqueeze(batch["dones"], 1)
 
-        # Qf losses
+        # Q predictions
         pred_qs = [critic(obs_dict=obs, acts=actions, goal_dict=goal_obs)
                    for critic in self.nets["critic"]]
 
         info["critic/critic1_pred"] = pred_qs[0].mean()
 
+        # Q target values
         target_vf_pred = self.nets["vf"](obs_dict=next_obs, goal_dict=goal_obs).detach()
         q_target = rewards + (1. - dones) * self.algo_config.discount * target_vf_pred
         q_target = q_target.detach()
 
+        # Q losses
         critic_losses = []
         for (i, q_pred) in enumerate(pred_qs):
             # Calculate td error loss
@@ -238,30 +219,40 @@ class IQL(PolicyAlgo, ValueAlgo):
             info[f"critic/critic{i+1}_loss"] = td_loss
             critic_losses.append(td_loss)
 
-        # Vf losses
+        # V predictions
         pred_qs = [critic(obs_dict=obs, acts=actions, goal_dict=goal_obs)
                         for critic in self.nets["critic_target"]]
         q_pred, _ = torch.cat(pred_qs, dim=1).min(dim=1, keepdim=True)
         q_pred = q_pred.detach()
         vf_pred = self.nets["vf"](obs)
+        
+        # V losses
         vf_err = vf_pred - q_pred
         vf_sign = (vf_err > 0).float()
         vf_weight = (1 - vf_sign) * self.algo_config.vf_quantile + vf_sign * (1 - self.algo_config.vf_quantile)
         vf_loss = (vf_weight * (vf_err ** 2)).mean()
+        
+        # update logs for V loss
         info["vf/q_pred"] = q_pred
         info["vf/v_pred"] = vf_pred
         info["vf/v_loss"] = vf_loss
 
         # Return stats
-        return info, critic_losses, vf_loss
+        return critic_losses, vf_loss, info
 
-    def _update_critic(self, critic_losses, vf_loss, validate=False):
-        if validate:
-            return
+    def _update_critic(self, critic_losses, vf_loss):
+        """
+        Helper function for updating critic and vf networks. Called by @train_on_batch
 
-        for i, (critic_loss, critic, critic_target, optimizer) in enumerate(zip(
+        Args:
+            critic_losses (list): list of critic (Q function) losses
+            vf_loss (torch.Tensor): value function loss
+        """
+
+        # update ensemble of critics
+        for (critic_loss, critic, critic_target, optimizer) in zip(
                 critic_losses, self.nets["critic"], self.nets["critic_target"], self.optimizers["critic"]
-        )):
+        ):
             TorchUtils.backprop_for_loss(
                 net=critic,
                 optim=optimizer,
@@ -270,9 +261,11 @@ class IQL(PolicyAlgo, ValueAlgo):
                 retain_graph=False,
             )
 
+            # update target network
             with torch.no_grad():
                 TorchUtils.soft_update(source=critic, target=critic_target, tau=self.algo_config.target_tau)
 
+        # update V function network
         TorchUtils.backprop_for_loss(
             net=self.nets["vf"],
             optim=self.optimizers["vf"],
@@ -281,12 +274,82 @@ class IQL(PolicyAlgo, ValueAlgo):
             retain_graph=False,
         )
 
-    def _apply_adv_filter(self, adv):
-        if self.algo_config.adv.clip_adv_value is not None:
-            adv = adv.clamp(max=self.algo_config.adv.clip_adv_value)  # just to experiment
+    def _compute_actor_loss(self, batch, critic_info):
+        """
+        Helper function for computing actor loss. Called by @train_on_batch
 
-        filter_type = self.algo_config.adv.filter_type
-        beta = self.algo_config.adv.beta
+        Args:
+            batch (dict): dictionary with torch.Tensors sampled
+                from a data loader and filtered by @process_batch_for_training
+
+            critic_info (dict): dictionary containing Q and V function predictions,
+                to be used for computing advantage estimates
+
+        Returns:
+            actor_loss (torch.Tensor): actor loss
+            info (dict): dictionary of actor losses, log_probs, advantages, and weights
+        """
+        info = OrderedDict()
+
+        # compute log probability of batch actions
+        dist = self.nets["actor"].forward_train(obs_dict=batch["obs"], goal_dict=batch["goal_obs"])
+        log_prob = dist.log_prob(batch["actions"])
+
+        info["actor/log_prob"] = log_prob.mean()
+
+        # compute advantage estimate
+        q_pred = critic_info["vf/q_pred"]
+        v_pred = critic_info["vf/v_pred"]
+        adv = q_pred - v_pred
+        
+        # compute weights
+        weights = self._get_adv_weights(adv)
+
+        # compute advantage weighted actor loss. disable gradients through weights
+        actor_loss = (-log_prob * weights.detach()).mean()
+
+        info["actor/loss"] = actor_loss
+
+        # log adv-related values
+        info["adv/adv"] = adv
+        info["adv/adv_weight"] = weights
+
+        # Return stats
+        return actor_loss, info
+
+    def _update_actor(self, actor_loss):
+        """
+        Helper function for updating actor network. Called by @train_on_batch
+
+        Args:
+            actor_loss (torch.Tensor): actor loss
+        """
+
+        TorchUtils.backprop_for_loss(
+            net=self.nets["actor"],
+            optim=self.optimizers["actor"],
+            loss=actor_loss,
+            max_grad_norm=self.algo_config.actor.max_gradient_norm,
+        )
+    
+    def _get_adv_weights(self, adv):
+        """
+        Helper function for computing advantage weights. Called by @_compute_actor_loss
+
+        Args:
+            adv (torch.Tensor): raw advantage estimates
+
+        Returns:
+            weights (torch.Tensor): weighted computed based on advantage estimates
+        """
+        
+        # clip raw advantage values
+        if self.algo_config.adv.clip_adv_value is not None:
+            adv = adv.clamp(max=self.algo_config.adv.clip_adv_value)
+
+        filter_type = self.algo_config.adv.filter_type # operator type for converting from advantages to weights
+        beta = self.algo_config.adv.beta # temprature factor
+        
         if filter_type == "softmax":
             raise NotImplementedError
         elif filter_type == "exp":
@@ -296,10 +359,11 @@ class IQL(PolicyAlgo, ValueAlgo):
         else:
             raise ValueError(f"Unrecognized filter type '{filter_type}'")
 
+        # clip final weights
         if self.algo_config.adv.use_final_clip is True:
             weights = weights.clamp(-100.0, 100.0)
 
-        return weights[:, 0], adv
+        return weights[:, 0]
 
     def log_info(self, info):
         """
@@ -324,18 +388,24 @@ class IQL(PolicyAlgo, ValueAlgo):
 
         self._log_data_attributes(log, info, "vf/q_pred")
         self._log_data_attributes(log, info, "vf/v_pred")
-        self._log_data_attributes(log, info, "adv/adv_raw")
-        self._log_data_attributes(log, info, "adv/adv_score")
+        self._log_data_attributes(log, info, "adv/adv")
         self._log_data_attributes(log, info, "adv/adv_weight")
 
         return log
 
     def _log_data_attributes(self, log, info, key):
+        """
+        Helper function for logging statistics. Moodifies log in-place
+
+        Args:
+            log (dict): existing log dictionary
+            log (dict): existing dictionary of tensors containing raw stats
+            key (str): key to log
+        """
         log[key + "/max"] = info[key].max().item()
         log[key + "/min"] = info[key].min().item()
         log[key + "/mean"] = info[key].mean().item()
         log[key + "/std"] = info[key].std().item()
-
 
     def on_epoch_end(self, epoch):
         """
