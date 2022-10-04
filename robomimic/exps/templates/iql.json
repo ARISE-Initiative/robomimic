@@ -49,7 +49,7 @@
         ],
         "goal_mode": null,
         "cuda": true,
-        "batch_size": 1024,
+        "batch_size": 100,
         "num_epochs": 2000,
         "seed": 1
     },
@@ -87,7 +87,49 @@
             }
         },
         "discount": 0.99,
-        "target_tau": 0.01
+        "target_tau": 0.01,
+        "actor": {
+            "net": {
+                "type": "gaussian",
+                "common": {
+                    "std_activation": "softplus",
+                    "low_noise_eval": true,
+                    "use_tanh": false
+                },
+                "gaussian": {
+                    "init_last_fc_weight": 0.001,
+                    "init_std": 0.3,
+                    "fixed_std": false
+                },
+                "gmm": {
+                    "num_modes": 5,
+                    "min_std": 0.0001
+                }
+            },
+            "layer_dims": [
+                300,
+                400
+            ],
+            "max_gradient_norm": null
+        },
+        "critic": {
+            "ensemble": {
+                "n": 2
+            },
+            "layer_dims": [
+                300,
+                400
+            ],
+            "use_huber": false,
+            "max_gradient_norm": null
+        },
+        "adv": {
+            "clip_adv_value": null,
+            "filter_type": "exp",
+            "beta": 1.0,
+            "use_final_clip": true
+        },
+        "vf_quantile": 0.9
     },
     "observation": {
         "modalities": {
