@@ -60,6 +60,7 @@ class BaseConfig(Config):
         self.train_config()
         self.algo_config()
         self.observation_config()
+        self.tag_config()
 
         # After Config init, new keys cannot be added to the config, except under nested
         # attributes that have called @do_not_lock_keys
@@ -84,6 +85,7 @@ class BaseConfig(Config):
         self.experiment.validate = True                             # whether to do validation or not
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
+        self.experiment.logging.log_wandb = False                   # enable wandb logging
 
 
         ## save config - if and when to save model checkpoints ##
@@ -276,6 +278,13 @@ class BaseConfig(Config):
         self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
         self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]
 
+    def tag_config(self):
+        self.tags.wandb_proj_name = "debug"             # project name in wandb
+        self.tags.algo = self.algo_name                 # algorithm name, eg. bc
+        self.tags.base_config_file = None               # base config file in hyperparam sweep
+        self.tags.hp_keys = []                          # relevant keys (swept) in hyperparam sweep
+        self.tags.hp_values = []                        # values corresponding to keys in hyperparam sweep
+    
     @property
     def use_goals(self):
         # whether the agent is goal-conditioned
