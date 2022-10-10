@@ -34,12 +34,6 @@ def algo_config_to_class(algo_config):
 
 
 class IQL(PolicyAlgo, ValueAlgo):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # set loss function operator for critic
-        self.td_loss_fcn = nn.SmoothL1Loss() if self.algo_config.critic.use_huber else nn.MSELoss()
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -213,9 +207,10 @@ class IQL(PolicyAlgo, ValueAlgo):
 
         # Q losses
         critic_losses = []
+        td_loss_fcn = nn.SmoothL1Loss() if self.algo_config.critic.use_huber else nn.MSELoss()
         for (i, q_pred) in enumerate(pred_qs):
             # Calculate td error loss
-            td_loss = self.td_loss_fcn(q_pred, q_target)
+            td_loss = td_loss_fcn(q_pred, q_target)
             info[f"critic/critic{i+1}_loss"] = td_loss
             critic_losses.append(td_loss)
 
@@ -226,7 +221,7 @@ class IQL(PolicyAlgo, ValueAlgo):
         q_pred = q_pred.detach()
         vf_pred = self.nets["vf"](obs)
         
-        # V losses
+        # V losses: expectile regression. see section 4.1 in https://arxiv.org/pdf/2110.06169.pdf
         vf_err = vf_pred - q_pred
         vf_sign = (vf_err > 0).float()
         vf_weight = (1 - vf_sign) * self.algo_config.vf_quantile + vf_sign * (1 - self.algo_config.vf_quantile)
@@ -340,29 +335,23 @@ class IQL(PolicyAlgo, ValueAlgo):
             adv (torch.Tensor): raw advantage estimates
 
         Returns:
-            weights (torch.Tensor): weighted computed based on advantage estimates
+            weights (torch.Tensor): weights computed based on advantage estimates,
+                in shape (B,) where B is batch size
         """
         
         # clip raw advantage values
         if self.algo_config.adv.clip_adv_value is not None:
             adv = adv.clamp(max=self.algo_config.adv.clip_adv_value)
 
-        filter_type = self.algo_config.adv.filter_type # operator type for converting from advantages to weights
-        beta = self.algo_config.adv.beta # temprature factor
-        
-        if filter_type == "softmax":
-            raise NotImplementedError
-        elif filter_type == "exp":
-            weights = torch.exp(adv / beta)
-        elif filter_type == "binary":
-            raise NotImplementedError
-        else:
-            raise ValueError(f"Unrecognized filter type '{filter_type}'")
+        # compute weights based on advantage values
+        beta = self.algo_config.adv.beta # temprature factor        
+        weights = torch.exp(adv / beta)
 
         # clip final weights
         if self.algo_config.adv.use_final_clip is True:
             weights = weights.clamp(-100.0, 100.0)
 
+        # reshape from (B, 1) to (B,)
         return weights[:, 0]
 
     def log_info(self, info):

@@ -67,7 +67,6 @@ class IQLConfig(BaseConfig):
 
         # ================== Adv Config ==============================
         self.algo.adv.clip_adv_value = None                                 # whether to clip raw advantage estimates
-        self.algo.adv.filter_type = "exp"                                   # operator for converting raw advantage estimates to weights
         self.algo.adv.beta = 1.0                                            # temperature for operator
         self.algo.adv.use_final_clip = True                                 # whether to clip final weight calculations
 
