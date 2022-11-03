@@ -8,6 +8,10 @@ DEBUG = False
 # wandb entity (eg. username or team name)
 WANDB_ENTITY = "add-here"
 
+# wandb api key (obtain from https://wandb.ai/authorize)
+# alternatively, set up wandb from terminal with `wandb login`
+WANDB_API_KEY = None
+
 try:
     from robomimic.macros_private import *
 except ImportError:

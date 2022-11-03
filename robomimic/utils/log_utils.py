@@ -58,6 +58,10 @@ class DataLogger(object):
         if log_wandb:
             import wandb
             import robomimic.macros as Macros
+            
+            # set up wandb api key if specified in macros
+            if Macros.WANDB_API_KEY is not None:
+                os.environ["WANDB_API_KEY"] = Macros.WANDB_API_KEY
 
             # attempt to set up wandb 10 times. If unsuccessful after these trials, don't use wandb
             num_attempts = 10
@@ -73,9 +77,9 @@ class DataLogger(object):
                         mode=("offline" if attempt == num_attempts - 1 else "online"),
                     )
 
-                    # set up tags for identifying experiment
-                    wandb_config = {k: v for (k, v) in config.tags.items() if k not in ["hp_keys", "hp_values"]}
-                    for (k, v) in zip(config.tags["hp_keys"], config.tags["hp_values"]):
+                    # set up info for identifying experiment
+                    wandb_config = {k: v for (k, v) in config.meta.items() if k not in ["hp_keys", "hp_values"]}
+                    for (k, v) in zip(config.meta["hp_keys"], config.meta["hp_values"]):
                         wandb_config[k] = v
                     if "algo" not in wandb_config:
                         wandb_config["algo"] = config.algo_name
