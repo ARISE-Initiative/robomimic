@@ -86,6 +86,7 @@ class BaseConfig(Config):
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
         self.experiment.logging.log_wandb = False                   # enable wandb logging
+        self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
 
         ## save config - if and when to save model checkpoints ##
@@ -279,9 +280,15 @@ class BaseConfig(Config):
         self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]
 
     def tag_config(self):
-        self.tags.wandb_proj_name = "debug"             # project name in wandb
-        self.tags.algo = self.algo_name                 # algorithm name, eg. bc
-        self.tags.base_config_file = None               # base config file in hyperparam sweep
+        """
+        This function populates the `config.tags` attribute of the config. This portion of the config 
+        is used to specify job information primarily for hyperparameter sweeps.
+        It contains hyperparameter keys and values, which are populated automatically
+        by the hyperparameter config generator (see `utils/hyperparam_utils.py`).
+        These values are read by the wandb logger (see `utils/log_utils.py`) to set job tags.
+        """
+        
+        self.tags.hp_base_config_file = None            # base config file in hyperparam sweep
         self.tags.hp_keys = []                          # relevant keys (swept) in hyperparam sweep
         self.tags.hp_values = []                        # values corresponding to keys in hyperparam sweep
     

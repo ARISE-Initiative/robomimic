@@ -12,8 +12,9 @@ try:
     from robomimic.macros_private import *
 except ImportError:
     from robomimic.utils.log_utils import log_warning
+    import robomimic
     log_warning(
         "No private macro file found!"\
         "\nIt is recommended to use a private macro file"\
-        "\nTo setup, run: python robomimic/scripts/setup_macros.py"\
+        "\nTo setup, run: python {}/scripts/setup_macros.py".format(robomimic.__path__[0])
     )
