@@ -57,31 +57,33 @@ class DataLogger(object):
 
         if log_wandb:
             import wandb
-            import robomimic.macros as macros
+            import robomimic.macros as Macros
 
+            # attempt to set up wandb 10 times. If unsuccessful after these trials, don't use wandb
             num_attempts = 10
             for attempt in range(num_attempts):
                 try:
                     # set up wandb
                     self._wandb_logger = wandb
                     self._wandb_logger.init(
-                        entity=macros.WANDB_ENTITY,
-                        project=config['tags']['wandb_proj_name'],
+                        entity=Macros.WANDB_ENTITY,
+                        project=config.experiment.logging.wandb_proj_name,
                         name=config.experiment.name,
                         dir=log_dir,
                         mode=("offline" if attempt == num_attempts - 1 else "online"),
                     )
 
                     # set up tags for identifying experiment
-                    tags = config['tags']
-                    wandb_config = {k: v for (k, v) in tags.items() if k not in ['hp_keys', 'hp_values']}
-                    for (k, v) in zip(tags['hp_keys'], tags['hp_values']):
+                    wandb_config = {k: v for (k, v) in config.tags.items() if k not in ["hp_keys", "hp_values"]}
+                    for (k, v) in zip(config.tags["hp_keys"], config.tags["hp_values"]):
                         wandb_config[k] = v
+                    if "algo" not in wandb_config:
+                        wandb_config["algo"] = config.algo_name
                     self._wandb_logger.config.update(wandb_config)
 
                     break
-                except:
-                    log_warning("wandb initialization error, attempt #{}".format(attempt + 1))
+                except Exception as e:
+                    log_warning("wandb initialization error (attempt #{}): {}".format(attempt + 1, e))
                     self._wandb_logger = None
                     time.sleep(30)
 
@@ -127,8 +129,8 @@ class DataLogger(object):
                             self._wandb_logger.log({stat_k: stat_v}, step=epoch)
                 elif data_type == 'image':
                     raise NotImplementedError
-            except:
-                log_warning("wandb logging")
+            except Exception as e:
+                log_warning("wandb logging: {}".format(e))
 
     def get_stats(self, k):
         """
