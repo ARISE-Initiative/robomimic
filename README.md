@@ -21,6 +21,14 @@
 
 -------
 
+## Colab quickstart
+Get started with a quick colab notebook demo of robomimic with installing anything locally.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1b62r_km9pP40fKF0cBdpdTO2P_2eIbC6?usp=sharing)
+
+
+-------
+
 **robomimic** is a framework for robot learning from demonstration.
 It offers a broad set of demonstration datasets collected on robot manipulation domains and offline learning algorithms to learn from these datasets.
 **robomimic** aims to make robot learning broadly *accessible* and *reproducible*, allowing researchers and practitioners to benchmark tasks and algorithms fairly and to develop the next generation of robot learning algorithms.
