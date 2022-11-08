@@ -122,9 +122,6 @@ Support for learning both low-dimensional and visuomotor policies, diverse netwo
 4. **Flexible Experiment Workflow**
 Utilities for running hyperparameter sweeps, visualizing demonstration data and trained policies, and collecting new datasets using trained policies -->
 
-## Quickstart colab notebook
-
-If you prefer to test the basic functionality of robomimic without installing anything locally, try the quickstart [Colab notebook](https://colab.research.google.com/drive/1b62r_km9pP40fKF0cBdpdTO2P_2eIbC6?usp=sharing).
 
 ## Reproducing benchmarks
 
