@@ -6,7 +6,7 @@ Set of global variables shared across robomimic
 DEBUG = False
 
 # wandb entity (eg. username or team name)
-WANDB_ENTITY = "add-here"
+WANDB_ENTITY = None
 
 # wandb api key (obtain from https://wandb.ai/authorize)
 # alternatively, set up wandb from terminal with `wandb login`
