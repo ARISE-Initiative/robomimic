@@ -21,7 +21,7 @@ import argparse
 import robomimic
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.test_utils as TestUtils
-import robomimic.utils.macros as Macros
+import robomimic.macros as Macros
 from robomimic.config import config_factory
 from robomimic.scripts.train import train
 

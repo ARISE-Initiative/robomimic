@@ -60,6 +60,7 @@ class BaseConfig(Config):
         self.train_config()
         self.algo_config()
         self.observation_config()
+        self.meta_config()
 
         # After Config init, new keys cannot be added to the config, except under nested
         # attributes that have called @do_not_lock_keys
@@ -84,6 +85,8 @@ class BaseConfig(Config):
         self.experiment.validate = True                             # whether to do validation or not
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
+        self.experiment.logging.log_wandb = False                   # enable wandb logging
+        self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
 
         ## save config - if and when to save model checkpoints ##
@@ -276,6 +279,19 @@ class BaseConfig(Config):
         self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
         self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]
 
+    def meta_config(self):
+        """
+        This function populates the `config.meta` attribute of the config. This portion of the config 
+        is used to specify job information primarily for hyperparameter sweeps.
+        It contains hyperparameter keys and values, which are populated automatically
+        by the hyperparameter config generator (see `utils/hyperparam_utils.py`).
+        These values are read by the wandb logger (see `utils/log_utils.py`) to set job tags.
+        """
+        
+        self.meta.hp_base_config_file = None            # base config file in hyperparam sweep
+        self.meta.hp_keys = []                          # relevant keys (swept) in hyperparam sweep
+        self.meta.hp_values = []                        # values corresponding to keys in hyperparam sweep
+    
     @property
     def use_goals(self):
         # whether the agent is goal-conditioned
