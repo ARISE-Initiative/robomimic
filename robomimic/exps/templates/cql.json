@@ -5,7 +5,9 @@
         "validate": true,
         "logging": {
             "terminal_output_to_txt": true,
-            "log_tb": true
+            "log_tb": true,
+            "log_wandb": false,
+            "wandb_proj_name": "debug"
         },
         "save": {
             "enabled": true,
@@ -242,5 +244,10 @@
                 }
             }
         }
+    },
+    "meta": {
+        "hp_base_config_file": null,
+        "hp_keys": [],
+        "hp_values": []
     }
 }

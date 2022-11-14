@@ -209,67 +209,81 @@ def update_config(cfg):
         cfg (dict): Raw dictionary of config values
     """
     # Check if image modality is defined -- this means we're using an outdated config
-    modalities = cfg["observation"]["modalities"]
+    # Note: There may be a nested hierarchy, so we possibly check all the nested obs cfgs which can include
+    # e.g. a planner and actor for HBC
 
-    found_img = False
-    for modality_group in ("obs", "subgoal", "goal"):
-        if modality_group in modalities:
-            img_modality = modalities[modality_group].pop("image", None)
-            if img_modality is not None:
-                found_img = True
-                cfg["observation"]["modalities"][modality_group]["rgb"] = img_modality
+    def find_obs_dicts_recursively(dic):
+        dics = []
+        if "modalities" in dic:
+            dics.append(dic)
+        else:
+            for child_dic in dic.values():
+                dics += find_obs_dicts_recursively(child_dic)
+        return dics
 
-    if found_img:
-        # Also need to map encoder kwargs correctly
-        old_encoder_cfg = cfg["observation"].pop("encoder")
+    obs_cfgs = find_obs_dicts_recursively(cfg["observation"])
+    for obs_cfg in obs_cfgs:
+        modalities = obs_cfg["modalities"]
 
-        # Create new encoder entry for RGB
-        rgb_encoder_cfg = {
-            "core_class": "VisualCore",
-            "core_kwargs": {
-                "backbone_kwargs": dict(),
-                "pool_kwargs": dict(),
-            },
-            "obs_randomizer_class": None,
-            "obs_randomizer_kwargs": dict(),
-        }
+        found_img = False
+        for modality_group in ("obs", "subgoal", "goal"):
+            if modality_group in modalities:
+                img_modality = modalities[modality_group].pop("image", None)
+                if img_modality is not None:
+                    found_img = True
+                    modalities[modality_group]["rgb"] = img_modality
 
-        if "visual_feature_dimension" in old_encoder_cfg:
-            rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg["visual_feature_dimension"]
+        if found_img:
+            # Also need to map encoder kwargs correctly
+            old_encoder_cfg = obs_cfg.pop("encoder")
 
-        if "visual_core" in old_encoder_cfg:
-            rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg["visual_core"]
+            # Create new encoder entry for RGB
+            rgb_encoder_cfg = {
+                "core_class": "VisualCore",
+                "core_kwargs": {
+                    "backbone_kwargs": dict(),
+                    "pool_kwargs": dict(),
+                },
+                "obs_randomizer_class": None,
+                "obs_randomizer_kwargs": dict(),
+            }
 
-        for kwarg in ("pretrained", "input_coord_conv"):
-            if "visual_core_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["visual_core_kwargs"]:
-                rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = old_encoder_cfg["visual_core_kwargs"][kwarg]
+            if "visual_feature_dimension" in old_encoder_cfg:
+                rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg["visual_feature_dimension"]
 
-        # Optionally add pooling info too
-        if old_encoder_cfg.get("use_spatial_softmax", True):
-            rgb_encoder_cfg["core_kwargs"]["pool_class"] = "SpatialSoftmax"
+            if "visual_core" in old_encoder_cfg:
+                rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg["visual_core"]
 
-        for kwarg in ("num_kp", "learnable_temperature", "temperature", "noise_std"):
-            if "spatial_softmax_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]:
-                rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
+            for kwarg in ("pretrained", "input_coord_conv"):
+                if "visual_core_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["visual_core_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = old_encoder_cfg["visual_core_kwargs"][kwarg]
 
-        # Update obs randomizer as well
-        for kwarg in ("obs_randomizer_class", "obs_randomizer_kwargs"):
-            if kwarg in old_encoder_cfg:
-                rgb_encoder_cfg[kwarg] = old_encoder_cfg[kwarg]
+            # Optionally add pooling info too
+            if old_encoder_cfg.get("use_spatial_softmax", True):
+                rgb_encoder_cfg["core_kwargs"]["pool_class"] = "SpatialSoftmax"
 
-        # Store rgb config
-        cfg["observation"]["encoder"] = {"rgb": rgb_encoder_cfg}
+            for kwarg in ("num_kp", "learnable_temperature", "temperature", "noise_std"):
+                if "spatial_softmax_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
 
-        # Also add defaults for low dim
-        cfg["observation"]["encoder"]["low_dim"] = {
-            "core_class": None,
-            "core_kwargs": {
-                "backbone_kwargs": dict(),
-                "pool_kwargs": dict(),
-            },
-            "obs_randomizer_class": None,
-            "obs_randomizer_kwargs": dict(),
-        }
+            # Update obs randomizer as well
+            for kwarg in ("obs_randomizer_class", "obs_randomizer_kwargs"):
+                if kwarg in old_encoder_cfg:
+                    rgb_encoder_cfg[kwarg] = old_encoder_cfg[kwarg]
+
+            # Store rgb config
+            obs_cfg["encoder"] = {"rgb": rgb_encoder_cfg}
+
+            # Also add defaults for low dim
+            obs_cfg["encoder"]["low_dim"] = {
+                "core_class": None,
+                "core_kwargs": {
+                    "backbone_kwargs": dict(),
+                    "pool_kwargs": dict(),
+                },
+                "obs_randomizer_class": None,
+                "obs_randomizer_kwargs": dict(),
+            }
 
 
 def config_from_checkpoint(algo_name=None, ckpt_path=None, ckpt_dict=None, verbose=False):
