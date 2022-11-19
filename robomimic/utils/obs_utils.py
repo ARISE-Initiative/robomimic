@@ -926,7 +926,7 @@ class DepthModality(Modality):
             unprocessed_obs (np.array or torch.Tensor): depth passed through
                 inverse operation of @process_depth
         """
-        return TU.to_uint8(unprocess_frame(frame=obs, channel_dim=1, scale=1.))
+        return unprocess_frame(frame=obs, channel_dim=1, scale=1.)
 
 
 class ScanModality(Modality):
