@@ -5,6 +5,7 @@ A list of projects and papers that use **robomimic**. If you would like to add y
 ## 2022
 
 - [Learning and Retrieval from Prior Data for Skill-based Imitation Learning](https://arxiv.org/abs/2210.11435) Soroush Nasiriany, Tian Gao, Ajay Mandlekar, Yuke Zhu
+- [VIOLA: Imitation Learning for Vision-Based Manipulation with Object Proposal Priors](https://arxiv.org/abs/2210.11339) Yifeng Zhu, Abhishek Joshi, Peter Stone, Yuke Zhu
 - [Robot Learning on the Job: Human-in-the-Loop Autonomy and Learning During Deployment](https://arxiv.org/abs/2211.08416) Huihan Liu, Soroush Nasiriany, Lance Zhang, Zhiyao Bao, Yuke Zhu
 - [Data-Efficient Pipeline for Offline Reinforcement Learning with Limited Data](https://arxiv.org/abs/2210.08642) Allen Nie, Yannis Flet-Berliac, Deon R. Jordan, William Steenbergen, Emma Brunskill
 - [Eliciting Compatible Demonstrations for Multi-Human Imitation Learning](https://arxiv.org/abs/2210.08073) Kanishk Gandhi, Siddharth Karamcheti, Madeline Liao, Dorsa Sadigh
