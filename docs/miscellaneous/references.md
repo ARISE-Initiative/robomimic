@@ -4,6 +4,14 @@ A list of projects and papers that use **robomimic**. If you would like to add y
 
 ## 2022
 
+- [Learning and Retrieval from Prior Data for Skill-based Imitation Learning](https://arxiv.org/abs/2210.11435) Soroush Nasiriany, Tian Gao, Ajay Mandlekar, Yuke Zhu
+- [Robot Learning on the Job: Human-in-the-Loop Autonomy and Learning During Deployment](https://arxiv.org/abs/2211.08416) Huihan Liu, Soroush Nasiriany, Lance Zhang, Zhiyao Bao, Yuke Zhu
+- [Data-Efficient Pipeline for Offline Reinforcement Learning with Limited Data](https://arxiv.org/abs/2210.08642) Allen Nie, Yannis Flet-Berliac, Deon R. Jordan, William Steenbergen, Emma Brunskill
+- [Eliciting Compatible Demonstrations for Multi-Human Imitation Learning](https://arxiv.org/abs/2210.08073) Kanishk Gandhi, Siddharth Karamcheti, Madeline Liao, Dorsa Sadigh
+- [Masked Imitation Learning: Discovering Environment-Invariant Modalities in Multimodal Demonstrations](https://arxiv.org/abs/2209.07682) Yilun Hao, Ruinan Wang, Zhangjie Cao, Zihan Wang, Yuchen Cui, Dorsa Sadigh
+- [Know Your Boundaries: The Necessity of Explicit Behavioral Cloning in Offline RL](https://arxiv.org/abs/2206.00695) Wonjoon Goo, Scott Niekum
+- [Translating Robot Skills: Learning Unsupervised Skill Correspondences Across Robots](https://proceedings.mlr.press/v162/shankar22a.html) Tanmay Shankar, Yixin Lin, Aravind Rajeswaran, Vikash Kumar, Stuart Anderson, Jean Oh
+- [Active Predicting Coding: Brain-Inspired Reinforcement Learning for Sparse Reward Robotic Control Problems](https://arxiv.org/abs/2209.09174) Alexander Ororbia, Ankur Mali
 - [Imitation Learning by Estimating Expertise of Demonstrators](https://arxiv.org/abs/2202.01288) Mark Beliaev, Andy Shih, Stefano Ermon, Dorsa Sadigh, Ramtin Pedarsani
 
 ## 2021
