@@ -151,97 +151,21 @@
             },
             "rgb": {
                 "core_class": "VisualCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "flatten": true,
-                    "backbone_class": "ResNet18Conv",
-                    "backbone_kwargs": {
-                        "pretrained": false,
-                        "input_coord_conv": false
-                    },
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
-                    }
-                },
+                "core_kwargs": {},
                 "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "obs_randomizer_kwargs": {}
             },
             "depth": {
                 "core_class": "VisualCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "flatten": true,
-                    "backbone_class": "ResNet18Conv",
-                    "backbone_kwargs": {
-                        "pretrained": false,
-                        "input_coord_conv": false
-                    },
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
-                    }
-                },
+                "core_kwargs": {},
                 "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "obs_randomizer_kwargs": {}
             },
             "scan": {
                 "core_class": "ScanCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "flatten": true,
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
-                    },
-                    "conv_activation": "relu",
-                    "conv_kwargs": {
-                        "out_channels": [
-                            32,
-                            64,
-                            64
-                        ],
-                        "kernel_size": [
-                            8,
-                            4,
-                            2
-                        ],
-                        "stride": [
-                            4,
-                            2,
-                            1
-                        ]
-                    }
-                },
+                "core_kwargs": {},
                 "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "obs_randomizer_kwargs": {}
             }
         }
     },

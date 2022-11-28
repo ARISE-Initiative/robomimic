@@ -629,19 +629,20 @@ class Conv1dBase(Module):
         input_channel (int): Number of channels for inputs to this network
         activation (None or str): Per-layer activation to use. Defaults to "relu". Valid options are
             currently {relu, None} for no activation
-        conv_kwargs (dict): Specific nn.Conv1D args to use, in list form, where the ith element corresponds to the
+        out_channels (list of int): Output channel size for each sequential Conv1d layer
+        kernel_size (list of int): Kernel sizes for each sequential Conv1d layer
+        stride (list of int): Stride sizes for each sequential Conv1d layer
+        conv_kwargs (dict): additional nn.Conv1D args to use, in list form, where the ith element corresponds to the
             argument to be passed to the ith Conv1D layer.
             See https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html for specific possible arguments.
-
-            e.g.: common values to use:
-                out_channels (list of int): Output channel size for each sequential Conv1d layer
-                kernel_size (list of int): Kernel sizes for each sequential Conv1d layer
-                stride (list of int): Stride sizes for each sequential Conv1d layer
     """
     def __init__(
         self,
         input_channel=1,
         activation="relu",
+        out_channels=(32, 64, 64),
+        kernel_size=(8, 4, 2),
+        stride=(4, 2, 1),
         **conv_kwargs,
     ):
         super(Conv1dBase, self).__init__()
@@ -649,12 +650,8 @@ class Conv1dBase(Module):
         # Get activation requested
         activation = CONV_ACTIVATIONS[activation]
 
-        # Make sure out_channels and kernel_size are specified
-        for kwarg in ("out_channels", "kernel_size"):
-            assert kwarg in conv_kwargs, f"{kwarg} must be specified in Conv1dBase kwargs!"
-
         # Generate network
-        self.n_layers = len(conv_kwargs["out_channels"])
+        self.n_layers = len(out_channels)
         layers = OrderedDict()
         for i in range(self.n_layers):
             layer_kwargs = {k: v[i] for k, v in conv_kwargs.items()}
@@ -712,7 +709,7 @@ class SpatialSoftmax(ConvBase):
     def __init__(
         self,
         input_shape,
-        num_kp=None,
+        num_kp=32,
         temperature=1.,
         learnable_temperature=False,
         output_variance=False,
@@ -721,7 +718,7 @@ class SpatialSoftmax(ConvBase):
         """
         Args:
             input_shape (list): shape of the input feature (C, H, W)
-            num_kp (int): number of keypoints (None for not use spatialsoftmax)
+            num_kp (int): number of keypoints (None for not using spatialsoftmax)
             temperature (float): temperature term for the softmax.
             learnable_temperature (bool): whether to learn the temperature
             output_variance (bool): treat attention as a distribution, and compute second-order statistics to return
@@ -953,27 +950,32 @@ class VisualCore(EncoderCore, ConvBase):
     def __init__(
         self,
         input_shape,
-        backbone_class,
-        backbone_kwargs,
-        pool_class=None,
+        backbone_class="ResNet18Conv",
+        pool_class="SpatialSoftmax",
+        backbone_kwargs=None,
         pool_kwargs=None,
         flatten=True,
-        feature_dimension=None,
+        feature_dimension=64,
     ):
         """
         Args:
             input_shape (tuple): shape of input (not including batch dimension)
-            backbone_class (str): class name for the visual backbone network (e.g.: ResNet18)
-            backbone_kwargs (dict): kwargs for the visual backbone network
+            backbone_class (str): class name for the visual backbone network. Defaults
+                to "ResNet18Conv".
             pool_class (str): class name for the visual feature pooler (optional)
-                Common options are "SpatialSoftmax" and "SpatialMeanPool"
+                Common options are "SpatialSoftmax" and "SpatialMeanPool". Defaults to
+                "SpatialSoftmax".
+            backbone_kwargs (dict): kwargs for the visual backbone network (optional)
             pool_kwargs (dict): kwargs for the visual feature pooler (optional)
-            flatten (bool): whether to flatten the visual feature
+            flatten (bool): whether to flatten the visual features
             feature_dimension (int): if not None, add a Linear layer to
                 project output into a desired feature dimension
         """
         super(VisualCore, self).__init__(input_shape=input_shape)
         self.flatten = flatten
+
+        if backbone_kwargs is None:
+            backbone_kwargs = dict()
 
         # add input channel dimension to visual core inputs
         backbone_kwargs["input_channel"] = input_shape[0]
@@ -1079,7 +1081,7 @@ class ScanCore(EncoderCore, ConvBase):
     def __init__(
         self,
         input_shape,
-        conv_kwargs,
+        conv_kwargs=None,
         conv_activation="relu",
         pool_class=None,
         pool_kwargs=None,
@@ -1094,6 +1096,8 @@ class ScanCore(EncoderCore, ConvBase):
                 kernel_size (int)
                 stride (int)
                 ...
+
+                If not specified, or an empty dictionary is specified, some default settings will be used.
             conv_activation (str or None): Activation to use between conv layers. Default is relu.
                 Currently, valid options are {relu}
             pool_class (str): class name for the visual feature pooler (optional)
@@ -1106,6 +1110,9 @@ class ScanCore(EncoderCore, ConvBase):
         super(ScanCore, self).__init__(input_shape=input_shape)
         self.flatten = flatten
         self.feature_dimension = feature_dimension
+
+        if conv_kwargs is None:
+            conv_kwargs = dict()
 
         # Generate backbone network
         self.backbone = Conv1dBase(
@@ -1281,8 +1288,8 @@ class CropRandomizer(Randomizer):
     def __init__(
         self,
         input_shape,
-        crop_height, 
-        crop_width, 
+        crop_height=76, 
+        crop_width=76, 
         num_crops=1,
         pos_enc=False,
     ):
