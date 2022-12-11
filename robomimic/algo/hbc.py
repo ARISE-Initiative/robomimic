@@ -149,7 +149,7 @@ class HBC(HierarchicalAlgo):
             policy_subgoal_indices = torch.randint(
                 low=0, high=self.global_config.train.seq_length, size=(batch["actions"].shape[0],))
             goal_obs = TensorUtils.gather_sequence(batch["next_obs"], policy_subgoal_indices)
-            goal_obs = TensorUtils.to_device(TensorUtils.to_float(goal_obs), self.device)
+            goal_obs = TensorUtils.to_float(TensorUtils.to_device(goal_obs, self.device))
             input_batch["actor"]["goal_obs"] = \
                 self.planner.get_actor_goal_for_training_from_processed_batch(
                     goal_obs,
@@ -167,7 +167,9 @@ class HBC(HierarchicalAlgo):
                     num_prior_samples=self.algo_config.latent_subgoal.prior_correction.num_samples,
                 )
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def train_on_batch(self, batch, epoch, validate=False):
         """

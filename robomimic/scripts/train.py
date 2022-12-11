@@ -51,6 +51,9 @@ def train(config, device):
     np.random.seed(config.train.seed)
     torch.manual_seed(config.train.seed)
 
+    # set num workers
+    torch.set_num_threads(1)
+
     print("\n============= New Training Run with Config =============")
     print(config)
     print("")
@@ -185,7 +188,13 @@ def train(config, device):
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
 
     for epoch in range(1, config.train.num_epochs + 1): # epoch numbers start at 1
-        step_log = TrainUtils.run_epoch(model=model, data_loader=train_loader, epoch=epoch, num_steps=train_num_steps)
+        step_log = TrainUtils.run_epoch(
+            model=model,
+            data_loader=train_loader,
+            epoch=epoch,
+            num_steps=train_num_steps,
+            obs_normalization_stats=obs_normalization_stats,
+        )
         model.on_epoch_end(epoch)
 
         # setup checkpoint path
