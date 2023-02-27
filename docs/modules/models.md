@@ -1,6 +1,8 @@
 # Models
 
-![overview](../images/modules.png)
+<p align="center">
+  <img width="100.0%" src="../images/modules.png">
+ </p>
 
 **robomimic** implements a suite of reusable network modules at different abstraction levels that make creating new policy models easy. 
 

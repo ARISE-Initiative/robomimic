@@ -1,4 +1,4 @@
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 # stores released dataset links and rollout horizons in global dictionary.

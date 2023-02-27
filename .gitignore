@@ -1,8 +1,8 @@
 # pip distribution folder
 dist/
 
-# datasets folder
-datasets/
+# datasets folder at top-level (leading slash)
+/datasets/
 
 # local test dataset that is lazily downloaded by example scripts
 tests/assets/test.hdf5
@@ -119,3 +119,7 @@ venv.bak/
 .mypy_cache/
 *.mp4
 *.pth
+
+
+macros_private.py
+expdata

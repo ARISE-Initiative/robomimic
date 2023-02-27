@@ -1,8 +1,20 @@
-# Using the Model Zoo
+# robomimic-v0.1
 
-This section provides several proficient trained policy models that can be downloaded and used as-is. See the ["Evaluating Trained Policies"](./quickstart.html#evaluating-trained-policies) section for instructions on loading these agents. The model zoo will be updated over time to include more tasks and policies. All success rates listed below are approximate - they may vary.
+We provide links below to several pretrained models that were trained with robomimic-v0.1 for our CoRL 2021 study. All success rates listed below are approximate - they may vary.
 
-**Warning:** When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite.
+<div class="admonition note">
+<p class="admonition-title">Note: see tutorial on using these models</p>
+
+See the ["Using Pretrained Models"](../tutorials/using_pretrained_models.html) tutorial for instructions on using these models.
+
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning: use correct robosuite branch!</p>
+
+When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite.
+
+</div>
 
 ## Proficient-Human (PH)
 

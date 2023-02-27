@@ -1,4 +1,4 @@
-# Observations
+# Multimodal Observations
 
 **robomimic** natively supports multiple different observation modalities, and provides integrated support for modifying observations and adding your own custom ones.
 
@@ -15,6 +15,12 @@ Observations are handled in the following way:
 
 ## Modifying and Adding Your Own Observation Modalities
 
-**robomimic** natively supports low dimensional (`low_dim`), RGB images (`rgb`), depth images (`depth`), and scan arrays (`scan`). The way each of these modalities are processed and encoded can be easily specified by modifying their respective `encoder` parameters in your `Config` class.
+**robomimic** natively supports the following modalities:
+- `low_dim`: low-dimensional states
+- `rgb`: RGB images
+- `depth`: depth images
+- `scan`: scan arrays
 
-You may want to specify your own custom modalities that get processed and encoded in a certain way (e.g.: semantic segmentation, optical flow, etc...). This can also easily be done, and we refer you to our [example script](../introduction/examples.html#custom-observation-modalities-example) which walks through the process.
+The way each of these modalities are processed and encoded can be easily specified by modifying their respective `encoder` parameters in your `Config` class.
+
+You may want to specify your own custom modalities that get processed and encoded in a certain way (e.g.: semantic segmentation, optical flow, etc...). This can also easily be done, and we refer you to our [example script](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/simple_obs_nets.py) which walks through the process.

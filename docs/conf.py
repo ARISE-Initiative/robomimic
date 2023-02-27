@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 
-import sphinx_rtd_theme
+import sphinx_book_theme
 import robomimic
 
 
@@ -29,7 +29,6 @@ import robomimic
 # ones.
 extensions = [
     'sphinx.ext.napoleon',
-    'sphinx_rtd_theme',
     'sphinx_markdown_tables',
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
@@ -60,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'robomimic'
-copyright = '2021, Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
+copyright = '2022, Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
 author = 'Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -98,7 +97,7 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -111,11 +110,11 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-    ],
-}
+# html_context = {
+#     'css_files': [
+#         '_static/theme_overrides.css',  # override wide tables in RTD theme
+#     ],
+# }
 
 # -- Options for HTMLHelp output ------------------------------------------
 

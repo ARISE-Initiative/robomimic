@@ -11,45 +11,62 @@
   <img width="24.0%" src="docs/images/task_transport.gif">
  </p>
 
-[**[Homepage]**](https://arise-initiative.github.io/robomimic-web/) &ensp; [**[Documentation]**](https://arise-initiative.github.io/robomimic-web/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://arise-initiative.github.io/robomimic-web/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
+[**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
 
 -------
 ## Latest Updates
+- [05/23/2022] **v0.2.1**: Updated website and documentation to feature more tutorials :notebook_with_decorative_cover:
 - [12/16/2021] **v0.2.0**: Modular observation modalities and encoders :wrench:, support for [MOMART](https://sites.google.com/view/il-for-mm/home) datasets :open_file_folder:
 - [08/09/2021] **v0.1.0**: Initial code and paper release
 
 -------
 
-**robomimic** is a framework for robot learning from demonstration. It offers a broad set of demonstration datasets collected on robot manipulation domains, and learning algorithms to learn from these datasets. This project is part of the broader [Advancing Robot Intelligence through Simulated Environments (ARISE) Initiative](https://github.com/ARISE-Initiative), with the aim of lowering the barriers of entry for cutting-edge research at the intersection of AI and Robotics.
+**robomimic** is a framework for robot learning from demonstration.
+It offers a broad set of demonstration datasets collected on robot manipulation domains and offline learning algorithms to learn from these datasets.
+**robomimic** aims to make robot learning broadly *accessible* and *reproducible*, allowing researchers and practitioners to benchmark tasks and algorithms fairly and to develop the next generation of robot learning algorithms.
 
-Imitating human demonstrations is a promising approach to endow robots with various manipulation capabilities. While recent advances have been made in imitation learning and batch (offline) reinforcement learning, a lack of open-source human datasets and reproducible learning methods make assessing the state of the field difficult. The overarching goal of **robomimic** is to provide researchers and practitioners with:
+## Core Features
 
-- a **standardized set of large demonstration datasets** across several benchmarking tasks to facilitate fair comparisons, with a focus on learning from human-provided demonstrations
-- a **standardized set of large demonstration datasets** across several benchmarking tasks to facilitate fair comparisons, with a focus on learning from human-provided demonstrations (see [this link](https://arise-initiative.github.io/robomimic-web/docs/introduction/quickstart.html#supported-datasets) for a list of supported datasets)
-- **high-quality implementations of several learning algorithms** for training closed-loop policies from offline datasets to make reproducing results easy and lower the barrier to entry
-- a **modular design** that offers great flexibility in extending algorithms and designing new algorithms
+<p align="center">
+  <img width="50.0%" src="docs/images/core_features.png">
+ </p>
 
-This release of **robomimic** contains seven offline learning [algorithms](https://arise-initiative.github.io/robomimic-web/docs/modules/algorithms.html) and standardized [datasets](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) collected across five simulated and three real-world multi-stage manipulation tasks of varying complexity. We highlight some features below (for a more thorough list of features, see [this link](https://arise-initiative.github.io/robomimic-web/docs/introduction/quickstart.html#features-overview)):
+<!-- **Standardized Datasets**
+- Simulated and real-world tasks
+- Multiple environments and robots
+- Diverse human-collected and machine-generated datasets
 
-- **standardized datasets:** a set of datasets collected from different sources (single proficient human, multiple humans, and machine-generated) across several simulated and real-world tasks, along with a plug-and-play [Dataset class](https://arise-initiative.github.io/robomimic-web/docs/modules/datasets.html) to easily use the datasets outside of this project
-- **algorithm implementations:** several high-quality implementations of offline learning algorithms, including BC, BC-RNN, HBC, IRIS, BCQ, CQL, and TD3-BC
-- **multiple observation spaces:** support for learning both low-dimensional and visuomotor policies, with support for observation tensor dictionaries throughout the codebase, making it easy to specify different subsets of observations to train a policy. This includes a set of useful tensor utilities to work with nested dictionaries of torch Tensors and numpy arrays.
-- **visualization utilities:** utilities for visualizing demonstration data, playing back actions, visualizing trained policies, and collecting new datasets using trained policies
-- **train launching utilities:** utilities for easily running hyperparameter sweeps, enabled by a flexible [Config](https://arise-initiative.github.io/robomimic-web/docs/modules/configs.html) management system
+**Suite of Learning Algorithms**
+- Imitation Learning algorithms (BC, BC-RNN, HBC)
+- Offline RL algorithms (BCQ, CQL, IRIS, TD3-BC)
 
-## Contributing to robomimic
+**Modular Design**
+- Low-dim + Visuomotor policies
+- Diverse network architectures
+- Support for external datasets
 
-This framework originally began development in late 2018. Researchers in the [Stanford Vision and Learning Lab](http://svl.stanford.edu/) (SVL) used it as an internal tool for training policies from offline human demonstration datasets. Now it is actively maintained and used for robotics research projects across multiple labs. We welcome community contributions to this project. For details please check our [contributing guidelines](https://arise-initiative.github.io/robomimic-web/docs/miscellaneous/contributing.html).
+**Flexible Workflow**
+- Hyperparameter sweep tools
+- Dataset visualization tools
+- Generating new datasets -->
+
+
+## Reproducing benchmarks
+
+The robomimic framework also makes reproducing the results from different benchmarks and datasets easy. See the [datasets page](https://robomimic.github.io/docs/datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
 ## Troubleshooting
 
-Please see the [troubleshooting](https://arise-initiative.github.io/robomimic-web/docs/miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
+Please see the [troubleshooting](https://robomimic.github.io/docs/miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
 
-## Reproducing study results
+## Contributing to robomimic
+This project is part of the broader [Advancing Robot Intelligence through Simulated Environments (ARISE) Initiative](https://github.com/ARISE-Initiative), with the aim of lowering the barriers of entry for cutting-edge research at the intersection of AI and Robotics.
+The project originally began development in late 2018 by researchers in the [Stanford Vision and Learning Lab](http://svl.stanford.edu/) (SVL).
+Now it is actively maintained and used for robotics research projects across multiple labs.
+We welcome community contributions to this project.
+For details please check our [contributing guidelines](https://robomimic.github.io/docs/miscellaneous/contributing.html).
 
-The **robomimic** framework also makes reproducing the results from this [study](https://arise-initiative.github.io/robomimic-web/study.) easy. See the [results documentation](https://arise-initiative.github.io/robomimic-web/docs/introduction/results.html) for more information.
-
-## Citations
+## Citation
 
 Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this framework in your work:
 
@@ -57,7 +74,7 @@ Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this frame
 @inproceedings{robomimic2021,
   title={What Matters in Learning from Offline Human Demonstrations for Robot Manipulation},
   author={Ajay Mandlekar and Danfei Xu and Josiah Wong and Soroush Nasiriany and Chen Wang and Rohun Kulkarni and Li Fei-Fei and Silvio Savarese and Yuke Zhu and Roberto Mart\'{i}n-Mart\'{i}n},
-  booktitle={arXiv preprint arXiv:2108.03298},
+  booktitle={Conference on Robot Learning (CoRL)},
   year={2021}
 }
 ```
