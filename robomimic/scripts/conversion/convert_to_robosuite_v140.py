@@ -137,7 +137,7 @@ def convert_xml(xml_str, env_name):
 
     # replace robot body
     robot_base_str = """
-    <body name="robot0_base" pos="-0.56 0 0.912" gravcomp="0">
+    <body name="robot0_base" pos="{base_pos}" gravcomp="0">
       <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
       <camera name="robot0_robotview" pos="1 0 0.4" quat="0.653098 0.271041 0.271041 0.653098"/>
       <body name="robot0_link0" pos="0 0 0" gravcomp="0">
@@ -286,7 +286,9 @@ def convert_xml(xml_str, env_name):
         </body>
       </body>
     </body>
-    """
+    """.format(
+      base_pos="-0.5 -0.1 0.912" if env_name == "PickPlaceCan" else "-0.56 0 0.912"
+    )
 
     
     textures = """
