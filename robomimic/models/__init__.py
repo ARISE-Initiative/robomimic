@@ -1,1 +1,1 @@
-from .base_nets import EncoderCore, Randomizer
+from .obs_core import EncoderCore, Randomizer

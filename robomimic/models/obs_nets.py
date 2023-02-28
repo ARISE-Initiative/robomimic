@@ -22,7 +22,8 @@ from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.models.base_nets import Module, Sequential, MLP, RNN_Base, ResNet18Conv, SpatialSoftmax, \
-    FeatureAggregator, VisualCore, Randomizer
+    FeatureAggregator
+from robomimic.models.obs_core import VisualCore, Randomizer
 
 
 def obs_encoder_factory(

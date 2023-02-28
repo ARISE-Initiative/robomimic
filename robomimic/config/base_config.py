@@ -239,12 +239,12 @@ class BaseConfig(Config):
 
         # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
         self.observation.encoder.rgb.core_class = "VisualCore"                  # Default VisualCore class combines backbone (like ResNet-18) with pooling operation (like spatial softmax)
-        self.observation.encoder.rgb.core_kwargs = Config()                     # See models/base_nets.py for important kwargs to set and defaults used
+        self.observation.encoder.rgb.core_kwargs = Config()                     # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.core_kwargs.do_not_lock_keys()
 
         # RGB: Obs Randomizer settings
         self.observation.encoder.rgb.obs_randomizer_class = None                # Can set to 'CropRandomizer' to use crop randomization
-        self.observation.encoder.rgb.obs_randomizer_kwargs = Config()           # See models/base_nets.py for important kwargs to set and defaults used
+        self.observation.encoder.rgb.obs_randomizer_kwargs = Config()           # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
         # Allow for other custom modalities to be specified
@@ -258,7 +258,7 @@ class BaseConfig(Config):
 
         # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
         self.observation.encoder.scan.core_class = "ScanCore"                   # Default ScanCore class uses Conv1D to process this modality
-        self.observation.encoder.scan.core_kwargs = Config()                    # See models/base_nets.py for important kwargs to set and defaults used
+        self.observation.encoder.scan.core_kwargs = Config()                    # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.scan.core_kwargs.do_not_lock_keys()
 
     def meta_config(self):
