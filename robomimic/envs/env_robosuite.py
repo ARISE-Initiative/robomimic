@@ -9,7 +9,6 @@ from copy import deepcopy
 
 import mujoco_py
 import robosuite
-from robosuite.utils.mjcf_utils import postprocess_model_xml
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
@@ -131,7 +130,13 @@ class EnvRobosuite(EB.EnvBase):
         should_ret = False
         if "model" in state:
             self.reset()
-            xml = postprocess_model_xml(state["model"])
+            robosuite_version_id = int(robosuite.__version__.split(".")[1])
+            if robosuite_version_id <= 3:
+                from robosuite.utils.mjcf_utils import postprocess_model_xml
+                xml = postprocess_model_xml(state["model"])
+            else:
+                # v1.4 and above use the class-based edit_model_xml function
+                xml = self.env.edit_model_xml(state["model"])
             self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
