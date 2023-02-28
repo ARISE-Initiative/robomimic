@@ -136,8 +136,8 @@ def convert_xml(xml_str, env_name):
 
 
     # replace robot body
-    robot_base_str = """
-    <body name="robot0_base" pos="{base_pos}" gravcomp="0">
+    robot0_base_str = """
+    <body name="robot0_base" pos="-0.56 0 0.912" gravcomp="0">
       <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
       <camera name="robot0_robotview" pos="1 0 0.4" quat="0.653098 0.271041 0.271041 0.653098"/>
       <body name="robot0_link0" pos="0 0 0" gravcomp="0">
@@ -286,9 +286,7 @@ def convert_xml(xml_str, env_name):
         </body>
       </body>
     </body>
-    """.format(
-      base_pos="-0.5 -0.1 0.912" if env_name == "PickPlaceCan" else "-0.56 0 0.912"
-    )
+    """
 
     
     textures = """
@@ -304,8 +302,7 @@ def convert_xml(xml_str, env_name):
       <texture type="cube" name="textable" builtin="flat" rgb1="0.5 0.5 0.5" width="512" height="3072"/>
       <texture type="cube" name="cube_redwood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/red-wood.png"/>
       """
-
-    if env_name == "PickPlaceCan":
+    elif env_name == "PickPlaceCan":
       textures += """
       <texture type="cube" name="tex-steel-brushed" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/steel-brushed.png"/>
       <texture type="2d" name="tex-light-gray-plaster" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/light-gray-plaster.png"/>
@@ -316,6 +313,47 @@ def convert_xml(xml_str, env_name):
       <texture type="2d" name="Cereal_tex-cereal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/../textures/cereal.png"/>
       <texture type="2d" name="Can_tex-can" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/../textures/soda.png"/>
       """
+    elif env_name == "NutAssemblySquare":
+      textures += """
+      <texture type="cube" name="steel-metal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/steel-scratched.png"/>
+      <texture type="cube" name="brass-metal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/brass-ambra.png"/>
+      <texture type="cube" name="tex-ceramic" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/ceramic.png"/>
+      <texture type="cube" name="tex-steel-brushed" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/steel-brushed.png"/>
+      <texture type="2d" name="tex-light-gray-plaster" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/light-gray-plaster.png"/>
+      <texture type="cube" name="textable" builtin="flat" rgb1="0.5 0.5 0.5" width="512" height="3072"/>
+      <texture type="cube" name="SquareNut_brass-metal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/../textures/brass-ambra.png"/>
+      <texture type="cube" name="RoundNut_steel-metal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/../textures/steel-scratched.png"/>
+      """
+    elif env_name == "ToolHang":
+      textures += """
+      <texture type="cube" name="tex-ceramic" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/ceramic.png"/>
+      <texture type="cube" name="tex-steel-brushed" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/steel-brushed.png"/>
+      <texture type="2d" name="tex-light-gray-plaster" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/light-gray-plaster.png"/>
+      <texture type="cube" name="textable" builtin="flat" rgb1="0.5 0.5 0.5" width="512" height="3072"/>
+      <texture type="cube" name="stand_brass" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/brass-ambra.png"/>
+      <texture type="cube" name="frame_brass" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/brass-ambra.png"/>
+      <texture type="cube" name="frame_ceramic" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/ceramic.png"/>
+      <texture type="cube" name="frame_steel" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/steel-scratched.png"/>
+      <texture type="cube" name="tool_hole1_steel" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/steel-scratched.png"/>
+      <texture type="cube" name="tool_hole2_steel" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/steel-scratched.png"/>
+      <texture type="cube" name="tool_handle_steel" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/steel-scratched.png"/>
+      """
+    elif env_name == "TwoArmTransport":
+      textures += """
+      <texture type="cube" name="tex-ceramic" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/ceramic.png"/>
+      <texture type="cube" name="tex-steel-brushed" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/steel-brushed.png"/>
+      <texture type="2d" name="tex-light-gray-plaster" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/arenas/../textures/light-gray-plaster.png"/>
+      <texture type="cube" name="textable" builtin="flat" rgb1="0.5 0.5 0.5" width="512" height="3072"/>
+      <texture type="cube" name="payload_metal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/steel-scratched.png"/>
+      <texture type="cube" name="payload_wood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/light-wood.png"/>
+      <texture type="cube" name="trash_redwood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/red-wood.png"/>
+      <texture type="cube" name="transport_start_bin_dark_wood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/dark-wood.png"/>
+      <texture type="cube" name="transport_target_bin_dark_wood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/dark-wood.png"/>
+      <texture type="cube" name="transport_trash_bin_dark_wood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/dark-wood.png"/>
+      <texture type="cube" name="transport_start_bin_lid_dark_wood" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/textures/dark-wood.png"/>
+      """
+    else:
+      raise NotImplementedError
 
     materials = """
     <material name="robot0_Face636_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
@@ -384,8 +422,22 @@ def convert_xml(xml_str, env_name):
       <material name="Cereal_cereal" texture="Cereal_tex-cereal" reflectance="0.5"/>
       <material name="Can_coke" texture="Can_tex-can" texuniform="true" texrepeat="5 5" reflectance="0.7"/>
       """
+    elif env_name == "NutAssemblySquare":
+      materials = """
+      <material name="floorplane" texture="texplane" texuniform="true" texrepeat="2 2" specular="0" shininess="0" reflectance="0.01"/>
+      <material name="smetal" texture="steel-metal" texuniform="true" specular="1" shininess="1" reflectance="1"/>
+      <material name="bmetal" texture="brass-metal" texuniform="true" specular="1" shininess="1" reflectance="1"/>
+      <material name="table_ceramic" texture="tex-ceramic" specular="0.2" shininess="0"/>
+      <material name="table_legs_metal" texture="tex-steel-brushed" shininess="0.8" reflectance="0.8"/>
+      <material name="walls_mat" texture="tex-light-gray-plaster" texuniform="true" texrepeat="3 3" specular="0.1" shininess="0.1"/>
+      <material name="table_mat" texture="textable"/>
+      """ + materials
 
-    elif env_name in ["Lift"]:
+      materials += """
+      <material name="SquareNut_bmetal" texture="SquareNut_brass-metal" texuniform="true" specular="1" shininess="1" reflectance="1"/>
+      <material name="RoundNut_smetal" texture="RoundNut_steel-metal" texuniform="true" specular="1" shininess="1" reflectance="1"/>
+      """
+    elif env_name == "Lift":
       materials = """
       <material name="floorplane" texture="texplane" texuniform="true" texrepeat="2 2" specular="0" shininess="0" reflectance="0.01"/>
       <material name="table_ceramic" texture="tex-ceramic" specular="0.2" shininess="0"/>
@@ -396,6 +448,92 @@ def convert_xml(xml_str, env_name):
 
       materials += """
       <material name="cube_redwood_mat" texture="cube_redwood" specular="0.4" shininess="0.1"/>
+      """
+    elif env_name == "ToolHang":
+      materials = """
+      <material name="floorplane" texture="texplane" texuniform="true" texrepeat="2 2" specular="0" shininess="0" reflectance="0.01"/>
+      <material name="table_ceramic" texture="tex-ceramic" specular="0.2" shininess="0"/>
+      <material name="table_legs_metal" texture="tex-steel-brushed" shininess="0.8" reflectance="0.8"/>
+      <material name="walls_mat" texture="tex-light-gray-plaster" texuniform="true" texrepeat="3 3" specular="0.1" shininess="0.1"/>
+      <material name="table_mat" texture="textable"/>
+      """ + materials
+
+      materials += """
+      <material name="stand_brass_mat" texture="stand_brass" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="frame_brass_mat" texture="frame_brass" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="frame_ceramic_mat" texture="frame_ceramic" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="frame_steel_mat" texture="frame_steel" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="tool_hole1_steel_mat" texture="tool_hole1_steel" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="tool_hole2_steel_mat" texture="tool_hole2_steel" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="tool_handle_steel_mat" texture="tool_handle_steel" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      """
+    elif env_name == "TwoArmTransport":
+      materials = """
+      <material name="floorplane" texture="texplane" texuniform="true" texrepeat="2 2" specular="0" shininess="0" reflectance="0.01"/>
+      <material name="table_ceramic" texture="tex-ceramic" specular="0.2" shininess="0"/>
+      <material name="table_legs_metal" texture="tex-steel-brushed" shininess="0.8" reflectance="0.8"/>
+      <material name="walls_mat" texture="tex-light-gray-plaster" texuniform="true" texrepeat="3 3" specular="0.1" shininess="0.1"/>
+      <material name="table_mat" texture="textable"/>
+      """ + materials
+
+      materials += """
+      <material name="robot1_Face636_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Part__Feature017_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature018_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature019_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature022_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Part__Feature023_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Shell001_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Shell002_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Shell003_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Shell009_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Shell010_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Shell_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Feature_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature024" shininess="0.45"/>
+      <material name="robot1_Part__Feature001_010_001_002" shininess="0.45"/>
+      <material name="robot1_Part__Feature002_007_001_002" shininess="0.45"/>
+      <material name="robot1_Part__Feature003_004_001_002" shininess="0.45"/>
+      <material name="robot1_Part__Feature_001_001_001_002" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Feature001_001_003_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature002_001_003_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Feature003_001_003_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature_002_003_001" shininess="0.45"/>
+      <material name="robot1_Part__Feature_002_004_003" shininess="0.45"/>
+      <material name="robot1_Shell001_001_001_003" shininess="0.45" rgba="0.25 0.25 0.25 1"/>
+      <material name="robot1_Shell_001_001_003" shininess="0.45"/>
+      <material name="robot1_Face064_002_001_002_001" shininess="0.45" rgba="1 0 0 1"/>
+      <material name="robot1_Face065_002_001_002_001" shininess="0.45" rgba="0 1 0 1"/>
+      <material name="robot1_Face374_002_001_002_001" shininess="0.45"/>
+      <material name="robot1_Face539_002_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Feature001_009_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Feature002_006_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Shell002_002_001_002_001" shininess="0.45"/>
+      <material name="robot1_Shell003_002_001_002_001" shininess="0.45"/>
+      <material name="robot1_Shell004_001_001_002_001" shininess="0.45"/>
+      <material name="robot1_Shell005_001_001_002_001" shininess="0.45"/>
+      <material name="robot1_Shell006_003_002_001" shininess="0.45" rgba="0.901961 0.921569 0.929412 1"/>
+      <material name="robot1_Shell007_002_002_001" shininess="0.45" rgba="0.25 0.25 0.25 1"/>
+      <material name="robot1_Shell011_002_002_001" shininess="0.45"/>
+      <material name="robot1_Shell012_002_002_001" shininess="0.45"/>
+      <material name="robot1_Shell_003_001_002_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Union001_001_001_002_001" shininess="0.45" rgba="0.039216 0.541176 0.780392 1"/>
+      <material name="robot1_Union_001_001_002_001" shininess="0.45" rgba="0.039216 0.541176 0.780392 1"/>
+      <material name="robot1_Part__Mirroring001_004_002" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring002_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring003_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring004_004_002" shininess="0.45"/>
+      <material name="robot1_Part__Mirroring005_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring006_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring007_004_001" shininess="0.45" rgba="0.25098 0.25098 0.25098 1"/>
+      <material name="robot1_Part__Mirroring_004_001" shininess="0.45" rgba="0.898039 0.917647 0.929412 1"/>
+      <material name="payload_metal_mat" texture="payload_metal" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="payload_wood_mat" texture="payload_wood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="trash_redwood_mat" texture="trash_redwood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="transport_start_bin_dark_wood_mat" texture="transport_start_bin_dark_wood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="transport_target_bin_dark_wood_mat" texture="transport_target_bin_dark_wood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="transport_trash_bin_dark_wood_mat" texture="transport_trash_bin_dark_wood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
+      <material name="transport_start_bin_lid_dark_wood_mat" texture="transport_start_bin_lid_dark_wood" texrepeat="3 3" specular="0.4" shininess="0.1"/>
       """
     else:
       raise NotImplementedError
@@ -478,6 +616,78 @@ def convert_xml(xml_str, env_name):
       <mesh name="Cereal_cereal_mesh" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/meshes/cereal.msh"/>
       <mesh name="Can_can_mesh" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/objects/meshes/can.msh"/>
       """
+    elif env_name == "TwoArmTransport":
+      meshes += """
+      <mesh name="robot1_link0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link0.stl"/>
+      <mesh name="robot1_link1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link1.stl"/>
+      <mesh name="robot1_link2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link2.stl"/>
+      <mesh name="robot1_link3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link3.stl"/>
+      <mesh name="robot1_link4" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link4.stl"/>
+      <mesh name="robot1_link5" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link5.stl"/>
+      <mesh name="robot1_link6" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link6.stl"/>
+      <mesh name="robot1_link7" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/meshes/link7.stl"/>
+      <mesh name="robot1_link0_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_0.obj"/>
+      <mesh name="robot1_link0_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_1.obj"/>
+      <mesh name="robot1_link0_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_2.obj"/>
+      <mesh name="robot1_link0_vis_3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_3.obj"/>
+      <mesh name="robot1_link0_vis_4" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_4.obj"/>
+      <mesh name="robot1_link0_vis_5" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_5.obj"/>
+      <mesh name="robot1_link0_vis_6" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_6.obj"/>
+      <mesh name="robot1_link0_vis_7" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_7.obj"/>
+      <mesh name="robot1_link0_vis_8" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_8.obj"/>
+      <mesh name="robot1_link0_vis_9" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_9.obj"/>
+      <mesh name="robot1_link0_vis_10" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_10.obj"/>
+      <mesh name="robot1_link0_vis_11" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link0_vis/link0_vis_11.obj"/>
+      <mesh name="robot1_link1_vis" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link1_vis/link1_vis.obj"/>
+      <mesh name="robot1_link2_vis" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link2_vis/link2_vis.obj"/>
+      <mesh name="robot1_link3_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_0.obj"/>
+      <mesh name="robot1_link3_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_1.obj"/>
+      <mesh name="robot1_link3_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_2.obj"/>
+      <mesh name="robot1_link3_vis_3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link3_vis/link3_vis_3.obj"/>
+      <mesh name="robot1_link4_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_0.obj"/>
+      <mesh name="robot1_link4_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_1.obj"/>
+      <mesh name="robot1_link4_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_2.obj"/>
+      <mesh name="robot1_link4_vis_3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link4_vis/link4_vis_3.obj"/>
+      <mesh name="robot1_link5_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_0.obj"/>
+      <mesh name="robot1_link5_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_1.obj"/>
+      <mesh name="robot1_link5_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link5_vis/link5_vis_2.obj"/>
+      <mesh name="robot1_link6_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_0.obj"/>
+      <mesh name="robot1_link6_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_1.obj"/>
+      <mesh name="robot1_link6_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_2.obj"/>
+      <mesh name="robot1_link6_vis_3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_3.obj"/>
+      <mesh name="robot1_link6_vis_4" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_4.obj"/>
+      <mesh name="robot1_link6_vis_5" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_5.obj"/>
+      <mesh name="robot1_link6_vis_6" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_6.obj"/>
+      <mesh name="robot1_link6_vis_7" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_7.obj"/>
+      <mesh name="robot1_link6_vis_8" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_8.obj"/>
+      <mesh name="robot1_link6_vis_9" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_9.obj"/>
+      <mesh name="robot1_link6_vis_10" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_10.obj"/>
+      <mesh name="robot1_link6_vis_11" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_11.obj"/>
+      <mesh name="robot1_link6_vis_12" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_12.obj"/>
+      <mesh name="robot1_link6_vis_13" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_13.obj"/>
+      <mesh name="robot1_link6_vis_14" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_14.obj"/>
+      <mesh name="robot1_link6_vis_15" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_15.obj"/>
+      <mesh name="robot1_link6_vis_16" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link6_vis/link6_vis_16.obj"/>
+      <mesh name="robot1_link7_vis_0" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_0.obj"/>
+      <mesh name="robot1_link7_vis_1" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_1.obj"/>
+      <mesh name="robot1_link7_vis_2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_2.obj"/>
+      <mesh name="robot1_link7_vis_3" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_3.obj"/>
+      <mesh name="robot1_link7_vis_4" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_4.obj"/>
+      <mesh name="robot1_link7_vis_5" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_5.obj"/>
+      <mesh name="robot1_link7_vis_6" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_6.obj"/>
+      <mesh name="robot1_link7_vis_7" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/robots/panda/obj_meshes/link7_vis/link7_vis_7.obj"/>
+      <mesh name="mount1_pedestal" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/mounts/meshes/rethink_mount/pedestal.stl"/>
+      <mesh name="gripper1_hand" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/grippers/meshes/panda_gripper/hand.stl"/>
+      <mesh name="gripper1_hand_vis" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/grippers/meshes/panda_gripper/hand_vis.stl"/>
+      <mesh name="gripper1_finger" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/grippers/meshes/panda_gripper/finger.stl"/>
+      <mesh name="gripper1_finger_vis" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/grippers/meshes/panda_gripper/finger_vis.stl"/>
+      <mesh name="gripper1_finger_vis2" file="/home/soroushn/code/robosuite-dev/robosuite/models/assets/grippers/meshes/panda_gripper/finger_longer.stl"/>
+      """
+    elif env_name in ["NutAssemblySquare", "Lift", "ToolHang"]:
+      # no meshes to add
+      pass
+    else:
+      raise NotImplementedError
     
     asset_str = """<asset>{textures}{materials}{meshes}\n</asset>""".format(
       textures=textures, materials=materials, meshes=meshes
@@ -494,14 +704,35 @@ def convert_xml(xml_str, env_name):
     )
     replace_elem(root, asset_old, asset_new)
 
-    robot_base_new = ET.ElementTree(ET.fromstring(robot_base_str)).getroot()
-    robot_base_old = find_elements(
+    robot0_base_new = ET.ElementTree(ET.fromstring(robot0_base_str)).getroot()
+    if env_name == "TwoArmTransport":
+      robot0_base_new.set("pos", "0 -0.81 0.912")
+      robot0_base_new.set("quat", "0.707107 0 0 0.707107")
+    elif env_name == "PickPlaceCan":
+      robot0_base_new.set("pos", "-0.5 -0.1 0.912")
+    robot0_base_old = find_elements(
         root=worldbody,
         tags="body",
         attribs={"name": "robot0_base"},
         return_first=True
     )
-    replace_elem(worldbody, robot_base_old, robot_base_new)
+    replace_elem(worldbody, robot0_base_old, robot0_base_new)
+
+    if env_name == "TwoArmTransport":
+      robot1_base_str = robot0_base_str.replace("robot0", "robot1")
+      robot1_base_str = robot1_base_str.replace("gripper0", "gripper1")
+      robot1_base_str = robot1_base_str.replace("mount0", "mount1")
+      robot1_base_new = ET.ElementTree(ET.fromstring(robot1_base_str)).getroot()
+      robot1_base_new.set("pos", "0 0.81 0.912")
+      robot1_base_new.set("quat", "0.707107 0 0 -0.707107")
+      robot1_base_old = find_elements(
+          root=worldbody,
+          tags="body",
+          attribs={"name": "robot1_base"},
+          return_first=True
+      )
+      replace_elem(worldbody, robot1_base_old, robot1_base_new)
+
 
     compiler = find_elements(
         root=root,
