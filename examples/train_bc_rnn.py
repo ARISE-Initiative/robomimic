@@ -61,9 +61,9 @@ def robosuite_hyperparameters(config):
 
     ## evaluation rollout config ##
     config.experiment.rollout.enabled = True                    # enable evaluation rollouts
-    config.experiment.rollout.n = 10                            # number of rollouts per evaluation
+    config.experiment.rollout.n = 50                            # number of rollouts per evaluation
     config.experiment.rollout.horizon = 400                     # maximum number of env steps per rollout
-    config.experiment.rollout.rate = 5                         # do rollouts every @rate epochs
+    config.experiment.rollout.rate = 50                         # do rollouts every @rate epochs
     config.experiment.rollout.warmstart = 0                     # number of epochs to wait before starting rollouts
     config.experiment.rollout.terminate_on_success = True       # end rollout early after task success
 
@@ -103,7 +103,7 @@ def robosuite_hyperparameters(config):
 
     ## learning config ##
     config.train.cuda = True                                    # try to use GPU (if present) or not
-    config.train.batch_size = 16                               # batch size
+    config.train.batch_size = 100                               # batch size
     config.train.num_epochs = 2000                              # number of training epochs
     config.train.seed = 1                                       # seed for training
 

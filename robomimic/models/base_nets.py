@@ -18,7 +18,6 @@ from torchvision import models as vision_models
 from torchvision import transforms
 
 import robomimic.utils.tensor_utils as TensorUtils
-import time
 
 CONV_ACTIVATIONS = {
     "relu": nn.ReLU,
