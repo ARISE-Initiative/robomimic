@@ -9,7 +9,7 @@ from copy import deepcopy
 
 import mujoco_py
 import robosuite
-from robosuite.utils.mjcf_utils import postprocess_model_xml
+from robosuite.utils.mjcf_utils import xml_path_completion
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
@@ -131,7 +131,7 @@ class EnvRobosuite(EB.EnvBase):
         should_ret = False
         if "model" in state:
             self.reset()
-            xml = postprocess_model_xml(state["model"])
+            xml = xml_path_completion(state["model"])
             self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:

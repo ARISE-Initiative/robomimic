@@ -61,9 +61,9 @@ def robosuite_hyperparameters(config):
 
     ## evaluation rollout config ##
     config.experiment.rollout.enabled = True                    # enable evaluation rollouts
-    config.experiment.rollout.n = 50                            # number of rollouts per evaluation
+    config.experiment.rollout.n = 10                            # number of rollouts per evaluation
     config.experiment.rollout.horizon = 400                     # maximum number of env steps per rollout
-    config.experiment.rollout.rate = 50                         # do rollouts every @rate epochs
+    config.experiment.rollout.rate = 5                         # do rollouts every @rate epochs
     config.experiment.rollout.warmstart = 0                     # number of epochs to wait before starting rollouts
     config.experiment.rollout.terminate_on_success = True       # end rollout early after task success
 
@@ -103,7 +103,7 @@ def robosuite_hyperparameters(config):
 
     ## learning config ##
     config.train.cuda = True                                    # try to use GPU (if present) or not
-    config.train.batch_size = 100                               # batch size
+    config.train.batch_size = 16                               # batch size
     config.train.num_epochs = 2000                              # number of training epochs
     config.train.seed = 1                                       # seed for training
 
@@ -115,7 +115,9 @@ def robosuite_hyperparameters(config):
         "robot0_gripper_qpos",
         "object",
     ]
+
     config.observation.modalities.obs.rgb = []                # no image observations
+
     config.observation.modalities.goal.low_dim = []             # no low-dim goals
     config.observation.modalities.goal.rgb = []               # no image goals
 
@@ -131,6 +133,16 @@ def robosuite_hyperparameters(config):
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+
+    # if you prefer to use pre-trained visual representation, uncomment the following lines
+    # R3M
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'R3MConv'                         # R3M backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.r3m_model_class = 'resnet18'       # R3M model class (resnet18, resnet34, resnet50)
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                  # no pooling class for pretraining model
+    # MVP
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'MVPConv'                                   # MVP backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.mvp_model_class = 'vitb-mae-egosoup'         # MVP model class (vits-mae-hoi, vits-mae-in, vits-sup-in, vitb-mae-egosoup, vitl-256-mae-egosoup)
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                            # no pooling class for pretraining model
 
     # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
     config.observation.encoder.rgb.obs_randomizer_class = None
