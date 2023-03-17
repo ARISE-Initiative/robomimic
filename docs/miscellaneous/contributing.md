@@ -45,6 +45,7 @@ We also list additional suggested contributing guidelines that we adhered to dur
 
 - Prefer `torch.expand` over `torch.repeat` wherever possible, for memory efficiency. See [this link](https://discuss.pytorch.org/t/expand-vs-repeat-semantic-difference/59789) for more details.
 
+- When implementing new configs that specify kwargs that will be unpacked by a downstream python class (for example, the property `self.observation.encoder.rgb.core_kwargs` in the `BaseConfig` class, which is fed to the class specified by `self.observation.encoder.rgb.core_class`), the default config class should specify an empty config object (essentially an empty dictionary) for the kwargs. This is to make sure that external config jsons will be able to completely override both the class and the kwargs without worrying about existing default kwargs that could break the initialization of the class. For example, while the default `VisualCore` class takes a kwarg called `feature_dimension`, another class may not take this argument. If this kwarg already existed in the base config, the external json will just add additional kwargs.
   
 
 We look forward to your contributions. Thanks!

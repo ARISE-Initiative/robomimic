@@ -87,7 +87,10 @@ class BC(PolicyAlgo):
         input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
         input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
+
 
     def train_on_batch(self, batch, epoch, validate=False):
         """
@@ -504,7 +507,9 @@ class BC_RNN(BC):
             obs_seq_start = TensorUtils.index_at_time(batch["obs"], ind=0)
             input_batch["obs"] = TensorUtils.unsqueeze_expand_at(obs_seq_start, size=n_steps, dim=1)
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def get_action(self, obs_dict, goal_dict=None):
         """

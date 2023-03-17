@@ -8,6 +8,13 @@ from robomimic.config.base_config import BaseConfig
 class BCConfig(BaseConfig):
     ALGO_NAME = "bc"
 
+    def train_config(self):
+        """
+        BC algorithms don't need "next_obs" from hdf5 - so save on storage and compute by disabling it.
+        """
+        super(BCConfig, self).train_config()
+        self.train.hdf5_load_next_obs = False
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the 
@@ -73,11 +80,11 @@ class BCConfig(BaseConfig):
         self.algo.vae.prior_layer_dims = (300, 400)                         # prior MLP layer dimensions (if learning conditioned prior)
 
         # RNN policy settings
-        self.algo.rnn.enabled = False       # whether to train RNN policy
-        self.algo.rnn.horizon = 10          # unroll length for RNN - should usually match train.seq_length
-        self.algo.rnn.hidden_dim = 400      # hidden dimension size    
-        self.algo.rnn.rnn_type = "LSTM"     # rnn type - one of "LSTM" or "GRU"
-        self.algo.rnn.num_layers = 2        # number of RNN layers that are stacked
-        self.algo.rnn.open_loop = False     # if True, action predictions are only based on a single observation (not sequence)
-        self.algo.rnn.kwargs.bidirectional = False            # rnn kwargs
+        self.algo.rnn.enabled = False               # whether to train RNN policy
+        self.algo.rnn.horizon = 10                  # unroll length for RNN - should usually match train.seq_length
+        self.algo.rnn.hidden_dim = 400              # hidden dimension size    
+        self.algo.rnn.rnn_type = "LSTM"             # rnn type - one of "LSTM" or "GRU"
+        self.algo.rnn.num_layers = 2                # number of RNN layers that are stacked
+        self.algo.rnn.open_loop = False             # if True, action predictions are only based on a single observation (not sequence)
+        self.algo.rnn.kwargs.bidirectional = False  # kwargs for torch.nn.LSTM / GRU
         self.algo.rnn.kwargs.do_not_lock_keys()

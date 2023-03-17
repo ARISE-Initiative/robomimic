@@ -52,7 +52,8 @@ Below, we provide descriptions of specific EncoderCore-based classes used to enc
 We provide a `VisualCore` module for constructing custom vision architectures. A `VisualCore` consists of a backbone network that featurizes image input --- typically a `ConvBase` module --- and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is a `VisualCore` built from a `ResNet18Conv` backbone and a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module. 
 
 ```python
-from robomimic.models.base_nets import VisualCore, ResNet18Conv, SpatialSoftmax
+from robomimic.models.obs_core import VisualCore
+from robomimic.models.base_nets import ResNet18Conv, SpatialSoftmax
 
 vis_net = VisualCore(
   input_shape=(3, 224, 224),
@@ -72,9 +73,10 @@ New vision backbone and pooling classes can be added by subclassing `ConvBase`.
 We provide a `ScanCore` module for constructing custom range finder architectures. `ScanCore` consists of a 1D Convolution backbone network (`Conv1dBase`) that featurizes a high-dimensional 1D input, and a pooling module that reduces the feature tensor into a fixed-sized vector representation.  Below is an example of a `ScanCore` network with a `SpatialSoftmax` ([paper](https://rll.berkeley.edu/dsae/dsae.pdf)) pooling module.
 
 ```python
-from robomimic.models.base_nets import ScanCore, SpatialSoftmax
+from robomimic.models.obs_core import ScanCore
+from robomimic.models.base_nets import SpatialSoftmax
 
-vis_net = VisualCore(
+vis_net = ScanCore(
   input_shape=(1, 120),
   conv_kwargs={
       "out_channels": [32, 64, 64],
@@ -103,7 +105,9 @@ Randomizers are `Modules` that perturb network inputs during training, and optio
  `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_obs_key` function.
 
 ```python
-from robomimic.models.obs_nets import ObservationEncoder, CropRandomizer, MLP, VisualCore, ObservationDecoder
+from robomimic.models.base_nets import MLP
+from robomimic.models.obs_core import VisualCore, CropRandomizer
+from robomimic.models.obs_nets import ObservationEncoder, ObservationDecoder
 
 obs_encoder = ObservationEncoder(feature_activation=torch.nn.ReLU)
 

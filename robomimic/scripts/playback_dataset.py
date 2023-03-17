@@ -115,6 +115,8 @@ def playback_trajectory_with_env(
     env.reset()
     env.reset_to(initial_state)
 
+    playback_err = []
+
     traj_len = states.shape[0]
     action_playback = (actions is not None)
     if action_playback:
@@ -126,8 +128,10 @@ def playback_trajectory_with_env(
             if i < traj_len - 1:
                 # check whether the actions deterministically lead to the same recorded states
                 state_playback = env.get_state()["states"]
+
+                err = np.linalg.norm(states[i + 1] - state_playback)
+                playback_err.append(err)
                 if not np.all(np.equal(states[i + 1], state_playback)):
-                    err = np.linalg.norm(states[i + 1] - state_playback)
                     print("warning: playback diverged by {} at step {}".format(err, i))
         else:
             env.reset_to({"states" : states[i]})
@@ -148,6 +152,8 @@ def playback_trajectory_with_env(
 
         if first:
             break
+
+    return playback_err
 
 
 def playback_trajectory_with_obs(
@@ -243,6 +249,8 @@ def playback_dataset(args):
     if write_video:
         video_writer = imageio.get_writer(args.video_path, fps=20)
 
+    all_playback_err = []
+
     for ind in range(len(demos)):
         ep = demos[ind]
         print("Playing back episode: {}".format(ep))
@@ -263,12 +271,17 @@ def playback_dataset(args):
         if is_robosuite_env:
             initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
 
+            # # replace model with current env model
+            # env.reset()
+            # env.reset_to(initial_state)
+            # initial_state["model"] = env.env.sim.model.get_xml()
+
         # supply actions if using open-loop action playback
         actions = None
         if args.use_actions:
             actions = f["data/{}/actions".format(ep)][()]
 
-        playback_trajectory_with_env(
+        playback_err = playback_trajectory_with_env(
             env=env, 
             initial_state=initial_state, 
             states=states, actions=actions, 
@@ -279,6 +292,14 @@ def playback_dataset(args):
             first=args.first,
         )
 
+        all_playback_err.append(playback_err)
+
+    if len(all_playback_err[0]) > 0:
+        print("Play back error stats:")
+        print("all final errors:", [arr[-1] for arr in all_playback_err])
+        print("avg error:", np.mean(np.mean([arr for arr in all_playback_err])))
+        print("avg final error:", np.mean([arr[-1] for arr in all_playback_err]))
+    
     f.close()
     if write_video:
         video_writer.close()
