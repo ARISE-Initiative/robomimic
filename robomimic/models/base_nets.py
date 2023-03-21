@@ -25,16 +25,6 @@ CONV_ACTIVATIONS = {
     None: None,
 }
 
-class FixableSequential(torch.nn.Sequential):
-    def __init__(self, fixed, *args, **kwargs):
-        torch.nn.Sequential.__init__(self, *args, **kwargs)
-        self.fixed = fixed
-
-    def train(self, mode):
-        if self.fixed:
-            super().train(False)
-        else:
-            super().train(mode)
 
 def rnn_args_from_config(rnn_config):
     """
@@ -79,6 +69,7 @@ class Sequential(torch.nn.Sequential, Module):
         for arg in args:
             assert isinstance(arg, Module)
         torch.nn.Sequential.__init__(self, *args)
+        self.fixed = False
 
     def output_shape(self, input_shape=None):
         """
@@ -96,6 +87,15 @@ class Sequential(torch.nn.Sequential, Module):
         for module in self:
             out_shape = module.output_shape(out_shape)
         return out_shape
+
+    def freeze(self):
+        self.fixed = True
+
+    def train(self, mode):
+        if self.fixed:
+            super().train(False)
+        else:
+            super().train(mode)
 
 
 class Parameter(Module):
@@ -551,7 +551,9 @@ class R3MConv(ConvBase):
             transforms.CenterCrop(224),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
-        self.nets = FixableSequential(freeze, *([preprocess] + list(net.module.convnet.children())))
+        self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())))
+        if freeze:
+            self.nets.freeze()
 
         self.weight_sum = np.sum([param.cpu().data.numpy().sum() for param in self.nets.parameters()])
         if freeze:
