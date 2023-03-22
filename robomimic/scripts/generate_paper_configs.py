@@ -1181,21 +1181,21 @@ def generate_d4rl_configs(
         return config
 
     d4rl_tasks = [
-        # "halfcheetah-random-v0",
-        # "hopper-random-v0",
-        # "walker2d-random-v0",
-        "halfcheetah-medium-v0",
-        "hopper-medium-v0",
-        "walker2d-medium-v0",
-        "halfcheetah-expert-v0",
-        "hopper-expert-v0",
-        "walker2d-expert-v0",
-        "halfcheetah-medium-expert-v0",
-        "hopper-medium-expert-v0",
-        "walker2d-medium-expert-v0",
-        # "halfcheetah-medium-replay-v0",
-        # "hopper-medium-replay-v0",
-        # "walker2d-medium-replay-v0",
+        # "halfcheetah-random-v2",
+        # "hopper-random-v2",
+        # "walker2d-random-v2",
+        "halfcheetah-medium-v2",
+        "hopper-medium-v2",
+        "walker2d-medium-v2",
+        "halfcheetah-expert-v2",
+        "hopper-expert-v2",
+        "walker2d-expert-v2",
+        "halfcheetah-medium-expert-v2",
+        "hopper-medium-expert-v2",
+        "walker2d-medium-expert-v2",
+        # "halfcheetah-medium-replay-v2",
+        # "hopper-medium-replay-v2",
+        # "walker2d-medium-replay-v2",
     ]
     d4rl_json_paths = Config() # use for convenient nested dict
     for task_name in d4rl_tasks:
