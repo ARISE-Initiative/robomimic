@@ -1168,7 +1168,7 @@ def generate_d4rl_configs(
 
     def cql_algo_config_modifier(config):
         with config.algo.values_unlocked():
-            # taken from TD3-BC settings describe in their paper
+            # taken from TD3-BC settings described in their paper
             config.algo.optim_params.critic.learning_rate.initial = 3e-4
             config.algo.optim_params.actor.learning_rate.initial = 3e-5
             config.algo.actor.bc_start_steps = 40000                        # pre-training steps for actor
@@ -1176,6 +1176,19 @@ def generate_d4rl_configs(
             config.algo.critic.cql_weight = 10.0
             config.algo.critic.min_q_weight = 1.0 
             config.algo.critic.deterministic_backup = True                  # deterministic backup (no entropy in Q-target)
+            config.algo.actor.layer_dims = (256, 256, 256)                  # MLP sizes
+            config.algo.critic.layer_dims = (256, 256, 256)
+        return config
+    
+    def iql_algo_config_modifier(config):
+        with config.algo.values_unlocked():
+            # taken from IQL settings described in their paper
+            config.algo.target_tau = 0.005
+            config.algo.vf_quantile = 0.7
+            config.algo.adv.beta = 3.0
+            config.algo.optim_params.critic.learning_rate.initial = 3e-4
+            config.algo.optim_params.vf.learning_rate.initial = 3e-4
+            config.algo.optim_params.actor.learning_rate.initial = 3e-4
             config.algo.actor.layer_dims = (256, 256, 256)                  # MLP sizes
             config.algo.critic.layer_dims = (256, 256, 256)
         return config
@@ -1199,7 +1212,7 @@ def generate_d4rl_configs(
     ]
     d4rl_json_paths = Config() # use for convenient nested dict
     for task_name in d4rl_tasks:
-        for algo_name in ["bcq", "cql", "td3_bc"]:
+        for algo_name in ["bcq", "cql", "td3_bc", "iql"]:
             config = config_factory(algo_name=algo_name)
 
             # hack: copy experiment and train sections from td3-bc, since that has defaults for training with D4RL
@@ -1216,6 +1229,8 @@ def generate_d4rl_configs(
                 config = bcq_algo_config_modifier(config)
             elif algo_name == "cql":
                 config = cql_algo_config_modifier(config)
+            elif algo_name == "iql":
+                config = iql_algo_config_modifier(config)
 
             # set experiment name
             with config.experiment.values_unlocked():
