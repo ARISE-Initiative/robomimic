@@ -1238,10 +1238,14 @@ def generate_d4rl_configs(
             # set output folder and dataset
             with config.train.values_unlocked():
                 if base_output_dir is None:
-                    base_output_dir = "../{}_trained_models".format(algo_name)
-                config.train.output_dir = os.path.join(base_output_dir, "d4rl", algo_name, task_name, "trained_models")
+                    base_output_dir_for_algo = "../{}_trained_models".format(algo_name)
+                else:
+                    base_output_dir_for_algo = base_output_dir
+                config.train.output_dir = os.path.join(base_output_dir_for_algo, "d4rl", algo_name, task_name, "trained_models")
                 config.train.data = os.path.join(base_dataset_dir, "d4rl", "converted", 
                     "{}.hdf5".format(task_name.replace("-", "_")))
+                
+                print(config.train.output_dir, algo_name)
 
             # save config to json file
             dir_to_save = os.path.join(base_config_dir, "d4rl", task_name)
