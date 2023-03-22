@@ -9,9 +9,9 @@ Use `convert_d4rl.py` in the `scripts/conversion` folder to automatically downlo
 
 ```sh
 # by default, download to robomimic/datasets
-$ python convert_d4rl.py --env walker2d-medium-expert-v0
+$ python convert_d4rl.py --env walker2d-medium-expert-v2
 # download to specific folder
-$ python convert_d4rl.py --env walker2d-medium-expert-v0 --folder /path/to/output/folder/
+$ python convert_d4rl.py --env walker2d-medium-expert-v2 --folder /path/to/output/folder/
 ```
 
 - `--env` specifies the dataset to download
@@ -25,19 +25,19 @@ No postprocessing is required, assuming the above script is run!
 
 ## D4RL Results
 
-Below, we provide a table of results on common D4RL datasets using the algorithms included in the released codebase. We follow the convention in the TD3-BC paper, where we average results over the final 10 rollout evaluations, but we use 50 rollouts instead of 10 for each evaluation. Apart from a small handful of the halfcheetah results, the results align with those presented in the [TD3_BC paper](https://arxiv.org/abs/2106.06860). We suspect the halfcheetah results are different because we used `mujoco-py` version `2.0.2.13` in our evaluations, as opposed to `1.5` in order to be consistent with the version we were using for robosuite datasets. The results below were generated with `gym` version `0.17.3` and this `d4rl` [commit](https://github.com/rail-berkeley/d4rl/tree/9b68f31bab6a8546edfb28ff0bd9d5916c62fd1f).
+Below, we provide a table of results on common D4RL datasets using the algorithms included in the released codebase. We follow the convention in the TD3-BC paper, where we average results over the final 10 rollout evaluations, but we use 50 rollouts instead of 10 for each evaluation. All results are reported on the `-v2` environment variants. Apart from a small handful of the halfcheetah results, the results align with those presented in the [TD3_BC paper](https://arxiv.org/abs/2106.06860). We suspect the halfcheetah results are different because we used `mujoco-py` version `2.0.2.13` in our evaluations, as opposed to `1.5` in order to be consistent with the version we were using for robosuite datasets. The results below were generated with `gym` version `0.17.3` and this `d4rl` [commit](https://github.com/rail-berkeley/d4rl/tree/9b68f31bab6a8546edfb28ff0bd9d5916c62fd1f).
 
-|                               | **BCQ**       | **CQL**       | **TD3-BC**    |
-| ----------------------------- | ------------- | ------------- | ------------- |
-| **HalfCheetah-Medium**        | 40.8% (4791)  | 38.5% (4497)  | 41.7% (4902)  |
-| **Hopper-Medium**             | 36.9% (1181)  | 30.7% (980)   | 97.9% (3167)  |
-| **Walker2d-Medium**           | 66.4% (3050)  | 65.2% (2996)  | 77.0% (3537)  |
-| **HalfCheetah-Medium-Expert** | 74.9% (9016)  | 21.5% (2389)  | 79.4% (9578)  |
-| **Hopper-Medium-Expert**      | 83.8% (2708)  | 111.7% (3614) | 112.2% (3631) |
-| **Walker2d-Medium-Expert**    | 70.2% (3224)  | 77.4% (3554)  | 102.0% (4683) |
-| **HalfCheetah-Expert**        | 94.3% (11427) | 29.2% (3342)  | 95.4% (11569) |
-| **Hopper-Expert**             | 104.7% (3389) | 111.8% (3619) | 112.2% (3633) |
-| **Walker2d-Expert**           | 80.5% (3699)  | 108.0% (4958) | 105.3% (4837) |
+|                               | **BCQ**       | **CQL**       | **TD3-BC**    | **IQL**       |
+| ----------------------------- | ------------- | ------------- | ------------- | ------------- |
+| **HalfCheetah-Medium**        | 46.8% (5535)  | 46.7% (5516)  | 47.9% (5664)  | 45.6% (5379)  |
+| **Hopper-Medium**             | 63.9% (2059)  | 59.2% (1908)  | 61.0% (1965)  | 53.7% (1729)  |
+| **Walker2d-Medium**           | 74.6% (3426)  | 79.7% (3659)  | 82.9% (3806)  | 77.0% (3537)  |
+| **HalfCheetah-Medium-Expert** | 89.9% (10875) | 77.6% (9358)  | 92.1% (11154) | 89.0% (10773) |
+| **Hopper-Medium-Expert**      | 79.5% (2566)  | 62.9% (2027)  | 89.7% (2900)  | 110.1% (3564) |
+| **Walker2d-Medium-Expert**    | 98.7% (4535)  | 109.0% (5007) | 111.1% (5103) | 109.7% (5037) |
+| **HalfCheetah-Expert**        | 92.9% (11249) | 67.7% (8126)  | 94.6% (11469) | 93.3% (11304) |
+| **Hopper-Expert**             | 92.3% (2984)  | 104.2% (3370) | 108.5% (3512) | 110.5% (3577) |
+| **Walker2d-Expert**           | 108.6% (4987) | 108.5% (4983) | 110.3% (5066) | 109.1% (5008) |
 
 
 ### Reproducing D4RL Results
