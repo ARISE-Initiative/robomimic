@@ -74,6 +74,12 @@ Welcome to robomimic's documentation!
    miscellaneous/acknowledgments
    miscellaneous/references
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Previous Versions
+
+   versions/v0.2
+
 
 Indices and tables
 ==================

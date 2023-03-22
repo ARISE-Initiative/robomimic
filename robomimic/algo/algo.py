@@ -201,6 +201,33 @@ class Algo(object):
         """
         return batch
 
+    def postprocess_batch_for_training(self, batch, obs_normalization_stats):
+        """
+        Does some operations (like channel swap, uint8 to float conversion, normalization)
+        after @process_batch_for_training is called, in order to ensure these operations
+        take place on GPU.
+
+        Args:
+            batch (dict): dictionary with torch.Tensors sampled
+                from a data loader. Assumed to be on the device where
+                training will occur (after @process_batch_for_training
+                is called)
+
+            obs_normalization_stats (dict or None): if provided, this should map observation 
+                keys to dicts with a "mean" and "std" of shape (1, ...) where ... is the 
+                default shape for the observation.
+
+        Returns:
+            batch (dict): postproceesed batch
+        """
+        obs_keys = ["obs", "next_obs", "goal_obs"]
+        for k in obs_keys:
+            if k in batch and batch[k] is not None:
+                batch[k] = ObsUtils.process_obs_dict(batch[k])
+                if obs_normalization_stats is not None:
+                    batch[k] = ObsUtils.normalize_obs(batch[k], obs_normalization_stats=obs_normalization_stats)
+        return batch
+
     def train_on_batch(self, batch, epoch, validate=False):
         """
         Training on a single batch of data.

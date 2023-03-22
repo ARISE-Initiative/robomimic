@@ -1,5 +1,9 @@
 # Getting Started
 
+## Quickstart colab notebook
+
+If you prefer to test the basic functionality of robomimic without installing anything locally, try the quickstart [Colab notebook](https://colab.research.google.com/drive/1b62r_km9pP40fKF0cBdpdTO2P_2eIbC6?usp=sharing).
+
 ## Running experiments
 We begin with a quick tutorial on downloading datasets and running experiments.
 

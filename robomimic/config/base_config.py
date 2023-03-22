@@ -60,6 +60,7 @@ class BaseConfig(Config):
         self.train_config()
         self.algo_config()
         self.observation_config()
+        self.meta_config()
 
         # After Config init, new keys cannot be added to the config, except under nested
         # attributes that have called @do_not_lock_keys
@@ -84,6 +85,8 @@ class BaseConfig(Config):
         self.experiment.validate = True                             # whether to do validation or not
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
+        self.experiment.logging.log_wandb = False                   # enable wandb logging
+        self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
 
         ## save config - if and when to save model checkpoints ##
@@ -151,6 +154,9 @@ class BaseConfig(Config):
 
         # used for parallel data loading
         self.train.hdf5_use_swmr = True
+
+        # whether to load "next_obs" group from hdf5 - only needed for batch / offline RL algorithms
+        self.train.hdf5_load_next_obs = True
 
         # if true, normalize observations at train and test time, using the global mean and standard deviation
         # of each observation in each dimension, computed across the training set. See SequenceDataset.normalize_obs
@@ -235,27 +241,13 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
         # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
-        self.observation.encoder.rgb.core_class = "VisualCore"
-        self.observation.encoder.rgb.core_kwargs.feature_dimension = 64
-        self.observation.encoder.rgb.core_kwargs.flatten = True
-        self.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.do_not_lock_keys()
-        self.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.output_variance = False          # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.core_class = "VisualCore"                  # Default VisualCore class combines backbone (like ResNet-18) with pooling operation (like spatial softmax)
+        self.observation.encoder.rgb.core_kwargs = Config()                     # See models/obs_core.py for important kwargs to set and defaults used
+        self.observation.encoder.rgb.core_kwargs.do_not_lock_keys()
 
         # RGB: Obs Randomizer settings
-        self.observation.encoder.rgb.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
-        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76       # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76        # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1          # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_class = None                # Can set to 'CropRandomizer' to use crop randomization
+        self.observation.encoder.rgb.obs_randomizer_kwargs = Config()           # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
         # Allow for other custom modalities to be specified
@@ -266,16 +258,25 @@ class BaseConfig(Config):
 
         # =============== Scan default encoder (Conv1d backbone + linear layer output) ===============
         self.observation.encoder.scan = deepcopy(self.observation.encoder.rgb)
-        self.observation.encoder.scan.core_kwargs.pop("backbone_class")
-        self.observation.encoder.scan.core_kwargs.pop("backbone_kwargs")
 
         # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
-        self.observation.encoder.scan.core_class = "ScanCore"
-        self.observation.encoder.scan.core_kwargs.conv_activation = "relu"
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.out_channels = [32, 64, 64]
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]
+        self.observation.encoder.scan.core_class = "ScanCore"                   # Default ScanCore class uses Conv1D to process this modality
+        self.observation.encoder.scan.core_kwargs = Config()                    # See models/obs_core.py for important kwargs to set and defaults used
+        self.observation.encoder.scan.core_kwargs.do_not_lock_keys()
 
+    def meta_config(self):
+        """
+        This function populates the `config.meta` attribute of the config. This portion of the config 
+        is used to specify job information primarily for hyperparameter sweeps.
+        It contains hyperparameter keys and values, which are populated automatically
+        by the hyperparameter config generator (see `utils/hyperparam_utils.py`).
+        These values are read by the wandb logger (see `utils/log_utils.py`) to set job tags.
+        """
+        
+        self.meta.hp_base_config_file = None            # base config file in hyperparam sweep
+        self.meta.hp_keys = []                          # relevant keys (swept) in hyperparam sweep
+        self.meta.hp_values = []                        # values corresponding to keys in hyperparam sweep
+    
     @property
     def use_goals(self):
         # whether the agent is goal-conditioned

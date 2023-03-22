@@ -33,6 +33,12 @@ Example usage:
     python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
         --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
+    # (space saving option) extract 84x84 image observations with compression and without 
+    # extracting next obs (not needed for pure imitation learning algos)
+    python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
+        --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 \
+        --compress --exclude-next-obs
+
     # use dense rewards, and only annotate the end of trajectories with done signal
     python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image_dense_done_1.hdf5 \
         --done_mode 1 --dense --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
@@ -210,8 +216,15 @@ def dataset_states_to_obs(args):
         ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
         ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
         for k in traj["obs"]:
-            ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
-            ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
+            if args.compress:
+                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
+            else:
+                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
+            if not args.exclude_next_obs:
+                if args.compress:
+                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
+                else:
+                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
 
         # episode metadata
         if is_robosuite_env:
@@ -313,6 +326,20 @@ if __name__ == "__main__":
         "--copy_dones", 
         action='store_true',
         help="(optional) copy dones from source file instead of inferring them",
+    )
+
+    # flag to exclude next obs in dataset
+    parser.add_argument(
+        "--exclude-next-obs", 
+        action='store_true',
+        help="(optional) exclude next obs in dataset",
+    )
+
+    # flag to compress observations with gzip option in hdf5
+    parser.add_argument(
+        "--compress", 
+        action='store_true',
+        help="(optional) compress observations with gzip option in hdf5",
     )
 
     args = parser.parse_args()

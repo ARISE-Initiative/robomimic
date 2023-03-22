@@ -138,7 +138,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
         dataset_keys=config.train.dataset_keys,
-        load_next_obs=True, # make sure dataset returns s'
+        load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
         frame_stack=1, # no frame stacking
         seq_length=config.train.seq_length,
         pad_frame_stack=True,
@@ -484,7 +484,7 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     print("save checkpoint to {}".format(ckpt_path))
 
 
-def run_epoch(model, data_loader, epoch, validate=False, num_steps=None):
+def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
     """
     Run an epoch of training or validation.
 
@@ -501,6 +501,10 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None):
 
         num_steps (int): if provided, this epoch lasts for a fixed number of batches (gradient steps),
             otherwise the epoch is a complete pass through the training dataset
+
+        obs_normalization_stats (dict or None): if provided, this should map observation keys to dicts
+            with a "mean" and "std" of shape (1, ...) where ... is the default
+            shape for the observation.
 
     Returns:
         step_log_all (dict): dictionary of logged training metrics averaged across all batches
@@ -534,6 +538,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None):
         # process batch for training
         t = time.time()
         input_batch = model.process_batch_for_training(batch)
+        input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
         timing_stats["Process_Batch"].append(time.time() - t)
 
         # forward and backward pass
