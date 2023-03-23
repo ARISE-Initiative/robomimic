@@ -43,7 +43,7 @@ Welcome to robomimic's documentation!
    tutorials/dataset_contents
    tutorials/using_pretrained_models
    tutorials/observations
-   tutorials/pretrain_representation
+   tutorials/pretrained_representations
    tutorials/custom_algorithms
    tutorials/tensor_collections
 
