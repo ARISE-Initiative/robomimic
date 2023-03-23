@@ -2,6 +2,12 @@
 
 A list of projects and papers that use **robomimic**. If you would like to add your work to this list, please send the paper or project information to Ajay Mandlekar (<amandlek@cs.stanford.edu>).
 
+## 2023
+
+- [MimicPlay: Long-Horizon Imitation Learning by Watching Human Play](https://arxiv.org/abs/2302.12422) Chen Wang, Linxi Fan, Jiankai Sun, Ruohan Zhang, Li Fei-Fei, Danfei Xu, Yuke Zhu, Anima Anandkumar
+- [Diffusion Policy: Visuomotor Policy Learning via Action Diffusion](https://arxiv.org/abs/2303.04137) Cheng Chi, Siyuan Feng, Yilun Du, Zhenjia Xu, Eric Cousineau, Benjamin Burchfiel, Shuran Song
+- [Mind the Gap: Offline Policy Optimization for Imperfect Rewards](https://arxiv.org/abs/2302.01667) Jianxiong Li, Xiao Hu, Haoran Xu, Jingjing Liu, Xianyuan Zhan, Qing-Shan Jia, Ya-Qin Zhang
+
 ## 2022
 
 - [Learning and Retrieval from Prior Data for Skill-based Imitation Learning](https://arxiv.org/abs/2210.11435) Soroush Nasiriany, Tian Gao, Ajay Mandlekar, Yuke Zhu
@@ -11,6 +17,7 @@ A list of projects and papers that use **robomimic**. If you would like to add y
 - [Eliciting Compatible Demonstrations for Multi-Human Imitation Learning](https://arxiv.org/abs/2210.08073) Kanishk Gandhi, Siddharth Karamcheti, Madeline Liao, Dorsa Sadigh
 - [Masked Imitation Learning: Discovering Environment-Invariant Modalities in Multimodal Demonstrations](https://arxiv.org/abs/2209.07682) Yilun Hao, Ruinan Wang, Zhangjie Cao, Zihan Wang, Yuchen Cui, Dorsa Sadigh
 - [Know Your Boundaries: The Necessity of Explicit Behavioral Cloning in Offline RL](https://arxiv.org/abs/2206.00695) Wonjoon Goo, Scott Niekum
+- [HEETR: Pretraining for Robotic Manipulation on Heteromodal Data](https://openreview.net/forum?id=1_XARk3k-M) Garrett Thomas, Andrey Kolobov, Ching-An Cheng, Vibhav Vineet, Mihai Jalobeanu
 - [Translating Robot Skills: Learning Unsupervised Skill Correspondences Across Robots](https://proceedings.mlr.press/v162/shankar22a.html) Tanmay Shankar, Yixin Lin, Aravind Rajeswaran, Vikash Kumar, Stuart Anderson, Jean Oh
 - [Active Predicting Coding: Brain-Inspired Reinforcement Learning for Sparse Reward Robotic Control Problems](https://arxiv.org/abs/2209.09174) Alexander Ororbia, Ankur Mali
 - [Imitation Learning by Estimating Expertise of Demonstrators](https://arxiv.org/abs/2202.01288) Mark Beliaev, Andy Shih, Stefano Ermon, Dorsa Sadigh, Ramtin Pedarsani
