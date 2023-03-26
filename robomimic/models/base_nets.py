@@ -1578,9 +1578,7 @@ class GaussianNoiseRandomizer(Randomizer):
         Samples N random gaussian noises for each input in the batch, and then reshapes
         inputs to [B * N, ...].
         """
-        sizing = [1 for _ in inputs.shape]
-        sizing[0] = self.num_samples
-        out = torch.tile(inputs, sizing)
+        out = TensorUtils.repeat_by_expand_at(inputs, repeats=self.num_samples, dim=0)
 
         # Sample noise across all samples
         out = torch.rand(size=out.shape) * self.noise_std + self.noise_mean + out
