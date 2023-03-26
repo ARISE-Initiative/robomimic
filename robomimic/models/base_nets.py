@@ -22,6 +22,8 @@ import torchvision.transforms.functional as TVF
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
+from robomimic.utils.macros import VISUALIZE_RANDOMIZER
+from robomimic.utils.vis_utils import visualize_image_randomizer
 
 
 CONV_ACTIVATIONS = {
@@ -1266,7 +1268,14 @@ class Randomizer(Module):
         """
         Randomize raw inputs if training.
         """
-        return self._forward_in(inputs=inputs) if self.training else inputs
+        if self.training:
+            randomized_inputs = self._forward_in(inputs=inputs)
+            if VISUALIZE_RANDOMIZER:
+                num_samples_to_visualize = min(4, inputs.shape[0])
+                self._visualize(inputs, randomized_inputs, num_samples_to_visualize=num_samples_to_visualize)
+            return randomized_inputs
+        else:
+            return inputs
 
     def forward_out(self, inputs):
         """
@@ -1287,6 +1296,13 @@ class Randomizer(Module):
         Processing for network outputs.
         """
         return inputs
+
+    @abc.abstractmethod
+    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+        """
+        Visualize the original input and the randomized input for _forward_in for debugging purposes.
+        """
+        pass
 
 
 class CropRandomizer(Randomizer):
@@ -1389,6 +1405,27 @@ class CropRandomizer(Randomizer):
         out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0, 
             target_dims=(batch_size, self.num_crops))
         return out.mean(dim=1)
+
+    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+        batch_size = pre_random_input.shape[0]
+        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
+        randomized_input = TensorUtils.reshape_dimensions(
+            randomized_input,
+            begin_axis=0,
+            end_axis=0,
+            target_dims=(batch_size, self.num_crops)
+        )  # [B * N, ...] -> [B, N, ...]
+        randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
+
+        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+
+        visualize_image_randomizer(
+            pre_random_input_np,
+            randomized_input_np,
+            randomizer_name='{}'.format(str(self.__class__.__name__))
+        )
 
     def __repr__(self):
         """Pretty print network."""
@@ -1527,6 +1564,27 @@ class ColorRandomizer(Randomizer):
                                              target_dims=(batch_size, self.num_samples))
         return out.mean(dim=1)
 
+    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+        batch_size = pre_random_input.shape[0]
+        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
+        randomized_input = TensorUtils.reshape_dimensions(
+            randomized_input,
+            begin_axis=0,
+            end_axis=0,
+            target_dims=(batch_size, self.num_samples)
+        )  # [B * N, ...] -> [B, N, ...]
+        randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
+
+        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+
+        visualize_image_randomizer(
+            pre_random_input_np,
+            randomized_input_np,
+            randomizer_name='{}'.format(str(self.__class__.__name__))
+        )
+
     def __repr__(self):
         """Pretty print network."""
         header = '{}'.format(str(self.__class__.__name__))
@@ -1599,6 +1657,27 @@ class GaussianNoiseRandomizer(Randomizer):
         out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
                                              target_dims=(batch_size, self.num_samples))
         return out.mean(dim=1)
+
+    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+        batch_size = pre_random_input.shape[0]
+        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
+        randomized_input = TensorUtils.reshape_dimensions(
+            randomized_input,
+            begin_axis=0,
+            end_axis=0,
+            target_dims=(batch_size, self.num_samples)
+        )  # [B * N, ...] -> [B, N, ...]
+        randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
+
+        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+
+        visualize_image_randomizer(
+            pre_random_input_np,
+            randomized_input_np,
+            randomizer_name='{}'.format(str(self.__class__.__name__))
+        )
 
     def __repr__(self):
         """Pretty print network."""
