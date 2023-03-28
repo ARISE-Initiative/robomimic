@@ -6,4 +6,4 @@ Set of global variables shared across robomimic
 DEBUG = False
 
 # Whether to visualize the before & after of an observation randomizer
-VISUALIZE_RANDOMIZER = True
+VISUALIZE_RANDOMIZER = False
