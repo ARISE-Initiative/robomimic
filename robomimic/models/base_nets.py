@@ -1275,13 +1275,16 @@ class Randomizer(Module):
                 self._visualize(inputs, randomized_inputs, num_samples_to_visualize=num_samples_to_visualize)
             return randomized_inputs
         else:
-            return inputs
+            return self._forward_in_eval(inputs)
 
     def forward_out(self, inputs):
         """
         Processing for network outputs.
         """
-        return self._forward_out(inputs=inputs) if self.training else inputs
+        if self.training:
+            return self._forward_out(inputs)
+        else:
+            return self._forward_out_eval(inputs)
 
     @abc.abstractmethod
     def _forward_in(self, inputs):
@@ -1290,10 +1293,22 @@ class Randomizer(Module):
         """
         raise NotImplementedError
 
+    def _forward_in_eval(self, inputs):
+        """
+        Test-time behavior for the randomizer
+        """
+        return inputs
+
     @abc.abstractmethod
     def _forward_out(self, inputs):
         """
         Processing for network outputs.
+        """
+        return inputs
+
+    def _forward_out_eval(self, inputs):
+        """
+        Test-time behavior for the randomizer
         """
         return inputs
 
@@ -1394,6 +1409,16 @@ class CropRandomizer(Randomizer):
         )
         # [B, N, ...] -> [B * N, ...]
         return TensorUtils.join_dimensions(out, 0, 1)
+
+    def _forward_in_eval(self, inputs):
+        """
+        Do center crops during eval
+        """
+        assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        inputs = inputs.permute(*range(inputs.dim()-3), inputs.dim()-2, inputs.dim()-1, inputs.dim()-3)
+        out = ObsUtils.center_crop(inputs, self.crop_height, self.crop_width)
+        out = out.permute(*range(out.dim()-3), out.dim()-1, out.dim()-3, out.dim()-2)
+        return out
 
     def _forward_out(self, inputs):
         """
