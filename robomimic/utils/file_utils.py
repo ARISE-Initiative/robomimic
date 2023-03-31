@@ -63,6 +63,25 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
     return ep_lengths
 
 
+def get_demos_for_filter_key(hdf5_path, filter_key):
+    """
+    Gets demo keys that correspond to a particular filter key.
+
+    Args:
+        hdf5_path (str): path to hdf5 file
+        filter_key (str): name of filter key
+
+    Returns:
+        demo_keys ([str]): list of demonstration keys that
+            correspond to this filter key. For example, ["demo_0", 
+            "demo_1"].
+    """
+    f = h5py.File(hdf5_path, "r")
+    demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    f.close()
+    return demo_keys
+
+
 def get_env_metadata_from_dataset(dataset_path):
     """
     Retrieves env metadata from dataset.

@@ -19,6 +19,7 @@ import torch
 import robomimic
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.log_utils as LogUtils
+import robomimic.utils.file_utils as FileUtils
 
 from robomimic.utils.dataset import SequenceDataset
 from robomimic.envs.env_base import EnvBase
@@ -93,20 +94,31 @@ def load_data_for_training(config, obs_keys):
     """
 
     # config can contain an attribute to filter on
-    filter_by_attribute = config.train.hdf5_filter_key
+    train_filter_by_attribute = config.train.hdf5_filter_key
+    valid_filter_by_attribute = config.train.hdf5_validation_filter_key
+    if valid_filter_by_attribute is not None:
+        assert config.experiment.validate, "specified validation filter key {}, but config.experiment.validate is not set".format(valid_filter_by_attribute)
 
     # load the dataset into memory
     if config.experiment.validate:
         assert not config.train.hdf5_normalize_obs, "no support for observation normalization with validation data yet"
-        train_filter_by_attribute = "train"
-        valid_filter_by_attribute = "valid"
-        if filter_by_attribute is not None:
-            train_filter_by_attribute = "{}_{}".format(filter_by_attribute, train_filter_by_attribute)
-            valid_filter_by_attribute = "{}_{}".format(filter_by_attribute, valid_filter_by_attribute)
+        assert (train_filter_by_attribute is not None) and (valid_filter_by_attribute is not None), \
+            "did not specify filter keys corresponding to train and valid split in dataset" \
+            " - please fill config.train.hdf5_filter_key and config.train.hdf5_validation_filter_key"
+        train_demo_keys = FileUtils.get_demos_for_filter_key(
+            hdf5_path=os.path.expanduser(config.train.data),
+            filter_key=train_filter_by_attribute,
+        )
+        valid_demo_keys = FileUtils.get_demos_for_filter_key(
+            hdf5_path=os.path.expanduser(config.train.data),
+            filter_key=valid_filter_by_attribute,
+        )
+        assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
+            "validation demonstrations!"
         train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
     else:
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=filter_by_attribute)
+        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = None
 
     return train_dataset, valid_dataset

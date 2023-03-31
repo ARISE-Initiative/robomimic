@@ -2,7 +2,7 @@
     "algo_name": "cql",
     "experiment": {
         "name": "test",
-        "validate": true,
+        "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
             "log_tb": true,
@@ -44,6 +44,7 @@
         "hdf5_load_next_obs": true,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
+        "hdf5_validation_filter_key": null,
         "seq_length": 1,
         "dataset_keys": [
             "actions",

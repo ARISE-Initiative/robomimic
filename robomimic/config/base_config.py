@@ -82,7 +82,7 @@ class BaseConfig(Config):
         """
 
         self.experiment.name = "test"                               # name of experiment used to make log files
-        self.experiment.validate = True                             # whether to do validation or not
+        self.experiment.validate = False                            # whether to do validation or not
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
         self.experiment.logging.log_wandb = False                   # enable wandb logging
@@ -166,6 +166,10 @@ class BaseConfig(Config):
         # if provided, use the list of demo keys under the hdf5 group "mask/@hdf5_filter_key" for training, instead 
         # of the full dataset. This provides a convenient way to train on only a subset of the trajectories in a dataset.
         self.train.hdf5_filter_key = None
+
+        # if provided, use the list of demo keys under the hdf5 group "mask/@hdf5_validation_filter_key" for validation.
+        # Must be provided if @experiment.validate is True.
+        self.train.hdf5_validation_filter_key = None
 
         # length of experience sequence to fetch from the dataset
         self.train.seq_length = 1

@@ -139,6 +139,10 @@ def train(config, device):
     print("\n============= Training Dataset =============")
     print(trainset)
     print("")
+    if validset is not None:
+        print("\n============= Validation Dataset =============")
+        print(validset)
+        print("")
 
     # maybe retreve statistics for normalizing observations
     obs_normalization_stats = None
