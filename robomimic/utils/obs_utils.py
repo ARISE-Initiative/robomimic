@@ -379,7 +379,6 @@ def process_frame(frame, channel_dim, scale):
     # Channel size should either be 3 (RGB) or 1 (depth)
     assert (frame.shape[-1] == channel_dim)
     frame = TU.to_float(frame)
-
     frame /= scale
     frame = frame.clip(0.0, 1.0)
     frame = batch_image_hwc_to_chw(frame)

@@ -586,6 +586,7 @@ class R3MConv(ConvBase):
         header = '{}'.format(str(self.__class__.__name__))
         return header + '(input_channel={}, input_coord_conv={}, pretrained={}, freeze={})'.format(self._input_channel, self._input_coord_conv, self._pretrained, self._freeze)
 
+
 class MVPConv(ConvBase):
     """
     Base class for ConvNets pretrained with MVP (https://arxiv.org/abs/2203.06173)
@@ -665,7 +666,6 @@ class MVPConv(ConvBase):
         """Pretty print network."""
         header = '{}'.format(str(self.__class__.__name__))
         return header + '(input_channel={}, input_coord_conv={}, pretrained={}, freeze={})'.format(self._input_channel, self._input_coord_conv, self._pretrained, self._freeze)
-
 
 
 class CoordConv2d(nn.Conv2d, Module):
