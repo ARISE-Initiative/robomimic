@@ -1244,8 +1244,6 @@ def generate_d4rl_configs(
                 config.train.output_dir = os.path.join(base_output_dir_for_algo, "d4rl", algo_name, task_name, "trained_models")
                 config.train.data = os.path.join(base_dataset_dir, "d4rl", "converted", 
                     "{}.hdf5".format(task_name.replace("-", "_")))
-                
-                print(config.train.output_dir, algo_name)
 
             # save config to json file
             dir_to_save = os.path.join(base_config_dir, "d4rl", task_name)

@@ -164,6 +164,14 @@ class EnvBase(abc.ABC):
         """
         return
 
+    @property
+    def version(self):
+        """
+        Returns version of environment (str).
+        This is not an abstract method, some subclasses do not implement it
+        """
+        return None
+
     @abc.abstractmethod
     def serialize(self):
         """
