@@ -1168,7 +1168,7 @@ def generate_d4rl_configs(
 
     def cql_algo_config_modifier(config):
         with config.algo.values_unlocked():
-            # taken from TD3-BC settings describe in their paper
+            # taken from TD3-BC settings described in their paper
             config.algo.optim_params.critic.learning_rate.initial = 3e-4
             config.algo.optim_params.actor.learning_rate.initial = 3e-5
             config.algo.actor.bc_start_steps = 40000                        # pre-training steps for actor
@@ -1179,27 +1179,40 @@ def generate_d4rl_configs(
             config.algo.actor.layer_dims = (256, 256, 256)                  # MLP sizes
             config.algo.critic.layer_dims = (256, 256, 256)
         return config
+    
+    def iql_algo_config_modifier(config):
+        with config.algo.values_unlocked():
+            # taken from IQL settings described in their paper
+            config.algo.target_tau = 0.005
+            config.algo.vf_quantile = 0.7
+            config.algo.adv.beta = 3.0
+            config.algo.optim_params.critic.learning_rate.initial = 3e-4
+            config.algo.optim_params.vf.learning_rate.initial = 3e-4
+            config.algo.optim_params.actor.learning_rate.initial = 3e-4
+            config.algo.actor.layer_dims = (256, 256, 256)                  # MLP sizes
+            config.algo.critic.layer_dims = (256, 256, 256)
+        return config
 
     d4rl_tasks = [
-        # "halfcheetah-random-v0",
-        # "hopper-random-v0",
-        # "walker2d-random-v0",
-        "halfcheetah-medium-v0",
-        "hopper-medium-v0",
-        "walker2d-medium-v0",
-        "halfcheetah-expert-v0",
-        "hopper-expert-v0",
-        "walker2d-expert-v0",
-        "halfcheetah-medium-expert-v0",
-        "hopper-medium-expert-v0",
-        "walker2d-medium-expert-v0",
-        # "halfcheetah-medium-replay-v0",
-        # "hopper-medium-replay-v0",
-        # "walker2d-medium-replay-v0",
+        # "halfcheetah-random-v2",
+        # "hopper-random-v2",
+        # "walker2d-random-v2",
+        "halfcheetah-medium-v2",
+        "hopper-medium-v2",
+        "walker2d-medium-v2",
+        "halfcheetah-expert-v2",
+        "hopper-expert-v2",
+        "walker2d-expert-v2",
+        "halfcheetah-medium-expert-v2",
+        "hopper-medium-expert-v2",
+        "walker2d-medium-expert-v2",
+        # "halfcheetah-medium-replay-v2",
+        # "hopper-medium-replay-v2",
+        # "walker2d-medium-replay-v2",
     ]
     d4rl_json_paths = Config() # use for convenient nested dict
     for task_name in d4rl_tasks:
-        for algo_name in ["bcq", "cql", "td3_bc"]:
+        for algo_name in ["bcq", "cql", "td3_bc", "iql"]:
             config = config_factory(algo_name=algo_name)
 
             # hack: copy experiment and train sections from td3-bc, since that has defaults for training with D4RL
@@ -1216,6 +1229,8 @@ def generate_d4rl_configs(
                 config = bcq_algo_config_modifier(config)
             elif algo_name == "cql":
                 config = cql_algo_config_modifier(config)
+            elif algo_name == "iql":
+                config = iql_algo_config_modifier(config)
 
             # set experiment name
             with config.experiment.values_unlocked():
@@ -1223,10 +1238,14 @@ def generate_d4rl_configs(
             # set output folder and dataset
             with config.train.values_unlocked():
                 if base_output_dir is None:
-                    base_output_dir = "../{}_trained_models".format(algo_name)
-                config.train.output_dir = os.path.join(base_output_dir, "d4rl", algo_name, task_name, "trained_models")
+                    base_output_dir_for_algo = "../{}_trained_models".format(algo_name)
+                else:
+                    base_output_dir_for_algo = base_output_dir
+                config.train.output_dir = os.path.join(base_output_dir_for_algo, "d4rl", algo_name, task_name, "trained_models")
                 config.train.data = os.path.join(base_dataset_dir, "d4rl", "converted", 
                     "{}.hdf5".format(task_name.replace("-", "_")))
+                
+                print(config.train.output_dir, algo_name)
 
             # save config to json file
             dir_to_save = os.path.join(base_config_dir, "d4rl", task_name)
