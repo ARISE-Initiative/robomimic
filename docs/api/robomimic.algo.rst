@@ -52,6 +52,14 @@ robomimic.algo.hbc module
    :undoc-members:
    :show-inheritance:
 
+robomimic.algo.iql module
+-------------------------
+
+.. automodule:: robomimic.algo.iql
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.algo.iris module
 --------------------------
 

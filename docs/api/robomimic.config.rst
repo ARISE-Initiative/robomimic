@@ -60,6 +60,14 @@ robomimic.config.hbc\_config module
    :undoc-members:
    :show-inheritance:
 
+robomimic.config.iql\_config module
+-----------------------------------
+
+.. automodule:: robomimic.config.iql_config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.config.iris\_config module
 ------------------------------------
 
