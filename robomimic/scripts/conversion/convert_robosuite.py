@@ -41,6 +41,7 @@ if __name__ == "__main__":
     env_meta = dict(
         type=EB.EnvType.ROBOSUITE_TYPE,
         env_name=env_name,
+        env_version=f["data"].attrs["repository_version"],
         env_kwargs=env_info,
     )
     if "env_args" in f["data"].attrs:

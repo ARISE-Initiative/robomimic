@@ -5,6 +5,7 @@ in dataset files.
 """
 from copy import deepcopy
 import robomimic.envs.env_base as EB
+from robomimic.utils.log_utils import log_warning
 
 
 def get_env_class(env_meta=None, env_type=None, env=None):
@@ -93,6 +94,39 @@ def check_env_type(type_to_check, env_meta=None, env_type=None, env=None):
     """
     env_type = get_env_type(env_meta=env_meta, env_type=env_type, env=env)
     return (env_type == type_to_check)
+
+
+def check_env_version(env, env_meta):
+    """
+    Checks whether the passed env and env_meta dictionary having matching environment versions.
+    Logs warning if cannot find version or versions do not match.
+
+    Args:
+        env (instance of EB.EnvBase): environment instance
+
+        env_meta (dict): environment metadata, which should be loaded from demonstration
+            hdf5 with @FileUtils.get_env_metadata_from_dataset or from checkpoint (see
+            @FileUtils.env_from_checkpoint). Contains following key:
+
+                :`'env_version'`: environment version, type str
+    """
+    env_system_version = env.version
+    env_meta_version = env_meta.get("env_version", None)
+
+    if env_meta_version is None:
+        log_warning(
+            "No environment version found in dataset!"\
+            "\nCannot verify if dataset and installed environment versions match"\
+        )
+    elif env_system_version != env_meta_version:
+        log_warning(
+            "Dataset and installed environment version mismatch!"\
+            "\nDataset environment version: {meta}"\
+            "\nInstalled environment version: {sys}".format(
+                sys=env_system_version,
+                meta=env_meta_version,
+            )
+        )
 
 
 def is_robosuite_env(env_meta=None, env_type=None, env=None):
@@ -189,6 +223,7 @@ def create_env_from_metadata(
         use_image_obs=use_image_obs, 
         **env_kwargs,
     )
+    check_env_version(env, env_meta)
     return env
 
 
@@ -232,7 +267,7 @@ def create_env_for_data_processing(
     env_kwargs.pop("camera_width", None)
     env_kwargs.pop("reward_shaping", None)
 
-    return env_class.create_for_data_processing(
+    env = env_class.create_for_data_processing(
         env_name=env_name, 
         camera_names=camera_names, 
         camera_height=camera_height, 
@@ -240,3 +275,5 @@ def create_env_for_data_processing(
         reward_shaping=reward_shaping, 
         **env_kwargs,
     )
+    check_env_version(env, env_meta)
+    return env
