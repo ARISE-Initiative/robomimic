@@ -482,7 +482,7 @@ def reshape_dimensions_single(x, begin_axis, end_axis, target_dims):
     Args:
         x (torch.Tensor): tensor to reshape
         begin_axis (int): begin dimension
-        end_axis (int): end dimension
+        end_axis (int): end dimension (inclusive)
         target_dims (tuple or list): target shape for the range of dimensions
             (@begin_axis, @end_axis)
 
@@ -511,7 +511,7 @@ def reshape_dimensions(x, begin_axis, end_axis, target_dims):
     Args:
         x (dict or list or tuple): a possibly nested dictionary or list or tuple
         begin_axis (int): begin dimension
-        end_axis (int): end dimension
+        end_axis (int): end dimension (inclusive)
         target_dims (tuple or list): target shape for the range of dimensions
             (@begin_axis, @end_axis)
 
