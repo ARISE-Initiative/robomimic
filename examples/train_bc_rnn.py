@@ -86,7 +86,8 @@ def robosuite_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 10
@@ -248,7 +249,8 @@ def momart_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 50
