@@ -195,7 +195,7 @@ These networks take an observation dictionary as input (and possibly additional 
 ### ValueNetwork
 - A basic value network that predicts values from observations. Can optionally be goal conditioned on future observations.
 ### DistributionalActionValueNetwork
-- Distributional Q (action-value) network that outputs a categorical distribution over a discrete grid of value atoms. See the [paper](https://arxiv.org/pdf/1707.06887.pdf for more details).
+- Distributional Q (action-value) network that outputs a categorical distribution over a discrete grid of value atoms. See the [paper](https://arxiv.org/pdf/1707.06887.pdf) for more details.
 
 ## Implemented VAEs
 The library implements a general VAE architecture and a number of prior distributions. See `robomimic/models/vae_nets.py` for complete implementations.
