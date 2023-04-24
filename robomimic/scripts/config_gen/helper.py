@@ -194,7 +194,7 @@ def set_cuda_mode(generator, args):
             name="",
             group=-1,
             values=[False],
-            hidename=True,
+            # hidename=True,
         )
 
 
@@ -205,7 +205,7 @@ def set_rollout_mode(generator, args):
             name="",
             group=-1,
             values=[False],
-            hidename=True,
+            # hidename=True,
         )
 
 
@@ -223,7 +223,7 @@ def set_env_settings(generator, args):
                     value_names=[
                         "scene_proprio",
                     ],
-                    hidename=True,
+                    # hidename=True,
                 )
             else:
                 generator.add_param(
@@ -236,7 +236,7 @@ def set_env_settings(generator, args):
                     value_names=[
                         "proprio",
                     ],
-                    hidename=True,
+                    # hidename=True,
                 )
 
         if args.mod == 'im':
@@ -576,7 +576,7 @@ def set_r3m_mode(generator, args):
         values=[
             'r3m',
         ],
-        hidename=True,
+        # hidename=True,
     )
     generator.add_param(
         key="observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze",
@@ -585,7 +585,7 @@ def set_r3m_mode(generator, args):
         values_and_names=[
             (True, "T"),
         ],
-        hidename=True,
+        # hidename=True,
     )
     generator.add_param(
         key="observation.encoder.rgb2.core_kwargs.backbone_kwargs.pretrained",
@@ -594,7 +594,7 @@ def set_r3m_mode(generator, args):
         values=[
             'r3m',
         ],
-        hidename=True,
+        # hidename=True,
     )
     generator.add_param(
         key="observation.encoder.rgb2.core_kwargs.backbone_kwargs.freeze",
@@ -603,7 +603,7 @@ def set_r3m_mode(generator, args):
         values_and_names=[
             (True, "T"),
         ],
-        hidename=True,
+        # hidename=True,
     )
 
 

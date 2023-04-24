@@ -72,6 +72,8 @@ def convert_xml(old_xml_str, env_name, env):
         )
         for bname in [
             "payload_root",
+            
+            ### ignore all these other following assets (makes playback worse for some reason...)
             # "trash_main",
             # "transport_start_bin_root", "transport_target_bin_root",
             # "transport_trash_bin_root", "transport_start_bin_lid_root"
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     args.output_dataset = os.path.expanduser(args.output_dataset)
     
     assert args.output_dataset != args.dataset
-    assert robosuite.__version__ == '1.4.0'
+    assert robosuite.__version__ == '1.4.1'
     
     copyfile(args.dataset, args.output_dataset)
     
