@@ -100,6 +100,7 @@ Randomizers are `Modules` that perturb network inputs during training, and optio
 
 `Randomizer` modules are intended to be used alongside an `ObservationEncoder` --- see the next section for more details. Additional randomizer classes can be implemented by subclassing the `Randomizer` class and implementing the necessary abstract functions. 
 
+**Visualizing randomized input:** To visualize the original and randomized image input, set `VISUALIZE_RANDOMIZER = True` in `robomimic/macros.py`
 
 ## Observation Encoder and Decoder
  `ObservationEncoder` and `ObservationDecoder` are basic building blocks for dealing with observation dictionary inputs and outputs. They are designed to take in multiple streams of observation modalities as input (e.g. a dictionary containing images and robot proprioception signals), and output a dictionary of predictions like actions and subgoals. Below is an example of how to manually create an `ObservationEncoder` instance by registering observation modalities with the `register_obs_key` function.
