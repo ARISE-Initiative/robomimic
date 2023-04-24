@@ -144,6 +144,9 @@ if __name__ == "__main__":
                             download_dir = os.path.abspath(os.path.join(default_base_dir, task, dataset_type))
                             print("\nDownloading dataset:\n    task: {}\n    dataset type: {}\n    hdf5 type: {}\n    download path: {}"
                                 .format(task, dataset_type, hdf5_type, download_dir))
+                            url = DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"]
+                            if url is None:
+                                print("Skipping {}-{}-{}, no url for dataset exists. Create this dataset locally.".format(task, dataset_type, hdf5_type))
                             if args.dry_run:
                                 print("\ndry run: skip download")
                             else:
