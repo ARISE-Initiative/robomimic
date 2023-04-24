@@ -225,7 +225,17 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
 
     with config.train.values_unlocked():
         # set dataset path and possibly filter keys
-        file_name = DATASET_REGISTRY[task_name][dataset_type][hdf5_type]["url"].split("/")[-1]
+        url = DATASET_REGISTRY[task_name][dataset_type][hdf5_type]["url"]
+        if url is None:
+            # infer file_name
+            if task_name in ["lift", "can", "square", "tool_hang", "transport"]:
+                file_name = "{}_v141.hdf5".format(hdf5_type)
+            elif task_name in ["lift_real", "can_real", "tool_hang_real"]:
+                file_name = "{}.hdf5".format(hdf5_type)
+            else:
+                raise ValueError("Unknown dataset type")
+        else:
+            file_name = url.split("/")[-1]
         config.train.data = os.path.join(base_dataset_dir, task_name, dataset_type, file_name)
         config.train.hdf5_filter_key = None if filter_key is None else filter_key
         config.train.hdf5_validation_filter_key = None
