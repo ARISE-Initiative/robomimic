@@ -215,17 +215,24 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
         if dataset_type == "mg":
             # machine-generated datasets did not use validation
             config.experiment.validate = False
+        else:
+            # all other datasets used validation
+            config.experiment.validate = True
 
         if is_real_dataset:
             # no evaluation rollouts for real robot training
             config.experiment.rollout.enabled = False
 
     with config.train.values_unlocked():
-        # set dataset path and possibly filter key
+        # set dataset path and possibly filter keys
         file_name = DATASET_REGISTRY[task_name][dataset_type][hdf5_type]["url"].split("/")[-1]
         config.train.data = os.path.join(base_dataset_dir, task_name, dataset_type, file_name)
-        if filter_key is not None:
-            config.train.hdf5_filter_key = filter_key
+        config.train.hdf5_filter_key = None if filter_key is None else filter_key
+        config.train.hdf5_validation_filter_key = None
+        if config.experiment.validate:
+            # set train and valid keys for validation
+            config.train.hdf5_filter_key = "train" if filter_key is None else "{}_train".format(filter_key)
+            config.train.hdf5_validation_filter_key = "valid" if filter_key is None else "{}_valid".format(filter_key)
 
     with config.observation.values_unlocked():
         # maybe modify observation names and randomization sizes (since image size might be different)

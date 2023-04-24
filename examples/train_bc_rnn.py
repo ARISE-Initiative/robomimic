@@ -86,7 +86,8 @@ def robosuite_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 10
@@ -131,6 +132,18 @@ def robosuite_hyperparameters(config):
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+
+    # if you prefer to use pre-trained visual representations, uncomment the following lines
+    # R3M
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'R3MConv'                         # R3M backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.r3m_model_class = 'resnet18'       # R3M model class (resnet18, resnet34, resnet50)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                      # whether to freeze network during training or allow finetuning
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                  # no pooling class for pretraining model
+    # MVP
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'MVPConv'                                   # MVP backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.mvp_model_class = 'vitb-mae-egosoup'         # MVP model class (vits-mae-hoi, vits-mae-in, vits-sup-in, vitb-mae-egosoup, vitl-256-mae-egosoup)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                                # whether to freeze network during training or allow finetuning
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                            # no pooling class for pretraining model
 
     # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
     config.observation.encoder.rgb.obs_randomizer_class = None
@@ -236,7 +249,8 @@ def momart_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 50

@@ -130,6 +130,10 @@ def get_base_config(algo_name):
     config.experiment.validation_epoch_every_n_steps = 3
     config.train.num_epochs = 1
 
+    # default train and validation filter keys
+    config.train.hdf5_filter_key = "train"
+    config.train.hdf5_validation_filter_key = "valid"
+
     # ensure model saving, rollout, and offscreen video rendering are tested too
     config.experiment.save.enabled = True
     config.experiment.save.every_n_epochs = 1
