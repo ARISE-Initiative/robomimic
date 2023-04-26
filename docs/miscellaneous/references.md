@@ -7,6 +7,8 @@ A list of projects and papers that use **robomimic**. If you would like to add y
 - [MimicPlay: Long-Horizon Imitation Learning by Watching Human Play](https://arxiv.org/abs/2302.12422) Chen Wang, Linxi Fan, Jiankai Sun, Ruohan Zhang, Li Fei-Fei, Danfei Xu, Yuke Zhu, Anima Anandkumar
 - [Diffusion Policy: Visuomotor Policy Learning via Action Diffusion](https://arxiv.org/abs/2303.04137) Cheng Chi, Siyuan Feng, Yilun Du, Zhenjia Xu, Eric Cousineau, Benjamin Burchfiel, Shuran Song
 - [ORBIT: A Unified Simulation Framework for Interactive Robot Learning Environments](https://arxiv.org/abs/2301.04195) Mayank Mittal, Calvin Yu, Qinxi Yu, Jingzhou Liu, Nikita Rudin, David Hoeller, Jia Lin Yuan, Pooria Poorsarvi Tehrani, Ritvik Singh, Yunrong Guo, Hammad Mazhar, Ajay Mandlekar, Buck Babich, Gavriel State, Marco Hutter, Animesh Garg
+- [PLEX: Making the Most of the Available Data for Robotic Manipulation Pretraining](https://arxiv.org/abs/2303.08789) Garrett Thomas, Ching-An Cheng, Ricky Loynd, Vibhav Vineet, Mihai Jalobeanu, Andrey Kolobov
+- [Behavior Retrieval: Few-Shot Imitation Learning by Querying Unlabeled Datasets](https://arxiv.org/abs/2304.08742) Maximilian Du, Suraj Nair, Dorsa Sadigh, Chelsea Finn
 - [Mind the Gap: Offline Policy Optimization for Imperfect Rewards](https://arxiv.org/abs/2302.01667) Jianxiong Li, Xiao Hu, Haoran Xu, Jingjing Liu, Xianyuan Zhan, Qing-Shan Jia, Ya-Qin Zhang
 
 ## 2022
