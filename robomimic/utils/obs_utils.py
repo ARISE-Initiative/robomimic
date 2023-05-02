@@ -499,6 +499,17 @@ def normalize_obs(obs_dict, obs_normalization_stats):
 
     return obs_dict
 
+def normalize_actions(actions, action_normalization_stats):
+    scale = action_normalization_stats['scale']
+    offset = action_normalization_stats['offset']
+    actions = actions * scale + offset
+    return actions
+
+def unnormalize_actions(actions, action_normalization_stats):
+    scale = action_normalization_stats['scale']
+    offset = action_normalization_stats['offset']
+    actions = (actions - offset) / scale
+    return actions
 
 def has_modality(modality, obs_keys):
     """

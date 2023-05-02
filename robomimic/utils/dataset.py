@@ -30,6 +30,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_cache_mode=None,
         hdf5_use_swmr=True,
         hdf5_normalize_obs=False,
+        hdf5_normalize_action=False,
         filter_by_attribute=None,
         load_next_obs=True,
     ):
@@ -85,6 +86,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.hdf5_path = os.path.expanduser(hdf5_path)
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
+        self.hdf5_normalize_action = hdf5_normalize_action
         self._hdf5_file = None
 
         assert hdf5_cache_mode in ["all", "low_dim", None]
@@ -120,8 +122,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         if self.hdf5_normalize_obs:
             self.obs_normalization_stats = self.normalize_obs()
             
-        # prepare for action normalization
         self.action_normalization_stats = None
+        if self.hdf5_normalize_action:
+            self.action_normalization_stats = self.normalize_actions()
 
         # maybe store dataset in memory for fast access
         if self.hdf5_cache_mode in ["all", "low_dim"]:
@@ -429,7 +432,25 @@ class SequenceDataset(torch.utils.data.Dataset):
             obs_normalization_stats[k]["min"] = merged_stats[k]["min"].astype('float32')
             obs_normalization_stats[k]["max"] = merged_stats[k]["max"].astype('float32')
         
-        action_normalization_stats = obs_normalization_stats['actions']
+        # convert min and max to scale and offset
+        stats = obs_normalization_stats['actions']
+        range_eps = 1e-4
+        input_min = stats['min']
+        input_max = stats['max']
+        output_min = -1.0
+        output_max = 1.0
+        
+        input_range = input_max - input_min
+        ignore_dim = input_range < range_eps
+        input_range[ignore_dim] = output_max - output_min
+        scale = (output_max - output_min) / input_range
+        offset = output_min - scale * input_min
+        offset[ignore_dim] = (output_max + output_min) / 2 - input_min[ignore_dim]
+
+        action_normalization_stats = {
+            'scale': scale,
+            'offset': offset
+        }
         return action_normalization_stats
     
     def get_action_normalization_stats(self):
@@ -441,8 +462,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 normalization with a "min", "max", "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the action.
         """
-        if self.action_normalization_stats is None:
-            self.action_normalization_stats = self.normalize_actions()
+        assert self.hdf5_normalize_action, "not using action normalization!"
         return deepcopy(self.action_normalization_stats)
 
     def get_dataset_for_ep(self, ep, key):
@@ -522,6 +542,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         )
         if self.hdf5_normalize_obs:
             meta["obs"] = ObsUtils.normalize_obs(meta["obs"], obs_normalization_stats=self.obs_normalization_stats)
+        if self.hdf5_normalize_action:
+            meta["actions"] = ObsUtils.normalize_actions(meta["actions"], action_normalization_stats=self.action_normalization_stats)
 
         if self.load_next_obs:
             meta["next_obs"] = self.get_obs_sequence_from_demo(
