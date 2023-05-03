@@ -46,12 +46,12 @@ def example_dataset_path():
     from a server if it does not exist.
     """
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
-    dataset_path = os.path.join(dataset_folder, "test.hdf5")
+    dataset_path = os.path.join(dataset_folder, "test_v141.hdf5")
     if not os.path.exists(dataset_path):
         print("\nWARNING: test hdf5 does not exist! Downloading from server...")
         os.makedirs(dataset_folder, exist_ok=True)
         FileUtils.download_url(
-            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test.hdf5", 
+            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test_v141.hdf5", 
             download_dir=dataset_folder,
         )
     return dataset_path
