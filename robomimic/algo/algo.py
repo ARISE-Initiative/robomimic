@@ -430,6 +430,11 @@ class RolloutPolicy(object):
                 normalization. This should map observation keys to dicts
                 with a "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the observation.
+            
+            action_normalization_stats (dict): optionally pass a dictionary for action
+                normalization. This should be a dict with keys
+                "scale" and "offset" of shape (1, ...) where ... is the default
+                shape for the action.
         """
         self.policy = policy
         self.obs_normalization_stats = obs_normalization_stats
@@ -475,6 +480,7 @@ class RolloutPolicy(object):
         if goal is not None:
             goal = self._prepare_observation(goal)
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
+        import pdb; pdb.set_trace()
         ac = TensorUtils.to_numpy(ac)
         if self.action_normalization_stats is not None:
             ac = ObsUtils.unnormalize_actions(ac, self.action_normalization_stats)

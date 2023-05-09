@@ -30,7 +30,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_cache_mode=None,
         hdf5_use_swmr=True,
         hdf5_normalize_obs=False,
-        hdf5_normalize_action=False,
+        hdf5_normalize_action=None,
         filter_by_attribute=None,
         load_next_obs=True,
     ):
@@ -75,6 +75,9 @@ class SequenceDataset(torch.utils.data.Dataset):
             hdf5_normalize_obs (bool): if True, normalize observations by computing the mean observation
                 and std of each observation (in each dimension and modality), and normalizing to unit
                 mean and variance in each dimension.
+            
+            hdf5_normalize_action (bool or None): if True, normalize actions' range to [-1,1]. If None,
+                this value is determined by the hdf5_file['data'].attrs['absolute_actions'] attribute.
 
             filter_by_attribute (str): if provided, use the provided filter key to look up a subset of
                 demonstrations to load
@@ -86,8 +89,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.hdf5_path = os.path.expanduser(hdf5_path)
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
-        self.hdf5_normalize_action = hdf5_normalize_action
         self._hdf5_file = None
+        
+        if hdf5_normalize_action is None:
+            hdf5_normalize_action = self.hdf5_file['data'].attrs.get('absolute_actions', False)
+        self.hdf5_normalize_action = hdf5_normalize_action
+            
 
         assert hdf5_cache_mode in ["all", "low_dim", None]
         self.hdf5_cache_mode = hdf5_cache_mode
@@ -411,29 +418,29 @@ class SequenceDataset(torch.utils.data.Dataset):
         
         # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
         # with the previous statistics.
-        def get_obs_traj(ep):
-            obs_traj = dict()
-            obs_traj['actions'] = self.dataset.hdf5_file["data/{}/actions".format(ep)][()].astype('float32')
-            return obs_traj
+        def get_action_traj(ep):
+            action_traj = dict()
+            action_traj['actions'] = self.dataset.hdf5_file["data/{}/actions".format(ep)][()].astype('float32')
+            return action_traj
         
         ep = self.dataset.demos[0]
-        obs_traj = get_obs_traj(ep)
-        merged_stats = _compute_traj_stats(obs_traj)
+        action_traj = get_action_traj(ep)
+        merged_stats = _compute_traj_stats(action_traj)
         print("SequenceDataset: normalizing actions...")
         for ep in LogUtils.custom_tqdm(self.dataset.demos[1:]):
-            obs_traj = get_obs_traj(ep)
-            traj_stats = _compute_traj_stats(obs_traj)
+            action_traj = get_action_traj(ep)
+            traj_stats = _compute_traj_stats(action_traj)
             merged_stats = _aggregate_traj_stats(merged_stats, traj_stats)
         
-        obs_normalization_stats = { k : {} for k in merged_stats }
+        normalization_stats = { k : {} for k in merged_stats }
         for k in merged_stats:
-            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype('float32')
-            obs_normalization_stats[k]["std"] = np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]).astype('float32')
-            obs_normalization_stats[k]["min"] = merged_stats[k]["min"].astype('float32')
-            obs_normalization_stats[k]["max"] = merged_stats[k]["max"].astype('float32')
+            normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype('float32')
+            normalization_stats[k]["std"] = np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]).astype('float32')
+            normalization_stats[k]["min"] = merged_stats[k]["min"].astype('float32')
+            normalization_stats[k]["max"] = merged_stats[k]["max"].astype('float32')
         
         # convert min and max to scale and offset
-        stats = obs_normalization_stats['actions']
+        stats = normalization_stats['actions']
         range_eps = 1e-4
         input_min = stats['min']
         input_max = stats['max']
@@ -448,8 +455,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         offset[ignore_dim] = (output_max + output_min) / 2 - input_min[ignore_dim]
 
         action_normalization_stats = {
-            'scale': scale,
-            'offset': offset
+            "scale": scale,
+            "offset": offset
         }
         return action_normalization_stats
     

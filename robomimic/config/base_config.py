@@ -156,8 +156,6 @@ class BaseConfig(Config):
         # of each observation in each dimension, computed across the training set. See SequenceDataset.normalize_obs
         # in utils/dataset.py for more information.
         self.train.hdf5_normalize_obs = False
-        
-        self.train.hdf5_normalize_action = False
 
         # if provided, use the list of demo keys under the hdf5 group "mask/@hdf5_filter_key" for training, instead 
         # of the full dataset. This provides a convenient way to train on only a subset of the trajectories in a dataset.
