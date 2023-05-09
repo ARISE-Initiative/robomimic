@@ -420,14 +420,14 @@ class SequenceDataset(torch.utils.data.Dataset):
         # with the previous statistics.
         def get_action_traj(ep):
             action_traj = dict()
-            action_traj['actions'] = self.dataset.hdf5_file["data/{}/actions".format(ep)][()].astype('float32')
+            action_traj['actions'] = self.hdf5_file["data/{}/actions".format(ep)][()].astype('float32')
             return action_traj
         
-        ep = self.dataset.demos[0]
+        ep = self.demos[0]
         action_traj = get_action_traj(ep)
         merged_stats = _compute_traj_stats(action_traj)
         print("SequenceDataset: normalizing actions...")
-        for ep in LogUtils.custom_tqdm(self.dataset.demos[1:]):
+        for ep in LogUtils.custom_tqdm(self.demos[1:]):
             action_traj = get_action_traj(ep)
             traj_stats = _compute_traj_stats(action_traj)
             merged_stats = _aggregate_traj_stats(merged_stats, traj_stats)
@@ -469,7 +469,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 normalization with a "min", "max", "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the action.
         """
-        assert self.hdf5_normalize_action, "not using action normalization!"
         return deepcopy(self.action_normalization_stats)
 
     def get_dataset_for_ep(self, ep, key):
@@ -621,7 +620,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         seq = TensorUtils.pad_sequence(seq, padding=(seq_begin_pad, seq_end_pad), pad_same=True)
         pad_mask = np.array([0] * seq_begin_pad + [1] * (seq_end_index - seq_begin_index) + [0] * seq_end_pad)
-        pad_mask = pad_mask[:, None].astype(np.bool)
+        pad_mask = pad_mask[:, None].astype(bool)
 
         return seq, pad_mask
 

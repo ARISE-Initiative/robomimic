@@ -480,8 +480,7 @@ class RolloutPolicy(object):
         if goal is not None:
             goal = self._prepare_observation(goal)
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        import pdb; pdb.set_trace()
-        ac = TensorUtils.to_numpy(ac)
+        ac = TensorUtils.to_numpy(ac[0])
         if self.action_normalization_stats is not None:
             ac = ObsUtils.unnormalize_actions(ac, self.action_normalization_stats)
         return ac

@@ -139,10 +139,9 @@ def train(config, device):
     obs_normalization_stats = None
     if config.train.hdf5_normalize_obs:
         obs_normalization_stats = trainset.get_obs_normalization_stats()
-        
-    action_normalization_stats = None
-    if config.train.hdf5_normalize_action:
-        action_normalization_stats = trainset.get_action_normalization_stats()
+    
+    # this could be None determined by trainset's init arguments
+    action_normalization_stats = trainset.get_action_normalization_stats()
 
     # initialize data loaders
     train_loader = DataLoader(
