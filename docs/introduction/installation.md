@@ -3,7 +3,7 @@
 ## Requirements
 
 - Mac OS X or Linux machine
-- Python >= 3.6 (recommended 3.7.9)
+- Python >= 3.6 (recommended 3.8.0)
 - [conda](https://www.anaconda.com/products/individual) 
   - [virtualenv](https://virtualenv.pypa.io/en/latest/) is also an acceptable alternative, but we assume you have conda installed in our examples below
 
@@ -13,7 +13,7 @@
 <p class="admonition-title">1. Create and activate conda environment</p>
 
 ```sh
-$ conda create -n robomimic_venv python=3.7.9
+$ conda create -n robomimic_venv python=3.8.0
 $ conda activate robomimic_venv
 ```
 
@@ -31,7 +31,7 @@ $ conda activate robomimic_venv
 ```sh
 # Can change pytorch, torchvision versions
 # We don't install cudatoolkit since Mac does not have NVIDIA GPU
-$ conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
+$ conda install pytorch==1.12.1 torchvision==0.13.1 -c pytorch
 ```
 
 </p>
@@ -43,7 +43,7 @@ $ conda install pytorch==1.6.0 torchvision==0.7.0 -c pytorch
 
 ```sh
 # Can change pytorch, torchvision versions
-$ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
+$ conda install pytorch==1.12.1 torchvision==0.13.1 -c pytorch
 ```
 
 </p>
@@ -115,20 +115,20 @@ OR
 $ pip install robosuite
 ```
 
-**(Optional)** to use our released datasets and reproduce our experiments, switch to our `offline_study` branch (requires installing robosuite from source):
+**(Optional)** to use our released datasets and reproduce our experiments, switch to our `v1.4.1` branch (requires installing robosuite from source):
 
 ```sh
-git checkout offline_study
+git checkout v1.4.1
 ```
 
-<div class="admonition warning">
+<!-- <div class="admonition warning">
 <p class="admonition-title">mujoco-py dependency!</p>
 
 Robosuite requires [mujoco-py](https://github.com/openai/mujoco-py). If you are on an Ubuntu machine with a GPU, you should make sure that the `GPU` version of `mujoco-py` gets built, so that image rendering is fast (crucial for working with image datasets!).
 
 An easy way to ensure this is to clone the repository, change [this line](https://github.com/openai/mujoco-py/blob/4830435a169c1f3e3b5f9b58a7c3d9c39bdf4acb/mujoco_py/builder.py#L74) to `Builder = LinuxGPUExtensionBuilder`, and install from source by running `pip install -e .` in the `mujoco-py` root directory.
 
-</div>
+</div> -->
 
 </p>
 </details>

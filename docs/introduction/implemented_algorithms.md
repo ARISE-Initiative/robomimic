@@ -11,6 +11,10 @@
 
 - Behavioral Cloning with an RNN network. Implemented in the `BC_RNN` and `BC_RNN_GMM` (recurrent GMM policy) classes in `algo/bc.py`.
 
+### BC-Transformer
+
+- Behavioral Cloning with an Transformer network. Implemented in the `BC_Transformer` and `BC_Transformer_GMM` (transformer GMM policy) classes in `algo/bc.py`.
+
 ### HBC
 
 - Hierarchical Behavioral Cloning - the implementation is largely based off of [this paper](https://arxiv.org/abs/2003.06085). Implemented in the `HBC` class in `algo/hbc.py`.
@@ -28,6 +32,10 @@
 ### CQL
 
 - A recent batch offline RL algorithm from [this paper](https://arxiv.org/abs/2006.04779). Implemented in the `CQL` class in `algo/cql.py`.
+
+### IQL
+
+- A recent batch offline RL algorithm from [this paper](https://arxiv.org/abs/2110.06169). Implemented in the `IQL` class in `algo/iql.py`.
 
 ### TD3-BC
 
