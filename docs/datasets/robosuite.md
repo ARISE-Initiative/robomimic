@@ -92,7 +92,7 @@ In our testing, enabling both flags reduced the Square (PH) Image dataset size f
 ```sh
 @article{zhu2020robosuite,
   title={robosuite: A modular simulation framework and benchmark for robot learning},
-  author={Zhu, Yuke and Wong, Josiah and Mandlekar, Ajay and Mart{\'\i}n-Mart{\'\i}n, Roberto},
+  author={Zhu, Yuke and Wong, Josiah and Mandlekar, Ajay and Mart{\'\i}n-Mart{\'\i}n, Roberto and Joshi, Abhishek and Nasiriany, Soroush and Zhu, Yifeng},
   journal={arXiv preprint arXiv:2009.12293},
   year={2020}
 }
