@@ -12,8 +12,11 @@ robomimic v0.1 datasets is a large-scale, diverse collection of task demonstrati
 
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
+<!-- When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. -->
 
-When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch.
+Since the release of robomimic v0.3, we recommend that users install [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. The `v1.4.1` branch of robosuite uses Google DeepMind's [mujoco python bindings](https://github.com/deepmind/mujoco) which replaces the now deprecated [mujoco-py](https://github.com/openai/mujoco-py).
+
+Note that the CoRL 2021 datasets relied on the mujoco-py based `offline_study` branch of robosuite. In this version of robomimic we provide users with datasets based on `v1.4.1`, which we found produce similar results to the original `offline_study` datasets. However if you would like to download the `offline_study` datasets, please use the `v0.2.0` branch of robomimic and consult the [v0.2 docs](https://robomimic.github.io/docs/v0.2/datasets/robomimic_v0.1.html) for instructions.
 
 </div>
 
