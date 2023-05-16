@@ -31,7 +31,7 @@ $ conda activate robomimic_venv
 ```sh
 # Can change pytorch, torchvision versions
 # We don't install cudatoolkit since Mac does not have NVIDIA GPU
-$ conda install pytorch==1.12.1 torchvision==0.13.1 -c pytorch
+$ conda install pytorch==2.0.0 torchvision==0.15.1 -c pytorch
 ```
 
 </p>
@@ -43,7 +43,7 @@ $ conda install pytorch==1.12.1 torchvision==0.13.1 -c pytorch
 
 ```sh
 # Can change pytorch, torchvision versions
-$ conda install pytorch==1.12.1 torchvision==0.13.1 -c pytorch
+$ conda install pytorch==2.0.0 torchvision==0.15.1 -c pytorch
 ```
 
 </p>
