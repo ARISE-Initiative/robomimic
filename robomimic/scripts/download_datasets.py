@@ -92,7 +92,7 @@ if __name__ == "__main__":
         "--hdf5_types",
         type=str,
         nargs='+',
-        default=["raw"],
+        default=["low_dim"],
         help="hdf5 types to download datasets for (e.g. raw, low_dim, image). Defaults to raw. Pass 'all' \
             to download datasets for all available hdf5 types per task and dataset, or directly specify the list\
             of hdf5 types.",
@@ -146,7 +146,11 @@ if __name__ == "__main__":
                                 .format(task, dataset_type, hdf5_type, download_dir))
                             url = DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"]
                             if url is None:
-                                print("Skipping {}-{}-{}, no url for dataset exists. Create this dataset locally.".format(task, dataset_type, hdf5_type))
+                                print(
+                                    "Skipping {}-{}-{}, no url for dataset exists.".format(task, dataset_type, hdf5_type)
+                                    + " Create this dataset locally by running the appropriate command from robomimic/scripts/extract_obs_from_raw_datasets.sh."
+                                )
+                                continue
                             if args.dry_run:
                                 print("\ndry run: skip download")
                             else:
