@@ -439,12 +439,12 @@ class CropRandomizer(Randomizer):
     Randomly sample crops at input, and then average across crop features at output.
     """
     def __init__(
-            self,
-            input_shape,
-            crop_height=76,
-            crop_width=76,
-            num_crops=1,
-            pos_enc=False,
+        self,
+        input_shape,
+        crop_height=76,
+        crop_width=76,
+        num_crops=1,
+        pos_enc=False,
     ):
         """
         Args:
@@ -579,13 +579,13 @@ class ColorRandomizer(Randomizer):
     Randomly sample color jitter at input, and then average across color jtters at output.
     """
     def __init__(
-            self,
-            input_shape,
-            brightness=0.3,
-            contrast=0.3,
-            saturation=0.3,
-            hue=0.3,
-            num_samples=1,
+        self,
+        input_shape,
+        brightness=0.3,
+        contrast=0.3,
+        saturation=0.3,
+        hue=0.3,
+        num_samples=1,
     ):
         """
         Args:
@@ -737,12 +737,12 @@ class GaussianNoiseRandomizer(Randomizer):
     Randomly sample gaussian noise at input, and then average across noises at output.
     """
     def __init__(
-            self,
-            input_shape,
-            noise_mean=0.0,
-            noise_std=0.3,
-            limits=None,
-            num_samples=1,
+        self,
+        input_shape,
+        noise_mean=0.0,
+        noise_std=0.3,
+        limits=None,
+        num_samples=1,
     ):
         """
         Args:
