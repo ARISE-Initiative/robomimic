@@ -5,6 +5,9 @@ Set of global variables shared across robomimic
 # debugging functionalities are made active
 DEBUG = False
 
+# Whether to visualize the before & after of an observation randomizer
+VISUALIZE_RANDOMIZER = False
+
 # wandb entity (eg. username or team name)
 WANDB_ENTITY = None
 
