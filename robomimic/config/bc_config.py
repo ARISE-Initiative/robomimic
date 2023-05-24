@@ -24,9 +24,11 @@ class BCConfig(BaseConfig):
         """
 
         # optimization parameters
+        self.algo.optim_params.policy.optimizer_type = "adam"
         self.algo.optim_params.policy.learning_rate.initial = 1e-4      # policy learning rate
         self.algo.optim_params.policy.learning_rate.decay_factor = 0.1  # factor to decay LR by (if epoch schedule non-empty)
         self.algo.optim_params.policy.learning_rate.epoch_schedule = [] # epochs where LR decay occurs
+        self.algo.optim_params.policy.learning_rate.scheduler_type = "multistep" # learning rate scheduler ("multistep", "linear", etc) 
         self.algo.optim_params.policy.regularization.L2 = 0.00          # L2 regularization strength
 
         # loss weights
@@ -80,11 +82,25 @@ class BCConfig(BaseConfig):
         self.algo.vae.prior_layer_dims = (300, 400)                         # prior MLP layer dimensions (if learning conditioned prior)
 
         # RNN policy settings
-        self.algo.rnn.enabled = False               # whether to train RNN policy
-        self.algo.rnn.horizon = 10                  # unroll length for RNN - should usually match train.seq_length
-        self.algo.rnn.hidden_dim = 400              # hidden dimension size    
-        self.algo.rnn.rnn_type = "LSTM"             # rnn type - one of "LSTM" or "GRU"
-        self.algo.rnn.num_layers = 2                # number of RNN layers that are stacked
-        self.algo.rnn.open_loop = False             # if True, action predictions are only based on a single observation (not sequence)
-        self.algo.rnn.kwargs.bidirectional = False  # kwargs for torch.nn.LSTM / GRU
+        self.algo.rnn.enabled = False                               # whether to train RNN policy
+        self.algo.rnn.horizon = 10                                  # unroll length for RNN - should usually match train.seq_length
+        self.algo.rnn.hidden_dim = 400                              # hidden dimension size    
+        self.algo.rnn.rnn_type = "LSTM"                             # rnn type - one of "LSTM" or "GRU"
+        self.algo.rnn.num_layers = 2                                # number of RNN layers that are stacked
+        self.algo.rnn.open_loop = False                             # if True, action predictions are only based on a single observation (not sequence)
+        self.algo.rnn.kwargs.bidirectional = False                  # rnn kwargs
         self.algo.rnn.kwargs.do_not_lock_keys()
+
+        # Transformer policy settings
+        self.algo.transformer.enabled = False                       # whether to train transformer policy
+        self.algo.transformer.context_length = 10                   # length of (s, a) seqeunces to feed to transformer - should usually match train.frame_stack
+        self.algo.transformer.embed_dim = 512                       # dimension for embeddings used by transformer
+        self.algo.transformer.num_layers = 6                        # number of transformer blocks to stack
+        self.algo.transformer.num_heads = 8                         # number of attention heads for each transformer block (should divide embed_dim evenly)
+        self.algo.transformer.emb_dropout = 0.1                     # dropout probability for embedding inputs in transformer
+        self.algo.transformer.attn_dropout = 0.1                    # dropout probability for attention outputs for each transformer block
+        self.algo.transformer.block_output_dropout = 0.1            # dropout probability for final outputs for each transformer block
+        self.algo.transformer.sinusoidal_embedding = False          # if True, use standard positional encodings (sin/cos)
+        self.algo.transformer.activation = "gelu"                   # activation function for MLP in Transformer Block
+        self.algo.transformer.supervise_all_steps = False           # if true, supervise all intermediate actions, otherwise only final one
+        self.algo.transformer.nn_parameter_for_timesteps = True     # if true, use nn.Parameter otherwise use nn.Embedding

@@ -172,7 +172,11 @@ class BaseConfig(Config):
         self.train.hdf5_validation_filter_key = None
 
         # length of experience sequence to fetch from the dataset
+        # and whether to pad the beginning / end of the sequence at boundaries of trajectory in dataset
         self.train.seq_length = 1
+        self.train.pad_seq_length = True
+        self.train.frame_stack = 1
+        self.train.pad_frame_stack = True
 
         # keys from hdf5 to load into each batch, besides "obs" and "next_obs". If algorithms
         # require additional keys from each trajectory in the hdf5, they should be specified here.

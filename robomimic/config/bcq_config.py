@@ -71,6 +71,7 @@ class BCQConfig(BaseConfig):
         del self.algo.action_sampler.loss
         del self.algo.action_sampler.gaussian
         del self.algo.action_sampler.rnn
+        del self.algo.action_sampler.transformer
 
         # Number of epochs before freezing encoder (-1 for no freezing). Only applies to cVAE-based action samplers.
         with self.algo.action_sampler.unlocked():
