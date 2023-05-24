@@ -101,11 +101,21 @@ def optimizer_from_optim_params(net_optim_params, net):
     Returns:
         optimizer (torch.optim.Optimizer): optimizer
     """
-    return optim.Adam(
-        params=net.parameters(),
-        lr=net_optim_params["learning_rate"]["initial"],
-        weight_decay=net_optim_params["regularization"]["L2"],
-    )
+    optimizer_type = net_optim_params.get("optimizer_type", "adam")
+    lr = net_optim_params["learning_rate"]["initial"]
+
+    if optimizer_type == "adam":
+        return optim.Adam(
+            params=net.parameters(),
+            lr=lr,
+            weight_decay=net_optim_params["regularization"]["L2"],
+        )
+    elif optimizer_type == "adamw":
+        return optim.AdamW(
+            params=net.parameters(),
+            lr=lr,
+            weight_decay=net_optim_params["regularization"]["L2"],
+        )
 
 
 def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
@@ -126,14 +136,30 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
     Returns:
         lr_scheduler (torch.optim.lr_scheduler or None): learning rate scheduler
     """
+    lr_scheduler_type = net_optim_params["learning_rate"].get("scheduler_type", "multistep")
+    epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+
     lr_scheduler = None
-    if len(net_optim_params["learning_rate"]["epoch_schedule"]) > 0:
-        # decay LR according to the epoch schedule
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(
-            optimizer=optimizer,
-            milestones=net_optim_params["learning_rate"]["epoch_schedule"],
-            gamma=net_optim_params["learning_rate"]["decay_factor"],
-        )
+    if len(epoch_schedule) > 0:
+        if lr_scheduler_type == "linear":
+            assert len(epoch_schedule) == 1
+            end_epoch = epoch_schedule[0]
+            
+            return optim.lr_scheduler.LinearLR(
+                optimizer,
+                start_factor=1.0,
+                end_factor=net_optim_params["learning_rate"]["decay_factor"],
+                total_iters=end_epoch,
+            )
+        elif lr_scheduler_type == "multistep":
+            return optim.lr_scheduler.MultiStepLR(
+                optimizer=optimizer,
+                milestones=epoch_schedule,
+                gamma=net_optim_params["learning_rate"]["decay_factor"],
+            )
+        else:
+            raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
+        
     return lr_scheduler
 
 

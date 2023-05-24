@@ -38,6 +38,30 @@ def rnn_args_from_config(rnn_config):
     )
 
 
+def transformer_args_from_config(transformer_config):
+    """
+    Takes a Config object corresponding to Transformer settings
+    (for example `config.algo.transformer` in BCConfig) and extracts
+    transformer kwargs for instantiating transformer networks.
+    """
+    transformer_args = dict(
+        transformer_context_length=transformer_config.context_length,
+        transformer_embed_dim=transformer_config.embed_dim,
+        transformer_num_heads=transformer_config.num_heads,
+        transformer_emb_dropout=transformer_config.emb_dropout,
+        transformer_attn_dropout=transformer_config.attn_dropout,
+        transformer_block_output_dropout=transformer_config.block_output_dropout,
+        transformer_sinusoidal_embedding=transformer_config.sinusoidal_embedding,
+        transformer_activation=transformer_config.activation,
+        transformer_nn_parameter_for_timesteps=transformer_config.nn_parameter_for_timesteps,
+    )
+    
+    if "num_layers" in transformer_config:
+        transformer_args["transformer_num_layers"] = transformer_config.num_layers
+
+    return transformer_args
+
+
 class Module(torch.nn.Module):
     """
     Base class for networks. The only difference from torch.nn.Module is that it

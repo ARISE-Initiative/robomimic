@@ -46,6 +46,9 @@
         "hdf5_filter_key": null,
         "hdf5_validation_filter_key": null,
         "seq_length": 10,
+        "pad_seq_length": true,
+        "frame_stack": 1,
+        "pad_frame_stack": true,
         "dataset_keys": [
             "actions",
             "rewards",
@@ -250,10 +253,12 @@
         "actor": {
             "optim_params": {
                 "policy": {
+                    "optimizer_type": "adam",
                     "learning_rate": {
                         "initial": 0.0001,
                         "decay_factor": 0.1,
-                        "epoch_schedule": []
+                        "epoch_schedule": [],
+                        "scheduler_type": "multistep"
                     },
                     "regularization": {
                         "L2": 0.0
@@ -279,6 +284,20 @@
                 "kwargs": {
                     "bidirectional": false
                 }
+            },
+            "transformer": {
+                "enabled": false,
+                "context_length": 10,
+                "embed_dim": 512,
+                "num_layers": 6,
+                "num_heads": 8,
+                "emb_dropout": 0.1,
+                "attn_dropout": 0.1,
+                "block_output_dropout": 0.1,
+                "sinusoidal_embedding": false,
+                "activation": "gelu",
+                "supervise_all_steps": false,
+                "nn_parameter_for_timesteps": true
             }
         }
     },

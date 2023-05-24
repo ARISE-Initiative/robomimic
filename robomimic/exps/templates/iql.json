@@ -46,6 +46,9 @@
         "hdf5_filter_key": null,
         "hdf5_validation_filter_key": null,
         "seq_length": 1,
+        "pad_seq_length": true,
+        "frame_stack": 1,
+        "pad_frame_stack": true,
         "dataset_keys": [
             "actions",
             "rewards",

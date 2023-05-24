@@ -23,6 +23,7 @@ import robomimic.utils.file_utils as FileUtils
 
 from robomimic.utils.dataset import SequenceDataset
 from robomimic.envs.env_base import EnvBase
+from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
 
 
@@ -151,10 +152,10 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         obs_keys=obs_keys,
         dataset_keys=config.train.dataset_keys,
         load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
-        frame_stack=1, # no frame stacking
+        frame_stack=config.train.frame_stack,
         seq_length=config.train.seq_length,
-        pad_frame_stack=True,
-        pad_seq_length=True, # pad last obs per trajectory to ensure all sequences are sampled
+        pad_frame_stack=config.train.pad_frame_stack,
+        pad_seq_length=config.train.pad_seq_length,
         get_pad_mask=False,
         goal_mode=config.train.goal_mode,
         hdf5_cache_mode=config.train.hdf5_cache_mode,
@@ -202,7 +203,7 @@ def run_rollout(
         results (dict): dictionary containing return, success rate, etc.
     """
     assert isinstance(policy, RolloutPolicy)
-    assert isinstance(env, EnvBase)
+    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper)
 
     policy.start_episode()
 

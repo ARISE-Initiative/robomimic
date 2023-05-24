@@ -277,3 +277,15 @@ def create_env_for_data_processing(
     )
     check_env_version(env, env_meta)
     return env
+
+
+def wrap_env_from_config(env, config):
+    """
+    Wraps environment using the provided Config object to determine which wrappers
+    to use (if any).
+    """
+    if config.train.frame_stack > 1:
+        from robomimic.envs.wrappers import FrameStackWrapper
+        env = FrameStackWrapper(env, num_frames=config.train.frame_stack)
+
+    return env

@@ -104,6 +104,7 @@ def train(config, device):
                 render_offscreen=config.experiment.render_video,
                 use_image_obs=shape_meta["use_images"], 
             )
+            env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
             envs[env.name] = env
             print(envs[env.name])
 

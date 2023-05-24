@@ -425,6 +425,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=index_in_demo,
             keys=self.dataset_keys,
+            num_frames_to_stack=self.n_frame_stack - 1, # note: need to decrement self.n_frame_stack by one
             seq_length=self.seq_length
         )
 
@@ -545,7 +546,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return obs
 
-    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, seq_length=1):
+    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
         """
         Extract a (sub)sequence of dataset items from a demo given the @keys of the items (e.g., states, actions).
         
@@ -553,6 +554,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id (str): id of the demo, e.g., demo_0
             index_in_demo (int): beginning index of the sequence wrt the demo
             keys (tuple): list of keys to extract
+            num_frames_to_stack (int): numbers of frame to stack. Seq gets prepended with repeated items if out of range
             seq_length (int): sequence length to extract. Seq gets post-pended with repeated items if out of range
 
         Returns:
@@ -562,7 +564,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=index_in_demo,
             keys=keys,
-            num_frames_to_stack=0,  # don't frame stack for meta keys
+            num_frames_to_stack=num_frames_to_stack,
             seq_length=seq_length,
         )
         if self.get_pad_mask:
@@ -581,6 +583,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=0,
             keys=self.dataset_keys,
+            num_frames_to_stack=self.n_frame_stack - 1, # note: need to decrement self.n_frame_stack by one
             seq_length=demo_length
         )
         meta["obs"] = self.get_obs_sequence_from_demo(
