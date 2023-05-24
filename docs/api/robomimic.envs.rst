@@ -36,6 +36,14 @@ robomimic.envs.env\_robosuite module
    :undoc-members:
    :show-inheritance:
 
+robomimic.envs.wrappers module
+------------------------------
+
+.. automodule:: robomimic.envs.wrappers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

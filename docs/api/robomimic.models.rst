@@ -44,6 +44,14 @@ robomimic.models.policy\_nets module
    :undoc-members:
    :show-inheritance:
 
+robomimic.models.transformers module
+------------------------------------
+
+.. automodule:: robomimic.models.transformers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.models.vae\_nets module
 ---------------------------------
 
