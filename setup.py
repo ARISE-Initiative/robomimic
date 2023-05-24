@@ -37,7 +37,7 @@ setup(
     author="Ajay Mandlekar, Danfei Xu, Josiah Wong, Soroush Nasiriany, Chen Wang",
     url="https://github.com/ARISE-Initiative/robomimic",
     author_email="amandlek@cs.stanford.edu",
-    version="0.2.0",
+    version="0.3.0",
     long_description=long_description,
     long_description_content_type='text/markdown'
 )

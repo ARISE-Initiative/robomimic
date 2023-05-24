@@ -19,14 +19,14 @@ Download the robosuite **Lift (PH)** dataset (see [this link](../datasets/robomi
 $ python robomimic/scripts/download_datasets.py --tasks lift --dataset_types ph
 ```
 
-The dataset can be found at `datasets/lift/ph/low_dim.hdf5`
+The dataset can be found at `datasets/lift/ph/low_dim_v141.hdf5`
 
 ### Step 2: Launch experiment
 
 Now, we will run an experiment using `train.py`. In this case we would like to run behavior cloning (BC) for the lift dataset we just downloaded.
 
 ```sh
-$ python robomimic/scripts/train.py --config robomimic/exps/templates/bc.json --dataset datasets/lift/ph/low_dim.hdf5 --debug
+$ python robomimic/scripts/train.py --config robomimic/exps/templates/bc.json --dataset datasets/lift/ph/low_dim_v141.hdf5 --debug
 ```
 
 <div class="admonition note">
@@ -39,7 +39,7 @@ Make sure to add the `--debug` flag to your experiments as a sanity check that y
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
 
-This example [requires robosuite](./installation.html#robosuite) to be installed (under the `offline_study` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
+This example [requires robosuite](./installation.html#robosuite) to be installed (under the `v1.4.1` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
 
 </div>
 

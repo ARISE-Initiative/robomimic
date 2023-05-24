@@ -13,6 +13,9 @@ Configured under `experiment.logging`:
     
     # save tensorboard logs under `logs/tb` in experiment folder
     "log_tb": true
+
+    # save wandb logs under `logs/wandb` in experiment folder
+    "log_wandb": true
 },
 ```
 
@@ -60,6 +63,7 @@ config.json               # config used for this experiment
 logs/                     # experiment log files
   log.txt                    # terminal output
   tb/                        # tensorboard logs
+  wandb/                     # wandb logs
 videos/                   # videos of robot rollouts during training
 models/                   # saved model checkpoints
 ```

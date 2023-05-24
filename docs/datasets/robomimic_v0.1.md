@@ -12,8 +12,11 @@ robomimic v0.1 datasets is a large-scale, diverse collection of task demonstrati
 
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
+<!-- When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. -->
 
-When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `offline_study` branch.
+Since the release of robomimic v0.3, we recommend that users install [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. The `v1.4.1` branch of robosuite uses Google DeepMind's [mujoco python bindings](https://github.com/deepmind/mujoco) which replaces the now deprecated [mujoco-py](https://github.com/openai/mujoco-py).
+
+Note that the CoRL 2021 datasets relied on the mujoco-py based `offline_study` branch of robosuite. In this version of robomimic we provide users with datasets based on `v1.4.1`, which we found produce similar results to the original `offline_study` datasets. However if you would like to download the `offline_study` datasets, please use the `v0.2.0` branch of robomimic and consult the [v0.2 docs](https://robomimic.github.io/docs/v0.2/datasets/robomimic_v0.1.html) for instructions.
 
 </div>
 
@@ -33,8 +36,8 @@ $ python download_datasets.py
 $ python download_datasets.py --tasks sim --dataset_types ph --hdf5_types low_dim --dry_run
 $ python download_datasets.py --tasks sim --dataset_types ph --hdf5_types low_dim
 
-# download all low-dim and image multi-human datasets for the can and square tasks
-$ python download_datasets.py --tasks can square --dataset_types mh --hdf5_types low_dim image
+# download all low-dim multi-human datasets for the can and square tasks
+$ python download_datasets.py --tasks can square --dataset_types mh --hdf5_types low_dim
 
 # download the sparse reward machine-generated low-dim datasets
 $ python download_datasets.py --tasks all --dataset_types mg --hdf5_types low_dim_sparse
@@ -61,9 +64,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(PH)**                      |                      **Can<br />(PH)**                       |                     **Square<br />(PH)**                     |                   **Transport<br />(PH)**                    |                   **Tool Hang<br />(PH)**                    |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |               ![square](../images/square.png)                |            ![transport](../images/transport.png)             |            ![tool_hang](../images/tool_hang.png)             |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/demo.hdf5)<br />(21 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/demo.hdf5)<br />(45 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/demo.hdf5)<br />(49 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/demo.hdf5)<br />(185 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/demo.hdf5)<br />(127 MB) |
-| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/low_dim.hdf5)<br />(18 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/low_dim.hdf5)<br />(44 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/low_dim.hdf5)<br />(48 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/low_dim.hdf5)<br />(296 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/low_dim.hdf5)<br />(193 MB) |
-| [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/image.hdf5)<br />(801 MB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/image.hdf5)<br />(1.9 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/image.hdf5)<br />(2.5 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/image.hdf5)<br />(16 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/image.hdf5)<br />(63 GB) |
+| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/demo_v141.hdf5) |
+| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/low_dim_v141.hdf5) |
 
 |                   **Lift Real<br />(PH)**                    |                    **Can Real<br />(PH)**                    |                 **Tool Hang Real<br />(PH)**                 |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
@@ -86,10 +88,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(MH)**                      |                      **Can<br />(MH)**                       |                     **Square<br />(MH)**                     |                   **Transport<br />(MH)**                    |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |               ![square](../images/square.png)                |            ![transport](../images/transport.png)             |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/demo.hdf5)<br />(20 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/demo.hdf5)<br />(51 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/demo.hdf5)<br />(45 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/demo.hdf5)<br />(212 MB) |
-| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/low_dim.hdf5)<br />(46 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/low_dim.hdf5)<br />(108 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/low_dim.hdf5)<br />(119 MB) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/low_dim.hdf5)<br />(609 MB) |
-| [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/image.hdf5)<br />(2.6 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/image.hdf5)<br />(5.1 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/image.hdf5)<br />(6.5 GB) | [image](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/image.hdf5)<br />(32 GB) |
-
+| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/demo_v141.hdf5) |
+| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/low_dim_v141.hdf5) |
 </p>
 </details>
 
@@ -107,11 +107,9 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(MG)**                      |                      **Can<br />(MG)**                       |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/demo.hdf5)<br />(96 MB) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/demo.hdf5)<br />(457 MB) |
-| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_sparse.hdf5)<br />(303 MB) | [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_sparse.hdf5)<br />(1.1 GB) |
-| [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_dense.hdf5)<br />(303 MB) | [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_dense.hdf5)<br />(1.1 GB) |
-| [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/image_sparse.hdf5)<br />(19 GB) | [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/image_sparse.hdf5)<br />(48 GB) |
-| [image (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/image_dense.hdf5)<br />(19 GB) | [image (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/image_dense.hdf5)<br />(48 GB) |
+| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/demo_v141.hdf5) |
+| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_sparse_v141.hdf5) | [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_sparse_v141.hdf5) |
+| [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_dense_v141.hdf5) | [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_dense_v141.hdf5) |
 
 </p>
 </details>
@@ -128,9 +126,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                        **Can Paired**                        |
 | :----------------------------------------------------------: |
 | <img src="../images/can_paired.png" alt="can_paired" style="zoom:12%;" /> |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo.hdf5)<br />(39 MB) |
-| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim.hdf5)<br />(39 MB) |
-| [image (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/image.hdf5)<br />(1.7 GB) |
+| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo_v141.hdf5) |
+| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim_v141.hdf5) |
 
 </p>
 </details>
@@ -138,7 +135,7 @@ We also provide direct download links for each hdf5 dataset (the download links 
 ## Postprocessing
 If a **low_dim** or **image** dataset was downloaded, the dataset works out of the box! No postprocessing is needed.
 
-If a **raw** dataset was downloaded, the dataset must be postprocessed since there are no observations stored. You must run `dataset_states_to_obs.py`. For more information, see [this page](robosuite.html#extracting-observations-from-mujoco-states).
+If a **raw** dataset was downloaded, the dataset must be postprocessed since there are no observations stored. To extract observations, please see the `extract_obs_from_raw_datasets.sh` script.
 
 ## Info
 
@@ -191,7 +188,7 @@ python /path/to/robomimic/scripts/train.py --config /path/to/robomimic/exps/pape
 <div class="admonition info">
 <p class="admonition-title">Want to Run Experiments on Custom Observations?</p>
 
-We provide the raw (observation-free) `demo.hdf5` datasets so that you can generate your own custom set of observations, such as additional camera viewpoints. For information, see [Extracting Observations from Datasets](robosuite.md#extracting-observations-from-mujoco-states).
+We provide the raw (observation-free) `demo_v141.hdf5` datasets so that you can generate your own custom set of observations, such as additional camera viewpoints. For information, see [Extracting Observations from Datasets](robosuite.md#extracting-observations-from-mujoco-states).
 
 **NOTE**: To compare against how our paper's released datasets were generated, please see the `extract_obs_from_raw_datasets.sh` script.
 

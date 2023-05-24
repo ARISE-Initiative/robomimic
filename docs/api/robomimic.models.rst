@@ -20,6 +20,14 @@ robomimic.models.distributions module
    :undoc-members:
    :show-inheritance:
 
+robomimic.models.obs\_core module
+---------------------------------
+
+.. automodule:: robomimic.models.obs_core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.models.obs\_nets module
 ---------------------------------
 
