@@ -229,8 +229,8 @@ $ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
 
 ## Citation
 
-```sh
-@inproceedings{mandlekar2021matters,
+```bibtex
+@inproceedings{robomimic2021,
   title={What Matters in Learning from Offline Human Demonstrations for Robot Manipulation},
   author={Mandlekar, Ajay and Xu, Danfei and Wong, Josiah and Nasiriany, Soroush and Wang, Chen and Kulkarni, Rohun and Fei-Fei, Li and Savarese, Silvio and Zhu, Yuke and Mart{\'\i}n-Mart{\'\i}n, Roberto},
   booktitle={5th Annual Conference on Robot Learning},
