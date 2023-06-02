@@ -224,7 +224,7 @@ $ python generate_paper_configs.py --output_dir /tmp/experiment_results
 
 # the training command can be found in robomimic/exps/paper/core.sh
 # Training results can be viewed at /tmp/experiment_results (--output_dir when generating paper configs).
-$ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc.json
+$ python train.py --config ../exps/paper/core/lift/ph/low_dim/bc_rnn.json
 ```
 
 ## Citation

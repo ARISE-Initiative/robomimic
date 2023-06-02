@@ -22,7 +22,7 @@ The preferred way to specify training parameters is to pass a config json to the
 $ python train.py --config ../exps/templates/bc.json --dataset ../../tests/assets/test_v141.hdf5
 ```
 
-Please see the [hyperparameter helper docs](./advanced.html#using-the-hyperparameter-helper-to-launch-runs) to see how to easily generate json configs for launching training runs.
+Please see the [hyperparameter helper tutorial](../tutorials/hyperparam_scan.html) to see how to easily generate json configs for launching training runs.
 
 #### 2. Constructing a config object in code
 
