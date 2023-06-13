@@ -50,8 +50,6 @@
         "pad_frame_stack": true,
         "dataset_keys": [
             "actions",
-            "rewards",
-            "dones"
         ],
         "goal_mode": null,
         "cuda": true,
