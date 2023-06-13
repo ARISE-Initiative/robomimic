@@ -2,7 +2,7 @@
     "algo_name": "bc",
     "experiment": {
         "name": "test",
-        "validate": true,
+        "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
             "log_tb": true,
@@ -49,7 +49,9 @@
         "frame_stack": 10,
         "pad_frame_stack": true,
         "dataset_keys": [
-            "actions"
+            "actions",
+            "rewards",
+            "dones"
         ],
         "goal_mode": null,
         "cuda": true,
