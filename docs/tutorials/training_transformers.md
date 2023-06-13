@@ -12,7 +12,7 @@ Before trying to train a transformer, it might be useful to read the following t
 
 </div>
 
-A template with tuned parameters for transformer based policy networks is defined in `robomimic/config/default_templates/bc_transformer.json`.  This configuration file is for datasets with low-dimensional state observations, examples below show how to modify this file for image observations.  
+A template with tuned parameters for transformer based policy networks is defined in `robomimic/config/default_templates/bc_transformer.json`.
 
 #### 1. Using default configurations
 
