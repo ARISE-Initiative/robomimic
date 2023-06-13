@@ -49,7 +49,7 @@
         "frame_stack": 10,
         "pad_frame_stack": true,
         "dataset_keys": [
-            "actions",
+            "actions"
         ],
         "goal_mode": null,
         "cuda": true,
