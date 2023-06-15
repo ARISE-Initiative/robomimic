@@ -82,7 +82,7 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
     return demo_keys
 
 
-def get_env_metadata_from_dataset(dataset_path):
+def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     """
     Retrieves env metadata from dataset.
 
@@ -98,12 +98,17 @@ def get_env_metadata_from_dataset(dataset_path):
     """
     dataset_path = os.path.expanduser(dataset_path)
     f = h5py.File(dataset_path, "r")
-    env_meta = json.loads(f["data"].attrs["env_args"])
+    if ds_format == "robomimic":
+        env_meta = json.loads(f["data"].attrs["env_args"])
+    elif ds_format == "r2d2":
+        env_meta = dict(f.attrs)
+    else:
+        raise ValueError
     f.close()
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="robomimic", verbose=False):
     """
     Retrieves shape metadata from dataset.
 
@@ -127,28 +132,55 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
     # read demo file for some metadata
     dataset_path = os.path.expanduser(dataset_path)
     f = h5py.File(dataset_path, "r")
-    demo_id = list(f["data"].keys())[0]
-    demo = f["data/{}".format(demo_id)]
+    
+    if ds_format == "robomimic":
+        demo_id = list(f["data"].keys())[0]
+        demo = f["data/{}".format(demo_id)]
 
-    # action dimension
-    shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
+        # action dimension
+        shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
 
-    # observation dimensions
-    all_shapes = OrderedDict()
+        # observation dimensions
+        all_shapes = OrderedDict()
 
-    if all_obs_keys is None:
-        # use all modalities present in the file
-        all_obs_keys = [k for k in demo["obs"]]
+        if all_obs_keys is None:
+            # use all modalities present in the file
+            all_obs_keys = [k for k in demo["obs"]]
 
-    for k in sorted(all_obs_keys):
-        initial_shape = demo["obs/{}".format(k)].shape[1:]
-        if verbose:
-            print("obs key {} with shape {}".format(k, initial_shape))
-        # Store processed shape for each obs key
-        all_shapes[k] = ObsUtils.get_processed_shape(
-            obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
-            input_shape=initial_shape,
-        )
+        for k in sorted(all_obs_keys):
+            initial_shape = demo["obs/{}".format(k)].shape[1:]
+            if verbose:
+                print("obs key {} with shape {}".format(k, initial_shape))
+            # Store processed shape for each obs key
+            all_shapes[k] = ObsUtils.get_processed_shape(
+                obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
+                input_shape=initial_shape,
+            )
+    elif ds_format == "r2d2":
+        shape_meta['ac_dim'] = f["action/cartesian_velocity"].shape[1] + 1 # 1 for "action/gripper_velocity"
+        
+        # observation dimensions
+        all_shapes = OrderedDict()
+
+        # hack all relevant obs shapes for now
+        for k in [
+            "robot_state/cartesian_position",
+            "robot_state/gripper_position",
+            "robot_state/joint_positions",
+            "camera/image/hand_camera_image",
+            "camera/image/varied_camera_left_image",
+            "camera/image/varied_camera_right_image",
+        ]:
+            initial_shape = f["observation/{}".format(k)].shape[1:]
+            if len(initial_shape) == 0:
+                initial_shape = (1,)
+
+            all_shapes[k] = ObsUtils.get_processed_shape(
+                obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
+                input_shape=initial_shape,
+            )
+    else:
+        raise ValueError
 
     f.close()
 

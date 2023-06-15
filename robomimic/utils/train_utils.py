@@ -21,7 +21,7 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.log_utils as LogUtils
 import robomimic.utils.file_utils as FileUtils
 
-from robomimic.utils.dataset import SequenceDataset
+from robomimic.utils.dataset import SequenceDataset, R2D2Dataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
@@ -163,9 +163,62 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
         filter_by_attribute=filter_by_attribute
     )
-    dataset = SequenceDataset(**ds_kwargs)
+
+    ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
+    ds_kwargs["filter_by_attribute"] = [filter_by_attribute for ds_cfg in config.train.data]
+    ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
+    ds_labels = [ds_cfg.get("label", "dummy") for ds_cfg in config.train.data]
+
+    meta_ds_kwargs = dict()
+
+    dataset = get_dataset(
+        ds_class=R2D2Dataset if config.train.data_format == "r2d2" else SequenceDataset,
+        ds_kwargs=ds_kwargs,
+        ds_weights=ds_weights,
+        ds_labels=ds_labels,
+        normalize_weights_by_ds_size=False,
+        meta_ds_class=MetaDataset,
+        meta_ds_kwargs=meta_ds_kwargs,
+    )
 
     return dataset
+
+
+def get_dataset(
+    ds_class,
+    ds_kwargs,
+    ds_weights,
+    ds_labels,
+    normalize_weights_by_ds_size,
+    meta_ds_class=MetaDataset,
+    meta_ds_kwargs=None,
+):
+    ds_list = []
+    for i in range(len(ds_weights)):
+        
+        ds_kwargs_copy = deepcopy(ds_kwargs)
+
+        keys = ["hdf5_path", "filter_by_attribute"]
+
+        for k in keys:
+            ds_kwargs_copy[k] = ds_kwargs[k][i]
+        
+        ds_list.append(ds_class(**ds_kwargs_copy))
+    
+    if len(ds_weights) == 1:
+        ds = ds_list[0]
+    else:
+        if meta_ds_kwargs is None:
+            meta_ds_kwargs = dict()
+        ds = meta_ds_class(
+            datasets=ds_list,
+            ds_weights=ds_weights,
+            ds_labels=ds_labels,
+            normalize_weights_by_ds_size=normalize_weights_by_ds_size,
+            **meta_ds_kwargs
+        )
+
+    return ds
 
 
 def run_rollout(

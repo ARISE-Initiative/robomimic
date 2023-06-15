@@ -69,16 +69,19 @@ def train(config, device):
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # make sure the dataset exists
-    dataset_path = os.path.expanduser(config.train.data)
+    eval_dataset_cfg = config.train.data[0]
+    dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
+    ds_format = config.train.data_format
     if not os.path.exists(dataset_path):
         raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
     # load basic metadata from training file
     print("\n============= Loaded Environment Metadata =============")
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=config.train.data)
+    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=config.train.data,
+        dataset_path=dataset_path,
         all_obs_keys=config.all_obs_keys,
+        ds_format=ds_format,
         verbose=True
     )
 

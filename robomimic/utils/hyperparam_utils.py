@@ -41,7 +41,7 @@ class ConfigGenerator(object):
         assert isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
-    def add_param(self, key, name, group, values, value_names=None):
+    def add_param(self, key, name, group, values, value_names=None, hidename=False):
         """
         Add parameter to the hyperparameter sweep.
 
@@ -68,6 +68,7 @@ class ConfigGenerator(object):
             group=group, 
             values=values, 
             value_names=value_names,
+            hidename=hidename,
         )
 
     def generate(self):
@@ -99,6 +100,9 @@ class ConfigGenerator(object):
         name = base_name
         for k in parameter_values:
             # append parameter name and value to end of base name
+            if len(self.parameters[k].name) == 0 or self.parameters[k].hidename:
+                # empty string indicates that naming should be skipped
+                continue
             if len(self.parameters[k].name) == 0:
                 # empty string indicates that naming should be skipped
                 continue
