@@ -4,6 +4,16 @@ A list of projects and papers that use **robomimic**. If you would like to add y
 
 ## 2023
 
+- [Imitating Task and Motion Planning with Visuomotor Transformers](https://arxiv.org/abs/2305.16309) Murtaza Dalal, Ajay Mandlekar\*, Caelan Garrett\*, Ankur Handa, Ruslan Salakhutdinov, Dieter Fox
+- [Data Quality in Imitation Learning](https://arxiv.org/abs/2306.02437) Suneel Belkhale, Yuchen Cui, Dorsa Sadigh
+- [Coherent Soft Imitation Learning](https://arxiv.org/abs/2305.16498) Joe Watson, Sandy H. Huang, Nicolas Heess
+- [Inverse Preference Learning: Preference-based RL without a Reward Function](https://arxiv.org/abs/2305.15363) Joey Hejna, Dorsa Sadigh
+- [Sequence Modeling is a Robust Contender for Offline Reinforcement Learning] Prajjwal Bhargava, Rohan Chitnis, Alborz Geramifard, Shagun Sodhani, Amy Zhang
+- [Diffusion Co-Policy for Synergistic Human-Robot Collaborative Tasks](https://arxiv.org/abs/2305.12171) Eley Ng, Ziang Liu, Monroe Kennedy III
+- [Zero-shot Preference Learning for Offline RL via Optimal Transport](https://arxiv.org/abs/2306.03615) Runze Liu, Yali Du, Fengshuo Bai, Jiafei Lyu, Xiu Li
+- [Seeing the Pose in the Pixels: Learning Pose-Aware Representations in Vision Transformers](https://arxiv.org/abs/2306.09331) Dominick Reilly, Aman Chadha, Srijan Das
+- [Get Back Here: Robust Imitation by Return-to-Distribution Planning](https://arxiv.org/abs/2305.01400) Geoffrey Cideron, Baruch Tabanpour, Sebastian Curi, Sertan Girgin, Leonard Hussenot, Gabriel Dulac-Arnold, Matthieu Geist, Olivier Pietquin, Robert Dadashi
+- [Preference Transformer: Modeling Human Preferences using Transformers for RL](https://arxiv.org/abs/2303.00957) Changyeon Kim, Jongjin Park, Jinwoo Shin, Honglak Lee, Pieter Abbeel, Kimin Lee
 - [MimicPlay: Long-Horizon Imitation Learning by Watching Human Play](https://arxiv.org/abs/2302.12422) Chen Wang, Linxi Fan, Jiankai Sun, Ruohan Zhang, Li Fei-Fei, Danfei Xu, Yuke Zhu, Anima Anandkumar
 - [Diffusion Policy: Visuomotor Policy Learning via Action Diffusion](https://arxiv.org/abs/2303.04137) Cheng Chi, Siyuan Feng, Yilun Du, Zhenjia Xu, Eric Cousineau, Benjamin Burchfiel, Shuran Song
 - [ORBIT: A Unified Simulation Framework for Interactive Robot Learning Environments](https://arxiv.org/abs/2301.04195) Mayank Mittal, Calvin Yu, Qinxi Yu, Jingzhou Liu, Nikita Rudin, David Hoeller, Jia Lin Yuan, Pooria Poorsarvi Tehrani, Ritvik Singh, Yunrong Guo, Hammad Mazhar, Ajay Mandlekar, Buck Babich, Gavriel State, Marco Hutter, Animesh Garg
