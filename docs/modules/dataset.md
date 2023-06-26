@@ -19,8 +19,8 @@ dataset = SequenceDataset(
         "rewards", 
         "dones",
     ),
-    seq_length=10,                  # length-10 temporal sequences
-    frame_stack=10,                 # prepend with length-10 temporal sequence
+    seq_length=1,                   # length-1 temporal sequence predicted
+    frame_stack=10,                 # length-10 temporal sequence observed
     pad_seq_length=True,            # pad last obs per trajectory to ensure all sequences are sampled
     pad_frame_stack=True,           # pad first obs per trajectory to ensure all sequences are sampled
     hdf5_cache_mode="all",          # cache dataset in memory to avoid repeated file i/o

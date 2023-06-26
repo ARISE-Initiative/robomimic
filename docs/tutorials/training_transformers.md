@@ -16,7 +16,7 @@ A template with tuned parameters for transformer based policy networks is define
 
 #### 1. Using default configurations
 
-The easiest way to train a transformer policy network is to pass the default template json to the main training script `train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument.
+The easiest way to train a transformer policy network is to pass the default template json to the main training script `train.py` via the `--config` argument. The dataset can be specified by setting the `data` attribute of the `train` section of the config json, or specified via the `--dataset` argument.  You may find that your data has different rollout horizon lengths, observation modalities, or other incompatibilities with the default template.  In this scenario, we suggest defining custom parameters as described in (2).
 
 ```sh
 $ python train.py --config ../config/default_templates/bc_transformer.json --dataset /path/to/dataset.hdf5
@@ -24,9 +24,9 @@ $ python train.py --config ../config/default_templates/bc_transformer.json --dat
 
 #### 2. Defining custom parameters
 
-If you want to modify the default transformer parameters, do not directly modify the default config (`config/bc_config.py`) or template (`config/default_templates/bc_transformer.json`).  Instead, you should modify the default template in python code and then call the train function, as shown in the code snippet below.
+If you want to modify the default transformer parameters, do not directly modify the default config (`config/bc_config.py`) or template (`config/default_templates/bc_transformer.json`).  Instead, you can create a copy of `robomimic/config/default_templates/bc_transformer.json` and store it in a new directory on your computer.  Set this as the base file for `scripts/hyperparam_helper.py` and define custom settings as described [here](./hyperparam_scan.html).  This is particularly useful when running a sweep over hyperparameters; **it is the prefered way to launch multiple training runs**. 
 
-This code highlights useful parameters to tune for transformers and modifications that should be made when training a policy on observation images (default is low-dimensional states).  To see all transformer policy settings, refer to `config/bc_config.py`.
+Optionally, you can modify the default template in python code and then call the train function, as shown in the code snippet below.  This code highlights useful parameters to tune for transformers and modifications that should be made when training a policy on image observations (default is low-dimensional observations).  To see all transformer policy settings, refer to `config/bc_config.py`.
 
 ```python
 import json
@@ -49,7 +49,7 @@ with config.values_unlocked():
     config.train.data = "/path/to/dataset.hdf5"
     config.train.output_dir = "/path/to/output_dir/"
 
-    # set horizon to be greater than the length of your longest demonstration
+    # set horizon based on length of demonstrations (can be obtained with scripts/get_dataset_info.py)
     config.experiment.rollout.horizon = 700
 
     # set config attributes for image modalities
@@ -88,6 +88,4 @@ device = TorchUtils.get_torch_device(try_to_use_cuda=True)
 # launch training run
 train(config, device=device)
 ```
-
-Optionally, you can create a copy of `robomimic/config/default_templates/bc_transformer.json` and store it locally on your computer.  From here you can directly modify the file and call `train.py` as in **Section 1** with the `--config` argument set to `/path/to/local_bc_transformer.json`.
 
