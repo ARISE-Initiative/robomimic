@@ -220,12 +220,27 @@ class Algo(object):
         Returns:
             batch (dict): postproceesed batch
         """
+
+        # we will search the nested batch dictionary for the following special batch dict keys
+        # and apply the processing function to their values (which correspond to observations)
         obs_keys = ["obs", "next_obs", "goal_obs"]
-        for k in obs_keys:
-            if k in batch and batch[k] is not None:
-                batch[k] = ObsUtils.process_obs_dict(batch[k])
-                if obs_normalization_stats is not None:
-                    batch[k] = ObsUtils.normalize_obs(batch[k], obs_normalization_stats=obs_normalization_stats)
+
+        def recurse_helper(d):
+            """
+            Apply process_obs_dict to values in nested dictionary d that match a key in obs_keys.
+            """
+            for k in d:
+                if k in obs_keys:
+                    # found key - stop search and process observation
+                    if d[k] is not None:
+                        d[k] = ObsUtils.process_obs_dict(d[k])
+                        if obs_normalization_stats is not None:
+                            d[k] = ObsUtils.normalize_obs(d[k], obs_normalization_stats=obs_normalization_stats)
+                elif isinstance(d[k], dict):
+                    # search down into dictionary
+                    recurse_helper(d[k])
+
+        recurse_helper(batch)
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
