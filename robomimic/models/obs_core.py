@@ -7,9 +7,12 @@ and randomizers (e.g. Randomizer, CropRandomizer).
 import abc
 import numpy as np
 import textwrap
+import random
 
 import torch
 import torch.nn as nn
+from torchvision.transforms import Lambda, Compose
+import torchvision.transforms.functional as TVF
 
 import robomimic.models.base_nets as BaseNets
 import robomimic.utils.tensor_utils as TensorUtils
