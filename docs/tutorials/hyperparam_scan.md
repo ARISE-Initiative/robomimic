@@ -198,6 +198,21 @@ Only do this if you are sweeping over a single value!
 
 </div>
 
+<div class="admonition tip">
+<p class="admonition-title">wandb logging</p>
+
+If you would like to log and view results on wandb, enable wandb logging in the hyperparameter generator:
+```python
+generator.add_param(
+    key="experiment.logging.log_wandb",
+    name="", 
+    group=-1, 
+    values=[True],
+)
+```
+
+</div>
+
 ### Define hyperparameter scan values
 Now we define our scan - we could like to sweep the following:
 - policy learning rate in [1e-3, 1e-4]
@@ -276,3 +291,10 @@ python train.py --config /tmp/gen_configs/bc_rnn_hyper_plr_0.0001_gmm_t_rnnd_100
 python train.py --config /tmp/gen_configs/bc_rnn_hyper_plr_0.0001_gmm_f_rnnd_400_mlp_1024.json
 python train.py --config /tmp/gen_configs/bc_rnn_hyper_plr_0.0001_gmm_f_rnnd_1000_mlp_0.json
 ```
+
+<div class="admonition tip">
+<p class="admonition-title">Meta information</p>
+
+For each generated config file you will find a `meta` section that contains hyperparameter names, values, and other metadata information. This `meta` section is generated automatically, and you should NOT need to edit or modify it.
+
+</div>
