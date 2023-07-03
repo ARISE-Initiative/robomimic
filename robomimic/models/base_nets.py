@@ -88,9 +88,12 @@ class Sequential(torch.nn.Sequential, Module):
     """
     Compose multiple Modules together (defined above).
     """
-    def __init__(self, *args):
+    def __init__(self, *args, has_output_shape = True):
         for arg in args:
-            assert isinstance(arg, Module)
+            if has_output_shape:
+                assert isinstance(arg, Module)
+            else:
+                assert isinstance(arg, nn.Module)
         torch.nn.Sequential.__init__(self, *args)
         self.fixed = False
 
@@ -574,7 +577,7 @@ class R3MConv(ConvBase):
             transforms.CenterCrop(224),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
-        self.nets = nn.Sequential(*([preprocess] + list(net.module.convnet.children())))
+        self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())), has_output_shape = False)
         if freeze:
             self.nets.freeze()
 
