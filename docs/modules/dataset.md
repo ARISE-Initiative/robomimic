@@ -19,8 +19,10 @@ dataset = SequenceDataset(
         "rewards", 
         "dones",
     ),
-    seq_length=10,                  # length-10 temporal sequences
+    seq_length=10,                  # length of sub-sequence to fetch: (s_{t}, a_{t}), (s_{t+1}, a_{t+1}), ..., (s_{t+9}, a_{t+9}) 
+    frame_stack=1,                  # length of sub-sequence to prepend
     pad_seq_length=True,            # pad last obs per trajectory to ensure all sequences are sampled
+    pad_frame_stack=True,           # pad first obs per trajectory to ensure all sequences are sampled
     hdf5_cache_mode="all",          # cache dataset in memory to avoid repeated file i/o
     hdf5_normalize_obs=False,
     filter_by_attribute=None,       # can optionally provide a filter key here
@@ -34,9 +36,13 @@ dataset = SequenceDataset(
 - `dataset_keys`
 	- Keys of non-observation data to read from a demonstration. Typically include `actions`, `rewards`, `dones`.
 - `seq_length`
-	- Length of the demonstration sub-sequence to fetch. 
+	- Length of demonstration sub-sequence to fetch.  For example, if `seq_length = 10` at time `t`, the data loader will fetch ${(s_{t}, a_{t}), (s_{t+1}, a_{t+1}), ..., (s_{t+9}, a_{t+9})}$
+- `frame_stack`
+    - Length of sub-sequence to stack at the beginning of fetched demonstration.  For example, if `frame_stack = 10` at time `t`, the  data loader will fetch ${(s_{t-1}, a_{t-1}), (s_{t-2}, a_{t-2}), ..., (s_{t-9}, a_{t-9})}$.  Note that the actual length of the fetched sequence is `frame_stack - 1`.  This term is useful when training a model to predict `seq_length` actions from `frame_stack` observations.  If training a transformer, this should be the same as context length.
 - `pad_seq_length`
 	- Whether to allow fetching subsequence that ends beyond the sequence. For example, given a demo of length 10 and `seq_length=10`, setting `pad_seq_length=True` allows the dataset object to access subsequence at `__get_item(index=5)__` by repeating the last frame 5 times.
+- `pad_frame_stack`
+	- Whether to allow fetching subsequence that starts before the first time step. For example, given a demo of length 10 and `frame_stack=10`, setting `pad_frame_stack=True` allows the dataset object to access subsequence at `__get_item(index=5)__` by repeating the first frame 5 times.
 - `hdf5_cache_mode`
 	- Optionally cache the dataset in memory for faster access. The dataset supports three caching modes: `["all", "low_dim", or None]`. 
 		- `all`: Load the entire dataset into the RAM. This mode minimizes data loading time but incurs the largest memory footprint. Recommended if the dataset is small or when working with low-dimensional observation data.

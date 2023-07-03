@@ -2,7 +2,7 @@
     "algo_name": "bc",
     "experiment": {
         "name": "test",
-        "validate": true,
+        "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
             "log_tb": true,

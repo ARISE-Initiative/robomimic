@@ -12,6 +12,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
@@ -573,7 +574,7 @@ class R3MConv(ConvBase):
             transforms.CenterCrop(224),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
-        self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())))
+        self.nets = nn.Sequential(*([preprocess] + list(net.module.convnet.children())))
         if freeze:
             self.nets.freeze()
 
