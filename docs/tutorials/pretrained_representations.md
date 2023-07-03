@@ -28,11 +28,15 @@ config.observation.encoder.rgb.core_kwargs.backbone_kwargs.mvp_model_class = 'vi
 config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                      # whether to freeze network during training or allow finetuning
 config.observation.encoder.rgb.core_kwargs.pool_class = None                                  # no pooling class for pretraining model
 
+# Set data loader attributes for image observations
+config.train.num_data_workers = 2                           # 2 data workers for image datasets
+config.train.hdf5_cache_mode = "low_dim"                    # only cache non-image data         
+
 # Ensure that you are using image observation modalities, names may depend on your dataset naming convention
 config.observation.modalities.obs.rgb = [
                     "agentview_image",
                     "robot0_eye_in_hand_image"
-                ]                    
+                ]                                                  
 ```
 
 Alternatively, if you are using a config json, you can set the appropriate keys in your json.
