@@ -96,6 +96,7 @@ class Sequential(torch.nn.Sequential, Module):
                 assert isinstance(arg, nn.Module)
         torch.nn.Sequential.__init__(self, *args)
         self.fixed = False
+        self.has_output_shape = has_output_shape
 
     def output_shape(self, input_shape=None):
         """
@@ -109,6 +110,8 @@ class Sequential(torch.nn.Sequential, Module):
         Returns:
             out_shape ([int]): list of integers corresponding to output shape
         """
+        if not self.has_output_shape:
+            raise NotImplementedError("Output shape is not defined for this module")
         out_shape = input_shape
         for module in self:
             out_shape = module.output_shape(out_shape)
