@@ -89,6 +89,11 @@ class Sequential(torch.nn.Sequential, Module):
     Compose multiple Modules together (defined above).
     """
     def __init__(self, *args, has_output_shape = True):
+        """
+        Args:
+            has_output_shape (bool, optional): indicates whether output_shape can be called on the Sequential module.
+                torch.nn modules do not have an output_shape, but Modules (defined above) do. Defaults to True.
+        """
         for arg in args:
             if has_output_shape:
                 assert isinstance(arg, Module)
