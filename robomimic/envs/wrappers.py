@@ -113,8 +113,6 @@ class FrameStackWrapper(EnvWrapper):
         super(FrameStackWrapper, self).__init__(env=env)
         self.num_frames = num_frames
 
-        ### TODO: add action padding option + adding action to obs to include action history in obs ###
-
         # keep track of last @num_frames observations for each obs key
         self.obs_history = None
 

@@ -689,7 +689,6 @@ class ColorRandomizer(Randomizer):
         if len(inputs.shape) == 3:
             inputs = torch.unsqueeze(inputs, dim=0)
 
-        # TODO: Make more efficient other than implicit for-loop?
         # Create lambda to aggregate all color randomizings at once
         transform = self.get_batch_transform(N=self.num_samples)
 
