@@ -13,6 +13,9 @@ Configured under `experiment.logging`:
     
     # save tensorboard logs under `logs/tb` in experiment folder
     "log_tb": true
+
+    # save wandb logs under `logs/wandb` in experiment folder
+    "log_wandb": true
 },
 ```
 
@@ -60,6 +63,7 @@ config.json               # config used for this experiment
 logs/                     # experiment log files
   log.txt                    # terminal output
   tb/                        # tensorboard logs
+  wandb/                     # wandb logs
 videos/                   # videos of robot rollouts during training
 models/                   # saved model checkpoints
 ```
@@ -92,3 +96,11 @@ You may find the following logging metrics useful:
 - `Train/`: training stats
 - `Validation/`: validation stats
 - `System/RAM Usage (MB)`: system RAM used by algorithm
+
+
+### Viewing wandb Results
+You can also view results in [wandb](https://wandb.ai), similarly to tensorboard. To do so, ensure that you have set `experiment.logging.log_wandb` to True in the experiment config.
+
+When first logging to wandb, you will need to specify a wandb entity name, ie. the wandb account under which results will be logged. You can do so by setting `WANDB_API_KEY` to the desired wandb account name in `robomimic/macros_private.py`. Note: if this file does not exist, run `python robomimic/scripts/setup_macros.py` to setup the private macros file.
+
+By default all results will be logged under a wandb project labled `default`, however you can set the project name by setting `experiment.logging.wandb_proj_name` in the configs.

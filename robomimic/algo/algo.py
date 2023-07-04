@@ -201,6 +201,48 @@ class Algo(object):
         """
         return batch
 
+    def postprocess_batch_for_training(self, batch, obs_normalization_stats):
+        """
+        Does some operations (like channel swap, uint8 to float conversion, normalization)
+        after @process_batch_for_training is called, in order to ensure these operations
+        take place on GPU.
+
+        Args:
+            batch (dict): dictionary with torch.Tensors sampled
+                from a data loader. Assumed to be on the device where
+                training will occur (after @process_batch_for_training
+                is called)
+
+            obs_normalization_stats (dict or None): if provided, this should map observation 
+                keys to dicts with a "mean" and "std" of shape (1, ...) where ... is the 
+                default shape for the observation.
+
+        Returns:
+            batch (dict): postproceesed batch
+        """
+
+        # we will search the nested batch dictionary for the following special batch dict keys
+        # and apply the processing function to their values (which correspond to observations)
+        obs_keys = ["obs", "next_obs", "goal_obs"]
+
+        def recurse_helper(d):
+            """
+            Apply process_obs_dict to values in nested dictionary d that match a key in obs_keys.
+            """
+            for k in d:
+                if k in obs_keys:
+                    # found key - stop search and process observation
+                    if d[k] is not None:
+                        d[k] = ObsUtils.process_obs_dict(d[k])
+                        if obs_normalization_stats is not None:
+                            d[k] = ObsUtils.normalize_obs(d[k], obs_normalization_stats=obs_normalization_stats)
+                elif isinstance(d[k], dict):
+                    # search down into dictionary
+                    recurse_helper(d[k])
+
+        recurse_helper(batch)
+        return batch
+
     def train_on_batch(self, batch, epoch, validate=False):
         """
         Training on a single batch of data.

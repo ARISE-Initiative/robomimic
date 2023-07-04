@@ -6,6 +6,7 @@ dist/
 
 # local test dataset that is lazily downloaded by example scripts
 tests/assets/test.hdf5
+tests/assets/test_v141.hdf5
 
 # pycharm configs
 .idea/
@@ -119,3 +120,6 @@ venv.bak/
 .mypy_cache/
 *.mp4
 *.pth
+
+# private macros
+macros_private.py

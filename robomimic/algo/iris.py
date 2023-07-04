@@ -145,13 +145,15 @@ class IRIS(HBC, ValueAlgo):
             policy_subgoal_indices = torch.randint(
                 low=0, high=self.global_config.train.seq_length, size=(batch["actions"].shape[0],))
             goal_obs = TensorUtils.gather_sequence(batch["next_obs"], policy_subgoal_indices)
-            goal_obs = TensorUtils.to_device(TensorUtils.to_float(goal_obs), self.device)
+            goal_obs = TensorUtils.to_float(TensorUtils.to_device(goal_obs, self.device))
             input_batch["actor"]["goal_obs"] = goal_obs
         else:
             # otherwise, use planner subgoal target as goal for the policy
             input_batch["actor"]["goal_obs"] = input_batch["planner"]["planner"]["target_subgoals"]
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # we move to device first before float conversion because image observation modalities will be uint8 -
+        # this minimizes the amount of data transferred to GPU
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def get_state_value(self, obs_dict, goal_dict=None):
         """

@@ -43,6 +43,7 @@ Welcome to robomimic's documentation!
    tutorials/dataset_contents
    tutorials/using_pretrained_models
    tutorials/observations
+   tutorials/pretrained_representations
    tutorials/custom_algorithms
    tutorials/tensor_collections
 
@@ -73,6 +74,12 @@ Welcome to robomimic's documentation!
    miscellaneous/team
    miscellaneous/acknowledgments
    miscellaneous/references
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Previous Versions
+
+   versions/v0.2
 
 
 Indices and tables

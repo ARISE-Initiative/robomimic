@@ -67,6 +67,12 @@ $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name ima
 # Using dense rewards
 $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image_dense.hdf5 --done_mode 2 --dense --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
+# (space saving option) extract 84x84 image observations with compression and without 
+# extracting next obs (not needed for pure imitation learning algos)
+python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
+    --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 \
+    --compress --exclude-next-obs
+
 # Only writing done at the end of the trajectory
 $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image_done_1.hdf5 --done_mode 1 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
@@ -74,11 +80,19 @@ $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name ima
 $ python dataset_states_to_obs.py --help
 ```
 
+<div class="admonition tip">
+<p class="admonition-title">Saving storage space</p>
+
+Image datasets can be quite large in terms of storage, but we also offer two flags that might be useful to save on storage. First, the `--compress` flag will run lossless compression on the extracted observations, resulting in datasets that are up to 5x smaller in storage (in our testing). However, training will be marginally slower due to uncompression costs when loading batches. Second, the `--exclude-next-obs` will exclude the `next_obs` keys per trajectory, since they are not needed for imitation learning algorithms like `BC` and `BC-RNN`.
+
+In our testing, enabling both flags reduced the Square (PH) Image dataset size from 2.5 GB to 307 MB at the cost of increasing BC-RNN training time from 7 hours to 8.5 hours.
+</div>
+
 ## Citation
 ```sh
 @article{zhu2020robosuite,
   title={robosuite: A modular simulation framework and benchmark for robot learning},
-  author={Zhu, Yuke and Wong, Josiah and Mandlekar, Ajay and Mart{\'\i}n-Mart{\'\i}n, Roberto},
+  author={Zhu, Yuke and Wong, Josiah and Mandlekar, Ajay and Mart{\'\i}n-Mart{\'\i}n, Roberto and Joshi, Abhishek and Nasiriany, Soroush and Zhu, Yifeng},
   journal={arXiv preprint arXiv:2009.12293},
   year={2020}
 }

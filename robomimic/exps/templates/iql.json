@@ -1,0 +1,192 @@
+{
+    "algo_name": "iql",
+    "experiment": {
+        "name": "test",
+        "validate": false,
+        "logging": {
+            "terminal_output_to_txt": true,
+            "log_tb": true,
+            "log_wandb": false,
+            "wandb_proj_name": "debug"
+        },
+        "save": {
+            "enabled": true,
+            "every_n_seconds": null,
+            "every_n_epochs": 50,
+            "epochs": [],
+            "on_best_validation": false,
+            "on_best_rollout_return": false,
+            "on_best_rollout_success_rate": true
+        },
+        "epoch_every_n_steps": 100,
+        "validation_epoch_every_n_steps": 10,
+        "env": null,
+        "additional_envs": null,
+        "render": false,
+        "render_video": true,
+        "keep_all_videos": false,
+        "video_skip": 5,
+        "rollout": {
+            "enabled": true,
+            "n": 50,
+            "horizon": 400,
+            "rate": 50,
+            "warmstart": 0,
+            "terminate_on_success": true
+        }
+    },
+    "train": {
+        "data": null,
+        "output_dir": "../iql_trained_models",
+        "num_data_workers": 0,
+        "hdf5_cache_mode": "all",
+        "hdf5_use_swmr": true,
+        "hdf5_load_next_obs": true,
+        "hdf5_normalize_obs": false,
+        "hdf5_filter_key": null,
+        "hdf5_validation_filter_key": null,
+        "seq_length": 1,
+        "pad_seq_length": true,
+        "frame_stack": 1,
+        "pad_frame_stack": true,
+        "dataset_keys": [
+            "actions",
+            "rewards",
+            "dones"
+        ],
+        "goal_mode": null,
+        "cuda": true,
+        "batch_size": 100,
+        "num_epochs": 2000,
+        "seed": 1
+    },
+    "algo": {
+        "optim_params": {
+            "critic": {
+                "learning_rate": {
+                    "initial": 0.0001,
+                    "decay_factor": 0.0,
+                    "epoch_schedule": []
+                },
+                "regularization": {
+                    "L2": 0.0
+                }
+            },
+            "vf": {
+                "learning_rate": {
+                    "initial": 0.0001,
+                    "decay_factor": 0.0,
+                    "epoch_schedule": []
+                },
+                "regularization": {
+                    "L2": 0.0
+                }
+            },
+            "actor": {
+                "learning_rate": {
+                    "initial": 0.0001,
+                    "decay_factor": 0.0,
+                    "epoch_schedule": []
+                },
+                "regularization": {
+                    "L2": 0.0
+                }
+            }
+        },
+        "discount": 0.99,
+        "target_tau": 0.01,
+        "actor": {
+            "net": {
+                "type": "gaussian",
+                "common": {
+                    "std_activation": "softplus",
+                    "low_noise_eval": true,
+                    "use_tanh": false
+                },
+                "gaussian": {
+                    "init_last_fc_weight": 0.001,
+                    "init_std": 0.3,
+                    "fixed_std": false
+                },
+                "gmm": {
+                    "num_modes": 5,
+                    "min_std": 0.0001
+                }
+            },
+            "layer_dims": [
+                300,
+                400
+            ],
+            "max_gradient_norm": null
+        },
+        "critic": {
+            "ensemble": {
+                "n": 2
+            },
+            "layer_dims": [
+                300,
+                400
+            ],
+            "use_huber": false,
+            "max_gradient_norm": null
+        },
+        "adv": {
+            "clip_adv_value": null,
+            "beta": 1.0,
+            "use_final_clip": true
+        },
+        "vf_quantile": 0.9
+    },
+    "observation": {
+        "modalities": {
+            "obs": {
+                "low_dim": [
+                    "robot0_eef_pos",
+                    "robot0_eef_quat",
+                    "robot0_gripper_qpos",
+                    "object"
+                ],
+                "rgb": [],
+                "depth": [],
+                "scan": []
+            },
+            "goal": {
+                "low_dim": [],
+                "rgb": [],
+                "depth": [],
+                "scan": []
+            }
+        },
+        "encoder": {
+            "low_dim": {
+                "core_class": null,
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
+            },
+            "rgb": {
+                "core_class": "VisualCore",
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
+            },
+            "depth": {
+                "core_class": "VisualCore",
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
+            },
+            "scan": {
+                "core_class": "ScanCore",
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
+            }
+        }
+    },
+    "meta": {
+        "hp_base_config_file": null,
+        "hp_keys": [],
+        "hp_values": []
+    }
+}

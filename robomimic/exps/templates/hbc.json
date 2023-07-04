@@ -2,10 +2,12 @@
     "algo_name": "hbc",
     "experiment": {
         "name": "test",
-        "validate": true,
+        "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
-            "log_tb": true
+            "log_tb": true,
+            "log_wandb": false,
+            "wandb_proj_name": "debug"
         },
         "save": {
             "enabled": true,
@@ -39,9 +41,14 @@
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
         "hdf5_use_swmr": true,
+        "hdf5_load_next_obs": true,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
+        "hdf5_validation_filter_key": null,
         "seq_length": 10,
+        "pad_seq_length": true,
+        "frame_stack": 1,
+        "pad_frame_stack": true,
         "dataset_keys": [
             "actions",
             "rewards",
@@ -123,10 +130,12 @@
         "actor": {
             "optim_params": {
                 "policy": {
+                    "optimizer_type": "adam",
                     "learning_rate": {
                         "initial": 0.0001,
                         "decay_factor": 0.1,
-                        "epoch_schedule": []
+                        "epoch_schedule": [],
+                        "scheduler_type": "multistep"
                     },
                     "regularization": {
                         "L2": 0.0
@@ -152,6 +161,20 @@
                 "kwargs": {
                     "bidirectional": false
                 }
+            },
+            "transformer": {
+                "enabled": false,
+                "context_length": 10,
+                "embed_dim": 512,
+                "num_layers": 6,
+                "num_heads": 8,
+                "emb_dropout": 0.1,
+                "attn_dropout": 0.1,
+                "block_output_dropout": 0.1,
+                "sinusoidal_embedding": false,
+                "activation": "gelu",
+                "supervise_all_steps": false,
+                "nn_parameter_for_timesteps": true
             }
         }
     },
@@ -196,97 +219,21 @@
                 },
                 "rgb": {
                     "core_class": "VisualCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "backbone_class": "ResNet18Conv",
-                        "backbone_kwargs": {
-                            "pretrained": false,
-                            "input_coord_conv": false
-                        },
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 },
                 "depth": {
                     "core_class": "VisualCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "backbone_class": "ResNet18Conv",
-                        "backbone_kwargs": {
-                            "pretrained": false,
-                            "input_coord_conv": false
-                        },
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 },
                 "scan": {
                     "core_class": "ScanCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        },
-                        "conv_activation": "relu",
-                        "conv_kwargs": {
-                            "out_channels": [
-                                32,
-                                64,
-                                64
-                            ],
-                            "kernel_size": [
-                                8,
-                                4,
-                                2
-                            ],
-                            "stride": [
-                                4,
-                                2,
-                                1
-                            ]
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 }
             }
         },
@@ -319,99 +266,28 @@
                 },
                 "rgb": {
                     "core_class": "VisualCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "backbone_class": "ResNet18Conv",
-                        "backbone_kwargs": {
-                            "pretrained": false,
-                            "input_coord_conv": false
-                        },
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 },
                 "depth": {
                     "core_class": "VisualCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "backbone_class": "ResNet18Conv",
-                        "backbone_kwargs": {
-                            "pretrained": false,
-                            "input_coord_conv": false
-                        },
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 },
                 "scan": {
                     "core_class": "ScanCore",
-                    "core_kwargs": {
-                        "feature_dimension": 64,
-                        "flatten": true,
-                        "pool_class": "SpatialSoftmax",
-                        "pool_kwargs": {
-                            "num_kp": 32,
-                            "learnable_temperature": false,
-                            "temperature": 1.0,
-                            "noise_std": 0.0,
-                            "output_variance": false
-                        },
-                        "conv_activation": "relu",
-                        "conv_kwargs": {
-                            "out_channels": [
-                                32,
-                                64,
-                                64
-                            ],
-                            "kernel_size": [
-                                8,
-                                4,
-                                2
-                            ],
-                            "stride": [
-                                4,
-                                2,
-                                1
-                            ]
-                        }
-                    },
+                    "core_kwargs": {},
                     "obs_randomizer_class": null,
-                    "obs_randomizer_kwargs": {
-                        "crop_height": 76,
-                        "crop_width": 76,
-                        "num_crops": 1,
-                        "pos_enc": false
-                    }
+                    "obs_randomizer_kwargs": {}
                 }
             }
         }
+    },
+    "meta": {
+        "hp_base_config_file": null,
+        "hp_keys": [],
+        "hp_values": []
     }
 }

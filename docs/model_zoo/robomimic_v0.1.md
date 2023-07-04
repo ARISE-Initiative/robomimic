@@ -12,7 +12,7 @@ See the ["Using Pretrained Models"](../tutorials/using_pretrained_models.html) t
 <div class="admonition warning">
 <p class="admonition-title">Warning: use correct robosuite branch!</p>
 
-When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite.
+When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite. Consult the [v0.2 docs](https://robomimic.github.io/docs/v0.2/datasets/robomimic_v0.1.html) for more information.
 
 </div>
 

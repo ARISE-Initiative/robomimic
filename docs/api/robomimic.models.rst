@@ -20,6 +20,14 @@ robomimic.models.distributions module
    :undoc-members:
    :show-inheritance:
 
+robomimic.models.obs\_core module
+---------------------------------
+
+.. automodule:: robomimic.models.obs_core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.models.obs\_nets module
 ---------------------------------
 
@@ -32,6 +40,14 @@ robomimic.models.policy\_nets module
 ------------------------------------
 
 .. automodule:: robomimic.models.policy_nets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+robomimic.models.transformers module
+------------------------------------
+
+.. automodule:: robomimic.models.transformers
    :members:
    :undoc-members:
    :show-inheritance:

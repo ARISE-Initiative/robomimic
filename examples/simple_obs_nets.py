@@ -7,8 +7,9 @@ functionality.
 from collections import OrderedDict
 
 import torch
-from robomimic.models.obs_nets import ObservationEncoder, MLP, ObservationDecoder
-from robomimic.models.base_nets import CropRandomizer
+from robomimic.models.base_nets import MLP
+from robomimic.models.obs_nets import ObservationEncoder, ObservationDecoder
+from robomimic.models.obs_core import CropRandomizer
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 

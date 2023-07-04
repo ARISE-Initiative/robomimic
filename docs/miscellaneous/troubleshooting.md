@@ -12,4 +12,4 @@ This section contains known issues that are either minor, or that will be patche
 
 - `PrintLogger` breaks if you use `embed()` with a new-ish IPython installation. The current workaround is to use an old version. Known working version is `ipython==5.8.0`
 
-- The `test_scripts` tests will fail if `robosuite` is not on the `offline_study` branch with the following error: `No "site" with name gripper0_ee_x exists.`. This is because the test hdf5 was collected on that branch -- switching to that branch should make the test pass.
+- On robomimic v0.2, the `test_scripts` tests will fail if `robosuite` is not on the `offline_study` branch with the following error: `No "site" with name gripper0_ee_x exists.`. This is because the test hdf5 was collected on that branch -- switching to that branch should make the test pass.
