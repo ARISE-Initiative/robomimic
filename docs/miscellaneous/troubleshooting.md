@@ -4,7 +4,7 @@
 
 This section will be populated with common mistakes and links to issues and fixes as we are made aware of them.
 
-If you're still having problems, please submit an issue on the github page.
+If you're still having problems, please submit an issue on [the github page](https://github.com/ARISE-Initiative/robomimic/issues).
 
 ## Known Issues
 

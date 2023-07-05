@@ -42,7 +42,7 @@ python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONF
 <div class="admonition note">
 <p class="admonition-title">Create Your Own Environment Wrapper!</p>
 
-If you want to generate your own dataset in a custom environment platform that is not listed above, please see [THIS PAGE](../modules/environments.md#implement-an-environment-wrapper).
+If you want to generate your own dataset in a custom environment platform that is not listed above, please see [this page](../modules/environments.md#implement-an-environment-wrapper).
 
 </div>
 

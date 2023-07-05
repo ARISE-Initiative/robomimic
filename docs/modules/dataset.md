@@ -1,6 +1,6 @@
 # SequenceDataset
 
-The `robomimic.utils.dataset.SequenceDataset` class extends PyTorch's default `torch.utils.data.Dataset` to interface with our demonstration [datasets](../introduction/datasets.html). The class supports accessing demonstration sub-sequences (as opposed to individual states) by index and both on-demand fetching and in-memory caching. This page walks through the key concepts of the `SequenceDataset` interface. Please refer to the official PyTorch [documentation](https://pytorch.org/docs/stable/data.html) and a short [example](../introduction/examples.html#train-loop-example) on how to use the `Dataset` and `DataLoader` interfaces to build a training pipeline. Also, please see the [released datasets section](../introduction/results.html#downloading-released-datasets) for guidance on downloading datasets that work out of the box with the repository.
+The `robomimic.utils.dataset.SequenceDataset` class extends PyTorch's default `torch.utils.data.Dataset` to interface with our demonstration [datasets](../datasets/overview.html). The class supports accessing demonstration sub-sequences (as opposed to individual states) by index and both on-demand fetching and in-memory caching. This page walks through the key concepts of the `SequenceDataset` interface. Please refer to the official PyTorch [documentation](https://pytorch.org/docs/stable/data.html) and a short [example](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/simple_train_loop.py) on how to use the `Dataset` and `DataLoader` interfaces to build a training pipeline.
 
 
 Here is a sample dataset object:
@@ -30,7 +30,7 @@ dataset = SequenceDataset(
 ```
 
 - `hdf5_path`
-	- The absolute / relative path to the hdf5 file containing training demonstrations. See [datasets](../introduction/datasets.html) page for the expected data structure.
+	- The absolute / relative path to the hdf5 file containing training demonstrations. See the [datasets page](../datasets/overview.html#dataset-structure) for the expected data structure.
 - `obs_keys`
 	- A list of strings specifying which observation modalities to read from the dataset. This is typically read from the config file: our implementation pools observation keys from `config.observation.modalities.obs.low_dim` and `config.observation.modalities.obs.rgb`.
 - `dataset_keys`
@@ -51,4 +51,4 @@ dataset = SequenceDataset(
 - `hdf5_normalize_obs`
 	- If `True`, normalize observations by computing the mean observation and std of each observation (in each dimension and modality), and normalizing unit mean and variance in each dimension.
 - `filter_by_attribute`
-  - if provided, use the provided filter key to look up a subset of demonstrations to load. See the documentation on [filter keys](../introduction/datasets.html#filter-keys-and-train-valid-splits) for more information.
+  - if provided, use the provided filter key to look up a subset of demonstrations to load. See the documentation on [filter keys](../datasets/overview.html#filter-keys) for more information.

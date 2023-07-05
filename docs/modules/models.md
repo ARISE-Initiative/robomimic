@@ -43,7 +43,7 @@ config.observation.encoder.rgb.core_class = "MyCustomRGBEncoder"
 config.observation.encoder.rgb.core_kwargs = ...
 ```
 
-Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](../introduction/examples.html#custom-observation-modalities-example).
+Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/simple_obs_nets.py).
 
 Below, we provide descriptions of specific EncoderCore-based classes used to encode RGB and depth observations (`VisualCore`) and range scanner observations (`ScanCore`).
 
