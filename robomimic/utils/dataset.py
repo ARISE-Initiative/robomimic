@@ -20,6 +20,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self,
         hdf5_path,
         obs_keys,
+        action_keys,
         dataset_keys,
         frame_stack=1,
         seq_length=1,
@@ -41,6 +42,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             hdf5_path (str): path to hdf5
 
             obs_keys (tuple, list): keys to observation items (image, object, etc) to be fetched from the dataset
+
+            action_keys (tuple, list): keys to action items (end effector velocity, gripper velocity, etc) to be fetched from the dataset
 
             dataset_keys (tuple, list): keys to dataset items (actions, rewards, etc) to be fetched from the dataset
 
@@ -95,7 +98,11 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         # get all keys that needs to be fetched
         self.obs_keys = tuple(obs_keys)
+        self.action_keys = tuple(action_keys)
         self.dataset_keys = tuple(dataset_keys)
+        # add action keys to dataset keys
+        if self.action_keys is not None:
+            self.dataset_keys = tuple(set(self.dataset_keys).union(set(self.action_keys)))
 
         self.n_frame_stack = frame_stack
         assert self.n_frame_stack >= 1
@@ -469,6 +476,16 @@ class SequenceDataset(torch.utils.data.Dataset):
             if self.hdf5_normalize_obs:
                 goal = ObsUtils.normalize_obs(goal, obs_normalization_stats=self.obs_normalization_stats)
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
+
+        # get actions
+        if self.action_keys is not None:
+            actions_to_concat = []
+            for k in self.action_keys:
+                ac = meta[k]
+                if len(ac.shape) == 1:
+                    ac = ac.reshape(-1, 1)
+                actions_to_concat.append(ac)
+            meta["actions"] = np.concatenate(actions_to_concat, axis=1)
 
         # also return the sampled index
         meta["index"] = index
@@ -867,9 +884,14 @@ class R2D2Dataset(SequenceDataset):
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
         
         # get actions
-        meta["actions"] = np.concatenate((
-            meta["action/cartesian_velocity"], meta["action/gripper_velocity"].reshape(-1, 1)
-        ), axis=1)
+        if self.action_keys is not None:
+            actions_to_concat = []
+            for k in self.action_keys:
+                ac = meta[k]
+                if len(ac.shape) == 1:
+                    ac = ac.reshape(-1, 1)
+                actions_to_concat.append(ac)
+            meta["actions"] = np.concatenate(actions_to_concat, axis=1)
 
         # keys to reshape
         for k in meta["obs"]:

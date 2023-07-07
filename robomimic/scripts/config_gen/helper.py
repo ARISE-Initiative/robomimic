@@ -103,11 +103,10 @@ def set_env_settings(generator, args):
             ],
         )
         generator.add_param(
-            key="train.dataset_keys",
+            key="train.action_keys",
             name="",
             group=-1,
             values=[
-                # ["action/cartesian_position", "action/gripper_position"],
                 ["action/cartesian_velocity", "action/gripper_velocity"],
             ],
         )

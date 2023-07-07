@@ -100,6 +100,8 @@ def load_data_for_training(config, obs_keys):
     if valid_filter_by_attribute is not None:
         assert config.experiment.validate, "specified validation filter key {}, but config.experiment.validate is not set".format(valid_filter_by_attribute)
 
+    action_keys = config.train.action_keys
+
     # load the dataset into memory
     if config.experiment.validate:
         assert not config.train.hdf5_normalize_obs, "no support for observation normalization with validation data yet"
@@ -116,16 +118,16 @@ def load_data_for_training(config, obs_keys):
         )
         assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
             "validation demonstrations!"
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
-        valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
+        train_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=train_filter_by_attribute)
+        valid_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=valid_filter_by_attribute)
     else:
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
+        train_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = None
 
     return train_dataset, valid_dataset
 
 
-def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=None):
+def dataset_factory(config, obs_keys, action_keys, filter_by_attribute=None, dataset_path=None):
     """
     Create a SequenceDataset instance to pass to a torch DataLoader.
 
@@ -150,6 +152,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     ds_kwargs = dict(
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
+        action_keys=action_keys,
         dataset_keys=config.train.dataset_keys,
         load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
         frame_stack=config.train.frame_stack,
