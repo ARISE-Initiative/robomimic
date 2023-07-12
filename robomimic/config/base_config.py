@@ -187,6 +187,7 @@ class BaseConfig(Config):
         )
 
         self.train.action_keys = ["actions"]
+        self.train.normalized_action_keys = []
 
         # one of [None, "last"] - set to "last" to include goal observations in each batch
         self.train.goal_mode = None

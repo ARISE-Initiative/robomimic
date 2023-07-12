@@ -448,7 +448,7 @@ class RolloutPolicy(object):
     """
     Wraps @Algo object to make it easy to run policies in a rollout loop.
     """
-    def __init__(self, policy, obs_normalization_stats=None):
+    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None):
         """
         Args:
             policy (Algo instance): @Algo object to wrap to prepare for rollouts
@@ -460,6 +460,7 @@ class RolloutPolicy(object):
         """
         self.policy = policy
         self.obs_normalization_stats = obs_normalization_stats
+        self.action_normalization_stats = action_normalization_stats
 
     def start_episode(self):
         """
@@ -501,4 +502,7 @@ class RolloutPolicy(object):
         if goal is not None:
             goal = self._prepare_observation(goal)
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        return TensorUtils.to_numpy(ac[0])
+        ac = TensorUtils.to_numpy(ac[0])
+        if self.action_normalization_stats is not None:
+            ac = ObsUtils.unnormalize_actions() ### TODO: unnormalize actions
+        return ac

@@ -153,6 +153,11 @@ def train(config, device):
     if config.train.hdf5_normalize_obs:
         obs_normalization_stats = trainset.get_obs_normalization_stats()
 
+    # maybe retreve statistics for normalizing actions
+    action_normalization_stats = None
+    if len(config.train.normalize_action_keys) > 0:
+        action_normalization_stats = trainset.get_action_normalization_stats()
+
     # initialize data loaders
     train_loader = DataLoader(
         dataset=trainset,
@@ -202,6 +207,7 @@ def train(config, device):
             epoch=epoch,
             num_steps=train_num_steps,
             obs_normalization_stats=obs_normalization_stats,
+            action_normalization_stats=action_normalization_stats,
         )
         model.on_epoch_end(epoch)
 
@@ -260,7 +266,11 @@ def train(config, device):
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
 
             # wrap model as a RolloutPolicy to prepare for rollouts
-            rollout_model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats)
+            rollout_model = RolloutPolicy(
+                model,
+                obs_normalization_stats=obs_normalization_stats,
+                action_normalization_stats=action_normalization_stats,
+            )
 
             num_episodes = config.experiment.rollout.n
             all_rollout_logs, video_paths = TrainUtils.rollout_with_stats(

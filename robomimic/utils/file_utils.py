@@ -432,7 +432,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     )
     model.deserialize(ckpt_dict["model"])
     model.set_eval()
-    model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats)
+    model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats) ### TODO: init with action norm stats
     if verbose:
         print("============= Loaded Policy =============")
         print(model)

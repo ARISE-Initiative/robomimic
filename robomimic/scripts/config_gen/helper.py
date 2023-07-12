@@ -107,7 +107,23 @@ def set_env_settings(generator, args):
             name="",
             group=-1,
             values=[
-                ["action/cartesian_velocity", "action/gripper_velocity"],
+                ["action/cartesian_position", "action/gripper_velocity"],
+            ],
+        )
+        generator.add_param(
+            key="train.normalized_action_keys",
+            name="",
+            group=-1,
+            values=[
+                ["action/cartesian_position"],
+            ],
+        )
+        generator.add_param(
+            key="train.dataset_keys",
+            name="",
+            group=-1,
+            values=[
+                [],
             ],
         )
         # generator.add_param(

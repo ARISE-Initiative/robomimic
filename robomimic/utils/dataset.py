@@ -373,6 +373,10 @@ class SequenceDataset(torch.utils.data.Dataset):
         assert self.hdf5_normalize_obs, "not using observation normalization!"
         return deepcopy(self.obs_normalization_stats)
 
+    def get_action_normalization_stats(self):
+        ### TODO: return stats
+        raise NotImplementedError
+
     def get_dataset_for_ep(self, ep, key):
         """
         Helper utility to get a dataset for a specific demonstration.
@@ -833,7 +837,7 @@ class R2D2Dataset(SequenceDataset):
         # end at offset index if not padding for seq length
         demo_length_offset = 0 if self.pad_seq_length else (self.seq_length - 1)
         end_index_in_demo = demo_length - demo_length_offset
-
+        
         meta = self.get_dataset_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
