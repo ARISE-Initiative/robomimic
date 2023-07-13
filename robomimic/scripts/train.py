@@ -154,9 +154,7 @@ def train(config, device):
         obs_normalization_stats = trainset.get_obs_normalization_stats()
 
     # maybe retreve statistics for normalizing actions
-    action_normalization_stats = None
-    if len(config.train.normalize_action_keys) > 0:
-        action_normalization_stats = trainset.get_action_normalization_stats()
+    action_normalization_stats = trainset.get_action_normalization_stats()
 
     # initialize data loaders
     train_loader = DataLoader(
@@ -207,7 +205,6 @@ def train(config, device):
             epoch=epoch,
             num_steps=train_num_steps,
             obs_normalization_stats=obs_normalization_stats,
-            action_normalization_stats=action_normalization_stats,
         )
         model.on_epoch_end(epoch)
 

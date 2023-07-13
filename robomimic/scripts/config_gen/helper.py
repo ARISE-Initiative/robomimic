@@ -103,19 +103,19 @@ def set_env_settings(generator, args):
             ],
         )
         generator.add_param(
-            key="train.action_keys",
+            key="train.action_config",
             name="",
             group=-1,
             values=[
-                ["action/cartesian_position", "action/gripper_velocity"],
-            ],
-        )
-        generator.add_param(
-            key="train.normalized_action_keys",
-            name="",
-            group=-1,
-            values=[
-                ["action/cartesian_position"],
+                {
+                    "action/cartesian_position":{
+                        "normalization": "min_max",
+                        "rot_conversion": None
+                    },
+                    "action/gripper_velocity":{
+                        "normalization": None,
+                    }
+                }
             ],
         )
         generator.add_param(
