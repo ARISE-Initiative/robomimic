@@ -23,7 +23,7 @@
 -------
 
 ## Colab quickstart
-Get started with a quick colab notebook demo of robomimic with installing anything locally.
+Get started with a quick colab notebook demo of robomimic without installing anything locally.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1b62r_km9pP40fKF0cBdpdTO2P_2eIbC6?usp=sharing)
 
