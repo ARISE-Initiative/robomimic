@@ -13,6 +13,7 @@ import torch.utils.data
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
+import robomimic.utils.action_utils as AcUtils
 import robomimic.utils.log_utils as LogUtils
 
 
@@ -131,7 +132,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             self.obs_normalization_stats = self.normalize_obs()
 
         # prepare for action normalization
-        self.action_stats = None
+        self.action_normalization_stats = None
 
         # maybe store dataset in memory for fast access
         if self.hdf5_cache_mode in ["all", "low_dim"]:
@@ -151,6 +152,16 @@ class SequenceDataset(torch.utils.data.Dataset):
                 dataset_keys=self.dataset_keys,
                 load_next_obs=self.load_next_obs
             )
+
+            if self.hdf5_cache_mode == "all":
+                # cache getitem calls for even more speedup. We don't do this for
+                # "low-dim" since image observations require calls to getitem anyways.
+                print("SequenceDataset: caching get_item calls...")
+                self.getitem_cache = [self.get_item(i) for i in LogUtils.custom_tqdm(range(len(self)))]
+
+                # don't need the previous cache anymore
+                del self.hdf5_cache
+                self.hdf5_cache = None
         else:
             self.hdf5_cache = None
 
@@ -349,9 +360,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         return action_traj
    
     def get_action_stats(self):
-        if self.action_stats is not None:
-            return self.action_stats
-        
         ep = self.demos[0]
         action_traj = self.get_action_traj(ep)
         action_stats = _compute_traj_stats(action_traj)
@@ -360,12 +368,10 @@ class SequenceDataset(torch.utils.data.Dataset):
             action_traj = self.get_action_traj(ep)
             traj_stats = _compute_traj_stats(action_traj)
             action_stats = _aggregate_traj_stats(action_stats, traj_stats)
-        self.action_stats = action_stats
+        return action_stats
 
-        return self.action_stats
-
-    def set_action_stats(self, action_stats):
-        self.action_stats = action_stats
+    def set_action_normalization_stats(self, action_normalization_stats):
+        self.action_normalization_stats = action_normalization_stats
 
     def get_action_normalization_stats(self):
         """
@@ -375,9 +381,11 @@ class SequenceDataset(torch.utils.data.Dataset):
         
         # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
         # with the previous statistics.
-        action_stats = self.get_action_stats()
-        action_normalization_stats = action_stats_to_normalization_stats(action_stats, self.action_config)
-        return action_normalization_stats
+        if self.action_normalization_stats is None:
+            action_stats = self.get_action_stats()
+            self.action_normalization_stats = action_stats_to_normalization_stats(
+                action_stats, self.action_config)
+        return self.action_normalization_stats
 
     def get_dataset_for_ep(self, ep, key):
         """
@@ -497,7 +505,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         ac_dict = ObsUtils.normalize_dict(ac_dict, normalization_stats=action_normalization_stats)
 
         # concatenate all action components
-        meta["actions"] = np.concatenate(list(ac_dict.values()), axis=1)
+        meta["actions"] = AcUtils.action_dict_to_vector(ac_dict)
 
         # also return the sampled index
         meta["index"] = index
@@ -652,8 +660,8 @@ class R2D2Dataset(SequenceDataset):
         action_traj = dict()
         for key in self.action_config.keys():
             action_traj[key] = self.hdf5_file[key][()].astype('float32')
-            if len(action_traj[key].shape) == 0:
-                action_traj[key] = np.reshape(action_traj[key], (1,))
+            if len(action_traj[key].shape) == 1:
+                action_traj[key] = np.reshape(action_traj[key], (-1, 1))
 
         return action_traj
 
@@ -918,7 +926,7 @@ class R2D2Dataset(SequenceDataset):
         ac_dict = ObsUtils.normalize_dict(ac_dict, normalization_stats=action_normalization_stats)
 
         # concatenate all action components
-        meta["actions"] = np.concatenate(list(ac_dict.values()), axis=1)
+        meta["actions"] = AcUtils.action_dict_to_vector(ac_dict)
 
         # keys to reshape
         for k in meta["obs"]:
@@ -947,6 +955,11 @@ class MetaDataset(torch.utils.data.Dataset):
         else:
             self.ds_weights = ds_weights
         self._ds_ind_bins = np.cumsum([0] + list(ds_lens))
+
+        # cache mode "all" not supported! The action normalization stats of each
+        # dataset will change after the datasets are already initialized
+        for ds in self.datasets:
+            assert ds.hdf5_cache_mode != "all"
         
         # compute ds_labels to one hot ids
         if ds_labels is None:
@@ -963,7 +976,10 @@ class MetaDataset(torch.utils.data.Dataset):
             self.ds_labels_to_ids[label] = one_hot_id
 
         # TODO: comment
-        self.action_stats = None
+        action_stats = self.get_action_stats()
+        self.action_normalization_stats = action_stats_to_normalization_stats(
+            action_stats, self.datasets[0].action_config)
+        self.set_action_normalization_stats(self.action_normalization_stats)
     
     def __len__(self):
         return np.sum([len(ds) for ds in self.datasets])
@@ -1004,16 +1020,17 @@ class MetaDataset(torch.utils.data.Dataset):
         return sampler
 
     def get_action_stats(self):
-        if self.action_stats is not None:
-            return self.action_stats
-
         meta_action_stats = self.datasets[0].get_action_stats()
         for dataset in self.datasets[1:]:
             ds_action_stats = dataset.get_action_stats()
             meta_action_stats = _aggregate_traj_stats(meta_action_stats, ds_action_stats)
             
-        self.action_stats = meta_action_stats
-        return self.action_stats
+        return meta_action_stats
+    
+    def set_action_normalization_stats(self, action_normalization_stats):
+        self.action_normalization_stats = action_normalization_stats
+        for ds in self.datasets:
+            ds.set_action_normalization_stats(self.action_normalization_stats)
 
     def get_action_normalization_stats(self):
         """
@@ -1023,9 +1040,11 @@ class MetaDataset(torch.utils.data.Dataset):
         
         # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
         # with the previous statistics.
-        action_stats = self.get_action_stats()
-        action_normalization_stats = action_stats_to_normalization_stats(action_stats, self.datasets[0].action_config)
-        return action_normalization_stats
+        if self.action_normalization_stats is None:
+            action_stats = self.get_action_stats()
+            self.action_normalization_stats = action_stats_to_normalization_stats(
+                action_stats, self.datasets[0].action_config)
+        return self.action_normalization_stats
 
 def _compute_traj_stats(traj_obs_dict):
     """
@@ -1060,7 +1079,7 @@ def _aggregate_traj_stats(traj_stats_a, traj_stats_b):
     return merged_stats
 
 def action_stats_to_normalization_stats(action_stats, action_config):
-    action_normalization_stats = dict()
+    action_normalization_stats = OrderedDict()
     for action_key in action_stats.keys():
         # get how this action should be normalized from config, default to None
         norm_method = action_config[action_key].get("normalization", None)

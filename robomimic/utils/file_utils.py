@@ -418,6 +418,13 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
             for k in obs_normalization_stats[m]:
                 obs_normalization_stats[m][k] = np.array(obs_normalization_stats[m][k])
 
+    # maybe restore action normalization stats
+    action_normalization_stats = ckpt_dict.get("action_normalization_stats", None)
+    if action_normalization_stats is not None:
+        for m in action_normalization_stats:
+            for k in action_normalization_stats[m]:
+                action_normalization_stats[m][k] = np.array(action_normalization_stats[m][k])
+
     if device is None:
         # get torch device
         device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)
@@ -432,7 +439,11 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     )
     model.deserialize(ckpt_dict["model"])
     model.set_eval()
-    model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats) ### TODO: init with action norm stats
+    model = RolloutPolicy(
+        model,
+        obs_normalization_stats=obs_normalization_stats,
+        action_normalization_stats=action_normalization_stats
+    )
     if verbose:
         print("============= Loaded Policy =============")
         print(model)

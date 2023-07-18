@@ -57,11 +57,11 @@ def make_generator_helper(args):
             group=2,
             values=[
                 [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im84.h5")],
-                [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im128.h5")],
+                # [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im128.h5")],
             ],
             value_names=[
                 "pnp-t2c-cans-84",
-                "pnp-t2c-cans-128",
+                # "pnp-t2c-cans-128",
             ],
         )
         generator.add_param(
@@ -70,7 +70,7 @@ def make_generator_helper(args):
             group=2,
             values=[
                 76,
-                116
+                # 116
             ],
         )
         generator.add_param(
@@ -79,7 +79,22 @@ def make_generator_helper(args):
             group=2,
             values=[
                 76,
-                116
+                # 116
+            ],
+        )
+    elif args.env == "square":
+        generator.add_param(
+            key="train.data",
+            name="ds",
+            group=2,
+            values=[
+                [
+                    {"path": "~/datasets/square/ph/image_v141.hdf5"},
+                    {"path": "~/datasets/square/ph/image_v141.hdf5"},
+                ],
+            ],
+            value_names=[
+                "square",
             ],
         )
     else:

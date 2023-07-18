@@ -327,6 +327,7 @@ def train(config, device):
                 shape_meta=shape_meta,
                 ckpt_path=os.path.join(ckpt_dir, epoch_ckpt_name + ".pth"),
                 obs_normalization_stats=obs_normalization_stats,
+                action_normalization_stats=action_normalization_stats,
             )
 
         # Finally, log memory usage in MB

@@ -16,6 +16,7 @@ import torch.nn as nn
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
+import robomimic.utils.action_utils as AcUtils
 
 
 # mapping from algo name to factory functions that map algo configs to algo class names
@@ -504,5 +505,9 @@ class RolloutPolicy(object):
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
         ac = TensorUtils.to_numpy(ac[0])
         if self.action_normalization_stats is not None:
-            ac = ObsUtils.unnormalize_actions() ### TODO: unnormalize actions
+            action_keys = self.policy.global_config.train.action_config
+            action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
+            ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
+            ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
+            ac = AcUtils.action_dict_to_vector(ac_dict)
         return ac

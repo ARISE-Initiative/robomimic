@@ -266,6 +266,19 @@ def set_env_settings(generator, args):
         # # set videos off
         # args.no_video = True
 
+        generator.add_param(
+            key="train.action_config",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "actions":{
+                        "normalization": None,
+                    }
+                }
+            ],
+        )
+
         if args.mod == 'im':
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
@@ -462,6 +475,89 @@ def set_env_settings(generator, args):
         raise ValueError
 
 
+def set_debug_mode(generator, args):
+    if not args.debug:
+        return
+
+    generator.add_param(
+        key="experiment.rollout.n",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.rollout.horizon",
+        name="",
+        group=-1,
+        values=[30],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.rollout.rate",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.epoch_every_n_steps",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.save.every_n_epochs",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.validation_epoch_every_n_steps",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="train.num_epochs",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    if args.name is None:
+        generator.add_param(
+            key="experiment.name",
+            name="",
+            group=-1,
+            values=["debug"],
+            value_names=[""],
+        )
+    generator.add_param(
+        key="experiment.save.enabled",
+        name="",
+        group=-1,
+        values=[False],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="train.hdf5_cache_mode",
+        name="",
+        group=-1,
+        values=["low_dim"],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="train.num_data_workers",
+        name="",
+        group=-1,
+        values=[3],
+    )
+
+
 def get_argparser():
     parser = argparse.ArgumentParser()
 
@@ -598,7 +694,7 @@ def make_generator(args, make_generator_helper):
     # set_mod_settings(generator, args)
 
     # set the debug settings last, to override previous setting changes
-    # set_debug_mode(generator, args)
+    set_debug_mode(generator, args)
 
     """ misc settings """
     generator.add_param(

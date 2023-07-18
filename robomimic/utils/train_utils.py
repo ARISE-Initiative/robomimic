@@ -514,7 +514,7 @@ def should_save_from_rollout_logs(
     )
 
 
-def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None):
+def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None, action_normalization_stats=None):
     """
     Save model to a torch pth file.
 
@@ -533,6 +533,8 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
             normalization. This should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
+
+        action_normalization_stats (dict): TODO
     """
     env_meta = deepcopy(env_meta)
     shape_meta = deepcopy(shape_meta)
@@ -547,6 +549,9 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         assert config.train.hdf5_normalize_obs
         obs_normalization_stats = deepcopy(obs_normalization_stats)
         params["obs_normalization_stats"] = TensorUtils.to_list(obs_normalization_stats)
+    if action_normalization_stats is not None:
+        action_normalization_stats = deepcopy(action_normalization_stats)
+        params["action_normalization_stats"] = TensorUtils.to_list(action_normalization_stats)
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
