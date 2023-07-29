@@ -56,8 +56,8 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im84.h5")],
-                # [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im128.h5")],
+                # [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im84.h5")],
+                [{"path": p} for p in scan_datasets("/home/cchi/local/data/r2d2/pen/success/2023-02-28", postfix="trajectory_im128.h5")],
             ],
             value_names=[
                 "pnp-t2c-cans-84",
@@ -129,7 +129,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "~/expdata/{env}/{mod}/{algo_name_short}".format(
+            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

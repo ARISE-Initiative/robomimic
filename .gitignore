@@ -2,7 +2,8 @@
 dist/
 
 # datasets folder at top-level (leading slash)
-/datasets/
+/datasets
+/experiment_results
 
 # local test dataset that is lazily downloaded by example scripts
 tests/assets/test.hdf5

@@ -11,3 +11,4 @@ matplotlib
 egl_probe>=1.0.1
 torch
 torchvision
+diffusers==0.11.1

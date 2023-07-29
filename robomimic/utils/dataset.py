@@ -697,7 +697,7 @@ class R2D2Dataset(SequenceDataset):
         self._demo_id_to_demo_length[ep] = demo_length
 
         # seperate demo into segments for better alignment
-        gripper_actions = list(self.hdf5_file["action/target_gripper_position"])
+        gripper_actions = list(self.hdf5_file["action/gripper_position"])
         gripper_closed = [1 if x > 0 else 0 for x in gripper_actions]
 
         try:
