@@ -4,8 +4,8 @@ def make_generator_helper(args):
     algo_name_short = "bc_xfmr"
 
     generator = get_generator(
-        algo_name="bc",
-        config_file=os.path.join(base_path, 'robomimic/exps/templates/bc_transformer.json'),
+        algo_name="diffusion_policy",
+        config_file=os.path.join(base_path, 'robomimic/exps/templates/diffusion_policy.json'),
         args=args,
         algo_name_short=algo_name_short,
         pt=True,

@@ -1,11 +1,13 @@
 {
     "algo_name": "diffusion_policy",
     "experiment": {
-        "name": "diffusion_policy_lift_ph_low_dim",
+        "name": "test",
         "validate": true,
         "logging": {
             "terminal_output_to_txt": true,
-            "log_tb": true
+            "log_tb": true,
+            "log_wandb": false,
+            "wandb_proj_name": "debug"
         },
         "save": {
             "enabled": true,
@@ -34,22 +36,24 @@
         }
     },
     "train": {
-        "data": "/home/cchi/dev/robomimic/robomimic/../datasets/lift/ph/low_dim_abs.hdf5",
-        "output_dir": "/home/cchi/dev/robomimic/experiment_results/diffusion_policy/lift/ph/low_dim/trained_models",
+        "data": null,
+        "output_dir": "../diffusion_policy_trained_models",
         "num_data_workers": 0,
-        "hdf5_cache_mode": "all",
+        "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
+        "hdf5_load_next_obs": false,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
         "seq_length": 16,
+        "pad_seq_length": true,
+        "frame_stack": 1,
+        "pad_frame_stack": false,
         "dataset_keys": [
-            "actions",
-            "rewards",
-            "dones"
+            "actions"
         ],
         "goal_mode": null,
         "cuda": true,
-        "batch_size": 256,
+        "batch_size": 100,
         "num_epochs": 2000,
         "seed": 1
     },
@@ -122,7 +126,6 @@
                 "core_class": "VisualCore",
                 "core_kwargs": {
                     "feature_dimension": 64,
-                    "flatten": true,
                     "backbone_class": "ResNet18Conv",
                     "backbone_kwargs": {
                         "pretrained": false,
@@ -133,11 +136,10 @@
                         "num_kp": 32,
                         "learnable_temperature": false,
                         "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
+                        "noise_std": 0.0
                     }
                 },
-                "obs_randomizer_class": null,
+                "obs_randomizer_class": "CropRandomizer",
                 "obs_randomizer_kwargs": {
                     "crop_height": 76,
                     "crop_width": 76,
@@ -147,70 +149,15 @@
             },
             "depth": {
                 "core_class": "VisualCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "flatten": true,
-                    "backbone_class": "ResNet18Conv",
-                    "backbone_kwargs": {
-                        "pretrained": false,
-                        "input_coord_conv": false
-                    },
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
-                    }
-                },
+                "core_kwargs": {},
                 "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "obs_randomizer_kwargs": {}
             },
             "scan": {
                 "core_class": "ScanCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "flatten": true,
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0,
-                        "output_variance": false
-                    },
-                    "conv_activation": "relu",
-                    "conv_kwargs": {
-                        "out_channels": [
-                            32,
-                            64,
-                            64
-                        ],
-                        "kernel_size": [
-                            8,
-                            4,
-                            2
-                        ],
-                        "stride": [
-                            4,
-                            2,
-                            1
-                        ]
-                    }
-                },
+                "core_kwargs": {},
                 "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "obs_randomizer_kwargs": {}
             }
         }
     }
