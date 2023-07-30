@@ -505,7 +505,7 @@ class RolloutPolicy(object):
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
         ac = TensorUtils.to_numpy(ac[0])
         if self.action_normalization_stats is not None:
-            action_keys = self.policy.global_config.train.action_config
+            action_keys = self.policy.global_config.train.action_keys
             action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
             ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
             ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)

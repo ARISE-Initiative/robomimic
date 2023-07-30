@@ -267,21 +267,23 @@ class DiffusionPolicyUNet(PolicyAlgo):
         To = self.algo_config.horizon.observation_horizon
         Ta = self.algo_config.horizon.action_horizon
 
+        # TODO: obs_queue already handled by frame_stack
         # make sure we have at least To observations in obs_queue
         # if not enough, repeat
         # if already full, append one to the obs_queue
-        n_repeats = max(To - len(self.obs_queue), 1)
-        self.obs_queue.extend([obs_dict] * n_repeats)
+        # n_repeats = max(To - len(self.obs_queue), 1)
+        # self.obs_queue.extend([obs_dict] * n_repeats)
         
         if len(self.action_queue) == 0:
             # no actions left, run inference
             # turn obs_queue into dict of tensors (concat at T dim)
-            obs_dict_list = TensorUtils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
-            obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
+            # import pdb; pdb.set_trace()
+            # obs_dict_list = TensorUtils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
+            # obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
             
             # run inference
             # [1,T,Da]
-            action_sequence = self._get_action_trajectory(obs_dict=obs_dict_tensor)
+            action_sequence = self._get_action_trajectory(obs_dict=obs_dict)
             
             # put actions into the queue
             self.action_queue.extend(action_sequence[0])

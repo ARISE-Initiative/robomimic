@@ -102,6 +102,8 @@ def set_env_settings(generator, args):
                 "r2d2"
             ],
         )
+        # specify action keys in your <yourmethod>_gen.py
+        # here, we list how each action key should be treated (normalized etc)
         generator.add_param(
             key="train.action_config",
             name="",
@@ -110,7 +112,7 @@ def set_env_settings(generator, args):
                 {
                     "action/cartesian_position":{
                         "normalization": "min_max",
-                        "rot_conversion": None
+                        "format": None
                     },
                     "action/gripper_velocity":{
                         "normalization": None,
@@ -274,6 +276,31 @@ def set_env_settings(generator, args):
                 {
                     "actions":{
                         "normalization": None,
+                    },
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
+                    "action_dict/abs_rot_axis_angle": {
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/abs_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/rel_pos": {
+                        "normalization": None,
+                    },
+                    "action_dict/rel_rot_axis_angle": {
+                        "normalization": None,
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/rel_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/gripper": {
+                        "normalization": None,
                     }
                 }
             ],
@@ -314,6 +341,45 @@ def set_env_settings(generator, args):
     elif args.env == 'transport':
         # set videos off
         args.no_video = True
+
+        # TODO: fix 2 robot case
+        generator.add_param(
+            key="train.action_config",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "actions":{
+                        "normalization": None,
+                    },
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
+                    "action_dict/abs_rot_axis_angle": {
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/abs_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/rel_pos": {
+                        "normalization": None,
+                    },
+                    "action_dict/rel_rot_axis_angle": {
+                        "normalization": None,
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/rel_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/gripper": {
+                        "normalization": None,
+                    }
+                }
+            ],
+        )
 
         if args.mod == 'im':
             generator.add_param(
@@ -365,6 +431,44 @@ def set_env_settings(generator, args):
     elif args.env == 'tool_hang':
         # set videos off
         args.no_video = True
+
+        generator.add_param(
+            key="train.action_config",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "actions":{
+                        "normalization": None,
+                    },
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
+                    "action_dict/abs_rot_axis_angle": {
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/abs_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/rel_pos": {
+                        "normalization": None,
+                    },
+                    "action_dict/rel_rot_axis_angle": {
+                        "normalization": None,
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/rel_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/gripper": {
+                        "normalization": None,
+                    }
+                }
+            ],
+        )
 
         if args.mod == 'im':
             generator.add_param(

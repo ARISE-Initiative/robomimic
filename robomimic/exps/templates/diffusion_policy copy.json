@@ -36,8 +36,10 @@
         }
     },
     "train": {
-        "data": null,
-        "output_dir":"../diffusion_policy_trained_models",
+        "data": [{
+            "path": "/home/cchi/dev/robomimic/robomimic/../datasets/lift/ph/low_dim_abs.hdf5"
+        }],
+        "output_dir": "../experiment_results/diffusion_policy_action_key",
         "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
@@ -46,11 +48,23 @@
         "hdf5_filter_key": null,
         "seq_length": 16,
         "pad_seq_length": true,
-        "frame_stack": 2,
-        "pad_frame_stack": true,
+        "frame_stack": 1,
+        "pad_frame_stack": false,
         "dataset_keys": [
-            "actions"
+            "action_dict/abs_pos",
+            "action_dict/abs_rot_axis_angle",
+            "action_dict/gripper"
         ],
+        "action_keys": [
+            "action_dict/abs_pos",
+            "action_dict/abs_rot_axis_angle",
+            "action_dict/gripper"
+        ],
+        "action_config": {
+            "action_dict/abs_pos": {
+                "normalization": "min_max"
+            }
+        },
         "goal_mode": null,
         "cuda": true,
         "batch_size": 100,

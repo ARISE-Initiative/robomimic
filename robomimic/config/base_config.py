@@ -187,7 +187,6 @@ class BaseConfig(Config):
         )
 
         self.train.action_keys = ["actions"]
-        self.train.normalized_action_keys = []
 
         # specifing each action keys to load and their corresponding normalization/conversion requirement
         # e.g. for dataset keys "action/eef_pos" and "action/eef_rot"
