@@ -12,6 +12,8 @@ from copy import deepcopy
 from collections import OrderedDict
 
 import torch.nn as nn
+import torch
+import pytorch3d.transforms as pt
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
@@ -513,8 +515,6 @@ class RolloutPolicy(object):
             for key, value in ac_dict.items():
                 this_format = action_config[key].get('format', None)
                 if this_format == 'rot_6d':
-                    import torch
-                    import pytorch3d.transforms as pt
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
                     rot_mat = pt.rotation_6d_to_matrix(rot_6d)
                     rot = pt.matrix_to_axis_angle(rot_mat).squeeze().numpy()
