@@ -108,12 +108,13 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="robomimic", verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None, ds_format="robomimic", verbose=False):
     """
     Retrieves shape metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+        action_keys (list): list of all action key strings
         all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
         verbose (bool): if True, include print statements
@@ -136,9 +137,11 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
     if ds_format == "robomimic":
         demo_id = list(f["data"].keys())[0]
         demo = f["data/{}".format(demo_id)]
-
-        # action dimension
-        shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
+        
+        for key in action_keys:
+            assert len(demo[key].shape) == 2 # shape should be (B, D)
+        action_dim = sum([demo[key].shape[1] for key in action_keys])
+        shape_meta['ac_dim'] = action_dim
 
         # observation dimensions
         all_shapes = OrderedDict()
@@ -157,7 +160,10 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
                 input_shape=initial_shape,
             )
     elif ds_format == "r2d2":
-        shape_meta['ac_dim'] = f["action/cartesian_velocity"].shape[1] + 1 # 1 for "action/gripper_velocity"
+        for key in action_keys:
+            assert len(f[key].shape) == 2 # shape should be (B, D)
+        action_dim = sum([f[key].shape[1] for key in action_keys])
+        shape_meta['ac_dim'] = action_dim
         
         # observation dimensions
         all_shapes = OrderedDict()

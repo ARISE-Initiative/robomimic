@@ -509,5 +509,15 @@ class RolloutPolicy(object):
             action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
             ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
             ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
-            ac = AcUtils.action_dict_to_vector(ac_dict)
+            action_config = self.policy.global_config.train.action_config
+            for key, value in ac_dict.items():
+                this_format = action_config[key].get('format', None)
+                if this_format == 'rot_6d':
+                    import torch
+                    import pytorch3d.transforms as pt
+                    rot_6d = torch.from_numpy(value).unsqueeze(0)
+                    rot_mat = pt.rotation_6d_to_matrix(rot_6d)
+                    rot = pt.matrix_to_axis_angle(rot_mat).squeeze().numpy()
+                    ac_dict[key] = rot
+            ac = AcUtils.action_dict_to_vector(ac_dict, action_keys=action_keys)
         return ac

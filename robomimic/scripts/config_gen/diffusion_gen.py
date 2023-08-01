@@ -41,7 +41,7 @@ def make_generator_helper(args):
         key="train.num_epochs",
         name="",
         group=-1,
-        values=[200],
+        values=[1000],
     )
     generator.add_param(
         key="experiment.rollout.rate",
@@ -50,7 +50,7 @@ def make_generator_helper(args):
         values=[50],
     )
     generator.add_param(
-        key="experiment.rollout.rate",
+        key="experiment.rollout.n",
         name="",
         group=-1,
         values=[10],
@@ -111,7 +111,7 @@ def make_generator_helper(args):
             values=[
                 [
                     "action_dict/abs_pos",
-                    "action_dict/abs_rot_axis_angle",
+                    "action_dict/abs_rot_6d",
                     "action_dict/gripper",
                 ],
             ],
@@ -151,7 +151,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/{env}/{mod}/{algo_name_short}".format(
+            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/debug/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,
