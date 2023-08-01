@@ -17,14 +17,14 @@ def make_generator_helper(args):
         key="train.num_data_workers",
         name="",
         group=-1,
-        values=[4],
+        values=[8],
     )
     generator.add_param(
         key="experiment.save.every_n_epochs",
         name="",
         group=-1,
         values=[
-            100
+            50
         ],
     )
 
@@ -41,7 +41,13 @@ def make_generator_helper(args):
         key="train.num_epochs",
         name="",
         group=-1,
-        values=[40],
+        values=[200],
+    )
+    generator.add_param(
+        key="experiment.rollout.rate",
+        name="",
+        group=-1,
+        values=[50],
     )
     generator.add_param(
         key="experiment.rollout.rate",
@@ -122,7 +128,7 @@ def make_generator_helper(args):
             name="lrinit",
             group=110,
             values=[
-                1e-5,
+                1e-4,
             ],
             hidename=True,
         )

@@ -44,7 +44,7 @@
         "hdf5_load_next_obs": false,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
-        "seq_length": 16,
+        "seq_length": 15,
         "pad_seq_length": true,
         "frame_stack": 2,
         "pad_frame_stack": true,
@@ -53,7 +53,7 @@
         ],
         "goal_mode": null,
         "cuda": true,
-        "batch_size": 100,
+        "batch_size": 256,
         "num_epochs": 2000,
         "seed": 1
     },
