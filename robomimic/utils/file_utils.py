@@ -141,7 +141,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
         for key in action_keys:
             assert len(demo[key].shape) == 2 # shape should be (B, D)
         action_dim = sum([demo[key].shape[1] for key in action_keys])
-        shape_meta['ac_dim'] = action_dim
+        shape_meta["ac_dim"] = action_dim
 
         # observation dimensions
         all_shapes = OrderedDict()
@@ -163,7 +163,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
         for key in action_keys:
             assert len(f[key].shape) == 2 # shape should be (B, D)
         action_dim = sum([f[key].shape[1] for key in action_keys])
-        shape_meta['ac_dim'] = action_dim
+        shape_meta["ac_dim"] = action_dim
         
         # observation dimensions
         all_shapes = OrderedDict()
