@@ -1,7 +1,7 @@
 from robomimic.scripts.config_gen.helper import *
 
 def make_generator_helper(args):
-    algo_name_short = "bc_xfmr"
+    algo_name_short = "diffusion_policy"
 
     generator = get_generator(
         algo_name="diffusion_policy",
@@ -17,14 +17,14 @@ def make_generator_helper(args):
         key="train.num_data_workers",
         name="",
         group=-1,
-        values=[4],
+        values=[8],
     )
     generator.add_param(
         key="experiment.save.every_n_epochs",
         name="",
         group=-1,
         values=[
-            100
+            50
         ],
     )
 
@@ -41,10 +41,16 @@ def make_generator_helper(args):
         key="train.num_epochs",
         name="",
         group=-1,
-        values=[40],
+        values=[1000],
     )
     generator.add_param(
         key="experiment.rollout.rate",
+        name="",
+        group=-1,
+        values=[50],
+    )
+    generator.add_param(
+        key="experiment.rollout.n",
         name="",
         group=-1,
         values=[10],
@@ -89,12 +95,28 @@ def make_generator_helper(args):
             group=2,
             values=[
                 [
-                    {"path": "~/datasets/square/ph/image_v141.hdf5"},
-                    {"path": "~/datasets/square/ph/image_v141.hdf5"},
+                    # TODO: point to the hdf5 file
+                    {"path": "/home/cchi/dev/robomimic_r2d2/datasets/square/ph/image_abs.hdf5"},
                 ],
             ],
             value_names=[
                 "square",
+            ],
+        )
+        
+        generator.add_param(
+            key="train.action_keys",
+            name="ac_keys",
+            group=-1,
+            values=[
+                [
+                    "action_dict/abs_pos",
+                    "action_dict/abs_rot_6d",
+                    "action_dict/gripper",
+                ],
+            ],
+            value_names=[
+                "abs",
             ],
         )
     else:
@@ -106,7 +128,7 @@ def make_generator_helper(args):
             name="lrinit",
             group=110,
             values=[
-                1e-5,
+                1e-4,
             ],
             hidename=True,
         )
@@ -129,7 +151,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/{env}/{mod}/{algo_name_short}".format(
+            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/debug/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

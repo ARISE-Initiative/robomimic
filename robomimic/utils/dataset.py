@@ -22,8 +22,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         self,
         hdf5_path,
         obs_keys,
-        action_config,
+        action_keys,
         dataset_keys,
+        action_config,
         frame_stack=1,
         seq_length=1,
         pad_frame_stack=True,
@@ -100,7 +101,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         # get all keys that needs to be fetched
         self.obs_keys = tuple(obs_keys)
-        self.action_keys = tuple(action_config.keys())
+        self.action_keys = tuple(action_keys)
         self.dataset_keys = tuple(dataset_keys)
         # add action keys to dataset keys
         if self.action_keys is not None:
@@ -355,7 +356,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def get_action_traj(self, ep):
         action_traj = dict()
-        for key in self.action_config.keys():
+        for key in self.action_keys:
             action_traj[key] = self.hdf5_file["data/{}/{}".format(ep, key)][()].astype('float32')
         return action_traj
    
@@ -399,7 +400,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             # if key is an observation, it may not be in memory
             if '/' in key:
                 key1, key2 = key.split('/')
-                assert(key1 in ['obs', 'next_obs'])
+                assert(key1 in ['obs', 'next_obs', 'action_dict'])
                 if key2 not in self.obs_keys_in_memory:
                     key_should_be_in_memory = False
 
@@ -407,7 +408,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             # read cache
             if '/' in key:
                 key1, key2 = key.split('/')
-                assert(key1 in ['obs', 'next_obs'])
+                assert(key1 in ['obs', 'next_obs', 'action_dict'])
                 ret = self.hdf5_cache[ep][key1][key2]
             else:
                 ret = self.hdf5_cache[ep][key]
@@ -493,7 +494,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         # get action components
         ac_dict = OrderedDict()
-        for k in self.action_config:
+        for k in self.action_keys:
             ac = meta[k]
             # expand action shape if needed
             if len(ac.shape) == 1:
@@ -658,7 +659,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 class R2D2Dataset(SequenceDataset):
     def get_action_traj(self, ep):
         action_traj = dict()
-        for key in self.action_config.keys():
+        for key in self.action_keys:
             action_traj[key] = self.hdf5_file[key][()].astype('float32')
             if len(action_traj[key].shape) == 1:
                 action_traj[key] = np.reshape(action_traj[key], (-1, 1))
@@ -697,7 +698,7 @@ class R2D2Dataset(SequenceDataset):
         self._demo_id_to_demo_length[ep] = demo_length
 
         # seperate demo into segments for better alignment
-        gripper_actions = list(self.hdf5_file["action/target_gripper_position"])
+        gripper_actions = list(self.hdf5_file["action/gripper_position"])
         gripper_closed = [1 if x > 0 else 0 for x in gripper_actions]
 
         try:
@@ -914,7 +915,7 @@ class R2D2Dataset(SequenceDataset):
         
         # get action components
         ac_dict = OrderedDict()
-        for k in self.action_config:
+        for k in self.action_keys:
             ac = meta[k]
             # expand action shape if needed
             if len(ac.shape) == 1:

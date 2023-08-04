@@ -289,7 +289,8 @@ class ConfigGenerator(object):
             f.write("#!/bin/bash\n\n")
             for path in json_paths:
                 # write python command to file
-                cmd = "python train.py --config {}\n".format(path)
+                import robomimic
+                cmd = "python {}/scripts/train.py --config {}\n".format(robomimic.__path__[0], path)
                 
                 print()
                 print(cmd)
