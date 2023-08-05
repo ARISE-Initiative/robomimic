@@ -96,7 +96,10 @@ def make_generator_helper(args):
             values=[
                 [
                     # TODO: point to the hdf5 file
-                    {"path": "/home/cchi/dev/robomimic_r2d2/datasets/square/ph/image_abs.hdf5"},
+                    # {"path": "/home/cchi/dev/robomimic_r2d2/datasets/square/ph/image_abs.hdf5"},
+                    # {"path": "~/datasets/square/ph/image_v141.hdf5"},
+                    # {"path": "~/datasets/square/ph/image.hdf5"},
+                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"},
                 ],
             ],
             value_names=[
@@ -113,6 +116,7 @@ def make_generator_helper(args):
                     "action_dict/abs_pos",
                     "action_dict/abs_rot_6d",
                     "action_dict/gripper",
+                    # "actions",
                 ],
             ],
             value_names=[
@@ -151,7 +155,8 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/debug/{env}/{mod}/{algo_name_short}".format(
+            # "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/debug/{env}/{mod}/{algo_name_short}".format(
+            "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

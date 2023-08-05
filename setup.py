@@ -29,6 +29,8 @@ setup(
         "egl_probe>=1.0.1",
         "torch",
         "torchvision",
+        "diffusers==0.11.1",
+        "pytorch3d",
     ],
     eager_resources=['*'],
     include_package_data=True,

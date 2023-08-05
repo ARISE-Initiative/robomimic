@@ -1095,8 +1095,9 @@ def action_stats_to_normalization_stats(action_stats, action_config):
             range_eps = 1e-4
             input_min = action_stats[action_key]["min"].astype(np.float32)
             input_max = action_stats[action_key]["max"].astype(np.float32)
-            output_min = -1.0
-            output_max = 1.0
+            # instead of -1 and 1 use numbers just below threshold to prevent numerical instability issues
+            output_min = -0.999999
+            output_max = 0.999999
             
             # ignore input dimentions that is too small to prevent division by zero
             input_range = input_max - input_min
