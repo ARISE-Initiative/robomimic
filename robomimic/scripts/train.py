@@ -78,6 +78,11 @@ def train(config, device):
     # load basic metadata from training file
     print("\n============= Loaded Environment Metadata =============")
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+
+    # update env meta if applicable
+    from robomimic.utils.script_utils import deep_update
+    deep_update(env_meta, config.experiment.env_meta_update_dict)
+
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
         dataset_path=dataset_path,
         action_keys=config.train.action_keys,

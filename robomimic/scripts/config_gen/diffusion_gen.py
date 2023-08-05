@@ -99,11 +99,21 @@ def make_generator_helper(args):
                     # {"path": "/home/cchi/dev/robomimic_r2d2/datasets/square/ph/image_abs.hdf5"},
                     # {"path": "~/datasets/square/ph/image_v141.hdf5"},
                     # {"path": "~/datasets/square/ph/image.hdf5"},
-                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"},
+                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
                 ],
             ],
             value_names=[
                 "square",
+            ],
+        )
+
+        # update env config to use absolute action control
+        generator.add_param(
+            key="experiment.env_meta_update_dict",
+            name="",
+            group=-1,
+            values=[
+                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
             ],
         )
         

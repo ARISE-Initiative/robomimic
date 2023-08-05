@@ -122,6 +122,10 @@ class BaseConfig(Config):
         self.experiment.rollout.warmstart = 0                       # number of epochs to wait before starting rollouts
         self.experiment.rollout.terminate_on_success = True         # end rollout early after task success
 
+        # for updating the evaluation env meta data
+        self.experiment.env_meta_update_dict = Config()
+        self.experiment.env_meta_update_dict.do_not_lock_keys()
+
     def train_config(self):
         """
         This function populates the `config.train` attribute of the config, which 
