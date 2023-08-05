@@ -19,41 +19,12 @@ def make_generator_helper(args):
         group=-1,
         values=[8],
     )
-    generator.add_param(
-        key="experiment.save.every_n_epochs",
-        name="",
-        group=-1,
-        values=[
-            50
-        ],
-    )
 
-    # run rollouts at epoch 0 only
-    generator.add_param(
-        key="experiment.rollout.warmstart",
-        name="",
-        group=-1,
-        values=[
-            -1,
-        ],
-    )
     generator.add_param(
         key="train.num_epochs",
         name="",
         group=-1,
         values=[1000],
-    )
-    generator.add_param(
-        key="experiment.rollout.rate",
-        name="",
-        group=-1,
-        values=[50],
-    )
-    generator.add_param(
-        key="experiment.rollout.n",
-        name="",
-        group=-1,
-        values=[10],
     )
 
     if args.env == "r2d2":
@@ -135,53 +106,18 @@ def make_generator_helper(args):
         )
     else:
         raise ValueError
-
-    if "experiment.ckpt_path" in generator.parameters:
-        generator.add_param(
-            key="algo.optim_params.policy.learning_rate.initial",
-            name="lrinit",
-            group=110,
-            values=[
-                1e-4,
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="algo.optim_params.policy.learning_rate.lr_scheduler_type",
-            name="lrsch",
-            group=111,
-            values=[
-                # "linear",
-                None,
-            ],
-            value_names=[
-                "none"
-            ],
-            hidename=True,
-        )
     
     generator.add_param(
         key="train.output_dir",
         name="",
         group=-1,
         values=[
-            # "/home/cchi/dev/robomimic_r2d2/datasets/experiment_results/debug/{env}/{mod}/{algo_name_short}".format(
             "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,
             )
         ],
-    )
-
-    generator.add_param(
-        key="experiment.rollout.enabled",
-        name="",
-        group=-1,
-        values=[
-            True
-        ],
-        hidename=False,
     )
 
     return generator
