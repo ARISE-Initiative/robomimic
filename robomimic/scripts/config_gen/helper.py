@@ -411,42 +411,70 @@ def set_env_settings(generator, args):
             group=-1,
             values=[700],
         )
-    elif args.env in ['real_breakfast', 'real_lift', 'real_cook']:
-        assert args.mod == "im"
-        generator.add_param(
-            key="experiment.save.enabled",
-            name="",
-            group=-1,
-            values=[
-                True
-            ],
-        )
-        generator.add_param(
-            key="experiment.rollout.enabled",
-            name="",
-            group=-1,
-            values=[
-                False
-            ],
-        )
-        generator.add_param(
-            key="observation.modalities.obs.low_dim",
-            name="",
-            group=-1,
-            values=[
-                ["ee_pos", "ee_quat", "gripper_states"]
-            ],
-        )
-        generator.add_param(
-            key="observation.modalities.obs.rgb",
-            name="",
-            group=-1,
-            values=[
-                ["agentview_rgb", "eye_in_hand_rgb"]
-            ],
-        )
     else:
         raise ValueError
+
+
+def set_mod_settings(generator, args):
+    if args.mod == 'ld':
+        if "experiment.save.epochs" not in generator.parameters:
+            generator.add_param(
+                key="experiment.save.epochs",
+                name="",
+                group=-1,
+                values=[
+                    [2000]
+                ],
+            )
+    elif args.mod == 'im':
+        if "experiment.save.every_n_epochs" not in generator.parameters:
+            generator.add_param(
+                key="experiment.save.every_n_epochs",
+                name="",
+                group=-1,
+                values=[20],
+            )
+
+        generator.add_param(
+            key="experiment.epoch_every_n_steps",
+            name="",
+            group=-1,
+            values=[500],
+        )
+        if "train.num_data_workers" not in generator.parameters:
+            generator.add_param(
+                key="train.num_data_workers",
+                name="",
+                group=-1,
+                values=[4],
+            )
+        generator.add_param(
+            key="train.hdf5_cache_mode",
+            name="",
+            group=-1,
+            values=["low_dim"],
+        )
+        if "train.batch_size" not in generator.parameters:
+            generator.add_param(
+                key="train.batch_size",
+                name="",
+                group=-1,
+                values=[16],
+            )
+        if "train.num_epochs" not in generator.parameters:
+            generator.add_param(
+                key="train.num_epochs",
+                name="",
+                group=-1,
+                values=[600],
+            )
+        if "experiment.rollout.rate" not in generator.parameters:
+            generator.add_param(
+                key="experiment.rollout.rate",
+                name="",
+                group=-1,
+                values=[20],
+            )
 
 
 def set_debug_mode(generator, args):
@@ -645,7 +673,7 @@ def make_generator(args, make_generator_helper):
             args.ckpt_mode = "best_only"
 
     set_env_settings(generator, args)
-    # set_mod_settings(generator, args)
+    set_mod_settings(generator, args)
 
     # set the debug settings last, to override previous setting changes
     set_debug_mode(generator, args)
