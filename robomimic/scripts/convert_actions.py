@@ -20,7 +20,7 @@ DATASETS = [
 ]
 
 
-def convert_actions_in_dataset(dataset_path):
+def convert_actions_in_dataset(dataset_path, output_name=None):
     """
     Helper function to call the relevant scripts to get absolute action dicts for a given dataset.
     """
@@ -30,12 +30,18 @@ def convert_actions_in_dataset(dataset_path):
     args.dataset = dataset_path
     args.n = None
     args.absolute = True
-    args.output = None
+
+    new_ds_path = dataset_path
+    if output_name is not None:
+        args.output = os.path.join(os.path.dirname(dataset_path), output_name)
+        new_ds_path = args.output
+    else:
+        args.output = None
     add_datagen_info(args)
 
     # next convert actions to dict
     args = argparse.Namespace()
-    args.dataset = dataset_path
+    args.dataset = new_ds_path
     extract_action_dict(args)
 
 
@@ -45,6 +51,11 @@ if __name__ == "__main__":
         "--datasets",
         type=str,
         nargs='+',
+        default=None,
+    )
+    parser.add_argument(
+        "--output_name",
+        type=str,
         default=None,
     )
     parser.add_argument(
@@ -60,7 +71,7 @@ if __name__ == "__main__":
 
     for d in datasets:
         dataset_path = os.path.expanduser(d)
-        convert_actions_in_dataset(dataset_path)
+        convert_actions_in_dataset(dataset_path, output_name=args.output_name)
 
     if args.slack and (Macros.SLACK_TOKEN is not None):
         from robomimic.scripts.give_slack_notification import give_slack_notif
