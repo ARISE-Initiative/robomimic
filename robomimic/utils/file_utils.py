@@ -82,12 +82,17 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
     return demo_keys
 
 
-def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
+def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_specific_obs_processors=True):
     """
     Retrieves env metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+
+        set_env_specific_obs_processors (bool): environment might have custom rules for how to process
+            observations - if this flag is true, make sure ObsUtils will use these custom settings. This
+            is a good place to do this operation to make sure it happens before loading data, running a 
+            trained model, etc.
 
     Returns:
         env_meta (dict): environment metadata. Contains 3 keys:
@@ -96,7 +101,7 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
             :`'type'`: type of environment, should be a value in EB.EnvType
             :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
     """
-    dataset_path = os.path.expanduser(dataset_path)
+    dataset_path = os.path.expandvars(os.path.expanduser(dataset_path))
     f = h5py.File(dataset_path, "r")
     if ds_format == "robomimic":
         env_meta = json.loads(f["data"].attrs["env_args"])
@@ -105,6 +110,9 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     else:
         raise ValueError
     f.close()
+    if set_env_specific_obs_processors:
+        # handle env-specific custom observation processing logic
+        EnvUtils.set_env_specific_obs_processing(env_meta=env_meta)
     return env_meta
 
 
@@ -131,7 +139,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     shape_meta = {}
 
     # read demo file for some metadata
-    dataset_path = os.path.expanduser(dataset_path)
+    dataset_path = os.path.expandvars(os.path.expanduser(dataset_path))
     f = h5py.File(dataset_path, "r")
     
     if ds_format == "robomimic":
@@ -193,6 +201,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     shape_meta['all_shapes'] = all_shapes
     shape_meta['all_obs_keys'] = all_obs_keys
     shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
+    shape_meta['use_depths'] = ObsUtils.has_modality("depth", all_obs_keys)
 
     return shape_meta
 
@@ -207,7 +216,7 @@ def load_dict_from_checkpoint(ckpt_path):
     Returns:
         ckpt_dict (dict): Loaded checkpoint dictionary.
     """
-    ckpt_path = os.path.expanduser(ckpt_path)
+    ckpt_path = os.path.expandvars(os.path.expanduser(ckpt_path))
     if not torch.cuda.is_available():
         ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage)
     else:
@@ -490,6 +499,7 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
         render=render, 
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
+        use_depth_obs=shape_meta["use_depths"],
     )
     if verbose:
         print("============= Loaded Environment =============")
@@ -558,3 +568,21 @@ def download_url(url, download_dir, check_overwrite=True):
     with DownloadProgressBar(unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:
         urllib.request.urlretrieve(url, filename=file_to_write, reporthook=t.update_to)
+
+
+def find_and_replace_path_prefix(org_path, replace_prefixes, new_prefix, assert_replace=False):
+    """
+    Try to find and replace one of several prefixes (@replace_prefixes) in string @org_path
+    with another prefix (@new_prefix). If @assert_replace is True, the function asserts that
+    replacement did occur.
+    """
+    check_ind = -1
+    for i, x in enumerate(replace_prefixes):
+        if org_path.startswith(x):
+            check_ind = i
+    if assert_replace:
+        assert check_ind != -1
+    if check_ind == -1:
+        return org_path
+    replace_prefix = replace_prefixes[check_ind]
+    return org_path.replace(replace_prefix, new_prefix, 1)

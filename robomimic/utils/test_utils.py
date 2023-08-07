@@ -237,6 +237,12 @@ def test_run(base_config, config_modifier):
         ret (str): a green "passed!" string, or a red "failed with error" string that contains
             the traceback
     """
+
+    # disable some macros for testing
+    Macros.RESULTS_SYNC_PATH = None
+    Macros.USE_MAGLEV = False
+    Macros.USE_NGC = False
+
     try:
         # get config
         config = config_from_modifier(base_config=base_config, config_modifier=config_modifier)

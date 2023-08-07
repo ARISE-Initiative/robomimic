@@ -371,7 +371,7 @@ def process_frame(frame, channel_dim, scale):
     Args:
         frame (np.array or torch.Tensor): frame array
         channel_dim (int): Number of channels to sanity check for
-        scale (float): Value to normalize inputs by
+        scale (float or None): Value to normalize inputs by
 
     Returns:
         processed_frame (np.array or torch.Tensor): processed frame
@@ -379,8 +379,9 @@ def process_frame(frame, channel_dim, scale):
     # Channel size should either be 3 (RGB) or 1 (depth)
     assert (frame.shape[-1] == channel_dim)
     frame = TU.to_float(frame)
-    frame /= scale
-    frame = frame.clip(0.0, 1.0)
+    if scale is not None:
+        frame /= scale
+        frame = frame.clip(0.0, 1.0)
     frame = batch_image_hwc_to_chw(frame)
 
     return frame
@@ -433,7 +434,7 @@ def unprocess_frame(frame, channel_dim, scale):
     Args:
         frame (np.array or torch.Tensor): frame array
         channel_dim (int): What channel dimension should be (used for sanity check)
-        scale (float): Scaling factor to apply during denormalization
+        scale (float or None): Scaling factor to apply during denormalization
 
     Returns:
         unprocessed_frame (np.array or torch.Tensor): frame passed through
@@ -441,7 +442,8 @@ def unprocess_frame(frame, channel_dim, scale):
     """
     assert frame.shape[-3] == channel_dim # check for channel dimension
     frame = batch_image_chw_to_hwc(frame)
-    frame *= scale
+    if scale is not None:
+        frame *= scale
     return frame
 
 

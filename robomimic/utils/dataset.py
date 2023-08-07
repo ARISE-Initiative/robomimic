@@ -88,7 +88,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         """
         super(SequenceDataset, self).__init__()
 
-        self.hdf5_path = os.path.expanduser(hdf5_path)
+        self.hdf5_path = os.path.expandvars(os.path.expanduser(hdf5_path))
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
         self._hdf5_file = None
@@ -555,7 +555,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         seq = TensorUtils.pad_sequence(seq, padding=(seq_begin_pad, seq_end_pad), pad_same=True)
         pad_mask = np.array([0] * seq_begin_pad + [1] * (seq_end_index - seq_begin_index) + [0] * seq_end_pad)
-        pad_mask = pad_mask[:, None].astype(np.bool)
+        pad_mask = pad_mask[:, None].astype(bool)
 
         return seq, pad_mask
 
@@ -842,7 +842,7 @@ class R2D2Dataset(SequenceDataset):
         
         seq = TensorUtils.pad_sequence(seq, padding=(seq_begin_pad, seq_end_pad), pad_same=True)
         pad_mask = np.array([0] * seq_begin_pad + [1] * (seq_end_index - seq_begin_index) + [0] * seq_end_pad)
-        pad_mask = pad_mask[:, None].astype(np.bool_)
+        pad_mask = pad_mask[:, None].astype(bool)
 
         return seq, pad_mask
     

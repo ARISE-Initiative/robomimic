@@ -27,6 +27,9 @@ class PrintLogger(object):
         print('STDOUT will be forked to %s' % log_file)
         self.log_file = open(log_file, "a")
 
+    def fileno(self):
+        return self.terminal.fileno()
+
     def write(self, message):
         self.terminal.write(message)
         self.log_file.write(message)

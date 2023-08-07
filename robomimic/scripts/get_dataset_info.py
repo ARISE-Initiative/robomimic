@@ -118,7 +118,8 @@ if __name__ == "__main__":
                 print("    key: {}".format(k))
                 for obs_k in f["data/{}/{}".format(ep, k)]:
                     shape = f["data/{}/{}/{}".format(ep, k, obs_k)].shape
-                    print("        observation key {} with shape {}".format(obs_k, shape))
+                    dtype = f["data/{}/{}/{}".format(ep, k, obs_k)].dtype
+                    print("        observation key {} with shape {} and dtype {}".format(obs_k, shape, dtype))
             elif isinstance(f["data/{}/{}".format(ep, k)], h5py.Dataset):
                 key_shape = f["data/{}/{}".format(ep, k)].shape
                 print("    key: {} with shape {}".format(k, key_shape))

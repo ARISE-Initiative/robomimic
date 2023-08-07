@@ -15,6 +15,37 @@ WANDB_ENTITY = None
 # alternatively, set up wandb from terminal with `wandb login`
 WANDB_API_KEY = None
 
+
+### Slack Notifications ###
+
+# Token for sending slack notifications
+SLACK_TOKEN = None
+
+# User ID for user that should receive slack notifications
+SLACK_USER_ID = None
+
+
+### Local Sync Settings ###
+
+# By specifying this path, you can sync the most important results of training back to this folder
+RESULTS_SYNC_PATH = None
+
+# This will be automatically populated.
+RESULTS_SYNC_PATH_ABS = None
+
+
+### MagLev and NGC Cluster Settings ###
+
+# Whether training is happening on MagLev / NGC (should set this on repos hosted in MagLev / NGC scratch space or in Docker)
+USE_MAGLEV = False
+USE_NGC = False
+
+# When using MagLev / NGC, sync the most important results of training back to this directory in scratch space. 
+# This path should be relative to the base scratch space directory (for MagLev) or an absolute path (for NGC)
+MAGLEV_SCRATCH_SYNC_PATH = None
+NGC_SCRATCH_SYNC_PATH = None
+
+
 try:
     from robomimic.macros_private import *
 except ImportError:

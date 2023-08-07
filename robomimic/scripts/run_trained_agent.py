@@ -52,9 +52,13 @@ Example usage:
         --dataset_path /path/to/output.hdf5
 """
 import argparse
+import os
 import json
 import h5py
 import imageio
+import sys
+import time
+import traceback
 import numpy as np
 from copy import deepcopy
 
@@ -62,14 +66,17 @@ import torch
 
 import robomimic
 import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
+from robomimic.utils.log_utils import log_warning
 from robomimic.envs.env_base import EnvBase
 from robomimic.algo import RolloutPolicy
+from robomimic.scripts.playback_dataset import DEFAULT_CAMERAS
 
 
-def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None):
+def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None, real=False):
     """
     Helper function to carry out rollouts. Supports on-screen rendering, off-screen rendering to a video, 
     and returns the rollout trajectory.
@@ -86,18 +93,26 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
             representation of the environment. 
         camera_names (list): determines which camera(s) are used for rendering. Pass more than
             one to output a video with multiple camera views concatenated horizontally.
+        real (bool): if real robot rollout
 
     Returns:
         stats (dict): some statistics for the rollout - such as return, horizon, and task success
         traj (dict): dictionary that corresponds to the rollout trajectory
     """
+    rollout_timestamp = time.time()
     assert isinstance(env, EnvBase)
     assert isinstance(policy, RolloutPolicy)
     assert not (render and (video_writer is not None))
 
     policy.start_episode()
     obs = env.reset()
-    state_dict = env.get_state()
+    state_dict = dict()
+    if real:
+        input("ready for next eval? hit enter to continue")
+    else:
+        state_dict = env.get_state()
+        # hack that is necessary for robosuite tasks for deterministic action playback
+        obs = env.reset_to(state_dict)
 
     # hack that is necessary for robosuite tasks for deterministic action playback
     obs = env.reset_to(state_dict)
@@ -105,6 +120,8 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
     results = {}
     video_count = 0  # video frame counter
     total_reward = 0.
+    got_exception = False
+    success = env.is_success()["task"]
     traj = dict(actions=[], rewards=[], dones=[], states=[], initial_state_dict=state_dict)
     if return_obs:
         # store observations too
@@ -114,6 +131,9 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
 
             # get action from policy
             act = policy(ob=obs)
+            if real and (not env.base_env.controller_type == "JOINT_IMPEDANCE"):
+                # joint impedance actions are absolute
+                act = np.clip(act, -1., 1.)
 
             # play action
             next_obs, r, done, _ = env.step(act)
@@ -138,7 +158,8 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
             traj["actions"].append(act)
             traj["rewards"].append(r)
             traj["dones"].append(done)
-            traj["states"].append(state_dict["states"])
+            if not real:
+                traj["states"].append(state_dict["states"])
             if return_obs:
                 # Note: We need to "unprocess" the observations to prepare to write them to dataset.
                 #       This includes operations like channel swapping and float to uint8 conversion
@@ -152,12 +173,20 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
 
             # update for next iter
             obs = deepcopy(next_obs)
-            state_dict = env.get_state()
+            if not real:
+                state_dict = env.get_state()
 
     except env.rollout_exceptions as e:
         print("WARNING: got rollout exception {}".format(e))
+        got_exception = True
 
-    stats = dict(Return=total_reward, Horizon=(step_i + 1), Success_Rate=float(success))
+    stats = dict(
+        Return=total_reward,
+        Horizon=(step_i + 1),
+        Success_Rate=float(success),
+        Exception_Rate=float(got_exception),
+        time=(time.time() - rollout_timestamp),
+    )
 
     if return_obs:
         # convert list of dict to dict of list for obs dictionaries (for convenient writes to hdf5 dataset)
@@ -181,9 +210,6 @@ def run_trained_agent(args):
     # some arg checking
     write_video = (args.video_path is not None)
     assert not (args.render and write_video) # either on-screen or video but not both
-    if args.render:
-        # on-screen rendering can only support one camera
-        assert len(args.camera_names) == 1
 
     # relative path to agent
     ckpt_path = args.agent
@@ -197,9 +223,9 @@ def run_trained_agent(args):
     # read rollout settings
     rollout_num_episodes = args.n_rollouts
     rollout_horizon = args.horizon
+    config, _ = FileUtils.config_from_checkpoint(ckpt_dict=ckpt_dict)
     if rollout_horizon is None:
         # read horizon from config
-        config, _ = FileUtils.config_from_checkpoint(ckpt_dict=ckpt_dict)
         rollout_horizon = config.experiment.rollout.horizon
 
     # create environment from saved checkpoint
@@ -210,6 +236,31 @@ def run_trained_agent(args):
         render_offscreen=(args.video_path is not None), 
         verbose=True,
     )
+
+    # Auto-fill camera rendering info if not specified
+    if args.camera_names is None:
+        # We fill in the automatic values
+        env_type = EnvUtils.get_env_type(env=env)
+        args.camera_names = DEFAULT_CAMERAS[env_type]
+    if args.render:
+        # on-screen rendering can only support one camera
+        assert len(args.camera_names) == 1
+
+    is_real_robot = EnvUtils.is_real_robot_env(env=env) or EnvUtils.is_real_robot_gprs_env(env=env)
+    if is_real_robot:
+        # on real robot - log some warnings
+        need_pause = False
+        if "env_name" not in ckpt_dict["env_metadata"]["env_kwargs"]:
+            log_warning("env_name not in checkpoint...proceed with caution...")
+            need_pause = True
+        if ckpt_dict["env_metadata"]["env_name"] != "EnvRealPandaGPRS":
+            # we will load EnvRealPandaGPRS class by default on real robot even if agent was collected with different class
+            log_warning("env name in metadata appears to be class ({}) different from EnvRealPandaGPRS".format(ckpt_dict["env_metadata"]["env_name"]))
+            need_pause = True
+        if need_pause:
+            ans = input("continue? (y/n)")
+            if ans != "y":
+                exit()
 
     # maybe set seed
     if args.seed is not None:
@@ -230,16 +281,37 @@ def run_trained_agent(args):
 
     rollout_stats = []
     for i in range(rollout_num_episodes):
-        stats, traj = rollout(
-            policy=policy, 
-            env=env, 
-            horizon=rollout_horizon, 
-            render=args.render, 
-            video_writer=video_writer, 
-            video_skip=args.video_skip, 
-            return_obs=(write_dataset and args.dataset_obs),
-            camera_names=args.camera_names,
-        )
+        try:
+            stats, traj = rollout(
+                policy=policy, 
+                env=env, 
+                horizon=rollout_horizon, 
+                render=args.render, 
+                video_writer=video_writer, 
+                video_skip=args.video_skip, 
+                return_obs=(write_dataset and args.dataset_obs),
+                camera_names=args.camera_names,
+                real=is_real_robot,
+            )
+        except KeyboardInterrupt:
+            if is_real_robot:
+                print("ctrl-C catched, stop execution")
+                print("env rate measure")
+                print(env.rate_measure)
+                ans = input("success? (y / n)")
+                rollout_stats.append((1 if ans == "y" else 0))
+                print("*" * 50)
+                print("have {} success out of {} attempts".format(np.sum(rollout_stats), len(rollout_stats)))
+                print("*" * 50)
+                continue
+            else:
+                sys.exit(0)
+        
+        if is_real_robot:
+            print("TERMINATE WITHOUT KEYBOARD INTERRUPT...")
+            ans = input("success? (y / n)")
+            rollout_stats.append((1 if ans == "y" else 0))
+            continue
         rollout_stats.append(stats)
 
         if write_dataset:
@@ -263,8 +335,15 @@ def run_trained_agent(args):
     rollout_stats = TensorUtils.list_of_flat_dict_to_dict_of_list(rollout_stats)
     avg_rollout_stats = { k : np.mean(rollout_stats[k]) for k in rollout_stats }
     avg_rollout_stats["Num_Success"] = np.sum(rollout_stats["Success_Rate"])
+    avg_rollout_stats["Time_Episode"] = np.sum(rollout_stats["time"]) / 60. # total time taken for rollouts in minutes
+    avg_rollout_stats["Num_Episode"] = len(rollout_stats["Success_Rate"]) # number of episodes attempted
     print("Average Rollout Stats")
-    print(json.dumps(avg_rollout_stats, indent=4))
+    stats_json = json.dumps(avg_rollout_stats, indent=4)
+    print(stats_json)
+    if args.json_path is not None:
+        json_f = open(args.json_path, "w")
+        json_f.write(stats_json)
+        json_f.close()
 
     if write_video:
         video_writer.close()
@@ -341,7 +420,7 @@ if __name__ == "__main__":
         "--camera_names",
         type=str,
         nargs='+',
-        default=["agentview"],
+        default=None,
         help="(optional) camera name(s) to use for rendering on-screen or to video",
     )
 
@@ -369,6 +448,31 @@ if __name__ == "__main__":
         help="(optional) set seed for rollouts",
     )
 
-    args = parser.parse_args()
-    run_trained_agent(args)
+    # Dump a json of the rollout results stats to the specified path
+    parser.add_argument(
+        "--json_path",
+        type=str,
+        default=None,
+        help="(optional) dump a json of the rollout results stats to the specified path",
+    )
 
+    # Dump a file with the error traceback at this path. Only created if run fails with an error.
+    parser.add_argument(
+        "--error_path",
+        type=str,
+        default=None,
+        help="(optional) dump a file with the error traceback at this path. Only created if run fails with an error.",
+    )
+
+    args = parser.parse_args()
+    res_str = None
+    try:
+        run_trained_agent(args)
+    except Exception as e:
+        res_str = "run failed with error:\n{}\n\n{}".format(e, traceback.format_exc())
+        if args.error_path is not None:
+            # write traceback to file
+            f = open(args.error_path, "w")
+            f.write(res_str)
+            f.close()
+        raise e

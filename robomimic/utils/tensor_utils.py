@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 
-def recursive_dict_list_tuple_apply(x, type_func_dict):
+def recursive_dict_list_tuple_apply(x, type_func_dict, error_on_missing_type=True):
     """
     Recursively apply functions to a nested dictionary or list or tuple, given a dictionary of 
     {data_type: function_to_apply}.
@@ -16,6 +16,8 @@ def recursive_dict_list_tuple_apply(x, type_func_dict):
         x (dict or list or tuple): a possibly nested dictionary or list or tuple
         type_func_dict (dict): a mapping from data types to the functions to be 
             applied for each data type.
+        error_on_missing_type (bool): if True, raise an error if a type outside the @type_func_dict is
+            encountered, else, just return the same value (identity function)
 
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
@@ -27,10 +29,10 @@ def recursive_dict_list_tuple_apply(x, type_func_dict):
     if isinstance(x, (dict, collections.OrderedDict)):
         new_x = collections.OrderedDict() if isinstance(x, collections.OrderedDict) else dict()
         for k, v in x.items():
-            new_x[k] = recursive_dict_list_tuple_apply(v, type_func_dict)
+            new_x[k] = recursive_dict_list_tuple_apply(v, type_func_dict, error_on_missing_type)
         return new_x
     elif isinstance(x, (list, tuple)):
-        ret = [recursive_dict_list_tuple_apply(v, type_func_dict) for v in x]
+        ret = [recursive_dict_list_tuple_apply(v, type_func_dict, error_on_missing_type) for v in x]
         if isinstance(x, tuple):
             ret = tuple(ret)
         return ret
@@ -39,11 +41,13 @@ def recursive_dict_list_tuple_apply(x, type_func_dict):
             if isinstance(x, t):
                 return f(x)
         else:
-            raise NotImplementedError(
-                'Cannot handle data type %s' % str(type(x)))
+            if error_on_missing_type:
+                raise NotImplementedError(
+                    'Cannot handle data type %s' % str(type(x)))
+            return x
 
 
-def map_tensor(x, func):
+def map_tensor(x, func, error_on_missing_type=True):
     """
     Apply function @func to torch.Tensor objects in a nested dictionary or
     list or tuple.
@@ -60,11 +64,12 @@ def map_tensor(x, func):
         {
             torch.Tensor: func,
             type(None): lambda x: x,
-        }
+        },
+        error_on_missing_type=error_on_missing_type,
     )
 
 
-def map_ndarray(x, func):
+def map_ndarray(x, func, error_on_missing_type=True):
     """
     Apply function @func to np.ndarray objects in a nested dictionary or
     list or tuple.
@@ -81,11 +86,12 @@ def map_ndarray(x, func):
         {
             np.ndarray: func,
             type(None): lambda x: x,
-        }
+        },
+        error_on_missing_type=error_on_missing_type,
     )
 
 
-def map_tensor_ndarray(x, tensor_func, ndarray_func):
+def map_tensor_ndarray(x, tensor_func, ndarray_func, error_on_missing_type=True):
     """
     Apply function @tensor_func to torch.Tensor objects and @ndarray_func to 
     np.ndarray objects in a nested dictionary or list or tuple.
@@ -104,7 +110,8 @@ def map_tensor_ndarray(x, tensor_func, ndarray_func):
             torch.Tensor: tensor_func,
             np.ndarray: ndarray_func,
             type(None): lambda x: x,
-        }
+        },
+        error_on_missing_type=error_on_missing_type,
     )
 
 
@@ -389,6 +396,28 @@ def to_uint8(x):
         {
             torch.Tensor: lambda x: x.byte(),
             np.ndarray: lambda x: x.astype(np.uint8),
+            type(None): lambda x: x,
+        }
+    )
+
+
+def to_uint16(x):
+    """
+    Converts all torch tensors and numpy arrays in nested dictionary or list 
+    or tuple to uint16 type entries, and returns a new nested structure. Note 
+    that torch does not support uint16, so int32 will be used (double storage).
+
+    Args:
+        x (dict or list or tuple): a possibly nested dictionary or list or tuple
+
+    Returns:
+        y (dict or list or tuple): new nested dict-list-tuple
+    """
+    return recursive_dict_list_tuple_apply(
+        x,
+        {
+            torch.Tensor: lambda x: x.int(),
+            np.ndarray: lambda x: x.astype(np.uint16),
             type(None): lambda x: x,
         }
     )
@@ -769,7 +798,7 @@ def pad_sequence_single(seq, padding, batched=False, pad_same=True, pad_values=N
         padded sequence (np.ndarray or torch.Tensor)
     """
     assert isinstance(seq, (np.ndarray, torch.Tensor))
-    assert pad_same or pad_values is not None
+    assert pad_same or (pad_values is not None)
     if pad_values is not None:
         assert isinstance(pad_values, float)
     repeat_func = np.repeat if isinstance(seq, np.ndarray) else torch.repeat_interleave
@@ -781,10 +810,16 @@ def pad_sequence_single(seq, padding, batched=False, pad_same=True, pad_values=N
     end_pad = []
 
     if padding[0] > 0:
-        pad = seq[[0]] if pad_same else ones_like_func(seq[[0]]) * pad_values
+        if batched:
+            pad = seq[:, [0]] if pad_same else ones_like_func(seq[:, [0]]) * pad_values
+        else:
+            pad = seq[[0]] if pad_same else ones_like_func(seq[[0]]) * pad_values
         begin_pad.append(repeat_func(pad, padding[0], seq_dim))
     if padding[1] > 0:
-        pad = seq[[-1]] if pad_same else ones_like_func(seq[[-1]]) * pad_values
+        if batched:
+            pad = seq[:, [-1]] if pad_same else ones_like_func(seq[:, [-1]]) * pad_values
+        else:
+            pad = seq[[-1]] if pad_same else ones_like_func(seq[[-1]]) * pad_values
         end_pad.append(repeat_func(pad, padding[1], seq_dim))
 
     return concat_func(begin_pad + [seq] + end_pad, seq_dim)
