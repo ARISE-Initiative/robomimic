@@ -8,17 +8,7 @@ import torch
 import pytorch3d.transforms as pt
 import os
 
-def main():
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True
-    )
-    
-    args = parser.parse_args()
-    
+def extract_action_dict(args):    
     # find files
     f = h5py.File(os.path.expanduser(args.dataset), mode="r+")
 
@@ -70,4 +60,14 @@ def main():
     f.close()
     
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True
+    )
+    
+    args = parser.parse_args()
+
+    extract_action_dict(args)
