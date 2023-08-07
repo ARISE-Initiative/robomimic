@@ -5,6 +5,8 @@ writing the absolute actions to action dictionaries.
 import os
 import h5py
 import argparse
+import socket
+import json
 import numpy as np
 
 import robomimic
@@ -65,6 +67,6 @@ if __name__ == "__main__":
     if args.slack and (Macros.SLACK_TOKEN is not None):
         from robomimic.scripts.give_slack_notification import give_slack_notif
         msg = "Completed the following action conversion run!\nHostname: {}\n".format(socket.gethostname())
-        datasets_json = json.dumps(dict(datasets=datasets))
+        datasets_json = json.dumps(dict(datasets=datasets), indent=4)
         msg += "```{}```".format(datasets_json)
         give_slack_notif(msg)
