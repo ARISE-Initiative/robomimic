@@ -280,6 +280,7 @@ def train(config, device, auto_remove_exp=False):
         # do rollouts at fixed rate or if it's time to save a new ckpt
         video_paths = None
         rollout_check = (epoch % config.experiment.rollout.rate == 0) or (should_save_ckpt and ckpt_reason == "time")
+        did_rollouts = False
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
 
             # wrap model as a RolloutPolicy to prepare for rollouts
@@ -331,6 +332,7 @@ def train(config, device, auto_remove_exp=False):
             should_save_ckpt = (config.experiment.save.enabled and updated_stats["should_save_ckpt"]) or should_save_ckpt
             if updated_stats["ckpt_reason"] is not None:
                 ckpt_reason = updated_stats["ckpt_reason"]
+            did_rollouts = True
 
         # Only keep saved videos if the ckpt should be saved (but not because of validation score)
         should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
@@ -351,7 +353,7 @@ def train(config, device, auto_remove_exp=False):
             )
 
         # maybe sync some results back to scratch space (only if rollouts happened)
-        if need_sync_results:
+        if did_rollouts and need_sync_results:
             print("Sync results back to sync path: {}".format(Macros.RESULTS_SYNC_PATH_ABS))
 
             # get best and latest model checkpoints and videos
