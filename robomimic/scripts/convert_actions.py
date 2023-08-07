@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 
 import robomimic
+import robomimic.macros as Macros
 from robomimic.scripts.conversion.extract_action_dict import extract_action_dict
 
 import mimicgen
@@ -46,6 +47,11 @@ if __name__ == "__main__":
         nargs='+',
         default=None,
     )
+    parser.add_argument(
+        "--slack",
+        action='store_true',
+        help="try to give slack notification after script finishes",
+    )
     args = parser.parse_args()
 
     datasets = args.datasets
@@ -55,3 +61,10 @@ if __name__ == "__main__":
     for d in datasets:
         dataset_path = os.path.expanduser(d)
         convert_actions_in_dataset(dataset_path)
+
+    if args.slack and (Macros.SLACK_TOKEN is not None):
+        from robomimic.scripts.give_slack_notification import give_slack_notif
+        msg = "Completed the following action conversion run!\nHostname: {}\n".format(socket.gethostname())
+        datasets_json = json.dumps(dict(datasets=datasets))
+        msg += "```{}```".format(datasets_json)
+        give_slack_notif(msg)
