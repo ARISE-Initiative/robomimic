@@ -68,7 +68,7 @@ def make_gen(base_config, settings):
     )
 
     # add some params to sweep
-    dataset_values = [dict(path=x) for x in settings["dataset_paths"]]
+    dataset_values = [[dict(path=x)] for x in settings["dataset_paths"]]
     generator.add_param(
         key="train.data", 
         name="ds", 
