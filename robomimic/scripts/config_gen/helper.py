@@ -59,6 +59,12 @@ def set_env_settings(generator, args):
                 False
             ],
         )
+        generator.add_param(
+            key="experiment.save.every_n_epochs",
+            name="",
+            group=-1,
+            values=[50],
+        )
         if "observation.modalities.obs.low_dim" not in generator.parameters:
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
