@@ -174,8 +174,8 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
             "robot_state/gripper_position",
             "robot_state/joint_positions",
             "camera/image/hand_camera_image",
-            "camera/image/varied_camera_left_image",
-            "camera/image/varied_camera_right_image",
+            "camera/image/varied_camera_1_image",
+            "camera/image/varied_camera_2_image",
         ]:
             initial_shape = f["observation/{}".format(k)].shape[1:]
             if len(initial_shape) == 0:

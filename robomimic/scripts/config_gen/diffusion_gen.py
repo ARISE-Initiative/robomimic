@@ -33,30 +33,25 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                # [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im84.h5")],
-                [{"path": p} for p in scan_datasets("/home/cchi/local/data/r2d2/pen/success/2023-02-28", postfix="trajectory_im128.h5")],
+                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
             ],
             value_names=[
-                "pnp-t2c-cans-84",
-                # "pnp-t2c-cans-128",
+                "pen-in-cup",
             ],
         )
         generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
-            name="",
-            group=2,
+            key="train.action_keys",
+            name="ac_keys",
+            group=-1,
             values=[
-                76,
-                # 116
+                [
+                    "action/abs_pos",
+                    "action/abs_rot_6d",
+                    "action/gripper_velocity",
+                ],
             ],
-        )
-        generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
-            name="",
-            group=2,
-            values=[
-                76,
-                # 116
+            value_names=[
+                "abs",
             ],
         )
     elif args.env == "square":

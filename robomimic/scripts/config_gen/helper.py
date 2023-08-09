@@ -74,7 +74,10 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    ["camera/image/hand_camera_image", "camera/image/varied_camera_left_image", "camera/image/varied_camera_right_image"]
+                    [
+                        "camera/image/hand_camera_image",
+                        # "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image" # uncomment to use all 3 cameras
+                    ]
                 ],
             )
         if "observation.encoder.rgb.obs_randomizer_kwargs.crop_height"  not in generator.parameters:
@@ -112,11 +115,27 @@ def set_env_settings(generator, args):
                 {
                     "action/cartesian_position":{
                         "normalization": "min_max",
-                        "format": None
+                    },
+                    "action/abs_pos":{
+                        "normalization": "min_max",
+                    },
+                    "action/abs_rot_6d":{
+                        "normalization": "min_max",
+                        "format": "rot_6d",
+                    },
+                    "action/abs_rot_axis_angle":{
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle",
+                    },
+                    "action/gripper_position":{
+                        "normalization": "min_max",
+                    },
+                    "action/cartesian_velocity":{
+                        "normalization": None,
                     },
                     "action/gripper_velocity":{
                         "normalization": None,
-                    }
+                    },
                 }
             ],
         )
@@ -124,16 +143,8 @@ def set_env_settings(generator, args):
             key="train.dataset_keys",
             name="",
             group=-1,
-            values=[
-                [],
-            ],
+            values=[[]],
         )
-        # generator.add_param(
-        #     key="train.hdf5_cache_mode",
-        #     name="",
-        #     group=-1,
-        #     values=[None],
-        # )
     elif args.env in ['square', 'lift', 'place_close']:
         # # set videos off
         # args.no_video = True
