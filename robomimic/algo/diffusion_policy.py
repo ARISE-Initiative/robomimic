@@ -353,6 +353,27 @@ class DiffusionPolicyUNet(PolicyAlgo):
         end = start + Ta
         action = naction[:,start:end]
         return action
+
+    def serialize(self):
+        """
+        Get dictionary of current model parameters.
+        """
+        return {
+            "nets": self.nets.state_dict(),
+            "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
+        }
+
+    def deserialize(self, model_dict):
+        """
+        Load model from a checkpoint.
+
+        Args:
+            model_dict (dict): a dictionary saved by self.serialize() that contains
+                the same keys as @self.network_classes
+        """
+        self.nets.load_state_dict(model_dict["nets"])
+        if model_dict.get("ema", None) is not None:
+            self.ema.averaged_model.load_state_dict(model_dict["ema"])
         
 
 # =================== Vision Encoder Utils =====================
