@@ -61,6 +61,7 @@ import time
 import traceback
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
 
 import torch
 
@@ -281,7 +282,7 @@ def run_trained_agent(args):
         total_samples = 0
 
     rollout_stats = []
-    for i in range(rollout_num_episodes):
+    for i in tqdm(range(rollout_num_episodes)):
         try:
             stats, traj = rollout(
                 policy=policy, 
