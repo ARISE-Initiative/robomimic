@@ -276,6 +276,8 @@ def playback_dataset(args, env=None):
     # some arg checking
     write_video = (args.video_path is not None)
     assert not (args.render and write_video) # either on-screen or video but not both
+    if args.absolute:
+        assert args.use_actions
 
     # Auto-fill camera rendering info if not specified
     if args.render_image_names is None:
@@ -310,6 +312,14 @@ def playback_dataset(args, env=None):
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
         is_robosuite_env = EnvUtils.is_robosuite_env(env_meta)
         is_real_robot = EnvUtils.is_real_robot_env(env_meta) or EnvUtils.is_real_robot_gprs_env(env_meta)
+
+        if args.absolute:
+            # modify env-meta to tell the environment to expect absolute actions
+            assert is_robosuite_env or is_real_robot, "only these support absolute actions for now"
+            if is_robosuite_env:
+                env_meta["env_kwargs"]["controller_configs"]["control_delta"] = False
+            else:
+                env_meta["env_kwargs"]["absolute_actions"] = True
 
         if env is None:
             if is_real_robot:
@@ -366,7 +376,10 @@ def playback_dataset(args, env=None):
         # supply actions if using open-loop action playback
         actions = None
         if args.use_actions:
-            actions = f["data/{}/actions".format(ep)][()]
+            if args.absolute:
+                actions = f["data/{}/actions_abs".format(ep)][()]
+            else:
+                actions = f["data/{}/actions".format(ep)][()]
 
         if is_real_robot:
             assert actions is not None
@@ -430,6 +443,13 @@ if __name__ == "__main__":
         "--use-actions",
         action='store_true',
         help="use open-loop action playback instead of loading sim states",
+    )
+
+    # TODO: clean up this arg
+    parser.add_argument(
+        "--absolute",
+        action='store_true',
+        help="use absolute actions for open-loop action playback",
     )
 
     # Whether to render playback to screen
