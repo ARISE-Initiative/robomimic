@@ -491,6 +491,8 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
     )
+    config, _ = config_from_checkpoint(algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False)
+    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
     if verbose:
         print("============= Loaded Environment =============")
         print(env)
