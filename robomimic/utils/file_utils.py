@@ -499,7 +499,7 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
         render=render, 
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
-        use_depth_obs=shape_meta["use_depths"],
+        use_depth_obs=shape_meta.get("use_depths", False),
     )
     if verbose:
         print("============= Loaded Environment =============")
