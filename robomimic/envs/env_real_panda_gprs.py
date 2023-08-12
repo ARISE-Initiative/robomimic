@@ -29,6 +29,11 @@ import robomimic.envs.env_base as EB
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.utils.log_utils import log_warning
 
+try:
+    import robosuite.utils.transform_utils as T
+except ImportError:
+    print("WARNING: could not import robosuite transform utils (needed for using absolute actions with GPRS")
+
 
 def center_crop(im, t_h, t_w):
     assert(im.shape[-3] >= t_h and im.shape[-2] >= t_w)
@@ -62,6 +67,7 @@ class EnvRealPandaGPRS(EB.EnvBase):
         controller_cfg_file=None,
         controller_cfg_dict=None,
         use_depth_obs=False,
+        absolute_actions=False, # use absolute pos and rot (axis-angle) in 7-dim action vector
         # additional GPRS-specific args
         state_freq=100.,
         control_timeout=1.0,
@@ -91,6 +97,7 @@ class EnvRealPandaGPRS(EB.EnvBase):
         self._env_name = env_name
         self.postprocess_visual_obs = postprocess_visual_obs
         self.control_freq = control_freq
+        self.absolute_actions = absolute_actions
         self.general_cfg_file = general_cfg_file
         self.controller_type = controller_type
         self.controller_cfg_file = controller_cfg_file
@@ -197,6 +204,9 @@ class EnvRealPandaGPRS(EB.EnvBase):
         target_rot_mat = (drot_mat.T).dot(ee_mat)
         target_rot_quat = U.mat2quat(target_rot_mat)
 
+        if self.absolute_actions:
+            test_mat = T.quat2mat(T.axisangle2quat(drot))
+
     def _get_unified_getter(self):
         """
         For HITL-TAMP teleoperation only - provides access to important information for perception.
@@ -249,9 +259,43 @@ class EnvRealPandaGPRS(EB.EnvBase):
         # print("step got action: {}".format(action))
         if self.controller_type == "OSC_POSE":
             assert len(action.shape) == 1 and action.shape[0] == 7, "action has incorrect dimensions"
+
+            if self.absolute_actions:
+                # convert action from absolute to relative for compatibility with rest of code
+                action = np.array(action)
+
+                # absolute pose target
+                target_pos = action[:3]
+                target_rot = T.quat2mat(T.axisangle2quat(action[3:6]))
+
+                # current pose
+                last_robot_state = self.robot_interface._state_buffer[-1]
+                ee_pose = np.array(last_robot_state.O_T_EE).reshape((4, 4)).T
+                start_pos = ee_pose[:3, 3]
+                start_rot = ee_pose[:3, :3]
+
+                # TODO: remove hardcode
+                max_dpos = np.array([0.08, 0.08, 0.08])
+                max_drot = np.array([0.5, 0.5, 0.5])
+
+                # copied from MG class (TODO: unify)
+                delta_position = target_pos - start_pos
+                delta_position = np.clip(delta_position / max_dpos, -1., 1.)
+
+                delta_rot_mat = target_rot.dot(start_rot.T)
+                delta_rot_quat = U.mat2quat(delta_rot_mat)
+                delta_rot_aa = U.quat2axisangle(delta_rot_quat)
+                delta_rotation = delta_rot_aa[0] * delta_rot_aa[1]
+                delta_rotation = np.clip(delta_rotation / max_drot, -1., 1.)
+
+                # relative action
+                action[:3] = delta_position
+                action[3:6] = delta_rotation
+
             assert np.min(action) >= -1. and np.max(action) <= 1., "incorrect action bounds"
         elif self.controller_type == "JOINT_IMPEDANCE":
             assert len(action.shape) == 1 and action.shape[0] == 8, "action has incorrect dimensions"
+            assert not self.absolute_actions
             if not np.any(action[:7]):
                 raise Exception("GOT ZERO ACTION WITH JOINT IMPEDANCE CONTROLLER - TERMINATING")
             

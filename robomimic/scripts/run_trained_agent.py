@@ -230,6 +230,11 @@ def run_trained_agent(args):
         # read horizon from config
         rollout_horizon = config.experiment.rollout.horizon
 
+    # HACK: assume absolute actions for now if using diffusion policy on real robot
+    is_diffusion_policy = (config.algo_name == "diffusion_policy")
+    if is_diffusion_policy and EnvUtils.is_real_robot_gprs_env(env_meta=ckpt_dict["env_metadata"]):
+        ckpt_dict["env_metadata"]["env_kwargs"]["absolute_actions"] = True
+
     # create environment from saved checkpoint
     env, _ = FileUtils.env_from_checkpoint(
         ckpt_dict=ckpt_dict, 
