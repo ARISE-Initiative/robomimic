@@ -15,7 +15,6 @@ from PIL import Image
 import RobotTeleop
 import RobotTeleop.utils as U
 from RobotTeleop.utils import Rate, RateMeasure, Timers
-from RobotTeleop.scripts.debug_april_tag import get_depth_scale_unified
 
 # GPRS imports
 from gprs.franka_interface import FrankaInterface
@@ -47,7 +46,15 @@ def get_depth_scale(camera_name):
     """
     Returns scaling factor that converts from uint16 depth to real-valued depth (in meters).
     """
-    return get_depth_scale_unified(camera_name=camera_name)
+
+    # TODO: fix duplication
+    if camera_name == "front":
+        return 0.0010000000474974513
+    if camera_name == "wrist":
+        return 0.0010000000474974513
+    raise Exception("should not reach here")
+    # from RobotTeleop.scripts.debug_april_tag import get_depth_scale_unified
+    # return get_depth_scale_unified(camera_name=camera_name)
 
 
 class EnvRealPandaGPRS(EB.EnvBase):

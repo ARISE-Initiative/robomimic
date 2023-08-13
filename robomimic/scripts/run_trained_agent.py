@@ -78,7 +78,7 @@ from robomimic.algo import RolloutPolicy
 from robomimic.scripts.playback_dataset import DEFAULT_CAMERAS
 
 
-def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None, real=False):
+def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None, real=False, rate_measure=None):
     """
     Helper function to carry out rollouts. Supports on-screen rendering, off-screen rendering to a video, 
     and returns the rollout trajectory.
@@ -96,6 +96,7 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         camera_names (list): determines which camera(s) are used for rendering. Pass more than
             one to output a video with multiple camera views concatenated horizontally.
         real (bool): if real robot rollout
+        rate_measure: if provided, measure rate of action computation and do not play actions in environment
 
     Returns:
         stats (dict): some statistics for the rollout - such as return, horizon, and task success
@@ -116,9 +117,6 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         # hack that is necessary for robosuite tasks for deterministic action playback
         obs = env.reset_to(state_dict)
 
-    # hack that is necessary for robosuite tasks for deterministic action playback
-    obs = env.reset_to(state_dict)
-
     results = {}
     video_count = 0  # video frame counter
     total_reward = 0.
@@ -130,15 +128,29 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         traj.update(dict(obs=[], next_obs=[]))
     try:
         for step_i in range(horizon):
+            # HACK: some keys on real robot do not have a shape (and then they get frame stacked)
+            for k in obs:
+                if len(obs[k].shape) == 1:
+                    obs[k] = obs[k][..., None] 
 
             # get action from policy
+            t1 = time.time()
             act = policy(ob=obs)
-            if real and (not env.base_env.controller_type == "JOINT_IMPEDANCE"):
-                # joint impedance actions are absolute
+            t2 = time.time()
+            if real and (not env.base_env.controller_type == "JOINT_IMPEDANCE") and (policy.policy.global_config.algo_name != "diffusion_policy"):
+                # joint impedance actions and diffusion policy actions are absolute in the real world
                 act = np.clip(act, -1., 1.)
 
-            # play action
-            next_obs, r, done, _ = env.step(act)
+            if rate_measure is not None:
+                rate_measure.measure()
+                print("time: {}s".format(t2 - t1))
+                # dummy reward and done
+                r = 0.
+                done = False
+                next_obs = obs
+            else:
+                # play action
+                next_obs, r, done, _ = env.step(act)
 
             # compute reward
             total_reward += r
@@ -212,6 +224,12 @@ def run_trained_agent(args):
     # some arg checking
     write_video = (args.video_path is not None)
     assert not (args.render and write_video) # either on-screen or video but not both
+
+    rate_measure = None
+    if args.hz is not None:
+        import RobotTeleop
+        from RobotTeleop.utils import Rate, RateMeasure, Timers
+        rate_measure = RateMeasure(name="control_rate_measure", freq_threshold=args.hz)
 
     # relative path to agent
     ckpt_path = args.agent
@@ -299,6 +317,7 @@ def run_trained_agent(args):
                 return_obs=(write_dataset and args.dataset_obs),
                 camera_names=args.camera_names,
                 real=is_real_robot,
+                rate_measure=rate_measure,
             )
         except KeyboardInterrupt:
             if is_real_robot:
@@ -469,6 +488,15 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="(optional) dump a file with the error traceback at this path. Only created if run fails with an error.",
+    )
+
+    # TODO: clean up this arg
+    # If provided, do not run actions in env, and instead just measure the rate of action computation
+    parser.add_argument(
+        "--hz",
+        type=int,
+        default=None,
+        help="If provided, do not run actions in env, and instead just measure the rate of action computation and raise warnings if it dips below this threshold",
     )
 
     args = parser.parse_args()
