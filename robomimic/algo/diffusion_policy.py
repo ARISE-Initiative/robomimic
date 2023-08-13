@@ -87,6 +87,15 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 clip_sample=self.algo_config.ddpm.clip_sample,
                 prediction_type=self.algo_config.ddpm.prediction_type
             )
+        elif self.algo_config.ddim.enabled:
+            noise_scheduler = DDIMScheduler(
+                num_train_timesteps=self.algo_config.ddim.num_train_timesteps,
+                beta_schedule=self.algo_config.ddim.beta_schedule,
+                clip_sample=self.algo_config.ddim.clip_sample,
+                set_alpha_to_one=self.algo_config.ddim.set_alpha_to_one,
+                steps_offset=self.algo_config.ddim.steps_offset,
+                prediction_type=self.algo_config.ddim.prediction_type
+            )
         else:
             raise RuntimeError()
         
@@ -303,7 +312,12 @@ class DiffusionPolicyUNet(PolicyAlgo):
         Ta = self.algo_config.horizon.action_horizon
         Tp = self.algo_config.horizon.prediction_horizon
         action_dim = self.ac_dim
-        num_inference_timesteps = self.algo_config.ddpm.num_inference_timesteps
+        if self.algo_config.ddpm.enabled is True:
+            num_inference_timesteps = self.algo_config.ddpm.num_inference_timesteps
+        elif self.algo_config.ddim.enabled is True:
+            num_inference_timesteps = self.algo_config.ddim.num_inference_timesteps
+        else:
+            raise ValueError
         
         # select network
         nets = self.nets
