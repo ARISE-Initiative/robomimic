@@ -27,6 +27,27 @@ def make_generator_helper(args):
         values=[1000],
     )
 
+    # use ddim by default
+    generator.add_param(
+        key="algo.ddim.enabled",
+        name="ddim",
+        group=1001,
+        values=[
+            True,
+            # False,
+        ],
+    )
+    generator.add_param(
+        key="algo.ddpm.enabled",
+        name="ddpm",
+        group=1001,
+        values=[
+            False,
+            # True,
+        ],
+        hidename=True,
+    )
+
     if args.env == "r2d2":
         generator.add_param(
             key="train.data",
@@ -97,34 +118,6 @@ def make_generator_helper(args):
             ],
             value_names=[
                 "abs",
-            ],
-        )
-
-        generator.add_param(
-            key="algo.ddpm.enabled",
-            name="ddpm",
-            group=-1,
-            values=[
-                [
-                    False,
-                ],
-            ],
-            value_names=[
-                "off",
-            ],
-        )
-
-        generator.add_param(
-            key="algo.ddim.enabled",
-            name="ddim",
-            group=-1,
-            values=[
-                [
-                    True,
-                ],
-            ],
-            value_names=[
-                "on",
             ],
         )
 

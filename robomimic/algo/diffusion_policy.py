@@ -312,7 +312,12 @@ class DiffusionPolicyUNet(PolicyAlgo):
         Ta = self.algo_config.horizon.action_horizon
         Tp = self.algo_config.horizon.prediction_horizon
         action_dim = self.ac_dim
-        num_inference_timesteps = self.algo_config.ddpm.num_inference_timesteps
+        if self.algo_config.ddpm.enabled is True:
+            num_inference_timesteps = self.algo_config.ddpm.num_inference_timesteps
+        elif self.algo_config.ddim.enabled is True:
+            num_inference_timesteps = self.algo_config.ddim.num_inference_timesteps
+        else:
+            raise ValueError
         
         # select network
         nets = self.nets
