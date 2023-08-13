@@ -691,6 +691,7 @@ class EnvRealPandaGPRS(EB.EnvBase):
             render=False, 
             render_offscreen=True, 
             use_image_obs=True, 
+            use_depth_obs=use_depth_obs if use_depth_obs is not None else False, 
             postprocess_visual_obs=False,
             **kwargs,
         )
