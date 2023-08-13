@@ -45,4 +45,13 @@ class DiffusionPolicyConfig(BaseConfig):
         self.algo.ddpm.beta_schedule = 'squaredcos_cap_v2'
         self.algo.ddpm.clip_sample = True
         self.algo.ddpm.prediction_type = 'epsilon'
-                
+
+        ## DDIM
+        self.algo.ddim.enabled = False
+        self.algo.ddim.num_train_timesteps = 100
+        self.algo.ddim.num_inference_timesteps = 10
+        self.algo.ddim.beta_schedule = 'squaredcos_cap_v2'
+        self.algo.ddim.clip_sample = True
+        self.algo.ddim.set_alpha_to_one = True
+        self.algo.ddim.steps_offset = 0
+        self.algo.ddim.prediction_type = 'epsilon'

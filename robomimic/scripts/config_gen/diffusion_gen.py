@@ -99,6 +99,36 @@ def make_generator_helper(args):
                 "abs",
             ],
         )
+
+        generator.add_param(
+            key="algo.ddpm.enabled",
+            name="ddpm",
+            group=-1,
+            values=[
+                [
+                    False,
+                ],
+            ],
+            value_names=[
+                "off",
+            ],
+        )
+
+        generator.add_param(
+            key="algo.ddim.enabled",
+            name="ddim",
+            group=-1,
+            values=[
+                [
+                    True,
+                ],
+            ],
+            value_names=[
+                "on",
+            ],
+        )
+
+
     else:
         raise ValueError
     

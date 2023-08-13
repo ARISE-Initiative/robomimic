@@ -87,6 +87,15 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 clip_sample=self.algo_config.ddpm.clip_sample,
                 prediction_type=self.algo_config.ddpm.prediction_type
             )
+        elif self.algo_config.ddim.enabled:
+            noise_scheduler = DDIMScheduler(
+                num_train_timesteps=self.algo_config.ddim.num_train_timesteps,
+                beta_schedule=self.algo_config.ddim.beta_schedule,
+                clip_sample=self.algo_config.ddim.clip_sample,
+                set_alpha_to_one=self.algo_config.ddim.set_alpha_to_one,
+                steps_offset=self.algo_config.ddim.steps_offset,
+                prediction_type=self.algo_config.ddim.prediction_type
+            )
         else:
             raise RuntimeError()
         
