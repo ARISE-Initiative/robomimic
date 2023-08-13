@@ -230,15 +230,30 @@ def run_trained_agent(args):
         import RobotTeleop
         from RobotTeleop.utils import Rate, RateMeasure, Timers
         rate_measure = RateMeasure(name="control_rate_measure", freq_threshold=args.hz)
+    
+    # load ckpt dict and get algo name for sanity checks
+    algo_name, ckpt_dict = FileUtils.algo_name_from_checkpoint(ckpt_path=args.agent)
 
-    # relative path to agent
-    ckpt_path = args.agent
+    if args.dp_eval_steps is not None:
+        assert algo_name == "diffusion_policy"
+        log_warning("setting @num_inference_steps to {}".format(args.dp_eval_steps))
+
+        # HACK: modify the config, then dump to json again and write to ckpt_dict
+        tmp_config, _ = FileUtils.config_from_checkpoint(ckpt_dict=ckpt_dict)
+        with tmp_config.values_unlocked():
+            if tmp_config.algo.ddpm.enabled:
+                tmp_config.algo.ddpm.num_inference_timesteps = args.dp_eval_steps
+            elif tmp_config.algo.ddim.enabled:
+                tmp_config.algo.ddim.num_inference_timesteps = args.dp_eval_steps
+            else:
+                raise Exception("should not reach here")
+        ckpt_dict['config'] = tmp_config.dump()
 
     # device
     device = TorchUtils.get_torch_device(try_to_use_cuda=True)
 
     # restore policy
-    policy, ckpt_dict = FileUtils.policy_from_checkpoint(ckpt_path=ckpt_path, device=device, verbose=True)
+    policy, ckpt_dict = FileUtils.policy_from_checkpoint(ckpt_dict=ckpt_dict, device=device, verbose=True)
 
     # read rollout settings
     rollout_num_episodes = args.n_rollouts
@@ -249,8 +264,7 @@ def run_trained_agent(args):
         rollout_horizon = config.experiment.rollout.horizon
 
     # HACK: assume absolute actions for now if using diffusion policy on real robot
-    is_diffusion_policy = (config.algo_name == "diffusion_policy")
-    if is_diffusion_policy and EnvUtils.is_real_robot_gprs_env(env_meta=ckpt_dict["env_metadata"]):
+    if (algo_name == "diffusion_policy") and EnvUtils.is_real_robot_gprs_env(env_meta=ckpt_dict["env_metadata"]):
         ckpt_dict["env_metadata"]["env_kwargs"]["absolute_actions"] = True
 
     # create environment from saved checkpoint
@@ -497,6 +511,15 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="If provided, do not run actions in env, and instead just measure the rate of action computation and raise warnings if it dips below this threshold",
+    )
+
+    # TODO: clean up this arg
+    # If provided, set num_inference_timesteps explicitly for diffusion policy evaluation
+    parser.add_argument(
+        "--dp_eval_steps",
+        type=int,
+        default=None,
+        help="If provided, set num_inference_timesteps explicitly for diffusion policy evaluation",
     )
 
     args = parser.parse_args()
