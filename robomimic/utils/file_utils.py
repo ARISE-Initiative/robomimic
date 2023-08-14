@@ -206,6 +206,30 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     return shape_meta
 
 
+def get_intervention_segments(interventions):
+    """
+    Splits interventions list into a list of start and end indices (windows) of continuous intervention segments.
+    """
+    interventions = interventions.reshape(-1).astype(int)
+    # pad before and after to make it easy to count starting and ending intervention segments
+    expanded_ints = [False] + interventions.astype(bool).tolist() + [False]
+    start_inds = []
+    end_inds = []
+    for i in range(1, len(expanded_ints)):
+        if expanded_ints[i] and (not expanded_ints[i - 1]):
+            # low to high edge means start of new window
+            start_inds.append(i - 1) # record index in original array which is one less (since we added an element to the beg)
+        elif (not expanded_ints[i]) and expanded_ints[i - 1]:
+            # high to low edge means end of previous window
+            end_inds.append(i - 1) # record index in original array which is one less (since we added an element to the beg)
+
+    # run some sanity checks
+    assert len(start_inds) == len(end_inds), "missing window edge"
+    assert np.all([np.sum(interventions[s : e]) == (e - s) for s, e in zip(start_inds, end_inds)]), "window computation covers non-interventions"
+    assert sum([np.sum(interventions[s : e]) for s, e in zip(start_inds, end_inds)]) == np.sum(interventions), "window computation does not cover all interventions"
+    return list(zip(start_inds, end_inds))
+
+
 def load_dict_from_checkpoint(ckpt_path):
     """
     Load checkpoint dictionary from a checkpoint file.
