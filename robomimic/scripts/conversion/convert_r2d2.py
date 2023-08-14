@@ -8,9 +8,12 @@ import glob
 from tqdm import tqdm
 import argparse
 import shutil
+import torch
+import pytorch3d.transforms as pt
 
 from r2d2.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
 from r2d2.trajectory_utils.trajectory_reader import TrajectoryReader
+from r2d2.camera_utils.info import camera_type_to_string_dict
 
 def convert_dataset(path, args):
     recording_folderpath = os.path.join(os.path.dirname(path), "recordings", "MP4")
@@ -37,12 +40,8 @@ def convert_dataset(path, args):
         f["observation"].create_group("camera").create_group("image")
     image_grp = f["observation/camera/image"]
 
-    cam_data = dict(
-        hand_camera_image=[],
-        varied_camera_left_image=[],
-        varied_camera_right_image=[],
-    )
-
+    """
+    Extract camera type and keys. Examples of what they should look like:
     camera_type_dict = {
         '17225336': 'hand_camera',
         '24013089': 'varied_camera',
@@ -53,7 +52,26 @@ def convert_dataset(path, args):
         "varied_camera_left_image": "25047636_right",
         "varied_camera_right_image": "24013089_left"
     }
+    """
 
+    CAM_ID_TO_TYPE = {}
+    for k in f["observation"]["camera_type"]:
+        CAM_ID_TO_TYPE[k] = camera_type_to_string_dict[f["observation"]["camera_type"][k][0]]
+
+    CAM_NAME_TO_KEY_MAPPING = {}
+    for (cam_id, cam_type) in CAM_ID_TO_TYPE.items():
+        if cam_type == "hand_camera":
+            cam_name = "hand_camera_image"
+            cam_key = "{}_left".format(cam_id)
+        elif cam_type == "varied_camera":
+            cam_name = "varied_camera_1_image" if "varied_camera_1_image" not in CAM_NAME_TO_KEY_MAPPING else "varied_camera_2_image"
+            cam_key = "{}_left".format(cam_id)
+        else:
+            raise NotImplementedError
+
+        CAM_NAME_TO_KEY_MAPPING[cam_name] = cam_key
+
+    cam_data = {cam_name: [] for cam_name in CAM_NAME_TO_KEY_MAPPING.keys()}
     traj_reader = TrajectoryReader(path, read_images=False)
 
     for index in range(demo_len):
@@ -63,9 +81,9 @@ def convert_dataset(path, args):
         
         timestamp_dict = {}
         camera_obs = camera_reader.read_cameras(
-            index=index, camera_type_dict=camera_type_dict, timestamp_dict=timestamp_dict
+            index=index, camera_type_dict=CAM_ID_TO_TYPE, timestamp_dict=timestamp_dict
         )
-        for cam_name in ["hand_camera_image", "varied_camera_left_image", "varied_camera_right_image"]:
+        for cam_name in CAM_NAME_TO_KEY_MAPPING.keys():
             if camera_obs is None:
                 im = np.zeros((args.imsize, args.imsize, 3))
             else:
@@ -83,6 +101,40 @@ def convert_dataset(path, args):
             del image_grp[cam_name]
         image_grp.create_dataset(cam_name, data=cam_data[cam_name], compression="gzip")
 
+    # extract action key data
+    action_dict_group = f["action"]
+    for in_ac_key in ["cartesian_position", "cartesian_velocity"]:
+        in_action = action_dict_group[in_ac_key][:]
+        in_pos = in_action[:,:3].astype(np.float64)
+        in_rot = in_action[:,3:6].astype(np.float64)
+        rot_ = torch.from_numpy(in_rot)
+        rot_mat = pt.axis_angle_to_matrix(rot_)
+        rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float64)
+
+        if in_ac_key == "cartesian_position":
+            prefix = "abs_"
+        elif in_ac_key == "cartesian_velocity":
+            prefix = "rel_"
+        else:
+            raise ValueError
+        
+        this_action_dict = {
+            prefix + 'pos': in_pos,
+            prefix + 'rot_axis_angle': in_rot,
+            prefix + 'rot_6d': rot_6d,
+        }
+        for key, data in this_action_dict.items():
+            if key in action_dict_group:
+                del action_dict_group[key]
+            action_dict_group.create_dataset(key, data=data)
+
+    # ensure all action keys are batched (ie., are not 0-dimensional)
+    for k in action_dict_group:
+        if isinstance(action_dict_group[k], h5py.Dataset) and len(action_dict_group[k].shape) == 1:
+            reshaped_values = np.reshape(action_dict_group[k][:], (-1, 1))
+            del action_dict_group[k]
+            action_dict_group.create_dataset(k, data=reshaped_values)
+
     f.close()
 
 if __name__ == "__main__":
@@ -98,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--imsize",
         type=int,
-        default=84,
+        default=128,
         help="image size (w and h)",
     )
     
