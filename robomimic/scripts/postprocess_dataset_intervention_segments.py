@@ -160,9 +160,10 @@ def postprocess_dataset_intervention_segments(args):
     total_samples = 0
     for ind in range(len(demos)):
         ep = demos[ind]
-        print("src grp: {}".format(ep))
+        src_ep_grp = f["data/{}".format(ep)]
+        print("src grp: {} with {} samples".format(ep, src_ep_grp.attrs["num_samples"]))
         ep_write_ind, ep_num_traj, ep_total_samples = write_intervention_segments_as_trajectories(
-            src_ep_grp=f["data/{}".format(ep)],
+            src_ep_grp=src_ep_grp,
             dst_grp=data_grp,
             start_ep_write_ind=ep_write_ind,
             same=args.same,

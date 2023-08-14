@@ -16,6 +16,7 @@ def get_idle_segments_in_trajectory(
     obs_pos_key="ee_pose",
     min_segment_length=1,
     threshold=1e-4,
+    verbose=False,
 ):
     """
     Returns a mask that corresponds to idle segments in the trajectory.
@@ -26,10 +27,13 @@ def get_idle_segments_in_trajectory(
         min_segment_length (int): minimum length of idle segment
         threshold (float): threshold for delta eef pos differences - everything below this threshold
             value is considered idle
+        verbose (bool): if True, print some helpful info
 
     Returns:
         idle_segment_mask (np.array): array with value of 1 during an idle segment
     """
+    if verbose:
+        print(ep_grp)
     eef_pos = ep_grp["obs/{}".format(obs_pos_key)][:, :3]
     delta_eef_pos_norms = np.linalg.norm(np.diff(eef_pos, axis=0), axis=1)
 
@@ -42,10 +46,21 @@ def get_idle_segments_in_trajectory(
     for seg in idle_segments:
         if seg[1] - seg[0] >= min_segment_length:
             ret_mask[seg[0] : seg[1]] = 1
+        
+            if verbose:
+                print("segment: {}".format(seg))
+                # print norms N timesteps before and after window to get a sense of nearby values
+                prev_norms = delta_eef_pos_norms[max(seg[0] - 6, 0) : seg[0] - 1]
+                print("prev_norms")
+                print(prev_norms)
+                post_norms = delta_eef_pos_norms[seg[1] - 1 : min(seg[1] + 4, eef_pos.shape[0] - 1)]
+                print("post_norms")
+                print(post_norms)
+
     return ret_mask
 
 
-def write_non_idle_segments_as_interventions(hdf5_path, n=None):
+def write_non_idle_segments_as_interventions(hdf5_path, n=None, min_segment_length=1, threshold=1e-4):
     """
     Modifies the hdf5 in-place by splitting each trajectory into idle and non-idle segments, and
     writing the result as an "interventions" key in each trajectory, where the interventions correspond
@@ -66,8 +81,8 @@ def write_non_idle_segments_as_interventions(hdf5_path, n=None):
         idle_seg_mask = get_idle_segments_in_trajectory(
             ep_grp=ep_grp,
             obs_pos_key="ee_pose",
-            min_segment_length=1,
-            threshold=1e-4,
+            min_segment_length=min_segment_length,
+            threshold=threshold,
         )
 
         # write non-idle segment mask as interventions
@@ -109,21 +124,36 @@ def remove_idle_segments(args):
             idle_seg_mask = get_idle_segments_in_trajectory(
                 ep_grp=f["data/{}".format(demo_key)],
                 obs_pos_key="ee_pose",
-                min_segment_length=1,
+                # min_segment_length=1,
+                min_segment_length=7,
                 threshold=1e-4,
+                # threshold=3e-4,
+                # verbose=True,
+                verbose=False,
             )
             idle_segs = FileUtils.get_intervention_segments(idle_seg_mask)
             print(demo_key)
+            # print(len(idle_segs))
+            print("idle segments")
             print(idle_segs)
+            print("segment lengths")
+            print([seg[1] - seg[0] for seg in idle_segs])
 
         f.close()
         exit()
+
+    assert args.output_name is not None
 
     # split each trajectory into idle and non-idle segments and write to "interventions" key
     print("writing non-idle segments as interventions...")
     write_non_idle_segments_as_interventions(
         hdf5_path=args.dataset,
         n=args.n,
+        # some good candidates below
+        min_segment_length=7,
+        threshold=1e-4,
+        # min_segment_length=7,
+        # threshold=3e-4,
     )
 
     # write new dataset, keeping only interventions
@@ -146,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_name",
         type=str,
-        required=True,
+        default=None,
         help="name of output hdf5 dataset",
     )
 
