@@ -24,12 +24,12 @@ def convert_dataset(path, args):
     camera_reader = RecordedMultiCameraWrapper(recording_folderpath, camera_kwargs)
 
     output_path = os.path.join(os.path.dirname(path), "trajectory_im{}.h5".format(args.imsize))
-    if os.path.exists(output_path):
-        # dataset already exists, skip
-        f = h5py.File(output_path)
-        if "observation/camera/image/hand_camera_image" in f.keys():
-            return
-        f.close()
+    # if os.path.exists(output_path):
+    #     # dataset already exists, skip
+    #     f = h5py.File(output_path)
+    #     if "observation/camera/image/hand_camera_image" in f.keys():
+    #         return
+    #     f.close()
 
     shutil.copyfile(path, output_path)
     f = h5py.File(output_path, "a")
@@ -135,7 +135,35 @@ def convert_dataset(path, args):
             del action_dict_group[k]
             action_dict_group.create_dataset(k, data=reshaped_values)
 
+    # post-processing: remove timesteps where robot movement is disabled
+    movement_enabled = f["observation/controller_info/movement_enabled"][:]
+    timesteps_to_remove = np.where(movement_enabled == False)[0]
+
+    if not args.keep_idle_timesteps:
+        remove_timesteps(f, timesteps_to_remove)
+
     f.close()
+
+def remove_timesteps(f, timesteps_to_remove):
+    total_timesteps = f["action/cartesian_position"].shape[0]
+    
+    def remove_timesteps_for_group(g):
+        for k in g:
+            if isinstance(g[k], h5py._hl.dataset.Dataset):
+                if g[k].shape[0] != total_timesteps:
+                    print("skipping {}".format(k))
+                    continue
+                new_dataset = np.delete(g[k], timesteps_to_remove, axis=0)
+                del g[k]
+                g.create_dataset(k, data=new_dataset)
+            elif isinstance(g[k], h5py._hl.group.Group):
+                remove_timesteps_for_group(g[k])
+            else:
+                raise NotImplementedError
+
+    for k in f:
+        remove_timesteps_for_group(f[k])
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -152,6 +180,12 @@ if __name__ == "__main__":
         type=int,
         default=128,
         help="image size (w and h)",
+    )
+
+    parser.add_argument(
+        "--keep_idle_timesteps",
+        action="store_true",
+        help="override the default behavior of truncating idle timesteps",
     )
     
     args = parser.parse_args()
