@@ -7,11 +7,17 @@ import json
 import numpy as np
 from copy import deepcopy
 
-import mujoco_py
 import robosuite
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
+
+# protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
+try:
+    import mujoco_py
+    MUJOCO_EXCEPTIONS = [mujoco_py.builder.MujocoException]
+except Exception:
+    MUJOCO_EXCEPTIONS = []
 
 
 class EnvRobosuite(EB.EnvBase):
@@ -374,7 +380,7 @@ class EnvRobosuite(EB.EnvBase):
         that the entire training run doesn't crash because of a bad policy that causes unstable
         simulation computations.
         """
-        return (mujoco_py.builder.MujocoException)
+        return tuple(MUJOCO_EXCEPTIONS)
 
     def __repr__(self):
         """
