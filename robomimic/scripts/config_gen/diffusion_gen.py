@@ -75,6 +75,47 @@ def make_generator_helper(args):
                 "abs",
             ],
         )
+    elif args.env == "kitchen":
+        generator.add_param(
+            key="train.data",
+            name="ds",
+            group=2,
+            values=[
+                [
+                    {"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5"},
+                ],
+            ],
+            value_names=[
+                "human-100",
+            ],
+        )
+        
+        # # update env config to use absolute action control
+        # generator.add_param(
+        #     key="experiment.env_meta_update_dict",
+        #     name="",
+        #     group=-1,
+        #     values=[
+        #         {"env_kwargs": {"controller_configs": {"control_delta": False}}}
+        #     ],
+        # )
+
+        # generator.add_param(
+        #     key="train.action_keys",
+        #     name="ac_keys",
+        #     group=-1,
+        #     values=[
+        #         [
+        #             "action_dict/abs_pos",
+        #             "action_dict/abs_rot_6d",
+        #             "action_dict/gripper",
+        #             # "actions",
+        #         ],
+        #     ],
+        #     value_names=[
+        #         "abs",
+        #     ],
+        # )
     elif args.env == "square":
         generator.add_param(
             key="train.data",
@@ -82,10 +123,6 @@ def make_generator_helper(args):
             group=2,
             values=[
                 [
-                    # TODO: point to the hdf5 file
-                    # {"path": "/home/cchi/dev/robomimic_r2d2/datasets/square/ph/image_abs.hdf5"},
-                    # {"path": "~/datasets/square/ph/image_v141.hdf5"},
-                    # {"path": "~/datasets/square/ph/image.hdf5"},
                     {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
                 ],
             ],

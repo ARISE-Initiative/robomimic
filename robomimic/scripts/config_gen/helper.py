@@ -151,6 +151,81 @@ def set_env_settings(generator, args):
             group=-1,
             values=[[]],
         )
+    elif args.env == "kitchen":
+        generator.add_param(
+            key="train.action_config",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "actions":{
+                        "normalization": None,
+                    },
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
+                    "action_dict/abs_rot_axis_angle": {
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/abs_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/rel_pos": {
+                        "normalization": None,
+                    },
+                    "action_dict/rel_rot_axis_angle": {
+                        "normalization": None,
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/rel_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/gripper": {
+                        "normalization": None,
+                    }
+                }
+            ],
+        )
+        
+        if args.mod == 'im':
+            generator.add_param(
+                key="observation.modalities.obs.low_dim",
+                name="",
+                group=-1,
+                values=[
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_base_pos",
+                     "robot0_gripper_qpos"]
+                ],
+            )
+            generator.add_param(
+                key="observation.modalities.obs.rgb",
+                name="",
+                group=-1,
+                values=[
+                    ["robot0_agentview_left_image",
+                     "robot0_agentview_right_image",
+                     "robot0_eye_in_hand_image"]
+                ],
+            )
+        else:
+            generator.add_param(
+                key="observation.modalities.obs.low_dim",
+                name="",
+                group=-1,
+                values=[
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "robot0_base_pos",
+                     "object",
+                    ]
+                ],
+            )
     elif args.env in ['square', 'lift', 'place_close']:
         # # set videos off
         # args.no_video = True

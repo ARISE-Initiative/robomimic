@@ -700,6 +700,9 @@ class BC_Transformer(BC):
         """
         self.context_length = self.algo_config.transformer.context_length
         self.supervise_all_steps = self.algo_config.transformer.supervise_all_steps
+        self.pred_future_acs = self.algo_config.transformer.pred_future_acs
+        if self.pred_future_acs:
+            assert self.supervise_all_steps is True
 
     def process_batch_for_training(self, batch):
         """
@@ -719,10 +722,17 @@ class BC_Transformer(BC):
 
         if self.supervise_all_steps:
             # supervision on entire sequence (instead of just current timestep)
-            input_batch["actions"] = batch["actions"][:, :h, :]
+            if self.pred_future_acs:
+                ac_start = h - 1
+            else:
+                ac_start = 0
+            input_batch["actions"] = batch["actions"][:, ac_start:ac_start+h, :]
         else:
             # just use current timestep
             input_batch["actions"] = batch["actions"][:, h-1, :]
+
+        if self.pred_future_acs:
+            assert input_batch["actions"].shape[1] == h
 
         input_batch = TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
         return input_batch
@@ -765,7 +775,17 @@ class BC_Transformer(BC):
         """
         assert not self.nets.training
 
-        return self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)[:, -1, :]
+        output = self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)
+
+        if self.supervise_all_steps:
+            if self.algo_config.transformer.pred_future_acs:
+                output = output[:, 0, :]
+            else:
+                output = output[:, -1, :]
+        else:
+            output = output[:, -1, :]
+
+        return output
 
 
 class BC_Transformer_GMM(BC_Transformer):
