@@ -524,7 +524,7 @@ def set_mod_settings(generator, args):
                 key="experiment.save.every_n_epochs",
                 name="",
                 group=-1,
-                values=[20],
+                values=[40],
             )
 
         generator.add_param(
@@ -565,7 +565,7 @@ def set_mod_settings(generator, args):
                 key="experiment.rollout.rate",
                 name="",
                 group=-1,
-                values=[20],
+                values=[40],
             )
 
 
@@ -650,6 +650,17 @@ def set_debug_mode(generator, args):
         group=-1,
         values=[3],
     )
+
+
+def set_num_seeds(generator, args):
+    if args.n_seeds is not None and "train.seed" not in generator.parameters:
+        generator.add_param(
+            key="train.seed",
+            name="seed",
+            group=-10,
+            values=[i + 1 for i in range(args.n_seeds)],
+            prepend=True,
+        )
 
 
 def get_argparser():
@@ -766,6 +777,7 @@ def make_generator(args, make_generator_helper):
 
     set_env_settings(generator, args)
     set_mod_settings(generator, args)
+    set_num_seeds(generator, args)
 
     # set the debug settings last, to override previous setting changes
     set_debug_mode(generator, args)
