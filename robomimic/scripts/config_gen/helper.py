@@ -652,6 +652,15 @@ def set_debug_mode(generator, args):
     )
 
 
+def set_wandb_mode(generator, args):
+    generator.add_param(
+        key="experiment.logging.log_wandb",
+        name="",
+        group=-1,
+        values=[not args.no_wandb],
+    )
+
+
 def set_num_seeds(generator, args):
     if args.n_seeds is not None and "train.seed" not in generator.parameters:
         generator.add_param(
@@ -778,6 +787,7 @@ def make_generator(args, make_generator_helper):
     set_env_settings(generator, args)
     set_mod_settings(generator, args)
     set_num_seeds(generator, args)
+    set_wandb_mode(generator, args)
 
     # set the debug settings last, to override previous setting changes
     set_debug_mode(generator, args)
