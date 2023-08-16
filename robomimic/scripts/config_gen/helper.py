@@ -655,6 +655,15 @@ def set_debug_mode(generator, args):
     )
 
 
+def set_output_dir(generator, args):
+    assert args.name is not None
+
+    vals = generator.parameters["train.output_dir"].values
+
+    for i in range(len(vals)):
+        vals[i] = os.path.join(vals[i], args.name)
+
+
 def set_wandb_mode(generator, args):
     generator.add_param(
         key="experiment.logging.log_wandb",
@@ -789,6 +798,7 @@ def make_generator(args, make_generator_helper):
 
     set_env_settings(generator, args)
     set_mod_settings(generator, args)
+    set_output_dir(generator, args)
     set_num_seeds(generator, args)
     set_wandb_mode(generator, args)
 
@@ -806,4 +816,4 @@ def make_generator(args, make_generator_helper):
     )
 
     # generate jsons and script
-    generator.generate()
+    generator.generate(override_base_name=True)

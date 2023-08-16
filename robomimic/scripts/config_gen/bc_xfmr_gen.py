@@ -31,14 +31,16 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
-                "human-100",
-                "mg-100",
-                "mg-1000",
+                "bowls-human-100",
+                # "human-100",
+                # "mg-100",
+                # "mg-1000",
             ],
         )
     elif args.env == "square":
@@ -64,7 +66,7 @@ def make_generator_helper(args):
         name="predfuture",
         group=1,
         values=[
-            # True,
+            True,
             False,
         ],
         # hidename=True,
@@ -74,7 +76,7 @@ def make_generator_helper(args):
         name="supallsteps",
         group=1,
         values=[
-            # True,
+            True,
             False,
         ],
         hidename=True,
@@ -84,7 +86,7 @@ def make_generator_helper(args):
         name="causal",
         group=1,
         values=[
-            # False,
+            False,
             True,
         ],
         hidename=True,
