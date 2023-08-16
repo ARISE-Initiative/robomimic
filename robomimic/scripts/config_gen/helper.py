@@ -185,6 +185,9 @@ def set_env_settings(generator, args):
                     },
                     "action_dict/gripper": {
                         "normalization": None,
+                    },
+                    "action_dict/base_mode": {
+                        "normalization": None,
                     }
                 }
             ],

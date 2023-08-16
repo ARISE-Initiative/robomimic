@@ -1,23 +1,11 @@
-if __name__ == "__main__":
-    import sys
-    import os
-    import pathlib
-
-    ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent)
-    sys.path.append(ROOT_DIR)
-
 import multiprocessing
 import os
-import shutil
-import click
 import pathlib
 import h5py
 from tqdm import tqdm
 import collections
 import pickle
-
-
-
+import argparse
 import numpy as np
 import copy
 
@@ -65,8 +53,8 @@ class RobomimicAbsoluteActionConverter:
         self.abs_env = abs_env
         self.file = h5py.File(dataset_path, 'r')
     
-    def __len__(self):
-        return len(self.file['data'])
+    def get_demo_keys(self):
+        return list(self.file['data'].keys())
 
     def convert_actions(self, 
             states: np.ndarray, 
@@ -76,12 +64,14 @@ class RobomimicAbsoluteActionConverter:
         generate equivalent goal position and orientation for each step
         keep the original gripper action intact.
         """
+        env = self.env
+        d_a = len(env.env.robots[0].action_limits[0])
+
         # in case of multi robot
         # reshape (N,14) to (N,2,7)
         # or (N,7) to (N,1,7)
-        stacked_actions = actions.reshape(*actions.shape[:-1],-1,7)
+        stacked_actions = actions.reshape(*actions.shape[:-1], -1, d_a)
 
-        env = self.env
         # generate abs actions
         action_goal_pos = np.zeros(
             stacked_actions.shape[:-1]+(3,), 
@@ -89,7 +79,7 @@ class RobomimicAbsoluteActionConverter:
         action_goal_ori = np.zeros(
             stacked_actions.shape[:-1]+(3,), 
             dtype=stacked_actions.dtype)
-        action_gripper = stacked_actions[...,[-1]]
+        action_remainder = stacked_actions[...,6:]
         for i in range(len(states)):
             _ = env.reset_to({'states': states[i]})
 
@@ -107,14 +97,14 @@ class RobomimicAbsoluteActionConverter:
         stacked_abs_actions = np.concatenate([
             action_goal_pos,
             action_goal_ori,
-            action_gripper
+            action_remainder
         ], axis=-1)
         abs_actions = stacked_abs_actions.reshape(actions.shape)
         return abs_actions
 
-    def convert_idx(self, idx):
+    def convert_demo(self, demo_key):
         file = self.file
-        demo = file[f'data/demo_{idx}']
+        demo = file["data/{}".format(demo_key)]
         # input
         states = demo['states'][:]
         actions = demo['actions'][:]
@@ -123,14 +113,14 @@ class RobomimicAbsoluteActionConverter:
         abs_actions = self.convert_actions(states, actions)
         return abs_actions
 
-    def convert_and_eval_idx(self, idx):
+    def convert_and_eval_demo(self, demo_key):
         env = self.env
         abs_env = self.abs_env
         file = self.file
         # first step have high error for some reason, not representative
         eval_skip_steps = 1
 
-        demo = file[f'data/demo_{idx}']
+        demo = file["data/{}".format(demo_key)]
         # input
         states = demo['states'][:]
         actions = demo['actions'][:]
@@ -202,27 +192,20 @@ class RobomimicAbsoluteActionConverter:
 copied/adapted from https://github.com/columbia-ai-robotics/diffusion_policy/blob/main/diffusion_policy/scripts/robomimic_dataset_conversion.py
 """
 def worker(x):
-    path, idx, do_eval = x
+    path, demo_key, do_eval = x
     converter = RobomimicAbsoluteActionConverter(path)
     if do_eval:
-        abs_actions, info = converter.convert_and_eval_idx(idx)
+        abs_actions, info = converter.convert_and_eval_demo(demo_key)
     else:
-        abs_actions = converter.convert_idx(idx)
+        abs_actions = converter.convert_demo(demo_key)
         info = dict()
     return abs_actions, info
 
-@click.command()
-@click.option('-i', '--input', required=True, help='input hdf5 path')
-@click.option('-o', '--output', required=True, help='output hdf5 path. Parent directory must exist')
-@click.option('-e', '--eval_dir', default=None, help='directory to output evaluation metrics')
-@click.option('-n', '--num_workers', default=None, type=int)
-def main(input, output, eval_dir, num_workers):
+
+def add_absolute_actions_to_dataset(dataset, eval_dir, num_workers):
     # process inputs
-    input = pathlib.Path(input).expanduser()
-    assert input.is_file()
-    output = pathlib.Path(output).expanduser()
-    assert output.parent.is_dir()
-    assert not output.is_dir()
+    dataset = pathlib.Path(dataset).expanduser()
+    assert dataset.is_file()
 
     do_eval = False
     if eval_dir is not None:
@@ -230,21 +213,19 @@ def main(input, output, eval_dir, num_workers):
         assert eval_dir.parent.exists()
         do_eval = True
     
-    converter = RobomimicAbsoluteActionConverter(input)
-
+    converter = RobomimicAbsoluteActionConverter(dataset)
+    demo_keys = converter.get_demo_keys()
+    del converter
+    
     # run
     with multiprocessing.Pool(num_workers) as pool:
-        results = pool.map(worker, [(input, i, do_eval) for i in range(len(converter))])
-    
-    # save output
-    print('Copying hdf5')
-    shutil.copy(str(input), str(output))
+        results = pool.map(worker, [(dataset, demo_key, do_eval) for demo_key in demo_keys])
 
     # modify action
-    with h5py.File(output, 'r+') as out_file:
-        for i in tqdm(range(len(converter)), desc="Writing to output"):
+    with h5py.File(dataset, 'r+') as out_file:
+        for i in tqdm(range(len(results)), desc="Writing to output"):
             abs_actions, info = results[i]
-            demo = out_file[f'data/demo_{i}']
+            demo = out_file["data/{}".format(demo_keys[i])]
             if "actions_abs" not in demo:
                 demo.create_dataset("actions_abs", data=np.array(abs_actions))
             else:
@@ -287,4 +268,31 @@ def main(input, output, eval_dir, num_workers):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "--eval_dir",
+        type=str,
+        help="directory to output evaluation metrics",
+    )
+
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=None,
+    )
+    
+    args = parser.parse_args()
+    
+    
+    add_absolute_actions_to_dataset(
+        dataset=args.dataset,
+        eval_dir=args.eval_dir,
+        num_workers=args.num_workers,
+    )

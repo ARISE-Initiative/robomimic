@@ -81,41 +81,45 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [
-                    {"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5"},
-                ],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
+                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
+                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
                 "human-100",
+                "mg-100",
+                "mg-1000",
             ],
         )
         
-        # # update env config to use absolute action control
-        # generator.add_param(
-        #     key="experiment.env_meta_update_dict",
-        #     name="",
-        #     group=-1,
-        #     values=[
-        #         {"env_kwargs": {"controller_configs": {"control_delta": False}}}
-        #     ],
-        # )
+        # update env config to use absolute action control
+        generator.add_param(
+            key="experiment.env_meta_update_dict",
+            name="",
+            group=-1,
+            values=[
+                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
+            ],
+        )
 
-        # generator.add_param(
-        #     key="train.action_keys",
-        #     name="ac_keys",
-        #     group=-1,
-        #     values=[
-        #         [
-        #             "action_dict/abs_pos",
-        #             "action_dict/abs_rot_6d",
-        #             "action_dict/gripper",
-        #             # "actions",
-        #         ],
-        #     ],
-        #     value_names=[
-        #         "abs",
-        #     ],
-        # )
+        generator.add_param(
+            key="train.action_keys",
+            name="ac_keys",
+            group=-1,
+            values=[
+                [
+                    "action_dict/abs_pos",
+                    "action_dict/abs_rot_6d",
+                    "action_dict/gripper",
+                    "action_dict/base_mode",
+                    # "actions",
+                ],
+            ],
+            value_names=[
+                "abs",
+            ],
+            hidename=True,
+        )
     elif args.env == "square":
         generator.add_param(
             key="train.data",

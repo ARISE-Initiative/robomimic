@@ -63,27 +63,36 @@ def make_generator_helper(args):
         key="algo.transformer.pred_future_acs",
         name="predfuture",
         group=1,
-        values=[True],
-        hidename=True,
+        values=[
+            # True,
+            False,
+        ],
+        # hidename=True,
     )
     generator.add_param(
         key="algo.transformer.supervise_all_steps",
         name="supallsteps",
         group=1,
-        values=[True],
+        values=[
+            # True,
+            False,
+        ],
         hidename=True,
     )
     generator.add_param(
         key="algo.transformer.causal",
         name="causal",
         group=1,
-        values=[False],
+        values=[
+            # False,
+            True,
+        ],
         hidename=True,
     )
     generator.add_param(
         key="train.seq_length",
         name="",
-        group=1,
+        group=-1,
         values=[10],
         hidename=True,
     )

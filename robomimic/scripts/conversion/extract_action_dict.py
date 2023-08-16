@@ -43,25 +43,28 @@ def main():
         else:
             prefix = "rel_"
 
-        for demo in f['data'].values():
+        for demo in f["data"].values():
             in_action = demo[str(input_action_key)][:]
             in_pos = in_action[:,:3].astype(np.float32)
             in_rot = in_action[:,3:6].astype(np.float32)
-            in_grip = in_action[:,6:].astype(np.float32)
+            in_grip = in_action[:,6:7].astype(np.float32)
             
             rot_ = torch.from_numpy(in_rot)
             rot_mat = pt.axis_angle_to_matrix(rot_)
             rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float32)
             
             this_action_dict = {
-                prefix + 'pos': in_pos,
-                prefix + 'rot_axis_angle': in_rot,
-                prefix + 'rot_6d': rot_6d,
-                'gripper': in_grip
+                prefix + "pos": in_pos,
+                prefix + "rot_axis_angle": in_rot,
+                prefix + "rot_6d": rot_6d,
+                "gripper": in_grip
             }
-            # if 'action_dict' in demo:
-            #     del demo['action_dict']
-            action_dict_group = demo.require_group('action_dict')
+
+            # special case: 8 dim actions mean there is a mobile base mode in the action space
+            if in_action.shape[1] == 8:
+                this_action_dict["base_mode"] = in_action[:,7:8].astype(np.float32)
+
+            action_dict_group = demo.require_group("action_dict")
             for key, data in this_action_dict.items():
                 if key in action_dict_group:
                     del action_dict_group[key]
