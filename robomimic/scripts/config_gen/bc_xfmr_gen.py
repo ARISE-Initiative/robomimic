@@ -96,6 +96,27 @@ def make_generator_helper(args):
         values=[10],
         hidename=True,
     )
+
+    generator.add_param(
+        key="algo.gmm.min_std",
+        name="mindstd",
+        group=271314,
+        values=[
+            0.03,
+            #0.0001,
+        ],
+        hidename=True,
+    )
+    generator.add_param(
+        key="train.max_grad_norm",
+        name="maxgradnorm",
+        group=18371,
+        values=[
+            # None,
+            100.0,
+        ],
+        hidename=True,
+    )
     
     generator.add_param(
         key="train.output_dir",
