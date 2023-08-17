@@ -111,11 +111,11 @@ def make_generator_helper(args):
             group=-1,
             values=[
                 [
-                    # "action_dict/abs_pos",
-                    # "action_dict/abs_rot_6d",
-                    # "action_dict/gripper",
-                    # "action_dict/base_mode",
-                    "actions",
+                    "action_dict/abs_pos",
+                    "action_dict/abs_rot_6d",
+                    "action_dict/gripper",
+                    "action_dict/base_mode",
+                    # "actions",
                 ],
             ],
             value_names=[
