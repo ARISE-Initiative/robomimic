@@ -16,13 +16,16 @@ import RobotTeleop
 import RobotTeleop.utils as U
 from RobotTeleop.utils import Rate, RateMeasure, Timers
 
-# GPRS imports
-from gprs.franka_interface import FrankaInterface
-from gprs.camera_redis_interface import CameraRedisSubInterface
-from gprs.utils import YamlConfig
-from gprs import config_root
+try:
+    # GPRS imports
+    from gprs.franka_interface import FrankaInterface
+    from gprs.camera_redis_interface import CameraRedisSubInterface
+    from gprs.utils import YamlConfig
+    from gprs import config_root
 
-from rpl_vision_utils.utils import img_utils as ImgUtils
+    from rpl_vision_utils.utils import img_utils as ImgUtils
+except ImportError:
+    print("WARNING: no GPRS...")
 
 import robomimic.envs.env_base as EB
 import robomimic.utils.obs_utils as ObsUtils

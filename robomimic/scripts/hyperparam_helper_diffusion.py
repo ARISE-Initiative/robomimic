@@ -18,8 +18,9 @@ CONFIG_DIR = "/tmp/diffusion_configs"
 
 # path to base robomimic training config(s)
 BASE_CONFIGS = [
-    "/tmp/diffusion_base/base_train_diffusion.json",
-    "/tmp/diffusion_base/base_train_diffusion_image.json",
+    # "~/Desktop/mimicgen_env_data/base_train_diffusion.json",
+    # "~/Desktop/mimicgen_env_data/base_train_diffusion_image.json",
+    "~/Desktop/mimicgen_env_data/base_train_diffusion.json",
 ]
 
 # output directory for this set of runs
@@ -29,23 +30,32 @@ OUTPUT_DIR = "/tmp/diffusion_runs"
 def make_generators(base_configs):
     """Helper function to make all generators."""
     all_settings = [
-        # low-dim
+        # # low-dim
+        # dict(
+        #     dataset_paths=[
+        #         "/tmp/low_dim.hdf5",
+        #     ],
+        #     dataset_names=[
+        #         "low_dim",
+        #     ],
+        #     horizon=400,
+        # ),
+        # # image
+        # dict(
+        #     dataset_paths=[
+        #         "/tmp/image.hdf5",
+        #     ],
+        #     dataset_names=[
+        #         "image",
+        #     ],
+        #     horizon=400,
+        # ),
         dict(
             dataset_paths=[
-                "/tmp/low_dim.hdf5",
+                "/ext2/rebuttal/diffusion/square_ph_abs_im.hdf5",
             ],
             dataset_names=[
-                "low_dim",
-            ],
-            horizon=400,
-        ),
-        # image
-        dict(
-            dataset_paths=[
-                "/tmp/image.hdf5",
-            ],
-            dataset_names=[
-                "image",
+                "square_ph_ld",
             ],
             horizon=400,
         ),
@@ -178,6 +188,66 @@ def make_gen(base_config, settings):
         group=-1,
         values=[1000],
     )
+
+    # set low-rate of eval - every 100 epochs
+    generator.add_param(
+        key="experiment.save.every_n_epochs",
+        name="",
+        group=-1,
+        values=[100],
+    )
+    generator.add_param(
+        key="experiment.rollout.rate",
+        name="",
+        group=-1,
+        values=[100],
+    )
+
+    # set noise scheduler
+    use_ddim = True
+    inf_steps = [(100, 10), (50, 5)]
+    # use_ddim = False
+    # inf_steps = []
+
+    generator.add_param(
+        key="algo.ddim.enabled",
+        name="ddim" if use_ddim else "",
+        group=1001,
+        values=[
+            use_ddim,
+        ],
+        value_names=[
+            "t" if use_ddim else "f",
+        ],
+    )
+    generator.add_param(
+        key="algo.ddpm.enabled",
+        name="ddpm" if not use_ddim else "",
+        group=1001,
+        values=[
+            (not use_ddim),
+        ],
+        value_names=[
+            "f" if not use_ddim else "t",
+        ],
+    )
+
+    if len(inf_steps) > 0:
+        train_inf_steps = [x[0] for x in inf_steps]
+        eval_inf_steps = [x[1] for x in inf_steps]
+        # set inf steps
+        generator.add_param(
+            key="algo.ddim.num_train_timesteps" if use_ddim else "algo.ddpm.num_train_timesteps",
+            name="train",
+            group=1002,
+            values=train_inf_steps,
+        )
+        generator.add_param(
+            key="algo.ddim.num_inference_timesteps" if use_ddim else "algo.ddpm.num_inference_timesteps",
+            name="eval",
+            group=1002,
+            values=eval_inf_steps,
+        )
 
     # # seed
     # generator.add_param(
