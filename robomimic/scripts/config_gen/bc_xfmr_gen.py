@@ -31,14 +31,16 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
-                "human-100",
-                "mg-100",
-                "mg-1000",
+                "bowls-human-100",
+                # "human-100",
+                # "mg-100",
+                # "mg-1000",
             ],
         )
     elif args.env == "square":
@@ -63,28 +65,58 @@ def make_generator_helper(args):
         key="algo.transformer.pred_future_acs",
         name="predfuture",
         group=1,
-        values=[True],
-        hidename=True,
+        values=[
+            True,
+            False,
+        ],
+        # hidename=True,
     )
     generator.add_param(
         key="algo.transformer.supervise_all_steps",
         name="supallsteps",
         group=1,
-        values=[True],
+        values=[
+            True,
+            False,
+        ],
         hidename=True,
     )
     generator.add_param(
         key="algo.transformer.causal",
         name="causal",
         group=1,
-        values=[False],
+        values=[
+            False,
+            True,
+        ],
         hidename=True,
     )
     generator.add_param(
         key="train.seq_length",
         name="",
-        group=1,
+        group=-1,
         values=[10],
+        hidename=True,
+    )
+
+    generator.add_param(
+        key="algo.gmm.min_std",
+        name="mindstd",
+        group=271314,
+        values=[
+            0.03,
+            #0.0001,
+        ],
+        hidename=True,
+    )
+    generator.add_param(
+        key="train.max_grad_norm",
+        name="maxgradnorm",
+        group=18371,
+        values=[
+            # None,
+            100.0,
+        ],
         hidename=True,
     )
     

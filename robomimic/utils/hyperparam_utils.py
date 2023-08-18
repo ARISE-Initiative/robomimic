@@ -73,7 +73,7 @@ class ConfigGenerator(object):
         if prepend:
             self.parameters.move_to_end(key, last=False)
 
-    def generate(self):
+    def generate(self, override_base_name=False):
         """
         Generates json configs for the hyperparameter sweep using attributes
         @self.parameters, @self.base_config_file, and @self.script_file,
@@ -81,7 +81,7 @@ class ConfigGenerator(object):
         @add_param, @set_base_config_file, and @set_script_file.
         """
         assert len(self.parameters) > 0, "must add parameters using add_param first!"
-        generated_json_paths = self._generate_jsons()
+        generated_json_paths = self._generate_jsons(override_base_name=override_base_name)
         self._script_from_jsons(generated_json_paths)
 
     def _name_for_experiment(self, base_name, parameter_values, parameter_value_names):
@@ -105,9 +105,6 @@ class ConfigGenerator(object):
             if len(self.parameters[k].name) == 0 or self.parameters[k].hidename:
                 # empty string indicates that naming should be skipped
                 continue
-            if len(self.parameters[k].name) == 0:
-                # empty string indicates that naming should be skipped
-                continue
             if parameter_value_names[k] is not None:
                 # take name from passed dictionary
                 val_str = parameter_value_names[k]
@@ -117,7 +114,9 @@ class ConfigGenerator(object):
                     # convert list to string to avoid weird spaces and naming problems
                     val_str = "_".join([str(x) for x in parameter_values[k]])
             val_str = str(val_str)
-            name += '_{}'.format(self.parameters[k].name)
+            if len(name) > 0:
+                name += "_"
+            name += '{}'.format(self.parameters[k].name)
             if len(val_str) > 0:
                 name += '_{}'.format(val_str)
         return name
@@ -196,7 +195,7 @@ class ConfigGenerator(object):
 
         return parameter_ranges, parameter_names
 
-    def _generate_jsons(self):
+    def _generate_jsons(self, override_base_name=False):
         """
         Generates json configs for the hyperparameter sweep, using @self.parameters and
         @self.base_config_file.
@@ -217,7 +216,10 @@ class ConfigGenerator(object):
         base_config = load_json(self.base_config_file, verbose=False)
 
         # base exp name from this base config
-        base_exp_name = base_config['experiment']['name']
+        if override_base_name:
+            base_exp_name = ""
+        else:
+            base_exp_name = base_config['experiment']['name']
 
         # use base json to determine the parameter ranges
         parameter_ranges, parameter_names = self._get_parameter_ranges()

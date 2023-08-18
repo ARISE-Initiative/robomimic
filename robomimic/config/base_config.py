@@ -220,6 +220,8 @@ class BaseConfig(Config):
         self.train.num_epochs = 2000    # number of training epochs
         self.train.seed = 1             # seed for training (for reproducibility)
 
+        self.train.max_grad_norm = None  # clip gradient norms (see `backprop_for_loss` function in torch_utils.py) 
+
         self.train.data_format = "robomimic" # either "robomimic" or "r2d2"
 
     def algo_config(self):
