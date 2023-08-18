@@ -301,6 +301,7 @@ class EnvRealPandaGPRS(EB.EnvBase):
                 # relative action
                 action[:3] = delta_position
                 action[3:6] = delta_rotation
+                action[6:] = np.clip(action[6:], -1., 1.)
 
             assert np.min(action) >= -1. and np.max(action) <= 1., "incorrect action bounds"
         elif self.controller_type == "JOINT_IMPEDANCE":
