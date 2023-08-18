@@ -139,6 +139,17 @@ def set_env_settings(generator, args):
                     "action/cartesian_velocity":{
                         "normalization": None,
                     },
+                    "action/rel_pos":{
+                        "normalization": None,
+                    },
+                    "action/rel_rot_6d":{
+                        "format": "rot_6d",
+                        "normalization": None,
+                    },
+                    "action/rel_rot_axis_angle":{
+                        "format": "rot_axis_angle",
+                        "normalization": None,
+                    },
                     "action/gripper_velocity":{
                         "normalization": None,
                     },
@@ -151,6 +162,22 @@ def set_env_settings(generator, args):
             group=-1,
             values=[[]],
         )
+        if "train.action_keys" not in generator.parameters:
+            generator.add_param(
+                key="train.action_keys",
+                name="ac_keys",
+                group=-1,
+                values=[
+                    [
+                        "action/rel_pos",
+                        "action/rel_rot_axis_angle",
+                        "action/gripper_velocity",
+                    ],
+                ],
+                value_names=[
+                    "rel",
+                ],
+            )
     elif args.env == "kitchen":
         generator.add_param(
             key="train.action_config",
