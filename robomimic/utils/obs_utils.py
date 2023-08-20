@@ -488,7 +488,8 @@ def normalize_dict(dict, normalization_stats):
         # check shape consistency
         shape_len_diff = len(offset.shape) - len(dict[m].shape)
         assert shape_len_diff in [0, 1], "shape length mismatch in @normalize_dict"
-        # assert offset.shape[shape_len_diff:] == dict[m].shape, "shape mismatch in @normalize_dict"
+        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
+        assert offset.shape[1:] == dict[m].shape[(shape_len_diff - 1):], "shape mismatch in @normalize_dict"
 
         # handle case where obs dict is not batched by removing stats batch dimension
         if shape_len_diff == 1:
@@ -527,8 +528,9 @@ def unnormalize_dict(dict, normalization_stats):
 
         # check shape consistency
         shape_len_diff = len(offset.shape) - len(dict[m].shape)
-        assert shape_len_diff in [0, 1], "shape length mismatch in @normalize_dict"
-        # assert offset.shape[shape_len_diff:] == dict[m].shape, "shape mismatch in @normalize_dict"
+        assert shape_len_diff in [0, 1], "shape length mismatch in @unnormalize_dict"
+        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
+        assert offset.shape[1:] == dict[m].shape[(shape_len_diff - 1):], "shape mismatch in @unnormalize_dict"
 
         # handle case where obs dict is not batched by removing stats batch dimension
         if shape_len_diff == 1:
