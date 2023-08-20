@@ -464,8 +464,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             seq_length=self.seq_length,
             prefix="obs"
         )
-        if self.hdf5_normalize_obs:
-            meta["obs"] = ObsUtils.normalize_dict(meta["obs"], normalization_stats=self.obs_normalization_stats)
 
         if self.load_next_obs:
             meta["next_obs"] = self.get_obs_sequence_from_demo(
@@ -476,8 +474,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=self.seq_length,
                 prefix="next_obs"
             )
-            if self.hdf5_normalize_obs:
-                meta["next_obs"] = ObsUtils.normalize_dict(meta["next_obs"], normalization_stats=self.obs_normalization_stats)
 
         if goal_index is not None:
             goal = self.get_obs_sequence_from_demo(
@@ -488,8 +484,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=1,
                 prefix="next_obs",
             )
-            if self.hdf5_normalize_obs:
-                goal = ObsUtils.normalize_dict(goal, normalization_stats=self.obs_normalization_stats)
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
 
         # get action components
@@ -885,8 +879,6 @@ class R2D2Dataset(SequenceDataset):
             seq_length=self.seq_length,
             prefix="observation"
         )
-        if self.hdf5_normalize_obs:
-            meta["obs"] = ObsUtils.normalize_dict(meta["obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if self.load_next_obs:
             meta["next_obs"] = self.get_obs_sequence_from_demo(
@@ -897,8 +889,6 @@ class R2D2Dataset(SequenceDataset):
                 seq_length=self.seq_length,
                 prefix="next_obs"
             )
-            if self.hdf5_normalize_obs:
-                meta["next_obs"] = ObsUtils.normalize_dict(meta["next_obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if goal_index is not None:
             goal = self.get_obs_sequence_from_demo(
@@ -909,8 +899,6 @@ class R2D2Dataset(SequenceDataset):
                 seq_length=1,
                 prefix="next_obs",
             )
-            if self.hdf5_normalize_obs:
-                goal = ObsUtils.normalize_dict(goal, obs_normalization_stats=self.obs_normalization_stats)
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
         
         # get action components
