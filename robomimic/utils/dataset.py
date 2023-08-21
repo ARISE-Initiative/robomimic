@@ -336,8 +336,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         obs_normalization_stats = { k : {} for k in merged_stats }
         for k in merged_stats:
             # note we add a small tolerance of 1e-3 for std
-            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"]
-            obs_normalization_stats[k]["std"] = np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3
+            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype(np.float32)
+            obs_normalization_stats[k]["std"] = (np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3).astype(np.float32)
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):

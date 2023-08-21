@@ -223,6 +223,10 @@ class Algo(object):
         Returns:
             batch (dict): postproceesed batch
         """
+
+        # ensure obs_normalization_stats are torch Tensors on proper device
+        obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(obs_normalization_stats), self.device))
+
         obs_keys = ["obs", "next_obs", "goal_obs"]
         for k in obs_keys:
             if k in batch and batch[k] is not None:
@@ -481,6 +485,8 @@ class RolloutPolicy(object):
                 and np.array values for each key)
         """
         if self.obs_normalization_stats is not None:
+            # limit normalization to obs keys being used, in case environment includes extra keys
+            ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
             ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
         ob = TensorUtils.to_batch(ob)
