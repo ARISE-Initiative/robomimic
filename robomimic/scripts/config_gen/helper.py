@@ -128,10 +128,11 @@ def set_env_settings(generator, args):
                     "action/abs_rot_6d":{
                         "normalization": "min_max",
                         "format": "rot_6d",
+                        "convert_at_runtime": "rot_euler",
                     },
-                    "action/abs_rot_axis_angle":{
+                    "action/abs_rot_euler":{
                         "normalization": "min_max",
-                        "format": "rot_axis_angle",
+                        "format": "rot_euler",
                     },
                     "action/gripper_position":{
                         "normalization": "min_max",
@@ -145,9 +146,10 @@ def set_env_settings(generator, args):
                     "action/rel_rot_6d":{
                         "format": "rot_6d",
                         "normalization": None,
+                        "convert_at_runtime": "rot_euler",
                     },
-                    "action/rel_rot_axis_angle":{
-                        "format": "rot_axis_angle",
+                    "action/rel_rot_euler":{
+                        "format": "rot_euler",
                         "normalization": None,
                     },
                     "action/gripper_velocity":{
@@ -170,7 +172,7 @@ def set_env_settings(generator, args):
                 values=[
                     [
                         "action/rel_pos",
-                        "action/rel_rot_axis_angle",
+                        "action/rel_rot_euler",
                         "action/gripper_velocity",
                     ],
                 ],

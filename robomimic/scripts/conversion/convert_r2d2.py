@@ -106,9 +106,9 @@ def convert_dataset(path, args):
     for in_ac_key in ["cartesian_position", "cartesian_velocity"]:
         in_action = action_dict_group[in_ac_key][:]
         in_pos = in_action[:,:3].astype(np.float64)
-        in_rot = in_action[:,3:6].astype(np.float64)
+        in_rot = in_action[:,3:6].astype(np.float64) # in euler format
         rot_ = torch.from_numpy(in_rot)
-        rot_mat = pt.axis_angle_to_matrix(rot_)
+        rot_mat = pt.euler_angles_to_matrix(rot_, convention="XYZ")
         rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float64)
 
         if in_ac_key == "cartesian_position":
@@ -120,7 +120,7 @@ def convert_dataset(path, args):
         
         this_action_dict = {
             prefix + 'pos': in_pos,
-            prefix + 'rot_axis_angle': in_rot,
+            prefix + 'rot_euler': in_rot,
             prefix + 'rot_6d': rot_6d,
         }
         for key, data in this_action_dict.items():
