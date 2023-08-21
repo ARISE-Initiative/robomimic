@@ -224,6 +224,11 @@ class BaseConfig(Config):
 
         self.train.data_format = "robomimic" # either "robomimic" or "r2d2"
 
+        # list of observation keys to shuffle randomly in the dataset.
+        # must be list of tuples pairs, with each pair representing
+        # the corresponding observation key groups to shuffle
+        self.train.shuffled_obs_key_groups = None
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the 

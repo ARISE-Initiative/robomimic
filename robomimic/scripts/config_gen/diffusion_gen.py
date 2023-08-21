@@ -76,6 +76,19 @@ def make_generator_helper(args):
                 "abs",
             ],
         )
+        generator.add_param(
+            key="observation.modalities.obs.rgb",
+            name="cams",
+            group=130,
+            values=[
+                ["camera/image/hand_camera_image"],
+                ["camera/image/hand_camera_image", "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image"],
+            ],
+            value_names=[
+                "wrist",
+                "3cams",
+            ]
+        )
     elif args.env == "kitchen":
         generator.add_param(
             key="train.data",

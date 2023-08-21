@@ -5,6 +5,7 @@ to fetch batches from hdf5 files.
 import os
 import h5py
 import numpy as np
+import random
 from copy import deepcopy
 from contextlib import contextmanager
 from collections import OrderedDict
@@ -36,6 +37,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_normalize_obs=False,
         filter_by_attribute=None,
         load_next_obs=True,
+        shuffled_obs_key_groups=None,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -85,6 +87,8 @@ class SequenceDataset(torch.utils.data.Dataset):
                 demonstrations to load
 
             load_next_obs (bool): whether to load next_obs from the dataset
+
+            shuffled_obs_key_groups (list): TODO
         """
         super(SequenceDataset, self).__init__()
 
@@ -165,6 +169,11 @@ class SequenceDataset(torch.utils.data.Dataset):
                 self.hdf5_cache = None
         else:
             self.hdf5_cache = None
+
+        if shuffled_obs_key_groups is None:
+            self.shuffled_obs_key_groups = list()
+        else:
+            self.shuffled_obs_key_groups = shuffled_obs_key_groups
 
         self.close_and_delete_hdf5_handle()
 
@@ -423,8 +432,24 @@ class SequenceDataset(torch.utils.data.Dataset):
         Fetch dataset sequence @index (inferred through internal index map), using the getitem_cache if available.
         """
         if self.hdf5_cache_mode == "all":
-            return self.getitem_cache[index]
-        return self.get_item(index)
+            output = self.getitem_cache[index]
+        else:
+            output = self.get_item(index)
+
+        for (g1, g2) in self.shuffled_obs_key_groups:
+            assert len(g1) == len(g2)
+            if random.random() > 0.5:
+                # shuffle the keys accordingly
+                for (o1, o2) in zip(g1, g2):
+                    for otype in ["obs", "next_obs", "goal_obs"]:
+                        if output.get(otype, None) is None:
+                            continue
+                        if o1 not in output[otype] or o2 not in output[otype]:
+                            continue
+                        # swap values
+                        output[otype][o1], output[otype][o2] = output[otype][o2], output[otype][o1]
+
+        return output
 
     def get_item(self, index):
         """

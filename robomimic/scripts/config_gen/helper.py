@@ -82,7 +82,7 @@ def set_env_settings(generator, args):
                 values=[
                     [
                         "camera/image/hand_camera_image",
-                        # "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image" # uncomment to use all 3 cameras
+                        "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image" # uncomment to use all 3 cameras
                     ]
                 ],
             )
@@ -180,6 +180,16 @@ def set_env_settings(generator, args):
                     "rel",
                 ],
             )
+        # observation key groups to swap
+        generator.add_param(
+            key="train.shuffled_obs_key_groups",
+            name="",
+            group=-1,
+            values=[[[
+              ("camera/image/varied_camera_1_image",),
+              ("camera/image/varied_camera_2_image",),  
+            ]]],
+        )
     elif args.env == "kitchen":
         generator.add_param(
             key="train.action_config",
