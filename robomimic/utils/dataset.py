@@ -1132,7 +1132,7 @@ def action_stats_to_normalization_stats(action_stats, action_config):
             scale = input_range / (output_max - output_min)
             offset = input_min - scale * output_min
 
-            offset[ignore_dim] = (output_max + output_min) / 2 - input_min[ignore_dim]
+            offset[ignore_dim] = input_min[ignore_dim] - (output_max + output_min) / 2
 
             action_normalization_stats[action_key] = {
                 "scale": scale,
