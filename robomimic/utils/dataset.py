@@ -348,8 +348,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         obs_normalization_stats = { k : {} for k in merged_stats }
         for k in merged_stats:
             # note we add a small tolerance of 1e-3 for std
-            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"]
-            obs_normalization_stats[k]["std"] = np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3
+            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype(np.float32)
+            obs_normalization_stats[k]["std"] = (np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3).astype(np.float32)
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):
@@ -442,8 +442,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             seq_length=self.seq_length,
             prefix="obs"
         )
-        if self.hdf5_normalize_obs:
-            meta["obs"] = ObsUtils.normalize_obs(meta["obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if self.load_next_obs:
             meta["next_obs"] = self.get_obs_sequence_from_demo(
@@ -454,8 +452,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=self.seq_length,
                 prefix="next_obs"
             )
-            if self.hdf5_normalize_obs:
-                meta["next_obs"] = ObsUtils.normalize_obs(meta["next_obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if goal_index is not None:
             goal = self.get_obs_sequence_from_demo(
@@ -466,8 +462,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=1,
                 prefix="next_obs",
             )
-            if self.hdf5_normalize_obs:
-                goal = ObsUtils.normalize_obs(goal, obs_normalization_stats=self.obs_normalization_stats)
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
 
         return meta

@@ -221,6 +221,9 @@ class Algo(object):
             batch (dict): postproceesed batch
         """
 
+        # ensure obs_normalization_stats are torch Tensors on proper device
+        obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(obs_normalization_stats), self.device))
+
         # we will search the nested batch dictionary for the following special batch dict keys
         # and apply the processing function to their values (which correspond to observations)
         obs_keys = ["obs", "next_obs", "goal_obs"]
@@ -491,12 +494,16 @@ class RolloutPolicy(object):
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
         """
-        if self.obs_normalization_stats is not None:
-            ob = ObsUtils.normalize_obs(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
         ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
+        if self.obs_normalization_stats is not None:
+            # ensure obs_normalization_stats are torch Tensors on proper device
+            obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(self.obs_normalization_stats), self.policy.device))
+            # limit normalization to obs keys being used, in case environment includes extra keys
+            ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
+            ob = ObsUtils.normalize_obs(ob, obs_normalization_stats=obs_normalization_stats)
         return ob
 
     def __repr__(self):
