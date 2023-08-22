@@ -5,7 +5,6 @@ import tqdm
 import h5py
 import numpy as np
 import torch
-import pytorch3d.transforms as pt
 import os
 
 def extract_action_dict(args):    
@@ -38,10 +37,9 @@ def extract_action_dict(args):
             in_pos = in_action[:,:3].astype(np.float32)
             in_rot = in_action[:,3:6].astype(np.float32)
             in_grip = in_action[:,6:].astype(np.float32)
-            
+
             rot_ = torch.from_numpy(in_rot)
-            rot_mat = pt.axis_angle_to_matrix(rot_)
-            rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float32)
+            rot_6d = TorchUtils.axis_angle_to_rot_6d(rot_).numpy().astype(np.float32)
             
             this_action_dict = {
                 prefix + 'pos': in_pos,
