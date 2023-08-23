@@ -49,26 +49,35 @@ def convert_dataset(path, args):
     }
     CAM_NAME_TO_KEY_MAPPING = {
         "hand_camera_image": "17225336_left",
-        "varied_camera_left_image": "25047636_right",
-        "varied_camera_right_image": "24013089_left"
+        "varied_camera_1_image": "24013089_left",
+        "varied_camera_2_image": "25047636_left",
     }
     """
 
     CAM_ID_TO_TYPE = {}
+    hand_cam_ids = []
+    varied_cam_ids = []
     for k in f["observation"]["camera_type"]:
-        CAM_ID_TO_TYPE[k] = camera_type_to_string_dict[f["observation"]["camera_type"][k][0]]
+        cam_type = camera_type_to_string_dict[f["observation"]["camera_type"][k][0]]
+        CAM_ID_TO_TYPE[k] = cam_type
+        if cam_type == "hand_camera":
+            hand_cam_ids.append(k)
+        elif cam_type == "varied_camera":
+            varied_cam_ids.append(k)
+        else:
+            raise ValueError
+
+    # sort the camera ids: important to maintain consistency of cams between train and eval!
+    hand_cam_ids = sorted(hand_cam_ids)
+    varied_cam_ids = sorted(varied_cam_ids)
 
     CAM_NAME_TO_KEY_MAPPING = {}
-    for (cam_id, cam_type) in CAM_ID_TO_TYPE.items():
-        if cam_type == "hand_camera":
-            cam_name = "hand_camera_image"
-            cam_key = "{}_left".format(cam_id)
-        elif cam_type == "varied_camera":
-            cam_name = "varied_camera_1_image" if "varied_camera_1_image" not in CAM_NAME_TO_KEY_MAPPING else "varied_camera_2_image"
-            cam_key = "{}_left".format(cam_id)
-        else:
-            raise NotImplementedError
-
+    CAM_NAME_TO_KEY_MAPPING["hand_camera_image"] = "{}_left".format(hand_cam_ids[0])
+    
+    # set up mapping for varied cameras
+    for i in range(len(varied_cam_ids)):
+        cam_name = "varied_camera_{}_image".format(i+1)
+        cam_key = "{}_left".format(varied_cam_ids[i])
         CAM_NAME_TO_KEY_MAPPING[cam_name] = cam_key
 
     cam_data = {cam_name: [] for cam_name in CAM_NAME_TO_KEY_MAPPING.keys()}
