@@ -468,7 +468,7 @@ def normalize_obs(obs_dict, obs_normalization_stats):
 
     Args:
         obs_dict (dict): dictionary mapping observation key to np.array or
-            torch.Tensor. Leading batch dimensions are optional.
+            torch.Tensor. Can have any number of leading batch dimensions.
 
         obs_normalization_stats (dict): this should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
@@ -482,19 +482,20 @@ def normalize_obs(obs_dict, obs_normalization_stats):
     assert set(obs_dict.keys()).issubset(obs_normalization_stats)
 
     for m in obs_dict:
-        mean = obs_normalization_stats[m]["mean"]
-        std = obs_normalization_stats[m]["std"]
+        # get rid of extra dimension - we will pad for broadcasting later
+        mean = obs_normalization_stats[m]["mean"][0]
+        std = obs_normalization_stats[m]["std"][0]
 
-        # check shape consistency
-        shape_len_diff = len(mean.shape) - len(obs_dict[m].shape)
-        assert shape_len_diff in [0, 1], "shape length mismatch in @normalize_obs"
-        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
-        assert mean.shape[1:] == obs_dict[m].shape[(1 - shape_len_diff):], "shape mismatch in @normalize_obs"
+        # shape consistency checks
+        m_num_dims = len(mean.shape)
+        shape_len_diff = len(obs_dict[m].shape) - m_num_dims
+        assert shape_len_diff >= 0, "shape length mismatch in @normalize_obs"
+        assert obs_dict[m].shape[-m_num_dims:] == mean.shape, "shape mismatch in @normalize_obs"
 
-        # handle case where obs dict is not batched by removing stats batch dimension
-        if shape_len_diff == 1:
-            mean = mean[0]
-            std = std[0]
+        # obs can have one or more leading batch dims - prepare for broadcasting
+        reshape_padding = tuple([1] * shape_len_diff)
+        mean = mean.reshape(reshape_padding + tuple(mean.shape))
+        std = std.reshape(reshape_padding + tuple(std.shape))
 
         obs_dict[m] = (obs_dict[m] - mean) / std
 

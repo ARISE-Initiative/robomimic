@@ -238,15 +238,7 @@ class Algo(object):
                     if d[k] is not None:
                         d[k] = ObsUtils.process_obs_dict(d[k])
                         if obs_normalization_stats is not None:
-                            m = list(d[k].keys())[0]
-                            shape_diff = len(d[k][m].shape) - len(obs_normalization_stats[m].shape)
-                            assert shape_diff in [1, 2]
-                            if shape_diff == 2:
-                                # leading dimensions are batch and time ([B, T, ...])
-                                d[k] = TensorUtils.time_distributed(d[k], ObsUtils.normalize_obs, obs_normalization_stats=obs_normalization_stats)
-                            else:
-                                # leading dimensions are batch ([B, ...])
-                                d[k] = ObsUtils.normalize_obs(d[k], obs_normalization_stats=obs_normalization_stats)
+                            d[k] = ObsUtils.normalize_obs(d[k], obs_normalization_stats=obs_normalization_stats)
                 elif isinstance(d[k], dict):
                     # search down into dictionary
                     recurse_helper(d[k])
