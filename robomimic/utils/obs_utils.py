@@ -484,19 +484,20 @@ def normalize_dict(dict, normalization_stats):
     assert set(dict.keys()).issubset(normalization_stats)
 
     for m in dict:
-        offset = normalization_stats[m]["offset"]
-        scale = normalization_stats[m]["scale"]
+        # get rid of extra dimension - we will pad for broadcasting later
+        offset = normalization_stats[m]["offset"][0]
+        scale = normalization_stats[m]["scale"][0]
 
-        # check shape consistency
-        shape_len_diff = len(offset.shape) - len(dict[m].shape)
-        assert shape_len_diff in [0, 1], "shape length mismatch in @normalize_dict"
-        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
-        assert offset.shape[1:] == dict[m].shape[(1 - shape_len_diff):], "shape mismatch in @normalize_dict"
+        # shape consistency checks
+        m_num_dims = len(offset.shape)
+        shape_len_diff = len(dict[m].shape) - m_num_dims
+        assert shape_len_diff >= 0, "shape length mismatch in @normalize_dict"
+        assert dict[m].shape[-m_num_dims:] == offset.shape, "shape mismatch in @normalize_dict"
 
-        # handle case where obs dict is not batched by removing stats batch dimension
-        if shape_len_diff == 1:
-            offset = offset[0]
-            scale = scale[0]
+        # dict can have one or more leading batch dims - prepare for broadcasting
+        reshape_padding = tuple([1] * shape_len_diff)
+        offset = offset.reshape(reshape_padding + tuple(offset.shape))
+        scale = scale.reshape(reshape_padding + tuple(scale.shape))
 
         dict[m] = (dict[m] - offset) / scale
 
@@ -525,19 +526,20 @@ def unnormalize_dict(dict, normalization_stats):
     assert set(dict.keys()).issubset(normalization_stats)
 
     for m in dict:
-        offset = normalization_stats[m]["offset"]
-        scale = normalization_stats[m]["scale"]
+        # get rid of extra dimension - we will pad for broadcasting later
+        offset = normalization_stats[m]["offset"][0]
+        scale = normalization_stats[m]["scale"][0]
 
-        # check shape consistency
-        shape_len_diff = len(offset.shape) - len(dict[m].shape)
-        assert shape_len_diff in [0, 1], "shape length mismatch in @unnormalize_dict"
-        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
-        assert offset.shape[1:] == dict[m].shape[(1 - shape_len_diff):], "shape mismatch in @unnormalize_dict"
+        # shape consistency checks
+        m_num_dims = len(offset.shape)
+        shape_len_diff = len(dict[m].shape) - m_num_dims
+        assert shape_len_diff >= 0, "shape length mismatch in @unnormalize_dict"
+        assert dict[m].shape[-m_num_dims:] == offset.shape, "shape mismatch in @unnormalize_dict"
 
-        # handle case where obs dict is not batched by removing stats batch dimension
-        if shape_len_diff == 1:
-            offset = offset[0]
-            scale = scale[0]
+        # dict can have one or more leading batch dims - prepare for broadcasting
+        reshape_padding = tuple([1] * shape_len_diff)
+        offset = offset.reshape(reshape_padding + tuple(offset.shape))
+        scale = scale.reshape(reshape_padding + tuple(scale.shape))
 
         dict[m] = (dict[m] * scale) + offset
 
