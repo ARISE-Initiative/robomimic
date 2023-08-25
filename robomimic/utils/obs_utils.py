@@ -492,7 +492,10 @@ def normalize_obs(obs_dict, obs_normalization_stats):
         assert shape_len_diff >= 0, "shape length mismatch in @normalize_obs"
         assert obs_dict[m].shape[-m_num_dims:] == mean.shape, "shape mismatch in @normalize_obs"
 
-        # obs can have one or more leading batch dims - prepare for broadcasting
+        # Obs can have one or more leading batch dims - prepare for broadcasting.
+        # 
+        # As an example, if the obs has shape [B, T, D] and our mean / std stats are shape [D]
+        # then we should pad the stats to shape [1, 1, D].
         reshape_padding = tuple([1] * shape_len_diff)
         mean = mean.reshape(reshape_padding + tuple(mean.shape))
         std = std.reshape(reshape_padding + tuple(std.shape))
