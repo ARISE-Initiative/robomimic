@@ -9,10 +9,12 @@ from sklearn.metrics import mean_squared_error
 import re
 import robomimic.utils.file_utils as FileUtils
 import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.train_utils as TrainUtils
 from robomimic.config import config_factory
 import robomimic.utils.obs_utils as ObsUtils
 import torch
+from torch.utils.data import DataLoader
 
 # the configs of the models to be plotted
 model_config_mapping = {
@@ -24,8 +26,8 @@ model_config_mapping = {
     #     "trajectory_name_regex": r'(\d+_trajectory_im\d+)'
     # },
     "r2d2_wire": {
-        "model": "/home/zehan/expdata/r2d2/im/bc_xfmr/wire_harness/gmm_transformer_11_128/20230813024138/models/model_epoch_60.pth",
-        "folder": "/home/zehan/expdata/r2d2/im/bc_xfmr/wire_harness/gmm_transformer_11_128/20230813024138/test_inference_figures/",
+        "model": "/home/soroushn/expdata/r2d2/im/bc_xfmr/debug/ds_pen-in-cup_cams_3cams_predfuture_True_ac_keys_rel/20230825172047/models/model_epoch_2.pth",
+        "folder": "/home/soroushn/tmp/model_predictions",
         # "action_names": ['x', 'y', 'z', 'r', 'p', 'y', "gripper_pos"], # use custom names
         "action_names": None, # use default names, see line 71
         "trajectory_name_regex": r'(\w+_\w+_\d{2}_\d{2}:\d{2}:\d{2}_\d{4})' # the name of the figure files need to be custom defined (the part of the names of the trajectories that uniquely identifies them)
@@ -48,7 +50,10 @@ for model_name in model_config_mapping:
     device = TorchUtils.get_torch_device(try_to_use_cuda=True)
 
     ckpt_dict = FileUtils.maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
-    policy, _ = FileUtils.policy_from_checkpoint(ckpt_path=ckpt_path, device=device, verbose=True)
+    config = json.loads(ckpt_dict["config"])
+    config["train"]["shuffled_obs_key_groups"] = None
+    ckpt_dict["config"] = json.dumps(config)
+    policy, _ = FileUtils.policy_from_checkpoint(ckpt_dict=ckpt_dict, device=device, verbose=True)
     shape_meta = ckpt_dict['shape_metadata']
     ext_cfg = json.loads(ckpt_dict["config"])
     config = config_factory(ext_cfg["algo_name"])
@@ -63,9 +68,9 @@ for model_name in model_config_mapping:
     # trainset.datasets is a list
     # the trajectories to plot is randomly sampled from the training and validation sets
     training_sampled_data = random.sample(trainset.datasets, NUM_SAMPLES)
-    validation_sampled_data = random.sample(validset.datasets, NUM_SAMPLES)
+    # validation_sampled_data = random.sample(validset.datasets, NUM_SAMPLES)
 
-    inference_datasets_mapping = {"training": training_sampled_data, "validation": validation_sampled_data}
+    inference_datasets_mapping = {"training": training_sampled_data} #, "validation": validation_sampled_data}
 
     
     if action_names == None:
@@ -98,14 +103,35 @@ for model_name in model_config_mapping:
             image_keys = [item for item in d.__getitem__(0)['obs'].keys() if "image" in item]
             images = {key: [] for key in image_keys}
 
+            dataloader = DataLoader(
+                dataset=d,
+                sampler=None,
+                batch_size=1,
+                shuffle=False,
+                num_workers=1,
+                drop_last=True,
+            )
+
+            model = policy.policy
+
             # loop through each timestep
-            for i in range(traj_length):
-                current_timestep = d.__getitem__(i)
-                obs = ObsUtils.process_obs_dict(current_timestep['obs'])
+            for batch in iter(dataloader):
+                batch = model.process_batch_for_training(batch)
+
                 for image_key in image_keys:
-                    images[image_key].append(current_timestep['obs'][image_key][frame_stack-1].astype(np.uint32))
-                actual_action = current_timestep['actions'][frame_stack-1]
-                predicted_action = policy(obs)
+                    im = batch["obs"][image_key][0][-1]
+                    im = TensorUtils.to_numpy(im).astype(np.uint32)
+                    images[image_key].append(im)
+
+                batch = model.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
+                model_output = model.nets["policy"](batch["obs"])
+                
+                actual_action = TensorUtils.to_numpy(
+                    batch["actions"][0][0]
+                )
+                predicted_action = TensorUtils.to_numpy(
+                    model_output[0][0]
+                )
 
                 actual_actions_all_traj.append(actual_action)
                 predicted_actions_all_traj.append(predicted_action)
@@ -141,7 +167,8 @@ for model_name in model_config_mapping:
 
             # Save inference figures
             save_path = saving_folder + inference_key+"/" #remember to add / at the end
-            data_content = re.search(trajectory_name_regex, hdf5_path).group(1)
+            # data_content = re.search(trajectory_name_regex, hdf5_path).group(1)
+            data_content = "test"
             filename = "comparison_figure_"+data_content +".png"    
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
