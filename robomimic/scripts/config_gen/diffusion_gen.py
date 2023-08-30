@@ -69,24 +69,53 @@ def make_generator_helper(args):
                 [
                     "action/abs_pos",
                     "action/abs_rot_6d",
-                    "action/gripper_velocity",
+                    "action/gripper_position",
                 ],
             ],
             value_names=[
                 "abs",
             ],
+            hidename=True,
         )
         generator.add_param(
             key="observation.modalities.obs.rgb",
             name="cams",
             group=130,
             values=[
-                ["camera/image/hand_camera_image"],
-                ["camera/image/hand_camera_image", "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image"],
+                ["camera/image/hand_camera_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                [
+                    "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
+                    "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
+                    "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
+                ],
             ],
             value_names=[
                 "wrist",
+                "wrist-stereo",
                 "3cams",
+                "3cams-stereo",
+            ]
+        )
+
+        generator.add_param(
+            key="observation.modalities.obs.low_dim",
+            name="ldkeys",
+            group=2498,
+            values=[
+                ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                [
+                    "robot_state/cartesian_position", "robot_state/gripper_position",
+                    "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
+                    "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
+                    "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
+                    "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
+                ]
+            ],
+            value_names=[
+                "proprio",
+                "proprio-extrinsics",
             ]
         )
     elif args.env == "kitchen":

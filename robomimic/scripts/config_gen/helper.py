@@ -81,8 +81,8 @@ def set_env_settings(generator, args):
                 group=-1,
                 values=[
                     [
-                        "camera/image/hand_camera_image",
-                        "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image" # uncomment to use all 3 cameras
+                        "camera/image/hand_camera_left_image",
+                        "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image" # uncomment to use all 3 cameras
                     ]
                 ],
             )
@@ -186,8 +186,18 @@ def set_env_settings(generator, args):
             name="",
             group=-1,
             values=[[[
-              ("camera/image/varied_camera_1_image",),
-              ("camera/image/varied_camera_2_image",),  
+                (
+                "camera/image/varied_camera_1_left_image",
+                "camera/image/varied_camera_1_right_image",
+                "camera/extrinsics/varied_camera_1_left",
+                "camera/extrinsics/varied_camera_1_right",
+                ),
+                (
+                "camera/image/varied_camera_2_left_image",
+                "camera/image/varied_camera_2_right_image",
+                "camera/extrinsics/varied_camera_2_left",
+                "camera/extrinsics/varied_camera_2_right",
+                ),  
             ]]],
         )
     elif args.env == "kitchen":

@@ -48,9 +48,12 @@ def convert_dataset(path, args):
         '25047636': 'varied_camera'
     }
     CAM_NAME_TO_KEY_MAPPING = {
-        "hand_camera_image": "17225336_left",
-        "varied_camera_1_image": "24013089_left",
-        "varied_camera_2_image": "25047636_left",
+        "hand_camera_left_image": "17225336_left",
+        "hand_camera_right_image": "17225336_right",
+        "varied_camera_1_left_image": "24013089_left",
+        "varied_camera_1_right_image": "24013089_right",
+        "varied_camera_2_left_image": "25047636_left",
+        "varied_camera_2_right_image": "25047636_right",
     }
     """
 
@@ -71,16 +74,18 @@ def convert_dataset(path, args):
     hand_cam_ids = sorted(hand_cam_ids)
     varied_cam_ids = sorted(varied_cam_ids)
 
-    CAM_NAME_TO_KEY_MAPPING = {}
-    CAM_NAME_TO_KEY_MAPPING["hand_camera_image"] = "{}_left".format(hand_cam_ids[0])
+    IMAGE_NAME_TO_CAM_KEY_MAPPING = {}
+    IMAGE_NAME_TO_CAM_KEY_MAPPING["hand_camera_left_image"] = "{}_left".format(hand_cam_ids[0])
+    IMAGE_NAME_TO_CAM_KEY_MAPPING["hand_camera_right_image"] = "{}_right".format(hand_cam_ids[0])
     
     # set up mapping for varied cameras
     for i in range(len(varied_cam_ids)):
-        cam_name = "varied_camera_{}_image".format(i+1)
-        cam_key = "{}_left".format(varied_cam_ids[i])
-        CAM_NAME_TO_KEY_MAPPING[cam_name] = cam_key
+        for side in ["left", "right"]:
+            cam_name = "varied_camera_{}_{}_image".format(i+1, side)
+            cam_key = "{}_{}".format(varied_cam_ids[i], side)
+            IMAGE_NAME_TO_CAM_KEY_MAPPING[cam_name] = cam_key
 
-    cam_data = {cam_name: [] for cam_name in CAM_NAME_TO_KEY_MAPPING.keys()}
+    cam_data = {cam_name: [] for cam_name in IMAGE_NAME_TO_CAM_KEY_MAPPING.keys()}
     traj_reader = TrajectoryReader(path, read_images=False)
 
     for index in range(demo_len):
@@ -92,11 +97,11 @@ def convert_dataset(path, args):
         camera_obs = camera_reader.read_cameras(
             index=index, camera_type_dict=CAM_ID_TO_TYPE, timestamp_dict=timestamp_dict
         )
-        for cam_name in CAM_NAME_TO_KEY_MAPPING.keys():
+        for cam_name in IMAGE_NAME_TO_CAM_KEY_MAPPING.keys():
             if camera_obs is None:
                 im = np.zeros((args.imsize, args.imsize, 3))
             else:
-                im_key = CAM_NAME_TO_KEY_MAPPING[cam_name]
+                im_key = IMAGE_NAME_TO_CAM_KEY_MAPPING[cam_name]
                 im = camera_obs["image"][im_key]
 
             # perform bgr_to_rgb operation
@@ -109,6 +114,24 @@ def convert_dataset(path, args):
         if cam_name in image_grp:
             del image_grp[cam_name]
         image_grp.create_dataset(cam_name, data=cam_data[cam_name], compression="gzip")
+
+    # extract camera extrinsics data
+    if "extrinsics" not in f["observation/camera"]:
+        f["observation/camera"].create_group("extrinsics")
+    extrinsics_grp = f["observation/camera/extrinsics"]    
+    for raw_key in f["observation/camera_extrinsics"].keys():
+        cam_key = "_".join(raw_key.split("_")[:2])
+        # reverse search for image name
+        im_name = None
+        for (k, v) in IMAGE_NAME_TO_CAM_KEY_MAPPING.items():
+            if v == cam_key:
+                im_name = k
+                break
+        if im_name is None: # sometimes the raw_key doesn't correspond to any camera we have images for
+            continue
+        extr_name = "_".join(im_name.split("_")[:-2] + raw_key.split("_")[1:])
+        data = f["observation/camera_extrinsics"][raw_key]
+        extrinsics_grp.create_dataset(extr_name, data=data, compression="gzip")
 
     # extract action key data
     action_dict_group = f["action"]
