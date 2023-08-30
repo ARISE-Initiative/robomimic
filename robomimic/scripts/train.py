@@ -57,7 +57,7 @@ def train(config, device):
     print("\n============= New Training Run with Config =============")
     print(config)
     print("")
-    log_dir, ckpt_dir, video_dir = TrainUtils.get_exp_dir(config)
+    log_dir, ckpt_dir, video_dir, vis_dir = TrainUtils.get_exp_dir(config)
 
     if config.experiment.logging.terminal_output_to_txt:
         # log stdout and stderr to a text file
@@ -324,8 +324,15 @@ def train(config, device):
             for env_name in video_paths:
                 os.remove(video_paths[env_name])
 
+        # TODO: add condition for visualizing
+        model.visualize(
+            trainset,
+            validset,
+            os.path.join(vis_dir, epoch_ckpt_name)
+        )
+        
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
-        if should_save_ckpt:
+        if should_save_ckpt:    
             TrainUtils.save_model(
                 model=model,
                 config=config,

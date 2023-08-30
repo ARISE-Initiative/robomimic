@@ -322,6 +322,12 @@ class Algo(object):
         """
         pass
 
+    def visualize(self, trainset, validset, savedir):
+        """
+        TODO: add documentation
+        """
+        pass
+
 
 class PolicyAlgo(Algo):
     """
