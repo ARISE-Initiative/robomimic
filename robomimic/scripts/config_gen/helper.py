@@ -86,23 +86,23 @@ def set_env_settings(generator, args):
                     ]
                 ],
             )
-        if "observation.encoder.rgb.obs_randomizer_kwargs.crop_height"  not in generator.parameters:
-            generator.add_param(
-                key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
-                name="",
-                group=-1,
-                values=[
-                    116
-                ],
-            )
-            generator.add_param(
-                key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
-                name="",
-                group=-1,
-                values=[
-                    116
-                ],
-            )
+        # if "observation.encoder.rgb.obs_randomizer_kwargs.crop_height"  not in generator.parameters:
+        #     generator.add_param(
+        #         key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
+        #         name="",
+        #         group=-1,
+        #         values=[
+        #             116
+        #         ],
+        #     )
+        #     generator.add_param(
+        #         key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
+        #         name="",
+        #         group=-1,
+        #         values=[
+        #             116
+        #         ],
+        #     )
         generator.add_param(
             key="train.data_format",
             name="",

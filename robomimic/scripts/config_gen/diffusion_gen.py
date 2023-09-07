@@ -82,20 +82,20 @@ def make_generator_helper(args):
             name="cams",
             group=130,
             values=[
-                ["camera/image/hand_camera_left_image"],
-                ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
+                # ["camera/image/hand_camera_left_image"],
+                # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
                 ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
-                [
-                    "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
-                    "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
-                    "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
-                ],
+                # [
+                #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
+                #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
+                #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
+                # ],
             ],
             value_names=[
-                "wrist",
-                "wrist-stereo",
+                # "wrist",
+                # "wrist-stereo",
                 "3cams",
-                "3cams-stereo",
+                # "3cams-stereo",
             ]
         )
 
@@ -105,18 +105,40 @@ def make_generator_helper(args):
             group=2498,
             values=[
                 ["robot_state/cartesian_position", "robot_state/gripper_position"],
-                [
-                    "robot_state/cartesian_position", "robot_state/gripper_position",
-                    "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
-                    "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
-                    "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
-                    "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
-                ]
+                # [
+                #     "robot_state/cartesian_position", "robot_state/gripper_position",
+                #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
+                #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
+                #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
+                #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
+                # ]
             ],
             value_names=[
                 "proprio",
-                "proprio-extrinsics",
+                # "proprio-extrinsics",
             ]
+        )
+
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_class",
+            name="obsrand",
+            group=13891,
+            values=[
+                "CropRandomizer",
+                "ColorRandomizer",
+                ["ColorRandomizer", "CropRandomizer"],
+            ],
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_kwargs",
+            name="obsrandargs",
+            group=13891,
+            values=[
+                {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False},
+                {},
+                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}],
+            ],
+            hidename=True,
         )
     elif args.env == "kitchen":
         generator.add_param(
