@@ -65,6 +65,12 @@ def set_env_settings(generator, args):
             group=-1,
             values=[50],
         )
+        generator.add_param(
+            key="experiment.vis.enabled",
+            name="",
+            group=-1,
+            values=[True],
+        )
         if "observation.modalities.obs.low_dim" not in generator.parameters:
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
@@ -625,6 +631,13 @@ def set_debug_mode(generator, args):
     if not args.debug:
         return
 
+    generator.add_param(
+        key="experiment.vis.every_n_epochs",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
     generator.add_param(
         key="experiment.rollout.n",
         name="",

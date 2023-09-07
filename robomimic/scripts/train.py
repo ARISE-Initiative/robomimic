@@ -324,12 +324,19 @@ def train(config, device):
             for env_name in video_paths:
                 os.remove(video_paths[env_name])
 
-        # TODO: add condition for visualizing
-        model.visualize(
-            trainset,
-            validset,
-            os.path.join(vis_dir, epoch_ckpt_name)
-        )
+        # check if we need to save model prediction visualizations
+        should_save_vis = False
+        if config.experiment.vis.enabled:
+            if config.experiment.vis.every_n_epochs is not None and epoch % config.experiment.vis.every_n_epochs == 0:
+                should_save_vis = True
+            if config.experiment.vis.on_save_ckpt and should_save_ckpt:
+                should_save_vis = True
+        if should_save_vis:
+            model.visualize(
+                trainset,
+                validset,
+                os.path.join(vis_dir, epoch_ckpt_name),
+            )
         
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    

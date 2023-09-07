@@ -21,14 +21,9 @@ import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
-### imports from plot_model_predictions.py
-import json
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import random
-from sklearn.metrics import mean_squared_error
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
@@ -403,38 +398,37 @@ class DiffusionPolicyUNet(PolicyAlgo):
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
 
-
     def visualize(self, trainset, validset, savedir):
-        NUM_SAMPLES = 2
-        frame_stack = self.global_config.train.frame_stack
+        NUM_SAMPLES = 30
 
         # set model into eval mode
         self.set_eval()
-
-        training_sampled_data = random.sample(trainset.datasets, NUM_SAMPLES)
-        # validation_sampled_data = random.sample(validset.datasets, NUM_SAMPLES)
-
-        inference_datasets_mapping = {"training": training_sampled_data} #, "validation": validation_sampled_data}
+        random_state = np.random.RandomState(0)
+        train_indices = random_state.choice(
+            min(len(trainset.datasets), NUM_SAMPLES),
+            len(trainset.datasets)
+        ).astype(int)
         
-        action_keys = self.global_config.train.action_keys # Need to adjust. For Robomimic datasets, there is no `action_keys`, it is config.train.dataset_keys
-        modified_action_keys = [element.replace('action/', '') for element in action_keys]
-        action_names = []
-        for i, action_key in enumerate(action_keys):
-            if isinstance(training_sampled_data[0].__getitem__(0)[action_key][frame_stack-1], np.ndarray):
-                action_names.extend([f'{modified_action_keys[i]}_{j+1}' for j in range(len(training_sampled_data[0].__getitem__(0)[action_key][frame_stack-1]))])
-            else:
-                action_names.append(modified_action_keys[i])
+        training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
+        inference_datasets_mapping = {"training": training_sampled_data} #, "validation": validation_sampled_data} 
+
+        action_names = self.get_action_names_for_vis(
+            action_keys=self.global_config.train.action_keys,
+            training_sample=training_sampled_data[0][0],
+        )
+
+        print("Saving model prediction plots to {}".format(savedir))
 
         # loop through training and validation sets
         for inference_key in inference_datasets_mapping:
-            data_name = []
             actual_actions_all_traj = [] # (NxT, D)
             predicted_actions_all_traj = [] # (NxT, D)
+
+            traj_num = 1
 
             # loop through each trajectory
             for d in inference_datasets_mapping[inference_key]:
                 hdf5_path = d.hdf5_path
-                traj_length = len(d)
                 action_dim = len(action_names)
                 actual_actions = [[] for _ in range(action_dim)] # (T, D)
                 predicted_actions = [[] for _ in range(action_dim)] # (T, D)           
@@ -463,7 +457,6 @@ class DiffusionPolicyUNet(PolicyAlgo):
                         images[image_key].append(im)
 
                     batch = self.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
-                    # model_output = model.nets["policy"](batch["obs"])
 
                     model_output = self.get_action(batch["obs"])
                     
@@ -481,45 +474,18 @@ class DiffusionPolicyUNet(PolicyAlgo):
                         actual_actions[dim].append(actual_action[dim])
                         predicted_actions[dim].append(predicted_action[dim])
 
-                # Plot
-                fig, axs = plt.subplots(len(images) + action_dim, 1, figsize=(30, (len(images) + action_dim) * 3))
-                for i, image_key in enumerate(image_keys):
-                    interval = int(traj_length/15) # plot `5` images
-                    images[image_key] = images[image_key][::interval]
-                    combined_images = np.concatenate(images[image_key], axis=1)
-                    axs[i].imshow(combined_images)
-                    if i == 0:
-                        axs[i].set_title(hdf5_path + '\n' + image_key, fontsize=30)
-                    else:
-                        axs[i].set_title(image_key, fontsize=30)
-                    axs[i].axis("off")
-                for dim in range(action_dim):
-                    axs[len(images)+dim].plot(range(traj_length), actual_actions[dim], label='Actual Action', color='blue')
-                    axs[len(images)+dim].plot(range(traj_length), predicted_actions[dim], label='Predicted Action', color='red')
-                    # axs[len(images)+dim].set_xlabel('Timestep')
-                    # axs[len(images)+dim].set_ylabel('Action Dimension {}'.format(dim + 1))
-                    axs[len(images)+dim].set_title(action_names[dim], fontsize=30)
-                    axs[len(images)+dim].xaxis.set_tick_params(labelsize=24)
-                    axs[len(images)+dim].yaxis.set_tick_params(labelsize=24)
-                    axs[len(images)+dim].legend(fontsize=20)
-                plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05, wspace=0.3, hspace=0.6)
+                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key, traj_num))
+                
+                self.make_model_prediction_plot(
+                    hdf5_path=hdf5_path,
+                    save_path=save_path,
+                    images=images,
+                    action_names=action_names,
+                    actual_actions=actual_actions,
+                    predicted_actions=predicted_actions,
+                )
 
-                # Save inference figures
-                save_path = savedir + inference_key+"/" #remember to add / at the end
-                # data_content = re.search(trajectory_name_regex, hdf5_path).group(1)
-                data_content = "test"
-                filename = "comparison_figure_"+data_content +".png"    
-                if not os.path.exists(save_path):
-                    os.makedirs(save_path)
-                print(save_path + filename)
-                # Save the figure with the specified path and filename
-                plt.savefig(save_path + filename) 
-                data_name.append(hdf5_path)
-
-                fig.clear()
-                plt.close()
-                plt.cla()
-                plt.clf()
+                traj_num += 1
             
 
 # =================== Vision Encoder Utils =====================

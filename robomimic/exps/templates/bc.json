@@ -9,6 +9,7 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
+        "vis": {},
         "save": {
             "enabled": true,
             "every_n_seconds": null,
