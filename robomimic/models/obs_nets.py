@@ -64,21 +64,19 @@ def obs_encoder_factory(
         obs_modality = ObsUtils.OBS_KEYS_TO_MODALITIES[k]
         enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
             deepcopy(encoder_kwargs[obs_modality])
-
-        for obs_module, cls_mapping in zip(("core", "obs_randomizer"),
-                                      (ObsUtils.OBS_ENCODER_CORES, ObsUtils.OBS_RANDOMIZERS)):
-            # Sanity check for kwargs in case they don't exist / are None
-            if enc_kwargs.get(f"{obs_module}_kwargs", None) is None:
-                enc_kwargs[f"{obs_module}_kwargs"] = {}
-            # Add in input shape info
-            enc_kwargs[f"{obs_module}_kwargs"]["input_shape"] = obs_shape
-            # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
-            if enc_kwargs[f"{obs_module}_class"] is not None:
-                enc_kwargs[f"{obs_module}_kwargs"] = extract_class_init_kwargs_from_dict(
-                    cls=cls_mapping[enc_kwargs[f"{obs_module}_class"]],
-                    dic=enc_kwargs[f"{obs_module}_kwargs"],
-                    copy=False,
-                )
+            
+        # Sanity check for kwargs in case they don't exist / are None
+        if enc_kwargs.get("core_kwargs", None) is None:
+            enc_kwargs["core_kwargs"] = {}
+        # Add in input shape info
+        enc_kwargs["core_kwargs"]["input_shape"] = obs_shape
+        # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
+        if enc_kwargs["core_class"] is not None:
+            enc_kwargs["core_kwargs"] = extract_class_init_kwargs_from_dict(
+                cls=ObsUtils.OBS_ENCODER_CORES[enc_kwargs["core_class"]],
+                dic=enc_kwargs["core_kwargs"],
+                copy=False,
+            )
 
         # Add in input shape info
         randomizers = []
@@ -91,9 +89,16 @@ def obs_encoder_factory(
         if not isinstance(obs_randomizer_kwargs_list, list):
             obs_randomizer_kwargs_list = [obs_randomizer_kwargs_list]
 
-        for rand_class, rand_kwargs in zip(obs_randomizer_class_list, obs_randomizer_kwargs_list):
-            rand = None if rand_class is None else \
-                ObsUtils.OBS_RANDOMIZERS[rand_class](**rand_kwargs)
+        for rand_class, rand_kwargs in zip(obs_randomizer_class_list, obs_randomizer_kwargs_list):            
+            rand = None
+            if rand_class is not None:
+                rand_kwargs["input_shape"] = obs_shape
+                rand_kwargs = extract_class_init_kwargs_from_dict(
+                    cls=ObsUtils.OBS_RANDOMIZERS[rand_class],
+                    dic=rand_kwargs,
+                    copy=False,
+                )
+                rand = ObsUtils.OBS_RANDOMIZERS[rand_class](**rand_kwargs)
             randomizers.append(rand)
 
         enc.register_obs_key(
