@@ -16,6 +16,10 @@ import robomimic.utils.obs_utils as ObsUtils
 import torch
 from torch.utils.data import DataLoader
 
+"""
+TODO: track rotation magnitude seperately (https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.magnitude.html)
+"""
+
 # the configs of the models to be plotted
 model_config_mapping = {
     # "bottle_less_obs": {
@@ -26,7 +30,8 @@ model_config_mapping = {
     #     "trajectory_name_regex": r'(\d+_trajectory_im\d+)'
     # },
     "r2d2_wire": {
-        "model": "/home/soroushn/expdata/r2d2/im/bc_xfmr/debug/ds_pen-in-cup_cams_3cams_predfuture_True_ac_keys_rel/20230825172047/models/model_epoch_2.pth",
+        # "model": "/home/soroushn/expdata/r2d2/im/diffusion_policy/debug/ds_pen-in-cup_cams_3cams/20230830160945/models/model_epoch_2.pth",
+        "model": "/home/soroushn/expdata/r2d2/im/bc_xfmr/debug/ds_pen-in-cup_cams_3cams_predfuture_True_ac_keys_rel/20230830161631/models/model_epoch_2.pth",
         "folder": "/home/soroushn/tmp/model_predictions",
         # "action_names": ['x', 'y', 'z', 'r', 'p', 'y', "gripper_pos"], # use custom names
         "action_names": None, # use default names, see line 71
@@ -114,6 +119,8 @@ for model_name in model_config_mapping:
 
             model = policy.policy
 
+            model.reset()
+
             # loop through each timestep
             for batch in iter(dataloader):
                 batch = model.process_batch_for_training(batch)
@@ -124,13 +131,15 @@ for model_name in model_config_mapping:
                     images[image_key].append(im)
 
                 batch = model.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
-                model_output = model.nets["policy"](batch["obs"])
+                # model_output = model.nets["policy"](batch["obs"])
+
+                model_output = model.get_action(batch["obs"])
                 
                 actual_action = TensorUtils.to_numpy(
                     batch["actions"][0][0]
                 )
                 predicted_action = TensorUtils.to_numpy(
-                    model_output[0][0]
+                    model_output[0]
                 )
 
                 actual_actions_all_traj.append(actual_action)

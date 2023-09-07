@@ -5,7 +5,7 @@ from typing import Callable, Union
 import math
 from collections import OrderedDict, deque
 from packaging.version import parse as parse_version
-
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,6 +20,15 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
+
+import os
+import numpy as np
+import random
+import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.tensor_utils as TensorUtils
+import robomimic.utils.obs_utils as ObsUtils
+import torch
+from torch.utils.data import DataLoader
 
 @register_algo_factory_func("diffusion_policy")
 def algo_config_to_class(algo_config):
@@ -388,7 +397,96 @@ class DiffusionPolicyUNet(PolicyAlgo):
         self.nets.load_state_dict(model_dict["nets"])
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
+
+    def visualize(self, trainset, validset, savedir):
+        NUM_SAMPLES = 30
+
+        # set model into eval mode
+        self.set_eval()
+        random_state = np.random.RandomState(0)
+        train_indices = random_state.choice(
+            min(len(trainset.datasets), NUM_SAMPLES),
+            len(trainset.datasets)
+        ).astype(int)
         
+        training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
+        inference_datasets_mapping = {"training": training_sampled_data} #, "validation": validation_sampled_data} 
+
+        action_names = self.get_action_names_for_vis(
+            action_keys=self.global_config.train.action_keys,
+            training_sample=training_sampled_data[0][0],
+        )
+
+        print("Saving model prediction plots to {}".format(savedir))
+
+        # loop through training and validation sets
+        for inference_key in inference_datasets_mapping:
+            actual_actions_all_traj = [] # (NxT, D)
+            predicted_actions_all_traj = [] # (NxT, D)
+
+            traj_num = 1
+
+            # loop through each trajectory
+            for d in inference_datasets_mapping[inference_key]:
+                hdf5_path = d.hdf5_path
+                action_dim = len(action_names)
+                actual_actions = [[] for _ in range(action_dim)] # (T, D)
+                predicted_actions = [[] for _ in range(action_dim)] # (T, D)           
+
+                image_keys = [item for item in d.__getitem__(0)['obs'].keys() if "image" in item]
+                images = {key: [] for key in image_keys}
+
+                dataloader = DataLoader(
+                    dataset=d,
+                    sampler=None,
+                    batch_size=1,
+                    shuffle=False,
+                    num_workers=1,
+                    drop_last=True,
+                )
+
+                self.reset()
+
+                # loop through each timestep
+                for batch in iter(dataloader):
+                    batch = self.process_batch_for_training(batch)
+
+                    for image_key in image_keys:
+                        im = batch["obs"][image_key][0][-1]
+                        im = TensorUtils.to_numpy(im).astype(np.uint32)
+                        images[image_key].append(im)
+
+                    batch = self.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
+
+                    model_output = self.get_action(batch["obs"])
+                    
+                    actual_action = TensorUtils.to_numpy(
+                        batch["actions"][0][0]
+                    )
+                    predicted_action = TensorUtils.to_numpy(
+                        model_output[0]
+                    )
+
+                    actual_actions_all_traj.append(actual_action)
+                    predicted_actions_all_traj.append(predicted_action)
+                
+                    for dim in range(action_dim):
+                        actual_actions[dim].append(actual_action[dim])
+                        predicted_actions[dim].append(predicted_action[dim])
+
+                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key, traj_num))
+                
+                self.make_model_prediction_plot(
+                    hdf5_path=hdf5_path,
+                    save_path=save_path,
+                    images=images,
+                    action_names=action_names,
+                    actual_actions=actual_actions,
+                    predicted_actions=predicted_actions,
+                )
+
+                traj_num += 1
+            
 
 # =================== Vision Encoder Utils =====================
 def replace_submodules(

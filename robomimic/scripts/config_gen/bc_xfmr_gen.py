@@ -30,11 +30,11 @@ def make_generator_helper(args):
             name="cams",
             group=130,
             values=[
-                ["camera/image/hand_camera_image"],
-                ["camera/image/hand_camera_image", "camera/image/varied_camera_1_image", "camera/image/varied_camera_2_image"],
+                # ["camera/image/hand_camera_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
             ],
             value_names=[
-                "wrist",
+                # "wrist",
                 "3cams",
             ]
         )

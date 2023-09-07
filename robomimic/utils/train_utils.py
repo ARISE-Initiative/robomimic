@@ -77,7 +77,12 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     # video directory
     video_dir = os.path.join(base_output_dir, time_str, "videos")
     os.makedirs(video_dir)
-    return log_dir, output_dir, video_dir
+
+    # vis directory
+    vis_dir = os.path.join(base_output_dir, time_str, "vis")
+    os.makedirs(vis_dir)
+    
+    return log_dir, output_dir, video_dir, vis_dir
 
 
 def load_data_for_training(config, obs_keys):
