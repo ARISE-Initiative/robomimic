@@ -19,6 +19,12 @@ try:
 except ImportError:
     print("WARNING: could not import mimicgen robosuite envs")
 
+try:
+    # try to import mimicgen environments
+    import mimicgen_envs
+except ImportError:
+    print("WARNING: could not import mimicgen envs")
+
 # protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
 try:
     import mujoco_py
