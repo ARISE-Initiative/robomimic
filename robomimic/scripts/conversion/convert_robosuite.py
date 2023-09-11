@@ -45,17 +45,22 @@ if __name__ == "__main__":
     f = h5py.File(args.dataset, "a") # edit mode
 
     # store env meta
-    env_name = f["data"].attrs["env"]
-    env_info = json.loads(f["data"].attrs["env_info"])
-    env_meta = dict(
-        type=EB.EnvType.ROBOSUITE_TYPE,
-        env_name=env_name,
-        env_version=f["data"].attrs["repository_version"],
-        env_kwargs=env_info,
-    )
-    if "env_args" in f["data"].attrs:
-        del f["data"].attrs["env_args"]
-    f["data"].attrs["env_args"] = json.dumps(env_meta, indent=4)
+    env_name = f["data"].attrs.get("env", None)
+    if "env_info" in f["data"].attrs:
+        env_info = json.loads(f["data"].attrs["env_info"])
+    if env_name is not None and env_info is not None:
+        env_meta = dict(
+            type=EB.EnvType.ROBOSUITE_TYPE,
+            env_name=env_name,
+            env_version=f["data"].attrs["repository_version"],
+            env_kwargs=env_info,
+        )
+        if "env_args" in f["data"].attrs:
+            del f["data"].attrs["env_args"]
+        f["data"].attrs["env_args"] = json.dumps(env_meta, indent=4)
+    else:
+        # assume env_args already present
+        assert "env_args" in f["data"].attrs
 
     print("====== Stored env meta ======")
     print(f["data"].attrs["env_args"])
