@@ -12,13 +12,6 @@ import robosuite
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
 
-# protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
-try:
-    import mujoco_py
-    MUJOCO_EXCEPTIONS = [mujoco_py.builder.MujocoException]
-except Exception:
-    MUJOCO_EXCEPTIONS = []
-
 
 class EnvRobosuite(EB.EnvBase):
     """Wrapper class for robosuite environments (https://github.com/ARISE-Initiative/robosuite)"""
@@ -86,6 +79,7 @@ class EnvRobosuite(EB.EnvBase):
         self._env_name = env_name
         self._init_kwargs = deepcopy(kwargs)
         self.env = robosuite.make(self._env_name, **kwargs)
+        self.base_env = self.env # for mimicgen
 
         if self._is_v1:
             # Make sure joint position observations and eef vel observations are active
@@ -206,7 +200,8 @@ class EnvRobosuite(EB.EnvBase):
                 # ensures that we don't accidentally add robot wrist images a second time
                 pf = robot.robot_model.naming_prefix
                 for k in di:
-                    if k.startswith(pf) and (k not in ret) and (not k.endswith("proprio-state")):
+                    if k.startswith(pf) and (k not in ret) and \
+                            (not k.endswith("proprio-state")):
                         ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
@@ -380,7 +375,7 @@ class EnvRobosuite(EB.EnvBase):
         that the entire training run doesn't crash because of a bad policy that causes unstable
         simulation computations.
         """
-        return tuple(MUJOCO_EXCEPTIONS)
+        return (Exception)
 
     def __repr__(self):
         """
