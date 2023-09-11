@@ -8,19 +8,9 @@ import torch
 import pytorch3d.transforms as pt
 import os
 
-def main():
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True
-    )
-    
-    args = parser.parse_args()
-    
+def extract_action_dict(dataset):
     # find files
-    f = h5py.File(os.path.expanduser(args.dataset), mode="r+")
+    f = h5py.File(os.path.expanduser(dataset), mode="r+")
 
     SPECS = [
         dict(
@@ -71,6 +61,19 @@ def main():
                 action_dict_group.create_dataset(key, data=data)
 
     f.close()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True
+    )
+    
+    args = parser.parse_args()
+    extract_action_dict(args.dataset)
     
 if __name__ == "__main__":
     main()

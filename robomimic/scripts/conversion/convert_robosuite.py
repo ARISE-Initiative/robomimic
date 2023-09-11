@@ -22,6 +22,9 @@ import argparse
 
 import robomimic.envs.env_base as EB
 from robomimic.scripts.split_train_val import split_train_val_from_hdf5
+from robomimic.scripts.conversion.robosuite_add_absolute_actions import add_absolute_actions_to_dataset
+from robomimic.scripts.conversion.extract_action_dict import extract_action_dict
+from robomimic.scripts.filter_dataset_size import filter_dataset_size
 
 
 if __name__ == "__main__":
@@ -30,6 +33,12 @@ if __name__ == "__main__":
         "--dataset",
         type=str,
         help="path to input hdf5 dataset",
+    )
+    parser.add_argument(
+        "--filter_num_demos",
+        type=int,
+        nargs='+',
+        help="Num demos to filter by (can be list)",
     )
     args = parser.parse_args()
 
@@ -73,3 +82,21 @@ if __name__ == "__main__":
 
     # create 90-10 train-validation split in the dataset
     split_train_val_from_hdf5(hdf5_path=args.dataset, val_ratio=0.1)
+
+    # add absolute actions to dataset
+    add_absolute_actions_to_dataset(
+        dataset=args.dataset,
+        eval_dir=None,
+        num_workers=10,
+    )
+
+    # extract corresponding action keys into action_dict
+    extract_action_dict(dataset=args.dataset)
+
+    # create filter keys according to number of demos
+    if args.filter_num_demos is not None:
+        for n in args.filter_num_demos:
+            filter_dataset_size(
+                args.dataset,
+                num_demos=n,
+            )
