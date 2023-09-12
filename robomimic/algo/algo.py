@@ -342,10 +342,12 @@ class Algo(object):
     ):
         """
         TODO: documentation
+        actual_actions: (T, D)
+        predicted_actions: (T, D)
         """
         image_keys = sorted(list(images.keys()))
-        action_dim = len(actual_actions)
-        traj_length = len(actual_actions[0])
+        action_dim = actual_actions.shape[1]
+        traj_length = len(actual_actions)
 
         # Plot
         fig, axs = plt.subplots(len(images) + action_dim, 1, figsize=(30, (len(images) + action_dim) * 3))
@@ -361,8 +363,8 @@ class Algo(object):
             axs[i].axis("off")
         for dim in range(action_dim):
             ax = axs[len(images)+dim]
-            ax.plot(range(traj_length), actual_actions[dim], label='Actual Action', color='blue')
-            ax.plot(range(traj_length), predicted_actions[dim], label='Predicted Action', color='red')
+            ax.plot(range(traj_length), actual_actions[:, dim], label='Actual Action', color='blue')
+            ax.plot(range(traj_length), predicted_actions[:, dim], label='Predicted Action', color='red')
             # ax.set_xlabel('Timestep')
             # ax.set_ylabel('Action Dimension {}'.format(dim + 1))
             ax.set_title(action_names[dim], fontsize=30)

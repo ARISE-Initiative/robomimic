@@ -10,6 +10,7 @@
             "wandb_proj_name": "debug"
         },
         "vis": {},
+        "mse":{},
         "save": {
             "enabled": true,
             "every_n_seconds": null,
