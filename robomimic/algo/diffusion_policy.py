@@ -4,6 +4,7 @@ Implementation of Diffusion Policy https://diffusion-policy.cs.columbia.edu/ by 
 from typing import Callable, Union
 import math
 from collections import OrderedDict, deque
+import imageio
 from packaging.version import parse as parse_version
 import random
 import torch
@@ -405,8 +406,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
         self.set_eval()
         random_state = np.random.RandomState(0)
         train_indices = random_state.choice(
-            min(len(trainset.datasets), NUM_SAMPLES),
-            len(trainset.datasets)
+            len(trainset.datasets),
+            min(len(trainset.datasets), NUM_SAMPLES)
         ).astype(int)
         
         training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
@@ -418,6 +419,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
         )
 
         print("Saving model prediction plots to {}".format(savedir))
+        
+        vis_dict = {} # Dict from trajectory key to images of policy visualizations
 
         # loop through training and validation sets
         for inference_key in inference_datasets_mapping:
@@ -474,7 +477,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
                         actual_actions[dim].append(actual_action[dim])
                         predicted_actions[dim].append(predicted_action[dim])
 
-                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key, traj_num))
+                traj_key = "{}_traj_{}".format(inference_key, traj_num)
+                save_path = os.path.join(savedir, "{}.png".format(traj_key))
                 
                 self.make_model_prediction_plot(
                     hdf5_path=hdf5_path,
@@ -486,6 +490,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 )
 
                 traj_num += 1
+                vis_dict[traj_key] = imageio.imread(save_path)
+        return vis_dict
             
 
 # =================== Vision Encoder Utils =====================

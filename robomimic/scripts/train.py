@@ -332,11 +332,13 @@ def train(config, device):
             if config.experiment.vis.on_save_ckpt and should_save_ckpt:
                 should_save_vis = True
         if should_save_vis:
-            model.visualize(
+            vis_dict =  model.visualize(
                 trainset,
                 validset,
                 os.path.join(vis_dir, epoch_ckpt_name),
             )
+            for k,v in vis_dict.items():
+                data_logger.record("Vis/{}".format(k), v, epoch ,data_type='image')
         
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    
