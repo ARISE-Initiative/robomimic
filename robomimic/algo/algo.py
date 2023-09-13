@@ -508,7 +508,7 @@ class PolicyAlgo(Algo):
             traj_num = 1
             for d in inference_datasets_mapping[inference_key]:
                 actual_actions, predicted_actions, images = self.compute_traj_pred_actual_actions(d, return_images=True)
-                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key, traj_num))
+                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key.lower(), traj_num))
                 
                 self.make_model_prediction_plot(
                     hdf5_path=d.hdf5_path,

@@ -75,7 +75,7 @@ def set_env_settings(generator, args):
             key="experiment.vis.every_n_epochs",
             name="",
             group=-1,
-            values=[25],
+            values=[50],
         ),
         generator.add_param(
             key="experiment.vis.on_save_ckpt",
@@ -93,7 +93,7 @@ def set_env_settings(generator, args):
             key="experiment.mse.every_n_epochs",
             name="",
             group=-1,
-            values=[25],
+            values=[50],
         ),
         generator.add_param(
             key="experiment.mse.on_save_ckpt",
@@ -669,6 +669,13 @@ def set_debug_mode(generator, args):
         value_names=[""],
     )
     generator.add_param(
+        key="experiment.mse.every_n_epochs",
+        name="",
+        group=-1,
+        values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
         key="experiment.rollout.n",
         name="",
         group=-1,
@@ -864,8 +871,8 @@ def make_generator(args, make_generator_helper):
         time_str = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d-')
         args.name = time_str + str(args.name)
 
-    if args.debug or args.tmplog:
-        args.no_wandb = True
+    # if args.debug or args.tmplog:
+    #     args.no_wandb = True
 
     if args.wandb_proj_name is not None:
         # prepend data to wandb name

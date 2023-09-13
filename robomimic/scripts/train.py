@@ -334,8 +334,8 @@ def train(config, device):
             for k, v in mse_log.items():
                 data_logger.record("{}".format(k), v, epoch)
 
-            print("Validation Epoch {}".format(epoch))
-            print(json.dumps(step_log, sort_keys=True, indent=4))
+            print("MSE Log Epoch {}".format(epoch))
+            print(json.dumps(mse_log, sort_keys=True, indent=4))
         
             
         # Only keep saved videos if the ckpt should be saved (but not because of validation score)
