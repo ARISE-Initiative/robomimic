@@ -40,6 +40,9 @@ python robomimic/scripts/config_gen/diffusion_gen.py --name <run-name>
 You can add `--debug` to generate small runs for testing. Running this script will generate training run commands. You can use this script for generating a single run or multiple (for comparing settings and hyperparameter tuning).
 At this point you just need to run the command(s) outputted.
 
+### Loading model checkpoint weights
+Want to intialize your model with weights from a previous model checkpoint? Set the checkpoint path under `experiment.ckpt_path` in the config.
+
 -------
 ## Logging and viewing results
 Read this short [tutorial page](https://robomimic.github.io/docs/tutorials/viewing_results.html).
