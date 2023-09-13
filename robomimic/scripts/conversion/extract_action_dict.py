@@ -5,8 +5,9 @@ import tqdm
 import h5py
 import numpy as np
 import torch
-import pytorch3d.transforms as pt
 import os
+
+import robomimic.utils.torch_utils as TorchUtils
 
 def extract_action_dict(dataset):
     # find files
@@ -39,9 +40,10 @@ def extract_action_dict(dataset):
             in_rot = in_action[:,3:6].astype(np.float32)
             in_grip = in_action[:,6:7].astype(np.float32)
             
-            rot_ = torch.from_numpy(in_rot)
-            rot_mat = pt.axis_angle_to_matrix(rot_)
-            rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float32)
+            rot_6d = TorchUtils.axis_angle_to_rot_6d(
+                axis_angle=torch.from_numpy(in_rot)
+            )
+            rot_6d = rot_6d.numpy().astype(np.float32) # convert to numpy
             
             this_action_dict = {
                 prefix + "pos": in_pos,

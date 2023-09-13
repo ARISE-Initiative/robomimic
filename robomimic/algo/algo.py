@@ -13,7 +13,6 @@ from collections import OrderedDict
 
 import torch.nn as nn
 import torch
-import pytorch3d.transforms as pt
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -591,12 +590,11 @@ class RolloutPolicy(object):
                 this_format = action_config[key].get("format", None)
                 if this_format == "rot_6d":
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
-                    rot_mat = pt.rotation_6d_to_matrix(rot_6d)
                     conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
                     if conversion_format == "rot_axis_angle":
-                        rot = pt.matrix_to_axis_angle(rot_mat).squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze().numpy()
                     elif conversion_format == "rot_euler":
-                        rot = pt.matrix_to_euler_angles(rot_mat, convention="XYZ").squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_euler_angles(rot_6d=rot_6d, convention="XYZ").squeeze().numpy()
                     else:
                         raise ValueError
                     ac_dict[key] = rot
