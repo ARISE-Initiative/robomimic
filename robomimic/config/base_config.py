@@ -88,19 +88,16 @@ class BaseConfig(Config):
         self.experiment.logging.log_wandb = False                   # enable wandb logging
         self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
-        self.experiment.vis.enabled = False
-        self.experiment.vis.every_n_epochs = 50
-        self.experiment.vis.on_save_ckpt = True
-
-        self.experiment.mse.enabled = False
-        self.experiment.mse.every_n_epochs = 50
-        self.experiment.mse.on_save_ckpt = True
-        
         # saving model prediction visualizations
         self.experiment.vis.enabled = False
         self.experiment.vis.every_n_epochs = 50
         self.experiment.vis.on_save_ckpt = True
         
+        # log model prediction MSE
+        self.experiment.mse.enabled = False
+        self.experiment.mse.every_n_epochs = 50
+        self.experiment.mse.on_save_ckpt = True
+                
         ## save config - if and when to save model checkpoints ##
         self.experiment.save.enabled = True                         # whether model saving should be enabled or disabled
         self.experiment.save.every_n_seconds = None                 # save model every n seconds (set to None to disable)

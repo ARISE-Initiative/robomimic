@@ -2,7 +2,6 @@ import argparse
 import os
 import time
 import datetime
-import random
 
 import robomimic
 import robomimic.utils.hyperparam_utils as HyperparamUtils
@@ -17,17 +16,6 @@ def scan_datasets(folder, postfix=".h5"):
                 dataset_paths.append(os.path.join(root, f))
     return dataset_paths
 
-def split_datasets(dataset_paths, train_ratio=0.8, seed=None):
-    assert train_ratio > 0 and train_ratio < 1
-    random.seed(seed)
-    train_size = int(len(dataset_paths) * train_ratio)
-    
-    random.shuffle(dataset_paths)
-    train_data = dataset_paths[:train_size]
-    validation_data = dataset_paths[train_size:]
-    if len(set(train_data).intersection(validation_data)) > 0:
-        raise ValueError("The sublists have overlapping elements.")
-    return [train_data, validation_data]
 
 def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
     if args.wandb_proj_name is None:
@@ -915,15 +903,9 @@ def make_generator(args, make_generator_helper):
         name="",
         group=-1,
         values=[
-            True,
+            False,
         ],
     )
-    generator.add_param(
-            key="experiment.validation_epoch_every_n_steps",
-            name="",
-            group=-1,
-            values=[None],
-        )
 
     # generate jsons and script
     generator.generate(override_base_name=True)
