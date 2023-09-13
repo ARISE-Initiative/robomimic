@@ -66,24 +66,6 @@ def set_env_settings(generator, args):
             values=[50],
         )
         generator.add_param(
-            key="experiment.vis.enabled",
-            name="",
-            group=-1,
-            values=[True],
-        ),
-        generator.add_param(
-            key="experiment.vis.every_n_epochs",
-            name="",
-            group=-1,
-            values=[50],
-        ),
-        generator.add_param(
-            key="experiment.vis.on_save_ckpt",
-            name="",
-            group=-1,
-            values=[True],
-        ),
-        generator.add_param(
             key="experiment.mse.enabled",
             name="",
             group=-1,
@@ -97,6 +79,12 @@ def set_env_settings(generator, args):
         ),
         generator.add_param(
             key="experiment.mse.on_save_ckpt",
+            name="",
+            group=-1,
+            values=[True],
+        ),
+        generator.add_param(
+            key="experiment.mse.visualize",
             name="",
             group=-1,
             values=[True],
@@ -662,17 +650,17 @@ def set_debug_mode(generator, args):
         return
 
     generator.add_param(
-        key="experiment.vis.every_n_epochs",
+        key="experiment.mse.every_n_epochs",
         name="",
         group=-1,
         values=[2],
         value_names=[""],
     )
     generator.add_param(
-        key="experiment.mse.every_n_epochs",
+        key="experiment.mse.visualize",
         name="",
         group=-1,
-        values=[2],
+        values=[True],
         value_names=[""],
     )
     generator.add_param(

@@ -472,8 +472,10 @@ class PolicyAlgo(Algo):
         predicted_actions = np.array(predicted_actions)
         return actual_actions, predicted_actions, images
     
-    def visualize(self, trainset, validset, savedir):
+    def compute_mse_visualize(self, trainset, validset, savedir=None):
+        """If savedir is not None, then also visualize the model predictions and save them to savedir"""
         NUM_SAMPLES = 20
+        visualize = savedir is not None
 
         # set model into eval mode
         self.set_eval()
@@ -500,77 +502,49 @@ class PolicyAlgo(Algo):
             training_sample=training_sampled_data[0][0],
         )
 
-        print("Saving model prediction plots to {}".format(savedir))
+        if visualize:
+            print("Saving model prediction plots to {}".format(savedir))
 
-        # loop through training and validation sets
-        for inference_key in inference_datasets_mapping:
-            # loop through each trajectory
-            traj_num = 1
-            for d in inference_datasets_mapping[inference_key]:
-                actual_actions, predicted_actions, images = self.compute_traj_pred_actual_actions(d, return_images=True)
-                save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key.lower(), traj_num))
-                
-                self.make_model_prediction_plot(
-                    hdf5_path=d.hdf5_path,
-                    save_path=save_path,
-                    images=images,
-                    action_names=action_names,
-                    actual_actions=actual_actions,
-                    predicted_actions=predicted_actions,
-                )
-                traj_num += 1
-    
-    def compute_mse(self, trainset, validset):
-        NUM_SAMPLES = 32
-
-        # set model into eval mode
-        self.set_eval()
-        random_state = np.random.RandomState(0)
-        train_indices = random_state.choice(
-            len(trainset.datasets),
-            min(len(trainset.datasets), NUM_SAMPLES)
-        ).astype(int)        
-        training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
-        
-        if validset is not None:
-            valid_indices = random_state.choice(
-                len(validset.datasets),
-                min(len(validset.datasets), NUM_SAMPLES)
-            ).astype(int)
-            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
-        
-            inference_datasets_mapping = {"Train": training_sampled_data, "Valid": validation_sampled_data} 
-        else:
-            inference_datasets_mapping = {"Train": training_sampled_data}
-
-        
         # loop through training and validation sets
         for inference_key in inference_datasets_mapping:
             actual_actions_all_traj = [] # (NxT, D)
             predicted_actions_all_traj = [] # (NxT, D)
 
             # loop through each trajectory
+            traj_num = 1
             for d in inference_datasets_mapping[inference_key]:
-                actual_actions, predicted_actions, _ = self.compute_traj_pred_actual_actions(d)
+                actual_actions, predicted_actions, images = self.compute_traj_pred_actual_actions(d, return_images=visualize)
                 actual_actions_all_traj.append(actual_actions)
                 predicted_actions_all_traj.append(predicted_actions)
-        
-        actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
-        predicted_actions_all_traj = np.concatenate(predicted_actions_all_traj, axis=0)        
-        accuracy_thresholds = np.logspace(-3,-5, num=3).tolist()
-        mse = torch.nn.functional.mse_loss(
-            torch.tensor(predicted_actions_all_traj), 
-            torch.tensor(actual_actions_all_traj), 
-            reduction='none'
-        ) # (NxT, D)
-        mse_log = {}
-        mse_log[f'{inference_key}/action_mse_error'] = mse.mean().item() # average MSE across all timesteps averaged across all action dimensions (D,)
-        
-        # compute percentage of timesteps that have MSE less than the accuracy thresholds
-        for accuracy_threshold in accuracy_thresholds:
-            mse_log[f'{inference_key}/action_accuracy@{accuracy_threshold}'] = (torch.less(mse,accuracy_threshold).float().mean().item())
+                if visualize:
+                    save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key.lower(), traj_num))                
+                    self.make_model_prediction_plot(
+                        hdf5_path=d.hdf5_path,
+                        save_path=save_path,
+                        images=images,
+                        action_names=action_names,
+                        actual_actions=actual_actions,
+                        predicted_actions=predicted_actions,
+                    )
+                traj_num += 1
+            
+            actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
+            predicted_actions_all_traj = np.concatenate(predicted_actions_all_traj, axis=0)        
+            accuracy_thresholds = np.logspace(-3,-5, num=3).tolist()
+            mse = torch.nn.functional.mse_loss(
+                torch.tensor(predicted_actions_all_traj), 
+                torch.tensor(actual_actions_all_traj), 
+                reduction='none'
+            ) # (NxT, D)
+            mse_log = {}
+            mse_log[f'{inference_key}/action_mse_error'] = mse.mean().item() # average MSE across all timesteps averaged across all action dimensions (D,)
+            
+            # compute percentage of timesteps that have MSE less than the accuracy thresholds
+            for accuracy_threshold in accuracy_thresholds:
+                mse_log[f'{inference_key}/action_accuracy@{accuracy_threshold}'] = (torch.less(mse,accuracy_threshold).float().mean().item())
         
         return mse_log
+    
         
 
 class ValueAlgo(Algo):
