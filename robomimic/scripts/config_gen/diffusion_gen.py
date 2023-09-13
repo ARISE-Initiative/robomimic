@@ -62,6 +62,28 @@ def make_generator_helper(args):
             ],
         )
         generator.add_param(
+            key="train.hdf5_filter_key",
+            name="ds",
+            group=2,
+            values=[
+                split_datasets(scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5"), ratio=0.8, seed=1)[0]
+            ],
+            value_names=[
+                "pen-in-cup",
+            ],
+        )
+        generator.add_param(
+            key="train.hdf5_validation_filter_key",
+            name="ds",
+            group=2,
+            values=[
+                split_datasets(scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5"), ratio=0.8, seed=1)[1]
+            ],
+            value_names=[
+                "pen-in-cup",
+            ],
+        )
+        generator.add_param(
             key="train.action_keys",
             name="ac_keys",
             group=-1,

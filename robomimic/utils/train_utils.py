@@ -111,16 +111,17 @@ def load_data_for_training(config, obs_keys):
         assert (train_filter_by_attribute is not None) and (valid_filter_by_attribute is not None), \
             "did not specify filter keys corresponding to train and valid split in dataset" \
             " - please fill config.train.hdf5_filter_key and config.train.hdf5_validation_filter_key"
-        train_demo_keys = FileUtils.get_demos_for_filter_key(
-            hdf5_path=os.path.expanduser(config.train.data),
-            filter_key=train_filter_by_attribute,
-        )
-        valid_demo_keys = FileUtils.get_demos_for_filter_key(
-            hdf5_path=os.path.expanduser(config.train.data),
-            filter_key=valid_filter_by_attribute,
-        )
-        assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
-            "validation demonstrations!"
+        if config.train.data_format != "r2d2":
+            train_demo_keys = FileUtils.get_demos_for_filter_key(
+                hdf5_path=os.path.expanduser(config.train.data),
+                filter_key=train_filter_by_attribute,
+            )
+            valid_demo_keys = FileUtils.get_demos_for_filter_key(
+                hdf5_path=os.path.expanduser(config.train.data),
+                filter_key=valid_filter_by_attribute,
+            )
+            assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
+                "validation demonstrations!"
         train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
     else:
@@ -173,7 +174,12 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
-    ds_kwargs["filter_by_attribute"] = [filter_by_attribute for ds_cfg in config.train.data]
+    if config.train.data_format == "r2d2":
+        ds_kwargs["filter_by_attribute"] = [True if ds_cfg["path"] in filter_by_attribute else False 
+                                            for ds_cfg in config.train.data]
+    else:
+        ds_kwargs["filter_by_attribute"] = [filter_by_attribute for ds_cfg in config.train.data]
+
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
     ds_labels = [ds_cfg.get("label", "dummy") for ds_cfg in config.train.data]
 
