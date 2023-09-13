@@ -857,7 +857,17 @@ class BC_Transformer(BC):
             min(len(trainset.datasets), NUM_SAMPLES)
         ).astype(int)
         training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
-        inference_datasets_mapping = {"Train": training_sampled_data} #, "Valid": validation_sampled_data} 
+        
+        if validset is not None:
+            valid_indices = random_state.choice(
+                len(validset.datasets),
+                min(len(validset.datasets), NUM_SAMPLES)
+            ).astype(int)
+            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
+        
+            inference_datasets_mapping = {"Train": training_sampled_data, "Valid": validation_sampled_data} 
+        else:
+            inference_datasets_mapping = {"Train": training_sampled_data}
 
         action_names = self.get_action_names_for_vis(
             action_keys=self.global_config.train.action_keys,
@@ -893,10 +903,19 @@ class BC_Transformer(BC):
         train_indices = random_state.choice(
             len(trainset.datasets),
             min(len(trainset.datasets), NUM_SAMPLES)
-        ).astype(int)
-        
+        ).astype(int)        
         training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
-        inference_datasets_mapping = {"Train": training_sampled_data} #, "Valid": validation_sampled_data} 
+        
+        if validset is not None:
+            valid_indices = random_state.choice(
+                len(validset.datasets),
+                min(len(validset.datasets), NUM_SAMPLES)
+            ).astype(int)
+            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
+        
+            inference_datasets_mapping = {"Train": training_sampled_data, "Valid": validation_sampled_data} 
+        else:
+            inference_datasets_mapping = {"Train": training_sampled_data}
 
         
         # loop through training and validation sets
