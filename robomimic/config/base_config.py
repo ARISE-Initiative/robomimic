@@ -131,6 +131,9 @@ class BaseConfig(Config):
         self.experiment.env_meta_update_dict = Config()
         self.experiment.env_meta_update_dict.do_not_lock_keys()
 
+        # whether to load in a previously trained model checkpoint
+        self.experiment.ckpt_path = None
+
     def train_config(self):
         """
         This function populates the `config.train` attribute of the config, which 
