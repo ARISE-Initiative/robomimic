@@ -38,7 +38,9 @@ Each algorithm has its own config generator script. For example for diffusion po
 python robomimic/scripts/config_gen/diffusion_gen.py --name <run-name>
 ```
 You can add `--debug` to generate small runs for testing. Running this script will generate training run commands. You can use this script for generating a single run or multiple (for comparing settings and hyperparameter tuning).
-At this point you just need to run the command(s) outputted.
+After running this script you just need to run the command(s) outputted.
+
+Want to learn how to set your own config values and sweep them? Read this short [tutorial section](https://robomimic.github.io/docs/tutorials/hyperparam_scan.html#step-3-set-hyperparameter-values).
 
 ### Loading model checkpoint weights
 Want to intialize your model with weights from a previous model checkpoint? Set the checkpoint path under `experiment.ckpt_path` in the config.
