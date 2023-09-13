@@ -318,26 +318,36 @@ def train(config, device):
             if updated_stats["ckpt_reason"] is not None:
                 ckpt_reason = updated_stats["ckpt_reason"]
 
+        # check if we need to save model MSE
+        should_save_mse = False
+        if config.experiment.mse.enabled:
+            if config.experiment.mse.every_n_epochs is not None and epoch % config.experiment.mse.every_n_epochs == 0:
+                should_save_mse = True
+            if config.experiment.mse.on_save_ckpt and should_save_ckpt:
+                should_save_mse = True
+        if should_save_mse:
+            print("Computing MSE ...")
+            if config.experiment.mse.visualize:
+                save_vis_dir = os.path.join(vis_dir, epoch_ckpt_name)
+            else:
+                save_vis_dir = None
+            mse_log = model.compute_mse_visualize(
+                trainset,
+                validset,
+                save_vis_dir,
+            )    
+            for k, v in mse_log.items():
+                data_logger.record("{}".format(k), v, epoch)
+
+            print("MSE Log Epoch {}".format(epoch))
+            print(json.dumps(mse_log, sort_keys=True, indent=4))
+        
         # Only keep saved videos if the ckpt should be saved (but not because of validation score)
         should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
         if video_paths is not None and not should_save_video:
             for env_name in video_paths:
                 os.remove(video_paths[env_name])
 
-        # check if we need to save model prediction visualizations
-        should_save_vis = False
-        if config.experiment.vis.enabled:
-            if config.experiment.vis.every_n_epochs is not None and epoch % config.experiment.vis.every_n_epochs == 0:
-                should_save_vis = True
-            if config.experiment.vis.on_save_ckpt and should_save_ckpt:
-                should_save_vis = True
-        if should_save_vis:
-            model.visualize(
-                trainset,
-                validset,
-                os.path.join(vis_dir, epoch_ckpt_name),
-            )
-        
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    
             TrainUtils.save_model(
