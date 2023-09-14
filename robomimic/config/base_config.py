@@ -88,11 +88,12 @@ class BaseConfig(Config):
         self.experiment.logging.log_wandb = False                   # enable wandb logging
         self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
-        # saving model prediction visualizations
-        self.experiment.vis.enabled = False
-        self.experiment.vis.every_n_epochs = 50
-        self.experiment.vis.on_save_ckpt = True
-        
+        # log model prediction MSE
+        self.experiment.mse.enabled = False                         # whether to log model prediction MSE
+        self.experiment.mse.every_n_epochs = 50                     # log model prediction MSE every n epochs
+        self.experiment.mse.on_save_ckpt = True                     # log model prediction MSE on model checkpoint
+        self.experiment.mse.visualize = True                        # save model prediction visualizations
+                
         ## save config - if and when to save model checkpoints ##
         self.experiment.save.enabled = True                         # whether model saving should be enabled or disabled
         self.experiment.save.every_n_seconds = None                 # save model every n seconds (set to None to disable)
@@ -129,6 +130,9 @@ class BaseConfig(Config):
         # for updating the evaluation env meta data
         self.experiment.env_meta_update_dict = Config()
         self.experiment.env_meta_update_dict.do_not_lock_keys()
+
+        # whether to load in a previously trained model checkpoint
+        self.experiment.ckpt_path = None
 
     def train_config(self):
         """

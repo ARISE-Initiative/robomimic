@@ -9,7 +9,8 @@ from tqdm import tqdm
 import argparse
 import shutil
 import torch
-import pytorch3d.transforms as pt
+
+import robomimic.utils.torch_utils as TorchUtils
 
 from r2d2.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
 from r2d2.trajectory_utils.trajectory_reader import TrajectoryReader
@@ -140,8 +141,10 @@ def convert_dataset(path, args):
         in_pos = in_action[:,:3].astype(np.float64)
         in_rot = in_action[:,3:6].astype(np.float64) # in euler format
         rot_ = torch.from_numpy(in_rot)
-        rot_mat = pt.euler_angles_to_matrix(rot_, convention="XYZ")
-        rot_6d = pt.matrix_to_rotation_6d(rot_mat).numpy().astype(np.float64)
+        rot_6d = TorchUtils.euler_angles_to_rot_6d(
+            rot_, convention="XYZ",
+        ) 
+        rot_6d = rot_6d.numpy().astype(np.float64)
 
         if in_ac_key == "cartesian_position":
             prefix = "abs_"

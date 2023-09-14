@@ -13,7 +13,6 @@ from collections import OrderedDict
 
 import torch.nn as nn
 import torch
-import pytorch3d.transforms as pt
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,7 +21,9 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.action_utils as AcUtils
+import robomimic.utils.vis_utils as VisUtils
 
+from torch.utils.data import DataLoader
 
 # mapping from algo name to factory functions that map algo configs to algo class names
 REGISTERED_ALGO_FACTORY_FUNCS = OrderedDict()
@@ -325,78 +326,6 @@ class Algo(object):
         """
         pass
 
-    def visualize(self, trainset, validset, savedir):
-        """
-        TODO: add documentation
-        """
-        pass
-
-    def make_model_prediction_plot(
-        self,
-        hdf5_path,
-        save_path,
-        images,
-        action_names,
-        actual_actions,
-        predicted_actions,
-    ):
-        """
-        TODO: documentation
-        """
-        image_keys = sorted(list(images.keys()))
-        action_dim = len(actual_actions)
-        traj_length = len(actual_actions[0])
-
-        # Plot
-        fig, axs = plt.subplots(len(images) + action_dim, 1, figsize=(30, (len(images) + action_dim) * 3))
-        for i, image_key in enumerate(image_keys):
-            interval = int(traj_length/15) # plot `5` images
-            images[image_key] = images[image_key][::interval]
-            combined_images = np.concatenate(images[image_key], axis=1)
-            axs[i].imshow(combined_images)
-            if i == 0:
-                axs[i].set_title(hdf5_path + '\n' + image_key, fontsize=30)
-            else:
-                axs[i].set_title(image_key, fontsize=30)
-            axs[i].axis("off")
-        for dim in range(action_dim):
-            ax = axs[len(images)+dim]
-            ax.plot(range(traj_length), actual_actions[dim], label='Actual Action', color='blue')
-            ax.plot(range(traj_length), predicted_actions[dim], label='Predicted Action', color='red')
-            # ax.set_xlabel('Timestep')
-            # ax.set_ylabel('Action Dimension {}'.format(dim + 1))
-            ax.set_title(action_names[dim], fontsize=30)
-            ax.xaxis.set_tick_params(labelsize=24)
-            ax.yaxis.set_tick_params(labelsize=24)
-            ax.legend(fontsize=20)
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05, wspace=0.3, hspace=0.6)
-        
-        # Save the figure with the specified path and filename
-        save_dir = os.path.dirname(save_path)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        plt.savefig(save_path) 
-
-        fig.clear()
-        plt.close()
-        plt.cla()
-        plt.clf()
-
-    def get_action_names_for_vis(self, action_keys, training_sample):
-        """
-        TODO: documentation
-        """
-        modified_action_keys = [element.replace('action/', '') for element in action_keys]
-        action_names = []
-        
-        for i, action_key in enumerate(action_keys):
-            if isinstance(training_sample[action_key][0], np.ndarray):
-                action_names.extend([f'{modified_action_keys[i]}_{j+1}' for j in range(len(training_sample[action_key][0]))])
-            else:
-                action_names.append(modified_action_keys[i])
-
-        return action_names
-
 
 class PolicyAlgo(Algo):
     """
@@ -415,6 +344,140 @@ class PolicyAlgo(Algo):
         """
         raise NotImplementedError
 
+    def compute_traj_pred_actual_actions(self, traj, return_images=False):
+        """
+        traj is an R2D2Dataset object representing one trajectory
+        This function is slow (>1s per trajectory) because there is no batching 
+        and instead loops through all timesteps one by one
+        TODO: documentation
+        """
+        if return_images:
+            image_keys = [item for item in traj.__getitem__(0)['obs'].keys() if "image" in item]
+            images = {key: [] for key in image_keys}
+        else:
+            images = None
+
+        dataloader = DataLoader(
+            dataset=traj,
+            sampler=None,
+            batch_size=1,
+            shuffle=False,
+            num_workers=1,
+            drop_last=True,
+        )
+
+        self.reset()
+        actual_actions = [] 
+        predicted_actions = [] 
+        
+        # loop through each timestep
+        for batch in iter(dataloader):
+            batch = self.process_batch_for_training(batch)
+
+            if return_images:
+                for image_key in image_keys:
+                    im = batch["obs"][image_key][0][-1]
+                    im = TensorUtils.to_numpy(im).astype(np.uint32)
+                    images[image_key].append(im)
+
+            batch = self.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
+
+            model_output = self.get_action(batch["obs"])
+            
+            actual_action = TensorUtils.to_numpy(
+                batch["actions"][0][0]
+            )
+            predicted_action = TensorUtils.to_numpy(
+                model_output[0]
+            )
+
+            actual_actions.append(actual_action)
+            predicted_actions.append(predicted_action)
+            
+        actual_actions = np.array(actual_actions)
+        predicted_actions = np.array(predicted_actions)
+        return actual_actions, predicted_actions, images
+    
+    def compute_mse_visualize(self, trainset, validset, savedir=None):
+        """If savedir is not None, then also visualize the model predictions and save them to savedir"""
+        NUM_SAMPLES = 20
+        visualize = savedir is not None
+
+        # set model into eval mode
+        self.set_eval()
+        random_state = np.random.RandomState(0)
+        train_indices = random_state.choice(
+            len(trainset.datasets),
+            min(len(trainset.datasets), NUM_SAMPLES)
+        ).astype(int)
+        training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
+        
+        if validset is not None:
+            valid_indices = random_state.choice(
+                len(validset.datasets),
+                min(len(validset.datasets), NUM_SAMPLES)
+            ).astype(int)
+            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
+        
+            inference_datasets_mapping = {"Train": training_sampled_data, "Valid": validation_sampled_data} 
+        else:
+            inference_datasets_mapping = {"Train": training_sampled_data}
+
+        # extract action name for visualization
+        action_keys = self.global_config.train.action_keys
+        training_sample=training_sampled_data[0][0]
+        modified_action_keys = [element.replace("action/", "") for element in action_keys]
+        action_names = []
+        
+        for i, action_key in enumerate(action_keys):
+            if isinstance(training_sample[action_key][0], np.ndarray):
+                action_names.extend([f'{modified_action_keys[i]}_{j+1}' for j in range(len(training_sample[action_key][0]))])
+            else:
+                action_names.append(modified_action_keys[i])
+
+        if visualize:
+            print("Saving model prediction plots to {}".format(savedir))
+
+        # loop through training and validation sets
+        for inference_key in inference_datasets_mapping:
+            actual_actions_all_traj = [] # (NxT, D)
+            predicted_actions_all_traj = [] # (NxT, D)
+
+            # loop through each trajectory
+            traj_num = 1
+            for d in inference_datasets_mapping[inference_key]:
+                actual_actions, predicted_actions, images = self.compute_traj_pred_actual_actions(d, return_images=visualize)
+                actual_actions_all_traj.append(actual_actions)
+                predicted_actions_all_traj.append(predicted_actions)
+                if visualize:
+                    save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key.lower(), traj_num))                
+                    VisUtils.make_model_prediction_plot(
+                        hdf5_path=d.hdf5_path,
+                        save_path=save_path,
+                        images=images,
+                        action_names=action_names,
+                        actual_actions=actual_actions,
+                        predicted_actions=predicted_actions,
+                    )
+                traj_num += 1
+            
+            actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
+            predicted_actions_all_traj = np.concatenate(predicted_actions_all_traj, axis=0)        
+            accuracy_thresholds = np.logspace(-3,-5, num=3).tolist()
+            mse = torch.nn.functional.mse_loss(
+                torch.tensor(predicted_actions_all_traj), 
+                torch.tensor(actual_actions_all_traj), 
+                reduction='none'
+            ) # (NxT, D)
+            mse_log = {}
+            mse_log[f'{inference_key}/action_mse_error'] = mse.mean().item() # average MSE across all timesteps averaged across all action dimensions (D,)
+            
+            # compute percentage of timesteps that have MSE less than the accuracy thresholds
+            for accuracy_threshold in accuracy_thresholds:
+                mse_log[f'{inference_key}/action_accuracy@{accuracy_threshold}'] = (torch.less(mse,accuracy_threshold).float().mean().item())
+        
+        return mse_log
+    
 
 class ValueAlgo(Algo):
     """
@@ -591,12 +654,11 @@ class RolloutPolicy(object):
                 this_format = action_config[key].get("format", None)
                 if this_format == "rot_6d":
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
-                    rot_mat = pt.rotation_6d_to_matrix(rot_6d)
                     conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
                     if conversion_format == "rot_axis_angle":
-                        rot = pt.matrix_to_axis_angle(rot_mat).squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze().numpy()
                     elif conversion_format == "rot_euler":
-                        rot = pt.matrix_to_euler_angles(rot_mat, convention="XYZ").squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_euler_angles(rot_6d=rot_6d, convention="XYZ").squeeze().numpy()
                     else:
                         raise ValueError
                     ac_dict[key] = rot
