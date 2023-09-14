@@ -118,28 +118,6 @@ def make_generator_helper(args):
                 # "proprio-extrinsics",
             ]
         )
-
-        generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_class",
-            name="obsrand",
-            group=13891,
-            values=[
-                "CropRandomizer",
-                "ColorRandomizer",
-                ["ColorRandomizer", "CropRandomizer"],
-            ],
-        )
-        generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs",
-            name="obsrandargs",
-            group=13891,
-            values=[
-                {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False},
-                {},
-                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}],
-            ],
-            hidename=True,
-        )
     elif args.env == "kitchen":
         generator.add_param(
             key="train.data",

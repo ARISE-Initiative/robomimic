@@ -110,6 +110,27 @@ def set_env_settings(generator, args):
                     ]
                 ],
             )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_class",
+            name="obsrand",
+            group=-1,
+            values=[
+                # "CropRandomizer", # crop only
+                # "ColorRandomizer", # jitter only
+                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
+            ],
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_kwargs",
+            name="obsrandargs",
+            group=-1,
+            values=[
+                # {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}, # crop only
+                # {}, # jitter only
+                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
         if ("observation.encoder.rgb.obs_randomizer_kwargs" not in generator.parameters) and \
             ("observation.encoder.rgb.obs_randomizer_kwargs.crop_height" not in generator.parameters):
             generator.add_param(
