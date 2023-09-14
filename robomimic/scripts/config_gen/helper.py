@@ -66,11 +66,29 @@ def set_env_settings(generator, args):
             values=[50],
         )
         generator.add_param(
-            key="experiment.vis.enabled",
+            key="experiment.mse.enabled",
             name="",
             group=-1,
             values=[True],
-        )
+        ),
+        generator.add_param(
+            key="experiment.mse.every_n_epochs",
+            name="",
+            group=-1,
+            values=[50],
+        ),
+        generator.add_param(
+            key="experiment.mse.on_save_ckpt",
+            name="",
+            group=-1,
+            values=[True],
+        ),
+        generator.add_param(
+            key="experiment.mse.visualize",
+            name="",
+            group=-1,
+            values=[True],
+        ),
         if "observation.modalities.obs.low_dim" not in generator.parameters:
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
@@ -92,7 +110,29 @@ def set_env_settings(generator, args):
                     ]
                 ],
             )
-        if "observation.encoder.rgb.obs_randomizer_kwargs.crop_height"  not in generator.parameters:
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_class",
+            name="obsrand",
+            group=-1,
+            values=[
+                # "CropRandomizer", # crop only
+                # "ColorRandomizer", # jitter only
+                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
+            ],
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_kwargs",
+            name="obsrandargs",
+            group=-1,
+            values=[
+                # {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}, # crop only
+                # {}, # jitter only
+                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
+        if ("observation.encoder.rgb.obs_randomizer_kwargs" not in generator.parameters) and \
+            ("observation.encoder.rgb.obs_randomizer_kwargs.crop_height" not in generator.parameters):
             generator.add_param(
                 key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
                 name="",
@@ -632,10 +672,17 @@ def set_debug_mode(generator, args):
         return
 
     generator.add_param(
-        key="experiment.vis.every_n_epochs",
+        key="experiment.mse.every_n_epochs",
         name="",
         group=-1,
         values=[2],
+        value_names=[""],
+    )
+    generator.add_param(
+        key="experiment.mse.visualize",
+        name="",
+        group=-1,
+        values=[True],
         value_names=[""],
     )
     generator.add_param(

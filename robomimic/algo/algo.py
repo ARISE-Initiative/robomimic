@@ -13,16 +13,17 @@ from collections import OrderedDict
 
 import torch.nn as nn
 import torch
-import pytorch3d.transforms as pt
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+import imageio
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.action_utils as AcUtils
+import robomimic.utils.vis_utils as VisUtils
 
+from torch.utils.data import DataLoader
 
 # mapping from algo name to factory functions that map algo configs to algo class names
 REGISTERED_ALGO_FACTORY_FUNCS = OrderedDict()
@@ -36,8 +37,10 @@ def register_algo_factory_func(algo_name):
     Args:
         algo_name (str): the algorithm name to register the algorithm under
     """
+
     def decorator(factory_func):
         REGISTERED_ALGO_FACTORY_FUNCS[algo_name] = factory_func
+
     return decorator
 
 
@@ -82,7 +85,7 @@ def algo_factory(algo_name, config, obs_key_shapes, ac_dim, device):
         obs_key_shapes=obs_key_shapes,
         ac_dim=ac_dim,
         device=device,
-        **algo_kwargs
+        **algo_kwargs,
     )
 
 
@@ -93,14 +96,9 @@ class Algo(object):
     a standard API to be used by training functions such as @run_epoch in
     utils/train_utils.py.
     """
+
     def __init__(
-        self,
-        algo_config,
-        obs_config,
-        global_config,
-        obs_key_shapes,
-        ac_dim,
-        device
+        self, algo_config, obs_config, global_config, obs_key_shapes, ac_dim, device
     ):
         """
         Args:
@@ -152,11 +150,23 @@ class Algo(object):
         # We check across all modality groups (obs, goal, subgoal), and see if the inputted observation key exists
         # across all modalitie specified in the config. If so, we store its corresponding shape internally
         for k in obs_key_shapes:
-            if "obs" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.obs.values() for obs_key in modality]:
+            if "obs" in self.obs_config.modalities and k in [
+                obs_key
+                for modality in self.obs_config.modalities.obs.values()
+                for obs_key in modality
+            ]:
                 self.obs_shapes[k] = obs_key_shapes[k]
-            if "goal" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.goal.values() for obs_key in modality]:
+            if "goal" in self.obs_config.modalities and k in [
+                obs_key
+                for modality in self.obs_config.modalities.goal.values()
+                for obs_key in modality
+            ]:
                 self.goal_shapes[k] = obs_key_shapes[k]
-            if "subgoal" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.subgoal.values() for obs_key in modality]:
+            if "subgoal" in self.obs_config.modalities and k in [
+                obs_key
+                for modality in self.obs_config.modalities.subgoal.values()
+                for obs_key in modality
+            ]:
                 self.subgoal_shapes[k] = obs_key_shapes[k]
 
     def _create_networks(self):
@@ -179,18 +189,28 @@ class Algo(object):
             if k in self.nets:
                 if isinstance(self.nets[k], nn.ModuleList):
                     self.optimizers[k] = [
-                        TorchUtils.optimizer_from_optim_params(net_optim_params=self.optim_params[k], net=self.nets[k][i])
+                        TorchUtils.optimizer_from_optim_params(
+                            net_optim_params=self.optim_params[k], net=self.nets[k][i]
+                        )
                         for i in range(len(self.nets[k]))
                     ]
                     self.lr_schedulers[k] = [
-                        TorchUtils.lr_scheduler_from_optim_params(net_optim_params=self.optim_params[k], net=self.nets[k][i], optimizer=self.optimizers[k][i])
+                        TorchUtils.lr_scheduler_from_optim_params(
+                            net_optim_params=self.optim_params[k],
+                            net=self.nets[k][i],
+                            optimizer=self.optimizers[k][i],
+                        )
                         for i in range(len(self.nets[k]))
                     ]
                 else:
                     self.optimizers[k] = TorchUtils.optimizer_from_optim_params(
-                        net_optim_params=self.optim_params[k], net=self.nets[k])
+                        net_optim_params=self.optim_params[k], net=self.nets[k]
+                    )
                     self.lr_schedulers[k] = TorchUtils.lr_scheduler_from_optim_params(
-                        net_optim_params=self.optim_params[k], net=self.nets[k], optimizer=self.optimizers[k])
+                        net_optim_params=self.optim_params[k],
+                        net=self.nets[k],
+                        optimizer=self.optimizers[k],
+                    )
 
     def process_batch_for_training(self, batch):
         """
@@ -203,7 +223,7 @@ class Algo(object):
 
         Returns:
             input_batch (dict): processed and filtered batch that
-                will be used for training 
+                will be used for training
         """
         return batch
 
@@ -219,8 +239,8 @@ class Algo(object):
                 training will occur (after @process_batch_for_training
                 is called)
 
-            obs_normalization_stats (dict or None): if provided, this should map observation 
-                keys to dicts with a "mean" and "std" of shape (1, ...) where ... is the 
+            obs_normalization_stats (dict or None): if provided, this should map observation
+                keys to dicts with a "mean" and "std" of shape (1, ...) where ... is the
                 default shape for the observation.
 
         Returns:
@@ -231,7 +251,9 @@ class Algo(object):
             if k in batch and batch[k] is not None:
                 batch[k] = ObsUtils.process_obs_dict(batch[k])
                 if obs_normalization_stats is not None:
-                    batch[k] = ObsUtils.normalize_dict(batch[k], obs_normalization_stats=obs_normalization_stats)
+                    batch[k] = ObsUtils.normalize_dict(
+                        batch[k], obs_normalization_stats=obs_normalization_stats
+                    )
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -316,8 +338,11 @@ class Algo(object):
         """
         Pretty print algorithm and network description.
         """
-        return "{} (\n".format(self.__class__.__name__) + \
-               textwrap.indent(self.nets.__repr__(), '  ') + "\n)"
+        return (
+            "{} (\n".format(self.__class__.__name__)
+            + textwrap.indent(self.nets.__repr__(), "  ")
+            + "\n)"
+        )
 
     def reset(self):
         """
@@ -325,83 +350,12 @@ class Algo(object):
         """
         pass
 
-    def visualize(self, trainset, validset, savedir):
-        """
-        TODO: add documentation
-        """
-        pass
-
-    def make_model_prediction_plot(
-        self,
-        hdf5_path,
-        save_path,
-        images,
-        action_names,
-        actual_actions,
-        predicted_actions,
-    ):
-        """
-        TODO: documentation
-        """
-        image_keys = sorted(list(images.keys()))
-        action_dim = len(actual_actions)
-        traj_length = len(actual_actions[0])
-
-        # Plot
-        fig, axs = plt.subplots(len(images) + action_dim, 1, figsize=(30, (len(images) + action_dim) * 3))
-        for i, image_key in enumerate(image_keys):
-            interval = int(traj_length/15) # plot `5` images
-            images[image_key] = images[image_key][::interval]
-            combined_images = np.concatenate(images[image_key], axis=1)
-            axs[i].imshow(combined_images)
-            if i == 0:
-                axs[i].set_title(hdf5_path + '\n' + image_key, fontsize=30)
-            else:
-                axs[i].set_title(image_key, fontsize=30)
-            axs[i].axis("off")
-        for dim in range(action_dim):
-            ax = axs[len(images)+dim]
-            ax.plot(range(traj_length), actual_actions[dim], label='Actual Action', color='blue')
-            ax.plot(range(traj_length), predicted_actions[dim], label='Predicted Action', color='red')
-            # ax.set_xlabel('Timestep')
-            # ax.set_ylabel('Action Dimension {}'.format(dim + 1))
-            ax.set_title(action_names[dim], fontsize=30)
-            ax.xaxis.set_tick_params(labelsize=24)
-            ax.yaxis.set_tick_params(labelsize=24)
-            ax.legend(fontsize=20)
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05, wspace=0.3, hspace=0.6)
-        
-        # Save the figure with the specified path and filename
-        save_dir = os.path.dirname(save_path)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        plt.savefig(save_path) 
-
-        fig.clear()
-        plt.close()
-        plt.cla()
-        plt.clf()
-
-    def get_action_names_for_vis(self, action_keys, training_sample):
-        """
-        TODO: documentation
-        """
-        modified_action_keys = [element.replace('action/', '') for element in action_keys]
-        action_names = []
-        
-        for i, action_key in enumerate(action_keys):
-            if isinstance(training_sample[action_key][0], np.ndarray):
-                action_names.extend([f'{modified_action_keys[i]}_{j+1}' for j in range(len(training_sample[action_key][0]))])
-            else:
-                action_names.append(modified_action_keys[i])
-
-        return action_names
-
 
 class PolicyAlgo(Algo):
     """
     Base class for all algorithms that can be used as policies.
     """
+
     def get_action(self, obs_dict, goal_dict=None):
         """
         Get policy action outputs.
@@ -415,11 +369,170 @@ class PolicyAlgo(Algo):
         """
         raise NotImplementedError
 
+    def compute_traj_pred_actual_actions(self, traj, return_images=False):
+        """
+        traj is an R2D2Dataset object representing one trajectory
+        This function is slow (>1s per trajectory) because there is no batching
+        and instead loops through all timesteps one by one
+        TODO: documentation
+        """
+        if return_images:
+            image_keys = [
+                item for item in traj.__getitem__(0)["obs"].keys() if "image" in item
+            ]
+            images = {key: [] for key in image_keys}
+        else:
+            images = None
+
+        dataloader = DataLoader(
+            dataset=traj,
+            sampler=None,
+            batch_size=1,
+            shuffle=False,
+            num_workers=1,
+            drop_last=True,
+        )
+
+        self.reset()
+        actual_actions = []
+        predicted_actions = []
+
+        # loop through each timestep
+        for batch in iter(dataloader):
+            batch = self.process_batch_for_training(batch)
+
+            if return_images:
+                for image_key in image_keys:
+                    im = batch["obs"][image_key][0][-1]
+                    im = TensorUtils.to_numpy(im).astype(np.uint32)
+                    images[image_key].append(im)
+
+            batch = self.postprocess_batch_for_training(
+                batch, obs_normalization_stats=None
+            )  # ignore obs_normalization for now
+
+            model_output = self.get_action(batch["obs"])
+
+            actual_action = TensorUtils.to_numpy(batch["actions"][0][0])
+            predicted_action = TensorUtils.to_numpy(model_output[0])
+
+            actual_actions.append(actual_action)
+            predicted_actions.append(predicted_action)
+
+        actual_actions = np.array(actual_actions)
+        predicted_actions = np.array(predicted_actions)
+        return actual_actions, predicted_actions, images
+
+    def compute_mse_visualize(self, trainset, validset, savedir=None):
+        """If savedir is not None, then also visualize the model predictions and save them to savedir"""
+        NUM_SAMPLES = 20
+        visualize = savedir is not None
+
+        # set model into eval mode
+        self.set_eval()
+        random_state = np.random.RandomState(0)
+        train_indices = random_state.choice(
+            len(trainset.datasets), min(len(trainset.datasets), NUM_SAMPLES)
+        ).astype(int)
+        training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
+
+        if validset is not None:
+            valid_indices = random_state.choice(
+                len(validset.datasets), min(len(validset.datasets), NUM_SAMPLES)
+            ).astype(int)
+            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
+
+            inference_datasets_mapping = {
+                "Train": training_sampled_data,
+                "Valid": validation_sampled_data,
+            }
+        else:
+            inference_datasets_mapping = {"Train": training_sampled_data}
+
+        # extract action name for visualization
+        action_keys = self.global_config.train.action_keys
+        training_sample = training_sampled_data[0][0]
+        modified_action_keys = [
+            element.replace("action/", "") for element in action_keys
+        ]
+        action_names = []
+
+        for i, action_key in enumerate(action_keys):
+            if isinstance(training_sample[action_key][0], np.ndarray):
+                action_names.extend(
+                    [
+                        f"{modified_action_keys[i]}_{j+1}"
+                        for j in range(len(training_sample[action_key][0]))
+                    ]
+                )
+            else:
+                action_names.append(modified_action_keys[i])
+
+        if visualize:
+            print("Saving model prediction plots to {}".format(savedir))
+
+        mse_log = {}
+
+        vis_log = {}
+        # loop through training and validation sets
+        for inference_key in inference_datasets_mapping:
+            actual_actions_all_traj = []  # (NxT, D)
+            predicted_actions_all_traj = []  # (NxT, D)
+
+            # loop through each trajectory
+            traj_num = 1
+            for d in inference_datasets_mapping[inference_key]:
+                (
+                    actual_actions,
+                    predicted_actions,
+                    images,
+                ) = self.compute_traj_pred_actual_actions(d, return_images=visualize)
+                actual_actions_all_traj.append(actual_actions)
+                predicted_actions_all_traj.append(predicted_actions)
+                if visualize:
+                    traj_key = "{}_traj_{}".format(inference_key.lower(), traj_num)
+                    save_path = os.path.join(savedir, traj_key + ".png")
+                    VisUtils.make_model_prediction_plot(
+                        hdf5_path=d.hdf5_path,
+                        save_path=save_path,
+                        images=images,
+                        action_names=action_names,
+                        actual_actions=actual_actions,
+                        predicted_actions=predicted_actions,
+                    )
+                    vis_log[traj_key] = imageio.imread(save_path)
+                traj_num += 1
+
+            actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
+            predicted_actions_all_traj = np.concatenate(
+                predicted_actions_all_traj, axis=0
+            )
+            accuracy_thresholds = np.logspace(-3, -5, num=3).tolist()
+            mse = torch.nn.functional.mse_loss(
+                torch.tensor(predicted_actions_all_traj),
+                torch.tensor(actual_actions_all_traj),
+                reduction="none",
+            )  # (NxT, D)
+            mse_log[
+                f"{inference_key}/action_mse_error"
+            ] = (
+                mse.mean().item()
+            )  # average MSE across all timesteps averaged across all action dimensions (D,)
+
+            # compute percentage of timesteps that have MSE less than the accuracy thresholds
+            for accuracy_threshold in accuracy_thresholds:
+                mse_log[f"{inference_key}/action_accuracy@{accuracy_threshold}"] = (
+                    torch.less(mse, accuracy_threshold).float().mean().item()
+                )
+
+        return mse_log, vis_log
+
 
 class ValueAlgo(Algo):
     """
     Base class for all algorithms that can learn a value function.
     """
+
     def get_state_value(self, obs_dict, goal_dict=None):
         """
         Get state value outputs.
@@ -453,6 +566,7 @@ class PlannerAlgo(Algo):
     Base class for all algorithms that can be used for planning subgoals
     conditioned on current observations and potential goal observations.
     """
+
     def get_subgoal_predictions(self, obs_dict, goal_dict=None):
         """
         Get predicted subgoal outputs.
@@ -485,6 +599,7 @@ class HierarchicalAlgo(Algo):
     Base class for all hierarchical algorithms that consist of (1) subgoal planning
     and (2) subgoal-conditioned policy learning.
     """
+
     def get_action(self, obs_dict, goal_dict=None):
         """
         Get policy action outputs.
@@ -526,7 +641,10 @@ class RolloutPolicy(object):
     """
     Wraps @Algo object to make it easy to run policies in a rollout loop.
     """
-    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None):
+
+    def __init__(
+        self, policy, obs_normalization_stats=None, action_normalization_stats=None
+    ):
         """
         Args:
             policy (Algo instance): @Algo object to wrap to prepare for rollouts
@@ -552,11 +670,13 @@ class RolloutPolicy(object):
         Prepare raw observation dict from environment for policy.
 
         Args:
-            ob (dict): single observation dictionary from environment (no batch dimension, 
+            ob (dict): single observation dictionary from environment (no batch dimension,
                 and np.array values for each key)
         """
         if self.obs_normalization_stats is not None:
-            ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
+            ob = ObsUtils.normalize_dict(
+                ob, obs_normalization_stats=self.obs_normalization_stats
+            )
         ob = TensorUtils.to_tensor(ob)
         ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
@@ -572,7 +692,7 @@ class RolloutPolicy(object):
         Produce action from raw observation dict (and maybe goal dict) from environment.
 
         Args:
-            ob (dict): single observation dictionary from environment (no batch dimension, 
+            ob (dict): single observation dictionary from environment (no batch dimension,
                 and np.array values for each key)
             goal (dict): goal observation
         """
@@ -583,20 +703,38 @@ class RolloutPolicy(object):
         ac = TensorUtils.to_numpy(ac[0])
         if self.action_normalization_stats is not None:
             action_keys = self.policy.global_config.train.action_keys
-            action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
-            ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
-            ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
+            action_shapes = {
+                k: self.action_normalization_stats[k]["offset"].shape[1:]
+                for k in self.action_normalization_stats
+            }
+            ac_dict = AcUtils.vector_to_action_dict(
+                ac, action_shapes=action_shapes, action_keys=action_keys
+            )
+            ac_dict = ObsUtils.unnormalize_dict(
+                ac_dict, normalization_stats=self.action_normalization_stats
+            )
             action_config = self.policy.global_config.train.action_config
             for key, value in ac_dict.items():
                 this_format = action_config[key].get("format", None)
                 if this_format == "rot_6d":
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
-                    rot_mat = pt.rotation_6d_to_matrix(rot_6d)
-                    conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
+                    conversion_format = action_config[key].get(
+                        "convert_at_runtime", "rot_axis_angle"
+                    )
                     if conversion_format == "rot_axis_angle":
-                        rot = pt.matrix_to_axis_angle(rot_mat).squeeze().numpy()
+                        rot = (
+                            TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d)
+                            .squeeze()
+                            .numpy()
+                        )
                     elif conversion_format == "rot_euler":
-                        rot = pt.matrix_to_euler_angles(rot_mat, convention="XYZ").squeeze().numpy()
+                        rot = (
+                            TorchUtils.rot_6d_to_euler_angles(
+                                rot_6d=rot_6d, convention="XYZ"
+                            )
+                            .squeeze()
+                            .numpy()
+                        )
                     else:
                         raise ValueError
                     ac_dict[key] = rot
