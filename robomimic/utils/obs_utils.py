@@ -93,14 +93,15 @@ def obs_encoder_kwargs_from_config(obs_encoder_config):
     # Unlock encoder config
     obs_encoder_config.unlock()
     for obs_modality, encoder_kwargs in obs_encoder_config.items():
-        # First run some sanity checks and store the classes
-        for cls_name, cores in zip(("core", "obs_randomizer"), (OBS_ENCODER_CORES, OBS_RANDOMIZERS)):
-            # Make sure the requested encoder for each obs_modality exists
-            cfg_cls = encoder_kwargs[f"{cls_name}_class"]
-            if cfg_cls is not None:
-                assert cfg_cls in cores, f"No {cls_name} class with name {cfg_cls} found, must register this class before" \
-                    f"creating model!"
-                # encoder_kwargs[f"{cls_name}_class"] = cores[cfg_cls]
+        ###  TODO: fix sanity checks. Disabling this code snippet to allow chaining multiple randomizers.
+        # # First run some sanity checks and store the classes
+        # for cls_name, cores in zip(("core", "obs_randomizer"), (OBS_ENCODER_CORES, OBS_RANDOMIZERS)):
+        #     # Make sure the requested encoder for each obs_modality exists
+        #     cfg_cls = encoder_kwargs[f"{cls_name}_class"]
+        #     if cfg_cls is not None:
+        #         assert cfg_cls in cores, f"No {cls_name} class with name {cfg_cls} found, must register this class before" \
+        #             f"creating model!"
+        #         # encoder_kwargs[f"{cls_name}_class"] = cores[cfg_cls]
 
         # Process core and randomizer kwargs
         encoder_kwargs.core_kwargs = dict() if encoder_kwargs.core_kwargs is None else \
