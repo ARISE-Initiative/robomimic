@@ -4,7 +4,6 @@ Implementation of Diffusion Policy https://diffusion-policy.cs.columbia.edu/ by 
 from typing import Callable, Union
 import math
 from collections import OrderedDict, deque
-import imageio
 from packaging.version import parse as parse_version
 import random
 import torch
@@ -394,6 +393,10 @@ class DiffusionPolicyUNet(PolicyAlgo):
         self.nets.load_state_dict(model_dict["nets"])
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
+
+    
+            
+            
 
 # =================== Vision Encoder Utils =====================
 def replace_submodules(

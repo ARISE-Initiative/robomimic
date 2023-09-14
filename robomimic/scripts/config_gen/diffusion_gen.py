@@ -1,14 +1,11 @@
 from robomimic.scripts.config_gen.helper import *
 
-
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"
 
     generator = get_generator(
         algo_name="diffusion_policy",
-        config_file=os.path.join(
-            base_path, "robomimic/exps/templates/diffusion_policy.json"
-        ),
+        config_file=os.path.join(base_path, 'robomimic/exps/templates/diffusion_policy.json'),
         args=args,
         algo_name_short=algo_name_short,
         pt=True,
@@ -58,12 +55,7 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [
-                    {"path": p}
-                    for p in scan_datasets(
-                        "datasets/2023-02-28", postfix="trajectory_im128.h5"
-                    )
-                ],
+                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
             ],
             value_names=[
                 "pen-in-cup",
@@ -92,11 +84,7 @@ def make_generator_helper(args):
             values=[
                 # ["camera/image/hand_camera_left_image"],
                 # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                [
-                    "camera/image/hand_camera_left_image",
-                    "camera/image/varied_camera_1_left_image",
-                    "camera/image/varied_camera_2_left_image",
-                ],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
                 # [
                 #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
                 #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
@@ -108,7 +96,7 @@ def make_generator_helper(args):
                 # "wrist-stereo",
                 "3cams",
                 # "3cams-stereo",
-            ],
+            ]
         )
 
         generator.add_param(
@@ -128,7 +116,7 @@ def make_generator_helper(args):
             value_names=[
                 "proprio",
                 # "proprio-extrinsics",
-            ],
+            ]
         )
     elif args.env == "kitchen":
         generator.add_param(
@@ -137,12 +125,7 @@ def make_generator_helper(args):
             group=2,
             values=[
                 # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
-                [
-                    {
-                        "path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5",
-                        "filter_key": "100_demos",
-                    }
-                ],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
@@ -153,13 +136,15 @@ def make_generator_helper(args):
                 # "mg-1000",
             ],
         )
-
+        
         # update env config to use absolute action control
         generator.add_param(
             key="experiment.env_meta_update_dict",
             name="",
             group=-1,
-            values=[{"env_kwargs": {"controller_configs": {"control_delta": False}}}],
+            values=[
+                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
+            ],
         )
 
         generator.add_param(
@@ -187,9 +172,7 @@ def make_generator_helper(args):
             group=2,
             values=[
                 [
-                    {
-                        "path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"
-                    },  # replace with your own path
+                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
                 ],
             ],
             value_names=[
@@ -202,9 +185,11 @@ def make_generator_helper(args):
             key="experiment.env_meta_update_dict",
             name="",
             group=-1,
-            values=[{"env_kwargs": {"controller_configs": {"control_delta": False}}}],
+            values=[
+                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
+            ],
         )
-
+        
         generator.add_param(
             key="train.action_keys",
             name="ac_keys",
@@ -222,9 +207,10 @@ def make_generator_helper(args):
             ],
         )
 
+
     else:
         raise ValueError
-
+    
     generator.add_param(
         key="train.output_dir",
         name="",
@@ -239,7 +225,6 @@ def make_generator_helper(args):
     )
 
     return generator
-
 
 if __name__ == "__main__":
     parser = get_argparser()
