@@ -155,6 +155,25 @@ def set_env_settings(generator, args):
                     116
                 ],
             )
+        # remove spatial softmax by default for r2d2 dataset
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.pool_class",
+            name="",
+            group=-1,
+            values=[
+                None
+            ],
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.pool_kwargs",
+            name="",
+            group=-1,
+            values=[
+                None
+            ],
+        )
+
+        # specify dataset type is r2d2 rather than default robomimic
         generator.add_param(
             key="train.data_format",
             name="",
@@ -163,7 +182,7 @@ def set_env_settings(generator, args):
                 "r2d2"
             ],
         )
-        # specify action keys in your <yourmethod>_gen.py
+        
         # here, we list how each action key should be treated (normalized etc)
         generator.add_param(
             key="train.action_config",
