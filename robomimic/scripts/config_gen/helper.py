@@ -84,6 +84,12 @@ def set_env_settings(generator, args):
             values=[True],
         ),
         generator.add_param(
+            key="experiment.mse.num_samples",
+            name="",
+            group=-1,
+            values=[20],
+        ),
+        generator.add_param(
             key="experiment.mse.visualize",
             name="",
             group=-1,

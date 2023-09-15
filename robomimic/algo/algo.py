@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+import imageio
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
@@ -398,9 +398,8 @@ class PolicyAlgo(Algo):
         predicted_actions = np.array(predicted_actions)
         return actual_actions, predicted_actions, images
     
-    def compute_mse_visualize(self, trainset, validset, savedir=None):
+    def compute_mse_visualize(self, trainset, validset, num_samples, savedir=None):
         """If savedir is not None, then also visualize the model predictions and save them to savedir"""
-        NUM_SAMPLES = 20
         visualize = savedir is not None
 
         # set model into eval mode
@@ -408,14 +407,14 @@ class PolicyAlgo(Algo):
         random_state = np.random.RandomState(0)
         train_indices = random_state.choice(
             len(trainset.datasets),
-            min(len(trainset.datasets), NUM_SAMPLES)
+            min(len(trainset.datasets), num_samples)
         ).astype(int)
         training_sampled_data = [trainset.datasets[idx] for idx in train_indices]
         
         if validset is not None:
             valid_indices = random_state.choice(
                 len(validset.datasets),
-                min(len(validset.datasets), NUM_SAMPLES)
+                min(len(validset.datasets), num_samples)
             ).astype(int)
             validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
         
@@ -438,6 +437,8 @@ class PolicyAlgo(Algo):
         if visualize:
             print("Saving model prediction plots to {}".format(savedir))
 
+        mse_log = {}
+        vis_log = {}
         # loop through training and validation sets
         for inference_key in inference_datasets_mapping:
             actual_actions_all_traj = [] # (NxT, D)
@@ -450,7 +451,8 @@ class PolicyAlgo(Algo):
                 actual_actions_all_traj.append(actual_actions)
                 predicted_actions_all_traj.append(predicted_actions)
                 if visualize:
-                    save_path = os.path.join(savedir, "{}_traj_{}.png".format(inference_key.lower(), traj_num))                
+                    traj_key = "{}_traj_{}".format(inference_key.lower(), traj_num)
+                    save_path = os.path.join(savedir, traj_key + ".png")                
                     VisUtils.make_model_prediction_plot(
                         hdf5_path=d.hdf5_path,
                         save_path=save_path,
@@ -459,6 +461,7 @@ class PolicyAlgo(Algo):
                         actual_actions=actual_actions,
                         predicted_actions=predicted_actions,
                     )
+                    vis_log[traj_key] = imageio.imread(save_path)
                 traj_num += 1
             
             actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
@@ -469,14 +472,13 @@ class PolicyAlgo(Algo):
                 torch.tensor(actual_actions_all_traj), 
                 reduction='none'
             ) # (NxT, D)
-            mse_log = {}
             mse_log[f'{inference_key}/action_mse_error'] = mse.mean().item() # average MSE across all timesteps averaged across all action dimensions (D,)
             
             # compute percentage of timesteps that have MSE less than the accuracy thresholds
             for accuracy_threshold in accuracy_thresholds:
                 mse_log[f'{inference_key}/action_accuracy@{accuracy_threshold}'] = (torch.less(mse,accuracy_threshold).float().mean().item())
         
-        return mse_log
+        return mse_log, vis_log
     
 
 class ValueAlgo(Algo):

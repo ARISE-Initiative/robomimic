@@ -339,13 +339,18 @@ def train(config, device):
                 save_vis_dir = os.path.join(vis_dir, epoch_ckpt_name)
             else:
                 save_vis_dir = None
-            mse_log = model.compute_mse_visualize(
+            mse_log, vis_log = model.compute_mse_visualize(
                 trainset,
                 validset,
-                save_vis_dir,
+                num_samples=config.experiment.mse.num_samples,
+                savedir=save_vis_dir,
             )    
             for k, v in mse_log.items():
                 data_logger.record("{}".format(k), v, epoch)
+            
+            for k, v in vis_log.items():
+                data_logger.record("{}".format(k), v, epoch, data_type='image')
+
 
             print("MSE Log Epoch {}".format(epoch))
             print(json.dumps(mse_log, sort_keys=True, indent=4))
@@ -474,4 +479,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
-
