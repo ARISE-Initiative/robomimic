@@ -106,3 +106,12 @@ class BCConfig(BaseConfig):
         self.algo.transformer.nn_parameter_for_timesteps = True     # if true, use nn.Parameter otherwise use nn.Embedding
         self.algo.transformer.pred_future_acs = False               # shift action prediction forward to predict future actions instead of past actions
         self.algo.transformer.causal = True                         # whether the transformer is causal
+
+        # ACT policy settings
+        self.algo.ACT.enabled = False                               # whether to train transformer policy
+        self.algo.ACT.hidden_dim = 512                              # length of (s, a) seqeunces to feed to transformer - should usually match train.frame_stack
+        self.algo.ACT.dim_feedforward = 3200                        # dimension for embeddings used by transformer
+        self.algo.ACT.backbone = "resnet18"                         # number of transformer blocks to stack
+        self.algo.ACT.enc_layers = 4                                # number of attention heads for each transformer block (should divide embed_dim evenly)
+        self.algo.ACT.dec_layers = 7                                # dropout probability for embedding inputs in transformer
+        self.algo.ACT.nheads = 8                                    # dropout probability for attention outputs for each transformer block
