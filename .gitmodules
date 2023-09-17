@@ -1,4 +1,4 @@
 [submodule "act"]
 	path = act
-	url = git@github.com:tonyzhaozh/act.git
+	url = https://github.com/tonyzhaozh/act
 	branch = robomimic

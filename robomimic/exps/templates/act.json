@@ -9,6 +9,7 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
+        "mse":{},
         "save": {
             "enabled": true,
             "every_n_seconds": null,
@@ -79,8 +80,7 @@
             "l1_weight": 1.0,
             "cos_weight": 0.0
         },
-        "ACT": {
-            "enabled": true,
+        "act": {
             "hidden_dim": 512,
             "dim_feedforward": 3200,
             "backbone": "resnet18",
