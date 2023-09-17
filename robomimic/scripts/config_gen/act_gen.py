@@ -17,7 +17,7 @@ def make_generator_helper(args):
         key="train.num_epochs",
         name="",
         group=-1,
-        values=[10000],
+        values=[1000],
     )
 
     generator.add_param(
@@ -54,7 +54,7 @@ def make_generator_helper(args):
                 [
                     "action/abs_pos",
                     "action/abs_rot_6d",
-                    "action/gripper_velocity",
+                    "action/gripper_position",
                 ],
             ],
             value_names=[

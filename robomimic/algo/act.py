@@ -26,8 +26,6 @@ def algo_config_to_class(algo_config):
         algo_class: subclass of Algo
         algo_kwargs (dict): dictionary of additional kwargs to pass to algorithm
     """
-    act_enabled = algo_config.ACT.enabled
-    assert act_enabled
     algo_class, algo_kwargs = ACT, {}
 
     return algo_class, algo_kwargs
@@ -56,18 +54,18 @@ class ACT(BC_VAE):
 
         from act.detr.main import build_ACT_model_and_optimizer
         policy_config = {'num_queries': self.chunk_size,
-                         'hidden_dim': self.algo_config['ACT']['hidden_dim'],
-                         'dim_feedforward': self.algo_config['ACT']['dim_feedforward'],
-                         'backbone': self.algo_config['ACT']['backbone'],
-                         'enc_layers': self.algo_config['ACT']['enc_layers'],
-                         'dec_layers': self.algo_config['ACT']['dec_layers'],
-                         'nheads': self.algo_config['ACT']['nheads'],
-                         'latent_dim': self.algo_config['ACT']['latent_dim'],
+                         'hidden_dim': self.algo_config.act.hidden_dim,
+                         'dim_feedforward': self.algo_config.act.dim_feedforward,
+                         'backbone': self.algo_config.act.backbone,
+                         'enc_layers': self.algo_config.act.enc_layers,
+                         'dec_layers': self.algo_config.act.dec_layers,
+                         'nheads': self.algo_config.act.nheads,
+                         'latent_dim': self.algo_config.act.latent_dim,
                          'a_dim': self.ac_dim,
                          'state_dim': self.proprio_dim,
                          'camera_names': self.camera_keys
                          }
-        self.kl_weight = self.algo_config['ACT']['kl_weight']
+        self.kl_weight = self.algo_config.act.kl_weight
         model, optimizer = build_ACT_model_and_optimizer(policy_config)
         self.nets["policy"] = model
         self.nets = self.nets.float().to(self.device)

@@ -125,6 +125,7 @@ def set_env_settings(generator, args):
                 # "ColorRandomizer", # jitter only
                 ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
             ],
+            hidename=True,
         )
         generator.add_param(
             key="observation.encoder.rgb.obs_randomizer_kwargs",

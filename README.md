@@ -4,7 +4,10 @@
 
 -------
 ## Installation
-Clone this repo (make sure you are on the right branch). Then run `pip install -e .` in the base repo path.
+1. Clone the repo with the `--recurse-submodules` flag.
+2. (if applicable) switch to `r2d2` branch
+3. Run `pip install -e .` in `robomimic`
+4. Run `pip install -e .` in `robomimic/act/detr`
 
 -------
 ## Pre-processing datasets

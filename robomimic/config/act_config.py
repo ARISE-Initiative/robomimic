@@ -37,12 +37,11 @@ class ACTConfig(BaseConfig):
         self.algo.loss.cos_weight = 0.0     # cosine loss weight
 
         # ACT policy settings
-        self.algo.ACT.enabled = False                               # whether to train transformer policy
-        self.algo.ACT.hidden_dim = 512                              # length of (s, a) seqeunces to feed to transformer - should usually match train.frame_stack
-        self.algo.ACT.dim_feedforward = 3200                        # dimension for embeddings used by transformer
-        self.algo.ACT.backbone = "resnet18"                         # number of transformer blocks to stack
-        self.algo.ACT.enc_layers = 4                                # number of attention heads for each transformer block (should divide embed_dim evenly)
-        self.algo.ACT.dec_layers = 7                                # dropout probability for embedding inputs in transformer
-        self.algo.ACT.nheads = 8                                    # dropout probability for attention outputs for each transformer block
-        self.algo.ACT.latent_dim = 32                               # latent dim of VAE
-        self.algo.ACT.kl_weight = 20                                # KL weight of VAE
+        self.algo.act.hidden_dim = 512                              # length of (s, a) seqeunces to feed to transformer - should usually match train.frame_stack
+        self.algo.act.dim_feedforward = 3200                        # dimension for embeddings used by transformer
+        self.algo.act.backbone = "resnet18"                         # number of transformer blocks to stack
+        self.algo.act.enc_layers = 4                                # number of attention heads for each transformer block (should divide embed_dim evenly)
+        self.algo.act.dec_layers = 7                                # dropout probability for embedding inputs in transformer
+        self.algo.act.nheads = 8                                    # dropout probability for attention outputs for each transformer block
+        self.algo.act.latent_dim = 32                               # latent dim of VAE
+        self.algo.act.kl_weight = 20                                # KL weight of VAE
