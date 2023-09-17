@@ -118,6 +118,26 @@ def make_generator_helper(args):
                 # "proprio-extrinsics",
             ]
         )
+
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.backbone_class",
+            name="backbone",
+            group=1234,
+            values=[
+                "ResNet18Conv",
+                # "ResNet50Conv",
+            ],
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.feature_dimension",
+            name="visdim",
+            group=1234,
+            values=[
+                64,
+                # 512,
+            ],
+        )
+
     elif args.env == "kitchen":
         generator.add_param(
             key="train.data",
