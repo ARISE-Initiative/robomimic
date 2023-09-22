@@ -113,6 +113,12 @@ class EnvRobosuite(EB.EnvBase):
         """
         di = self.env.reset()
         return self.get_observation(di)
+    
+    def update_env(self, new_obj):
+        update_obj = getattr(self.env, "update_force_object")
+        if callable(update_obj):
+            update_obj(new_obj)
+        
 
     def reset_to(self, state):
         """
