@@ -10,11 +10,27 @@ import argparse
 import shutil
 import torch
 
+"""
+Follow instructions here to setup zed:
+https://www.stereolabs.com/docs/installation/linux/
+"""
+import pyzed.sl as sl
+
 import robomimic.utils.torch_utils as TorchUtils
 
 from r2d2.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
 from r2d2.trajectory_utils.trajectory_reader import TrajectoryReader
 from r2d2.camera_utils.info import camera_type_to_string_dict
+
+from r2d2.camera_utils.camera_readers.zed_camera import ZedCamera, standard_params
+
+def get_cam_instrinsics(svo_path):
+    """
+    utility function to get camera intrinsics
+    """
+    intrinsics = {}
+
+    return intrinsics
 
 def convert_dataset(path, args):
     recording_folderpath = os.path.join(os.path.dirname(path), "recordings", "MP4")
@@ -132,7 +148,45 @@ def convert_dataset(path, args):
             continue
         extr_name = "_".join(im_name.split("_")[:-2] + raw_key.split("_")[1:])
         data = f["observation/camera_extrinsics"][raw_key]
-        extrinsics_grp.create_dataset(extr_name, data=data, compression="gzip")
+        extrinsics_grp.create_dataset(extr_name, data=data)
+    
+    svo_path = os.path.join(os.path.dirname(path), "recordings", "SVO")
+    cam_reader_svo = RecordedMultiCameraWrapper(svo_path, camera_kwargs)
+    if "intrinsics" not in f["observation/camera"]:
+        f["observation/camera"].create_group("intrinsics")
+    intrinsics_grp = f["observation/camera/intrinsics"]    
+    for cam_id, svo_reader in cam_reader_svo.camera_dict.items():
+        cam = svo_reader._cam
+        calib_params = cam.get_camera_information().camera_configuration.calibration_parameters
+        for (posftix, params)in zip(
+            ["_left", "_right"],
+            [calib_params.left_cam, calib_params.right_cam]
+        ):
+            # get name to store intrinsics under
+            cam_key = cam_id + posftix
+            # reverse search for image name
+            im_name = None
+            for (k, v) in IMAGE_NAME_TO_CAM_KEY_MAPPING.items():
+                if v == cam_key:
+                    im_name = k
+                    break
+            if im_name is None: # sometimes the raw_key doesn't correspond to any camera we have images for
+                continue
+            intr_name = "_".join(im_name.split("_")[:-1])
+
+            if intr_name not in intrinsics_grp:
+                intrinsics_grp.create_group(intr_name)
+            cam_intr_grp = intrinsics_grp[intr_name]
+            
+            # these lines are copied from _process_intrinsics function in svo_reader.py
+            cam_intrinsics = {
+                "camera_matrix": np.array([[params.fx, 0, params.cx], [0, params.fy, params.cy], [0, 0, 1]]),
+                "dist_coeffs": np.array(list(params.disto)),
+            }
+            # batchify across trajectory
+            for k in cam_intrinsics:
+                data = np.repeat(cam_intrinsics[k][None], demo_len, axis=0)
+                cam_intr_grp.create_dataset(k, data=data)
 
     # extract action key data
     action_dict_group = f["action"]
