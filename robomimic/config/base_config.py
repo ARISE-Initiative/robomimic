@@ -294,6 +294,9 @@ class BaseConfig(Config):
         self.observation.encoder.rgb.core_class = "VisualCore"                  # Default VisualCore class combines backbone (like ResNet-18) with pooling operation (like spatial softmax)
         self.observation.encoder.rgb.core_kwargs = Config()                     # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.core_kwargs.do_not_lock_keys()
+        # input keys for the encoder
+        self.observation.encoder.rgb.input_maps = Config() # mapping each obs key to encoder input map
+        self.observation.encoder.rgb.input_maps.do_not_lock_keys()
 
         # RGB: Obs Randomizer settings
         self.observation.encoder.rgb.obs_randomizer_class = None                # Can set to 'CropRandomizer' to use crop randomization

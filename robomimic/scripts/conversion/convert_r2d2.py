@@ -174,19 +174,22 @@ def convert_dataset(path, args):
                 continue
             intr_name = "_".join(im_name.split("_")[:-1])
 
-            if intr_name not in intrinsics_grp:
-                intrinsics_grp.create_group(intr_name)
-            cam_intr_grp = intrinsics_grp[intr_name]
+            # if intr_name not in intrinsics_grp:
+            #     intrinsics_grp.create_group(intr_name)
+            # cam_intr_grp = intrinsics_grp[intr_name]
             
             # these lines are copied from _process_intrinsics function in svo_reader.py
-            cam_intrinsics = {
-                "camera_matrix": np.array([[params.fx, 0, params.cx], [0, params.fy, params.cy], [0, 0, 1]]),
-                "dist_coeffs": np.array(list(params.disto)),
-            }
-            # batchify across trajectory
-            for k in cam_intrinsics:
-                data = np.repeat(cam_intrinsics[k][None], demo_len, axis=0)
-                cam_intr_grp.create_dataset(k, data=data)
+            cam_intrinsics = np.array([[params.fx, 0, params.cx], [0, params.fy, params.cy], [0, 0, 1]])
+            data = np.repeat(cam_intrinsics[None], demo_len, axis=0)
+            intrinsics_grp.create_dataset(intr_name, data=data)
+            # {
+            #     "camera_matrix": np.array([[params.fx, 0, params.cx], [0, params.fy, params.cy], [0, 0, 1]]),
+            #     "dist_coeffs": np.array(list(params.disto)),
+            # }
+            # # batchify across trajectory
+            # for k in cam_intrinsics:
+            #     data = np.repeat(cam_intrinsics[k][None], demo_len, axis=0)
+            #     cam_intr_grp.create_dataset(k, data=data)
 
     # extract action key data
     action_dict_group = f["action"]

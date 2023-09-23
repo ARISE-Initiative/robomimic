@@ -82,9 +82,9 @@ def make_generator_helper(args):
             name="cams",
             group=130,
             values=[
-                # ["camera/image/hand_camera_left_image"],
+                ["camera/image/hand_camera_left_image"],
                 # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                # ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
                 # [
                 #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
                 #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
@@ -104,7 +104,35 @@ def make_generator_helper(args):
             name="ldkeys",
             group=2498,
             values=[
-                ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                # ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                [
+                    "robot_state/cartesian_position", "robot_state/gripper_position",
+                    "camera/extrinsics/hand_camera_left", "camera/intrinsics/hand_camera_left", # "camera/extrinsics/hand_camera_left_gripper_offset", 
+                    "camera/extrinsics/hand_camera_right", "camera/intrinsics/hand_camera_right", # "camera/extrinsics/hand_camera_right_gripper_offset",
+                    "camera/extrinsics/varied_camera_1_left", "camera/intrinsics/varied_camera_1_left",
+                    "camera/extrinsics/varied_camera_1_right", "camera/intrinsics/varied_camera_1_right",
+                    "camera/extrinsics/varied_camera_2_left", "camera/intrinsics/varied_camera_2_left",
+                    "camera/extrinsics/varied_camera_2_right", "camera/intrinsics/varied_camera_2_right",
+                ]
+            ],
+            value_names=[
+                "proprio",
+                # "proprio-extrinsics",
+            ]
+        )
+
+        generator.add_param(
+            key="observation.encoder.rgb.input_maps",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "camera/image/hand_camera_left_image": {
+                        "image": "camera/image/hand_camera_left_image",
+                        "intrinsics": "camera/intrinsics/hand_camera_left",
+                        "extrinsics": "camera/extrinsics/hand_camera_left",
+                    },
+                },
                 # [
                 #     "robot_state/cartesian_position", "robot_state/gripper_position",
                 #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",

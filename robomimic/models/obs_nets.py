@@ -101,9 +101,12 @@ def obs_encoder_factory(
                 rand = ObsUtils.OBS_RANDOMIZERS[rand_class](**rand_kwargs)
             randomizers.append(rand)
 
+        input_maps = enc_kwargs.get("input_maps", {})
+
         enc.register_obs_key(
             name=k,
             shape=obs_shape,
+            input_map=input_maps.get(k, None),
             net_class=enc_kwargs["core_class"],
             net_kwargs=enc_kwargs["core_kwargs"],
             randomizers=randomizers,
@@ -128,6 +131,7 @@ class ObservationEncoder(Module):
         """
         super(ObservationEncoder, self).__init__()
         self.obs_shapes = OrderedDict()
+        self.obs_input_maps = OrderedDict()
         self.obs_nets_classes = OrderedDict()
         self.obs_nets_kwargs = OrderedDict()
         self.obs_share_mods = OrderedDict()
@@ -139,7 +143,8 @@ class ObservationEncoder(Module):
     def register_obs_key(
         self, 
         name,
-        shape, 
+        shape,
+        input_map=None,
         net_class=None, 
         net_kwargs=None, 
         net=None, 
@@ -186,6 +191,7 @@ class ObservationEncoder(Module):
                     net_kwargs["input_shape"] = rand.output_shape_in(shape)
 
         self.obs_shapes[name] = shape
+        self.obs_input_maps[name] = input_map
         self.obs_nets_classes[name] = net_class
         self.obs_nets_kwargs[name] = net_kwargs
         self.obs_nets[name] = net
@@ -244,20 +250,39 @@ class ObservationEncoder(Module):
         # process modalities by order given by @self.obs_shapes
         feats = []
         for k in self.obs_shapes:
-            x = obs_dict[k]
+            if self.obs_input_maps[k] is not None:
+                x = dict()
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    x[input_name] = obs_dict[input_obs_key]
+            else:
+                x = obs_dict[k]
             # maybe process encoder input with randomizer
-            for rand in self.obs_randomizers[k]:
-                if rand is not None:
-                    x = rand.forward_in(x)
+            if isinstance(x, dict):
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    randomizers = self.obs_randomizers[input_obs_key]
+                    for rand in randomizers:
+                        if rand is not None:
+                            x[input_name] = rand.forward_in(x[input_name])
+            else:
+                for rand in self.obs_randomizers[k]:
+                    if rand is not None:
+                        x = rand.forward_in(x)
             # maybe process with obs net
             if self.obs_nets[k] is not None:
                 x = self.obs_nets[k](x)
                 if self.activation is not None:
                     x = self.activation(x)
             # maybe process encoder output with randomizer
-            for rand in self.obs_randomizers[k]:
-                if rand is not None:
-                    x = rand.forward_out(x)
+            if isinstance(x, dict):
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    randomizers = self.obs_randomizers[input_obs_key]
+                    for rand in randomizers:
+                        if rand is not None:
+                            x[input_name] = rand.forward_out(x[input_name])
+            else:
+                for rand in self.obs_randomizers[k]:
+                    if rand is not None:
+                        x = rand.forward_out(x)
             # flatten to [B, D]
             x = TensorUtils.flatten(x, begin_axis=1)
             feats.append(x)

@@ -187,6 +187,12 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
             "camera/extrinsics/varied_camera_1_right",
             "camera/extrinsics/varied_camera_2_left",
             "camera/extrinsics/varied_camera_2_right",
+            "camera/intrinsics/hand_camera_left",
+            "camera/intrinsics/hand_camera_right",
+            "camera/intrinsics/varied_camera_1_left",
+            "camera/intrinsics/varied_camera_1_right",
+            "camera/intrinsics/varied_camera_2_left",
+            "camera/intrinsics/varied_camera_2_right",
         ]:
             initial_shape = f["observation/{}".format(k)].shape[1:]
             if len(initial_shape) == 0:
