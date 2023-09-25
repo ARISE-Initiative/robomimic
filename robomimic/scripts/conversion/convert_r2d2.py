@@ -17,6 +17,7 @@ https://www.stereolabs.com/docs/installation/linux/
 import pyzed.sl as sl
 
 import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.tensor_utils as TensorUtils
 
 from r2d2.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
 from r2d2.trajectory_utils.trajectory_reader import TrajectoryReader
@@ -136,19 +137,17 @@ def convert_dataset(path, args):
     if "extrinsics" not in f["observation/camera"]:
         f["observation/camera"].create_group("extrinsics")
     extrinsics_grp = f["observation/camera/extrinsics"]    
-    for raw_key in f["observation/camera_extrinsics"].keys():
-        cam_key = "_".join(raw_key.split("_")[:2])
-        # reverse search for image name
-        im_name = None
-        for (k, v) in IMAGE_NAME_TO_CAM_KEY_MAPPING.items():
-            if v == cam_key:
-                im_name = k
-                break
-        if im_name is None: # sometimes the raw_key doesn't correspond to any camera we have images for
-            continue
-        extr_name = "_".join(im_name.split("_")[:-2] + raw_key.split("_")[1:])
-        data = f["observation/camera_extrinsics"][raw_key]
-        extrinsics_grp.create_dataset(extr_name, data=data)
+    for (im_name, cam_key) in IMAGE_NAME_TO_CAM_KEY_MAPPING.items():
+        raw_data = f["observation/camera_extrinsics"][cam_key][:]
+        raw_data = torch.from_numpy(raw_data)
+        pos = raw_data[:,0:3]
+        rot_mat = TorchUtils.euler_angles_to_matrix(raw_data[:,3:6], convention="XYZ")
+        extrinsics = np.zeros((len(pos), 4, 4))
+        extrinsics[:,:3,:3] = TensorUtils.to_numpy(rot_mat)
+        extrinsics[:,:3,3] = TensorUtils.to_numpy(pos)
+        extrinsics[:,3,3] = 1.0
+        extr_name = "_".join(im_name.split("_")[:-1])
+        extrinsics_grp.create_dataset(extr_name, data=extrinsics)
     
     svo_path = os.path.join(os.path.dirname(path), "recordings", "SVO")
     cam_reader_svo = RecordedMultiCameraWrapper(svo_path, camera_kwargs)

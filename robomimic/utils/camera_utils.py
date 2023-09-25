@@ -8,6 +8,7 @@ from abc import ABC
 import abc
 import torch
 import torch.nn as nn
+import torch.nn.functional as tfn
 import os
 import numpy as np
 from collections import OrderedDict
@@ -1858,116 +1859,269 @@ def build_position_encoding(
 
     return output_pos_enc, positions_projection
 
+import torchvision.models as models
+RESNET_VERSIONS = {
+    18: models.resnet18,
+    34: models.resnet34,
+    50: models.resnet50,
+    101: models.resnet101,
+    152: models.resnet152
+}
 
-"""
-pulled these from here:
-https://github.com/TRI-ML/vidar/blob/6fdbee65bff2cc94a42aaedd121a2179ac48d441/configs/papers/define/hub_define_temporal.yaml#L21
-"""
-num_bands_orig = 20
-num_bands_dirs = 10
-max_resolution_orig = 60
-max_resolution_dirs = 60
+RESNET_WEIGHTS = 'IMAGENET1K_V1'
 
-# Fourier encoding for camera origin
-fourier_encoding_orig, _ = build_position_encoding(
-    position_encoding_type='fourier',
-    fourier_position_encoding_kwargs={
-        'num_bands': num_bands_orig,
-        'max_resolution': [max_resolution_orig] * 3,
-        'concat_pos': True,
-        'sine_only': False,
-    }
-)
+class ResNetMultiInput(models.ResNet, ABC):
+    def __init__(self, block_type, block_channels, num_input_rgb):
+        """Multi-input ResNet model
 
-# Fourier encoding for camera viewing rays
-fourier_encoding_dirs, _ = build_position_encoding(
-    position_encoding_type='fourier',
-    fourier_position_encoding_kwargs={
-        'num_bands': num_bands_dirs,
-        'max_resolution': [num_bands_dirs] * 3,
-        'concat_pos': True,
-        'sine_only': False,
-    }
-)
+        Parameters
+        ----------
+        block_type : nn.Module
+            Residual block type
+        block_channels : int
+            Number of channels in each block
+        num_input_rgb : int
+            Number of input images
+        """
+        super().__init__(block_type, block_channels)
+
+        self.inplanes = 64
+        self.conv1 = nn.Conv2d(
+            num_input_rgb * 3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block_type,  64, block_channels[0])
+        self.layer2 = self._make_layer(block_type, 128, block_channels[1], stride=2)
+        self.layer3 = self._make_layer(block_type, 256, block_channels[2], stride=2)
+        self.layer4 = self._make_layer(block_type, 512, block_channels[3], stride=2)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+def resnet_multi_input(num_layers, num_input_rgb, pretrained=True):
+    """Generates a multi-input ResNet model
+
+    Parameters
+    ----------
+    num_layers : int
+        Number of layers in the ResNet
+    num_input_rgb : int
+        Number of input images
+    pretrained : bool, optional
+        True is pre-trained ImageNet weights are used, by default True
+
+    Returns
+    -------
+    nn.Module
+        Multi-input ResNet model
+    """
+    assert num_layers in [18, 50], 'Can only run with 18 or 50 layer resnet'
+
+    block_channels = {
+        18: [2, 2, 2, 2],
+        50: [3, 4, 6, 3]
+    }[num_layers]
+
+    block_type = {
+        18: models.resnet.BasicBlock,
+        50: models.resnet.Bottleneck
+    }[num_layers]
+
+    model = ResNetMultiInput(block_type, block_channels, num_input_rgb)
+
+    if pretrained:
+        loaded = RESNET_VERSIONS[num_layers](weights=RESNET_WEIGHTS).state_dict()
+        loaded['conv1.weight'] = torch.cat(
+            [loaded['conv1.weight']] * num_input_rgb, 1) / num_input_rgb
+        model.load_state_dict(loaded)
+
+    return model
 
 
-def embeddings(data, sources, downsample):
-    """Compute embeddings for encoder and decoder data"""
-    if 'rgb' in sources:
-        assert 'rgb' in data[0].keys()
-        b = [datum['rgb'].shape[0] for datum in data]
-        rgb = torch.cat([datum['rgb'] for datum in data], 0)
-        output_feats = self.get_rgb_feat(rgb)
-        feats = torch.split(output_feats['feat'], b)
-        for i in range(len(data)):
-            data[i]['feat'] = feats[i]
+class ResNetEncoder(nn.Module, ABC):
+    """
+    Single-frame depth encoder
 
-    encodings = []
-    for datum in data:
+    Parameters
+    ----------
+    cfg : Config
+        Configuration with parameters
+    """
+    def __init__(self, version=18, num_rgb_in=1, pretrained=False):
+        super().__init__()
 
-        encoding = OrderedDict()
+        self.num_ch_enc = np.array([64, 64, 128, 256, 512])
+        self.features = []
 
-        # Camera embeddings
-        if 'cam' in sources:
-            assert 'cam' in data[0].keys()
+        assert version in RESNET_VERSIONS, f'Invalid ResNet version: {version}'
 
-            cam = datum['cam'].scaled(1. / downsample)
-            orig = cam.get_origin(flatten=True)
+        if num_rgb_in > 1:
+            self.encoder = resnet_multi_input(
+                version, num_rgb_in, pretrained)
+        else:
+            self.encoder = RESNET_VERSIONS[version](
+                weights=None if not pretrained else RESNET_WEIGHTS)
 
-            to_world = False # should it be True or False? idk
-            
-            if to_world:
-                dirs = cam.get_viewdirs(normalize=True, flatten=True, to_world=True)
-            else:
-                dirs = cam.no_translation().get_viewdirs(normalize=True, flatten=True, to_world=True)
+        if version > 34:
+            self.num_ch_enc[1:] *= 4
 
-            orig_encodings = fourier_encoding_orig(
-                index_dims=None, pos=orig, batch_size=orig.shape[0], device=orig.device)
-            dirs_encodings = fourier_encoding_dirs(
-                index_dims=None, pos=dirs, batch_size=dirs.shape[0], device=dirs.device)
+    def forward(self, input_image):
+        """Network forward pass"""
 
-            encoding['cam'] = torch.cat([orig_encodings, dirs_encodings], -1)
+        x = (input_image - 0.45) / 0.225
+        x = self.encoder.conv1(x)
+        x = self.encoder.bn1(x)
 
-        # Image embeddings
+        self.features.clear()
+        self.features.append(self.encoder.relu(x))
+        self.features.append(self.encoder.layer1(self.encoder.maxpool(self.features[-1])))
+        self.features.append(self.encoder.layer2(self.features[-1]))
+        self.features.append(self.encoder.layer3(self.features[-1]))
+        self.features.append(self.encoder.layer4(self.features[-1]))
+
+        return self.features
+
+
+class DeFiNeImageCamEncoder(nn.Module, ABC):
+    def __init__(self, pretrained=False, input_coord_conv=False):
+        super().__init__()
+        
+        """
+        pulled these from here:
+        https://github.com/TRI-ML/vidar/blob/6fdbee65bff2cc94a42aaedd121a2179ac48d441/configs/papers/define/hub_define_temporal.yaml#L21
+        """
+        num_bands_orig = 20
+        num_bands_dirs = 10
+        max_resolution_orig = 60
+        max_resolution_dirs = 60
+
+        from robomimic.utils.camera_utils import ResNetEncoder
+        self.image_feature_encoder = ResNetEncoder(version=18, pretrained=pretrained, num_rgb_in=1)
+
+        # Fourier encoding for camera origin
+        self._fourier_encoding_orig, _ = build_position_encoding(
+            position_encoding_type='fourier',
+            fourier_position_encoding_kwargs={
+                'num_bands': num_bands_orig,
+                'max_resolution': [max_resolution_orig] * 3,
+                'concat_pos': True,
+                'sine_only': False,
+            }
+        )
+
+        # Fourier encoding for camera viewing rays
+        self._fourier_encoding_dirs, _ = build_position_encoding(
+            position_encoding_type='fourier',
+            fourier_position_encoding_kwargs={
+                'num_bands': num_bands_dirs,
+                'max_resolution': [num_bands_dirs] * 3,
+                'concat_pos': True,
+                'sine_only': False,
+            }
+        )
+
+    def get_rgb_feat(self, rgb, rgb_feat_type="resnet_all"):
+        """Exract image features"""
+        if rgb_feat_type == 'convnet':
+            return {
+                'feat': self.image_feature_encoder(rgb)
+            }
+        elif rgb_feat_type == 'resnet':
+            return {
+                'feat': self.image_feature_encoder(rgb)[1]
+            }
+        elif rgb_feat_type.startswith('resnet_all'):
+            all_feats = self.image_feature_encoder(rgb)
+            feats = all_feats[1:]
+            for i in range(1, len(feats)):
+                feats[i] = interpolate(
+                    feats[i], size=feats[0], scale_factor=None, mode='bilinear')
+            if rgb_feat_type.endswith('rgb'):
+                feats = feats + [interpolate(
+                    rgb, size=feats[0], scale_factor=None, mode='bilinear')]
+            feat = torch.cat(feats, 1)
+            return {
+                'all_feats': all_feats,
+                'feat': feat
+            }
+
+
+    def embeddings(self, data, sources, downsample):
+        """Compute embeddings for encoder and decoder data"""
         if 'rgb' in sources:
-            rgb = datum['feat']
-            rgb_flat = rgb.view(*rgb.shape[:-2], -1).permute(0, 2, 1)
-            encoding['rgb'] = rgb_flat
+            assert 'rgb' in data[0].keys()
+            b = [datum['rgb'].shape[0] for datum in data]
+            rgb = torch.cat([datum['rgb'] for datum in data], 0)
+            output_feats = self.get_rgb_feat(rgb)
+            feats = torch.split(output_feats['feat'], b)
+            for i in range(len(data)):
+                data[i]['feat'] = feats[i]
 
-        encoding['all'] = torch.cat([val for val in encoding.values()], -1)
-        encodings.append(encoding)
+        encodings = []
+        for datum in data:
 
-    return encodings
+            encoding = OrderedDict()
 
+            # Camera embeddings
+            if 'cam' in sources:
+                assert 'cam' in data[0].keys()
 
-if __name__ == "__main__":
-    import robomimic.utils.tensor_utils as TensorUtils
-    import robomimic.utils.torch_utils as TorchUtils
-    device = TorchUtils.get_torch_device(try_to_use_cuda=True)
+                cam = datum['cam'].scaled(1. / downsample)
+                orig = cam.get_origin(flatten=True)
 
-    # rgb = batch["rgb"]
-    intrinsics = TensorUtils.to_torch(np.array([
-        [1, 0, 0], [0, 1, 0], [0, 0, 1],
-    ]), device)
-    pose = TensorUtils.to_torch(np.array([
-        [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1],
-    ]), device)
+                to_world = True # should it be True or False? idk
+                
+                if to_world:
+                    dirs = cam.get_viewdirs(normalize=True, flatten=True, to_world=True)
+                else:
+                    dirs = cam.no_translation().get_viewdirs(normalize=True, flatten=True, to_world=True)
 
-    intrinsics = TensorUtils.to_batch(intrinsics)
-    pose = TensorUtils.to_batch(pose)
+                orig_encodings = self._fourier_encoding_orig(
+                    index_dims=None, pos=orig, batch_size=orig.shape[0], device=orig.device)
+                dirs_encodings = self._fourier_encoding_dirs(
+                    index_dims=None, pos=dirs, batch_size=dirs.shape[0], device=dirs.device)
 
-    cam = CameraPinhole( #CameraNerf(
-        K=intrinsics, # this was breaking things so I commented it out
-        Twc=Pose(pose).to(device),
-        hw=(128, 128), # todo: remove manual specification of image size
-    )
+                encoding['cam'] = torch.cat([orig_encodings, dirs_encodings], -1)
 
-    downsample = 4
+            # Image embeddings
+            if 'rgb' in sources:
+                rgb = datum['feat']
+                rgb_flat = rgb.view(*rgb.shape[:-2], -1).permute(0, 2, 1)
+                encoding['rgb'] = rgb_flat
 
-    data = [{
-        "cam": cam,
-    }]
-    sources = ["cam"]
+            encoding['all'] = torch.cat([val for val in encoding.values()], -1)
+            encodings.append(encoding)
 
-    emb = embeddings(data, sources=sources, downsample=downsample)
-    print(emb[0]["cam"].shape)
+        return encodings
+    
+    def forward(self, image, extrinsics, intrinsics):
+        cam = CameraPinhole(
+            K=intrinsics,
+            Twc=Pose(extrinsics).to(image.device),
+            hw=image.shape[-2:],
+        )
+        downsample = 4
+        data = [{
+            "cam": cam,
+            "rgb": image,
+        }]
+        sources = ["cam", "rgb"]
+        emb = self.embeddings(
+            data,
+            sources=sources,
+            downsample=downsample,
+        )
+        result = torch.cat([emb[i]["all"] for i in range(len(emb))])
+        return result
+    
+    def output_shape(self, input_shape):
+        num_cam_feats = 186
+        num_image_feats = 512 + 256 + 128 + 64
+        num_sptial_feats = int(input_shape[1] / 4 * input_shape[2] / 4)
+        return (num_sptial_feats, num_image_feats + num_cam_feats)

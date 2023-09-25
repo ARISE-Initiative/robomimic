@@ -82,9 +82,9 @@ def make_generator_helper(args):
             name="cams",
             group=130,
             values=[
-                ["camera/image/hand_camera_left_image"],
+                # ["camera/image/hand_camera_left_image"],
                 # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                # ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
                 # [
                 #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
                 #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
@@ -116,9 +116,10 @@ def make_generator_helper(args):
                 ]
             ],
             value_names=[
-                "proprio",
-                # "proprio-extrinsics",
-            ]
+                # "proprio",
+                "proprio-cam",
+            ],
+            hidename=True,
         )
 
         generator.add_param(
@@ -132,29 +133,34 @@ def make_generator_helper(args):
                         "intrinsics": "camera/intrinsics/hand_camera_left",
                         "extrinsics": "camera/extrinsics/hand_camera_left",
                     },
+                    "camera/image/varied_camera_1_left_image": {
+                        "image": "camera/image/varied_camera_1_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_1_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_1_left",
+                    },
+                    "camera/image/varied_camera_2_left_image": {
+                        "image": "camera/image/varied_camera_2_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_2_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_2_left",
+                    },
                 },
-                # [
-                #     "robot_state/cartesian_position", "robot_state/gripper_position",
-                #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
-                #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
-                #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
-                #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
-                # ]
             ],
             value_names=[
-                "proprio",
-                # "proprio-extrinsics",
+                "define-encoder",
             ]
         )
-
+        generator.add_param(
+            key="observation.encoder.rgb.core_class",
+            name="visenc",
+            group=-1,
+            values=["DeFiNeVisualCore"],
+        )
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.backbone_class",
-            name="backbone",
-            group=1234,
-            values=[
-                "ResNet18Conv",
-                # "ResNet50Conv",
-            ],
+            name="",
+            group=-1,
+            values=["DeFiNeImageCamEncoder"],
+            hidename=True,
         )
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.feature_dimension",
@@ -165,6 +171,26 @@ def make_generator_helper(args):
                 # 512,
             ],
         )
+
+
+        # generator.add_param(
+        #     key="observation.encoder.rgb.core_kwargs.backbone_class",
+        #     name="backbone",
+        #     group=1234,
+        #     values=[
+        #         "ResNet18Conv",
+        #         # "ResNet50Conv",
+        #     ],
+        # )
+        # generator.add_param(
+        #     key="observation.encoder.rgb.core_kwargs.feature_dimension",
+        #     name="visdim",
+        #     group=1234,
+        #     values=[
+        #         64,
+        #         # 512,
+        #     ],
+        # )
 
     elif args.env == "kitchen":
         generator.add_param(
