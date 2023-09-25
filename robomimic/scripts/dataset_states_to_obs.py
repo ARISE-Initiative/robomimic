@@ -253,6 +253,8 @@ def dataset_states_to_obs(args):
         # episode metadata
         if is_robosuite_env:
             ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
+        if "ep_info" in f["data/{}".format(ep)].attrs:
+            ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
         ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
         total_samples += traj["actions"].shape[0]
         print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
