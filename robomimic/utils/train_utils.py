@@ -173,7 +173,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
-    ds_kwargs["filter_by_attribute"] = [filter_by_attribute for ds_cfg in config.train.data]
+    ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
     ds_labels = [ds_cfg.get("label", "dummy") for ds_cfg in config.train.data]
 
