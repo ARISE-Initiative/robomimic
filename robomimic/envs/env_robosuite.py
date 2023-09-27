@@ -115,12 +115,8 @@ class EnvRobosuite(EB.EnvBase):
         return self.get_observation(di)
     
     #notifies the environment whether or not the next environemnt testing object should update its category
-    def update_env(self, new_obj):
-        update_obj = getattr(self.env, "update_resample_obj_cat")
-        if callable(update_obj):
-            update_obj(new_obj)
-        else:
-            return NotImplementedError
+    def update_env(self, attr, value):
+        self.env.attr = value
         
 
     def reset_to(self, state):

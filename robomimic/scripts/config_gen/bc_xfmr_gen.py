@@ -31,7 +31,7 @@ def make_generator_helper(args):
             group=130,
             values=[
                 # ["camera/image/hand_camera_left_image"],
-                ["camera/image`/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
             ],
             value_names=[
                 # "wrist",
@@ -44,17 +44,16 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "/home/aaronl/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/group_1_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "/data/aaronl/tmp/mimicgen/kitchen_pnp_table_to_cab/all/2023-09-18-22-08-47/low_dim_im84.hdf5", "filter_key": "1000_demos"}],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
-                "human-100-bc-xfmr",
+                "bowls-human-100",
                 # "human-100",
                 # "mg-100",
-                "mg-1000-bc-xfmr",
+                # "mg-1000",
             ],
         )
     elif args.env == "square":
@@ -139,7 +138,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/data/aaronl/expdata/{env}/{mod}/{algo_name_short}".format(
+            "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,
