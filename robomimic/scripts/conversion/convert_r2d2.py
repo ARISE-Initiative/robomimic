@@ -146,6 +146,8 @@ def convert_dataset(path, args):
         extrinsics[:,:3,:3] = TensorUtils.to_numpy(rot_mat)
         extrinsics[:,:3,3] = TensorUtils.to_numpy(pos)
         extrinsics[:,3,3] = 1.0
+        # invert the matrix to represent standard definition of extrinsics: from world to cam
+        extrinsics = np.linalg.inv(extrinsics)
         extr_name = "_".join(im_name.split("_")[:-1])
         extrinsics_grp.create_dataset(extr_name, data=extrinsics)
     
