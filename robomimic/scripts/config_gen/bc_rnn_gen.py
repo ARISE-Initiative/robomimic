@@ -68,6 +68,12 @@ def make_generator_helper(args):
         )
 
     generator.add_param(
+        key="algo.gmm.enabled",
+        name="gmm",
+        group=130801,
+        values=[True],
+    )
+    generator.add_param(
         key="algo.gmm.min_std",
         name="mindstd",
         group=271314,
