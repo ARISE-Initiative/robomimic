@@ -8,6 +8,11 @@ import numpy as np
 from copy import deepcopy
 
 import robosuite
+try:
+    # this is needed for ensuring robosuite can find the additional mimicgen environments (see https://mimicgen.github.io)
+    import mimicgen_envs
+except ImportError:
+    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
