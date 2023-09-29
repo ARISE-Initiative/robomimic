@@ -299,8 +299,8 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
         assert tuple(inputs["image"].shape)[-ndim:] == tuple(self.input_shape)
 
         image = inputs["image"]
-        intrinsics = inputs["intrinsics"]
-        extrinsics = inputs["extrinsics"]
+        intrinsics = inputs.get("intrinsics", None)
+        extrinsics = inputs.get("extrinsics", None)
 
         # # TODO: replace with actual extrinsics
         # extrinsics = TensorUtils.to_torch(np.array([[

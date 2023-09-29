@@ -1989,7 +1989,7 @@ class ResNetEncoder(nn.Module, ABC):
 
 
 class DeFiNeImageCamEncoder(nn.Module, ABC):
-    def __init__(self, pretrained=False, input_coord_conv=False):
+    def __init__(self, pretrained=False, input_coord_conv=False, use_cam=True):
         super().__init__()
         
         """
@@ -2000,6 +2000,9 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
         num_bands_dirs = 10
         max_resolution_orig = 60
         max_resolution_dirs = 60
+
+        # whether to use camera information (intrinsics + extrinsics) in the encoder
+        self.use_cam = use_cam
 
         from robomimic.utils.camera_utils import ResNetEncoder
         self.image_feature_encoder = ResNetEncoder(version=18, pretrained=pretrained, num_rgb_in=1)
@@ -2101,27 +2104,36 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
         return encodings
     
     def forward(self, image, extrinsics, intrinsics):
-        cam = CameraPinhole(
-            K=intrinsics,
-            Twc=Pose(extrinsics).to(image.device),
-            hw=image.shape[-2:],
-        )
-        downsample = 4
-        data = [{
-            "cam": cam,
-            "rgb": image,
-        }]
-        sources = ["cam", "rgb"]
+        if extrinsics is None or intrinsics is None:
+            sources = ["rgb"] # camera info not present
+            data = [{
+                "rgb": image,
+            }]
+        else:
+            sources = ["rgb", "cam"]
+            cam = CameraPinhole(
+                K=intrinsics,
+                Twc=Pose(extrinsics).to(image.device),
+                hw=image.shape[-2:],
+            )
+            data = [{
+                "cam": cam,
+                "rgb": image,
+            }]
         emb = self.embeddings(
             data,
             sources=sources,
-            downsample=downsample,
+            downsample=4,
         )
         result = torch.cat([emb[i]["all"] for i in range(len(emb))])
         return result
     
     def output_shape(self, input_shape):
-        num_cam_feats = 186
-        num_image_feats = 512 + 256 + 128 + 64
+        num_cam_channels = 186
+        num_image_channels = 512 + 256 + 128 + 64
         num_sptial_feats = int(input_shape[1] / 4 * input_shape[2] / 4)
-        return (num_sptial_feats, num_image_feats + num_cam_feats)
+        if self.use_cam:
+            num_channels = num_image_channels + num_cam_channels
+        else:
+            num_channels = num_image_channels
+        return (num_sptial_feats, num_channels)

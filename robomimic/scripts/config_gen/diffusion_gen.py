@@ -104,7 +104,7 @@ def make_generator_helper(args):
             name="ldkeys",
             group=2498,
             values=[
-                # ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                ["robot_state/cartesian_position", "robot_state/gripper_position"],
                 [
                     "robot_state/cartesian_position", "robot_state/gripper_position",
                     "camera/extrinsics/hand_camera_left", "camera/intrinsics/hand_camera_left", # "camera/extrinsics/hand_camera_left_gripper_offset", 
@@ -116,17 +116,27 @@ def make_generator_helper(args):
                 ]
             ],
             value_names=[
-                # "proprio",
+                "proprio",
                 "proprio-cam",
             ],
-            hidename=True,
+            hidename=False,
         )
-
         generator.add_param(
             key="observation.encoder.rgb.input_maps",
             name="",
-            group=-1,
+            group=2498,
             values=[
+                {
+                    "camera/image/hand_camera_left_image": {
+                        "image": "camera/image/hand_camera_left_image",
+                    },
+                    "camera/image/varied_camera_1_left_image": {
+                        "image": "camera/image/varied_camera_1_left_image",
+                    },
+                    "camera/image/varied_camera_2_left_image": {
+                        "image": "camera/image/varied_camera_2_left_image",
+                    },
+                },
                 {
                     "camera/image/hand_camera_left_image": {
                         "image": "camera/image/hand_camera_left_image",
@@ -146,9 +156,23 @@ def make_generator_helper(args):
                 },
             ],
             value_names=[
-                "define-encoder",
-            ]
+                "define-image-only",
+                "define",
+            ],
+            hidename=True,
         )
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.backbone_kwargs.use_cam",
+            name="",
+            group=2498,
+            values=[
+                False,
+                True,
+            ],
+            hidename=True,
+        )
+
+
         generator.add_param(
             key="observation.encoder.rgb.core_class",
             name="visenc",
@@ -167,9 +191,9 @@ def make_generator_helper(args):
             name="visdim",
             group=1234,
             values=[
-                64,
-                # 512,
+                64, #512
             ],
+            hidename=True,
         )
 
 
