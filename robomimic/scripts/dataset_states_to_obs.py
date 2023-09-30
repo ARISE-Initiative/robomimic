@@ -49,6 +49,7 @@ import h5py
 import argparse
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.file_utils as FileUtils
@@ -181,7 +182,7 @@ def dataset_states_to_obs(args):
     print("output file: {}".format(output_path))
 
     total_samples = 0
-    for ind in range(len(demos)):
+    for ind in tqdm(range(len(demos))):
         ep = demos[ind]
 
         # prepare initial state to reload from
@@ -231,7 +232,6 @@ def dataset_states_to_obs(args):
             ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
         ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
         total_samples += traj["actions"].shape[0]
-        print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
 
 
     # copy over all filter keys that exist in the original hdf5
