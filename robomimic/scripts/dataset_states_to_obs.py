@@ -285,7 +285,7 @@ def dataset_states_to_obs_multiprocessing(args):
     total_samples_shared = multiprocessing.Value('i', 0)
     
     start_time = time.time()
-    num_processes = 12
+    num_processes = 10
     processes = []
     for i in range(num_processes):
         process = multiprocessing.Process(target=extract_multiple_trajectories, args=(index, lock, args, data_grp, total_samples_shared))
