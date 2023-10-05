@@ -50,10 +50,6 @@ import argparse
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-
-import sys
-sys.path.append('/home/yixuan/robomimic')
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.file_utils as FileUtils
