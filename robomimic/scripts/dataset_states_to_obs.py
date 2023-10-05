@@ -50,6 +50,10 @@ import argparse
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+
+import sys
+sys.path.append('/home/yixuan/robomimic')
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.file_utils as FileUtils
@@ -149,6 +153,7 @@ def extract_trajectory(
 def dataset_states_to_obs(args):
     # create environment to use for data processing
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
+    env_meta["env_kwargs"]["camera_depths"] = args.camera_depths
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
         camera_names=args.camera_names, 
@@ -317,6 +322,13 @@ if __name__ == "__main__":
     # flag for copying rewards from source file instead of re-writing them
     parser.add_argument(
         "--copy_rewards", 
+        action='store_true',
+        help="(optional) copy rewards from source file instead of inferring them",
+    )
+    
+    # flag for rendering camera depths
+    parser.add_argument(
+        "--camera_depths", 
         action='store_true',
         help="(optional) copy rewards from source file instead of inferring them",
     )

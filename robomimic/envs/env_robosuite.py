@@ -7,7 +7,9 @@ import json
 import numpy as np
 from copy import deepcopy
 
+import mujoco
 import robosuite
+from robosuite.utils.camera_utils import get_real_depth_map, get_camera_extrinsic_matrix, get_camera_intrinsic_matrix
 try:
     # this is needed for ensuring robosuite can find the additional mimicgen environments (see https://mimicgen.github.io)
     import mimicgen_envs
@@ -70,7 +72,7 @@ class EnvRobosuite(EB.EnvBase):
             ignore_done=True,
             use_object_obs=True,
             use_camera_obs=use_image_obs,
-            camera_depths=False,
+            camera_depths=kwargs['camera_depths'],
         )
         kwargs.update(update_kwargs)
 
@@ -201,9 +203,21 @@ class EnvRobosuite(EB.EnvBase):
                 ret[k] = di[k][::-1]
                 if self.postprocess_visual_obs:
                     ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
+            if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
+                ret[k] = di[k][::-1]
+                ret[k] = get_real_depth_map(self.env.sim, ret[k])
+                if self.postprocess_visual_obs:
+                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
 
         # "object" key contains object information
         ret["object"] = np.array(di["object-state"])
+        
+        # save camera intrinsics and extrinsics
+        for cam_idx, camera_name in enumerate(self.env.camera_names):
+            cam_height = self.env.camera_heights[cam_idx]
+            cam_width = self.env.camera_widths[cam_idx]
+            ret[f'{camera_name}_extrinsic'] = get_camera_extrinsic_matrix(self.env.sim, camera_name)
+            ret[f'{camera_name}_intrinsic'] = get_camera_intrinsic_matrix(self.env.sim, camera_name, cam_height, cam_width)
 
         if self._is_v1:
             for robot in self.env.robots:
@@ -357,6 +371,8 @@ class EnvRobosuite(EB.EnvBase):
         image_modalities = list(camera_names)
         if is_v1:
             image_modalities = ["{}_image".format(cn) for cn in camera_names]
+            if kwargs['camera_depths']:
+                depth_modalities = ["{}_depth".format(cn) for cn in camera_names]
         elif has_camera:
             # v0.3 only had support for one image, and it was named "rgb"
             assert len(image_modalities) == 1
@@ -367,6 +383,8 @@ class EnvRobosuite(EB.EnvBase):
                 "rgb": image_modalities,
             }
         }
+        if kwargs['camera_depths']:
+            obs_modality_specs['obs']['depth'] = depth_modalities
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs)
 
         # note that @postprocess_visual_obs is False since this env's images will be written to a dataset
