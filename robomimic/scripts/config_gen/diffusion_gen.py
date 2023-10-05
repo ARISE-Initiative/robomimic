@@ -186,19 +186,37 @@ def make_generator_helper(args):
             hidename=True,
         )
     elif args.env == "square":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [
-                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
+        if args.data_format == 'hdf5':
+            generator.add_param(
+                key="train.data",
+                name="ds",
+                group=2,
+                values=[
+                    [
+                        {"path": "/iris/u/jyang27/dev/robomimic/datasets/square/ph/low_dim_v141.hdf5"}, # replace with your own path
+                    ],
                 ],
-            ],
-            value_names=[
-                "square",
-            ],
-        )
+                value_names=[
+                    "square",
+                ],
+            )
+        elif args.data_format == 'rlds':
+            generator.add_param(
+                key="train.data",
+                name="ds",
+                group=2,
+                values=[
+                    [
+                        {"path": "/iris/u/jyang27/rlds_data",
+                        "name": "robomimic_dataset"}, # replace with your own path
+                    ],
+                ],
+                value_names=[
+                    "square",
+                ],
+            )
+        else:
+            raise ValueError 
 
         # update env config to use absolute action control
         generator.add_param(
@@ -236,7 +254,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "~/expdata/{env}/{mod}/{algo_name_short}".format(
+            "/iris/u/jyang27/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

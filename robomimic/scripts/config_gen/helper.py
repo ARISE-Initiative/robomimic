@@ -630,6 +630,17 @@ def set_env_settings(generator, args):
     else:
         raise ValueError
 
+    if args.data_format == 'rlds':
+        #If using rlds, overwrite data format to rlds
+        generator.add_param(
+            key="train.data_format",
+            name="",
+            group=-1,
+            values=[
+                "rlds"
+            ],
+        )
+
 
 def set_mod_settings(generator, args):
     if args.mod == 'ld':
@@ -838,6 +849,12 @@ def get_argparser():
         type=str,
         choices=['ld', 'im'],
         default='im',
+    )
+
+    parser.add_argument(
+        "--data_format",
+        type=str,
+        default='hdf5',
     )
 
     parser.add_argument(
