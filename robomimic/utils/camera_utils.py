@@ -2005,7 +2005,7 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
         self.use_cam = use_cam
 
         from robomimic.utils.camera_utils import ResNetEncoder
-        self.image_feature_encoder = ResNetEncoder(version=18, pretrained=pretrained, num_rgb_in=1)
+        self.image_feature_encoder = ResNetEncoder(version=50, pretrained=pretrained, num_rgb_in=1)
 
         # Fourier encoding for camera origin
         self._fourier_encoding_orig, _ = build_position_encoding(
@@ -2073,7 +2073,7 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
 
             # Camera embeddings
             if 'cam' in sources:
-                assert 'cam' in data[0].keys()
+                assert 'cam' in data[0].keys()  
 
                 cam = datum['cam'].scaled(1. / downsample)
                 orig = cam.get_origin(flatten=True)
@@ -2130,7 +2130,7 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
     
     def output_shape(self, input_shape):
         num_cam_channels = 186
-        num_image_channels = 512 + 256 + 128 + 64
+        num_image_channels = 3840 # ResNet18: 512 + 256 + 128 + 64
         num_sptial_feats = int(input_shape[1] / 4 * input_shape[2] / 4)
         if self.use_cam:
             num_channels = num_image_channels + num_cam_channels
