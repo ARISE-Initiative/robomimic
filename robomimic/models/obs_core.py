@@ -254,6 +254,9 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
         else:
             self.pool = None
 
+        post_proc_list.append(torch.nn.Conv1d(in_channels = feat_shape[-1], out_channels=feature_dimension*2, kernel_size=1))
+        post_proc_list.append(torch.nn.Conv1d(in_channels = feature_dimension*2, out_channels=feature_dimension, kernel_size=1))
+
         # flatten layer
         if self.flatten:
             post_proc_list.append(torch.nn.Flatten(start_dim=1, end_dim=-1))
@@ -262,7 +265,7 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
         self.feature_dimension = feature_dimension
         if feature_dimension is not None:
             assert self.flatten
-            post_proc_list.append(torch.nn.Linear(int(np.prod(feat_shape)), feature_dimension))
+            post_proc_list.append(torch.nn.Linear(feature_dimension * feat_shape[0], feature_dimension))
 
         self.nets["post_proc"] = nn.Sequential(*post_proc_list)
 
@@ -309,6 +312,7 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
 
         x = self.nets["backbone"].forward(image=image, intrinsics=intrinsics, extrinsics=extrinsics)
         # x = self.nets["backbone"].forward(inputs["image"])
+        x = x.permute(0, 2, 1) # B, L, C --> B, C, L
         x = self.nets["post_proc"](x)
 
         return x
