@@ -103,13 +103,24 @@ def obs_encoder_factory(
 
         input_maps = enc_kwargs.get("input_maps", {})
 
+        if any("camera/image/varied_camera" in s for s in enc.obs_shapes.keys()) and ("camera/image/varied_camera" in k):
+            existing_varied_cam = [a for a in enc.obs_shapes.keys() if "camera/image/varied_camera" in a][0]
+            share = existing_varied_cam
+            net_class = None
+            net_kwargs = None
+        else: 
+            share = None
+            net_class = enc_kwargs["core_class"]
+            net_kwargs = enc_kwargs["core_kwargs"]
+
         enc.register_obs_key(
             name=k,
             shape=obs_shape,
             input_map=input_maps.get(k, None),
-            net_class=enc_kwargs["core_class"],
-            net_kwargs=enc_kwargs["core_kwargs"],
+            net_class=net_class,
+            net_kwargs=net_kwargs,
             randomizers=randomizers,
+            share_net_from=share,
         )
 
     enc.make()
