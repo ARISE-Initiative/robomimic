@@ -232,6 +232,7 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
         self.backbone = eval(backbone_class)(**backbone_kwargs)
 
         feat_shape = self.backbone.output_shape(input_shape)
+        self.feat_shape = feat_shape
         # net_list = [self.backbone]
         self.nets["backbone"] = self.backbone
 
@@ -254,8 +255,6 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
         else:
             self.pool = None
 
-        post_proc_list.append(torch.nn.Conv1d(in_channels = feat_shape[-1], out_channels=feature_dimension*2, kernel_size=1))
-        post_proc_list.append(torch.nn.Conv1d(in_channels = feature_dimension*2, out_channels=feature_dimension, kernel_size=1))
 
         # flatten layer
         if self.flatten:
@@ -312,7 +311,6 @@ class DeFiNeVisualCore(EncoderCore, BaseNets.ConvBase):
 
         x = self.nets["backbone"].forward(image=image, intrinsics=intrinsics, extrinsics=extrinsics)
         # x = self.nets["backbone"].forward(inputs["image"])
-        x = x.permute(0, 2, 1) # B, L, C --> B, C, L
         x = self.nets["post_proc"](x)
 
         return x

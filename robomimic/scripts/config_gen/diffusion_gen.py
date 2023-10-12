@@ -27,6 +27,13 @@ def make_generator_helper(args):
         values=[1000],
     )
 
+    generator.add_param(
+        key="train.batch_size",
+        name="",
+        group=-1,
+        values=[8],
+    )
+
     # use ddim by default
     generator.add_param(
         key="algo.ddim.enabled",
@@ -55,10 +62,10 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
+                ["DATAPATH"]
             ],
             value_names=[
-                "pen-in-cup",
+                "data",
             ],
         )
         generator.add_param(
@@ -98,13 +105,35 @@ def make_generator_helper(args):
                 # "3cams-stereo",
             ]
         )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_class",
+            name="obsrand",
+            group=130,
+            values=[
+                # "CropRandomizer", # crop only
+                # "ColorRandomizer", # jitter only
+                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_kwargs",
+            name="obsrandargs",
+            group=-1,
+            values=[
+                # {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}, # crop only
+                # {}, # jitter only
+                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
 
         generator.add_param(
             key="observation.modalities.obs.low_dim",
             name="ldkeys",
             group=2498,
             values=[
-                ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                # ["robot_state/cartesian_position", "robot_state/gripper_position"],
                 [
                     "robot_state/cartesian_position", "robot_state/gripper_position",
                     "camera/extrinsics/hand_camera_left", "camera/intrinsics/hand_camera_left", # "camera/extrinsics/hand_camera_left_gripper_offset", 
@@ -116,27 +145,28 @@ def make_generator_helper(args):
                 ]
             ],
             value_names=[
-                "proprio",
+                # "proprio",
                 "proprio-cam",
             ],
             hidename=False,
         )
+        ## All of the following are needed for DeFiNe style encoding
         generator.add_param(
             key="observation.encoder.rgb.input_maps",
             name="",
             group=2498,
             values=[
-                {
-                    "camera/image/hand_camera_left_image": {
-                        "image": "camera/image/hand_camera_left_image",
-                    },
-                    "camera/image/varied_camera_1_left_image": {
-                        "image": "camera/image/varied_camera_1_left_image",
-                    },
-                    "camera/image/varied_camera_2_left_image": {
-                        "image": "camera/image/varied_camera_2_left_image",
-                    },
-                },
+                # {
+                #     "camera/image/hand_camera_left_image": {
+                #         "image": "camera/image/hand_camera_left_image",
+                #     },
+                #     "camera/image/varied_camera_1_left_image": {
+                #         "image": "camera/image/varied_camera_1_left_image",
+                #     },
+                #     "camera/image/varied_camera_2_left_image": {
+                #         "image": "camera/image/varied_camera_2_left_image",
+                #     },
+                # },
                 {
                     "camera/image/hand_camera_left_image": {
                         "image": "camera/image/hand_camera_left_image",
@@ -156,7 +186,7 @@ def make_generator_helper(args):
                 },
             ],
             value_names=[
-                "define-image-only",
+                # "define-image-only",
                 "define",
             ],
             hidename=True,
@@ -166,13 +196,21 @@ def make_generator_helper(args):
             name="",
             group=2498,
             values=[
-                False,
+                # False,
                 True,
             ],
             hidename=True,
         )
-
-
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained",
+            name="",
+            group=2498,
+            values=[
+                # False,
+                True,
+            ],
+            hidename=True,
+        )
         generator.add_param(
             key="observation.encoder.rgb.core_class",
             name="visenc",
@@ -191,7 +229,25 @@ def make_generator_helper(args):
             name="visdim",
             group=1234,
             values=[
-                64, #512
+                None
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.core_kwargs.flatten",
+            name="flatten",
+            group=1234,
+            values=[
+                False
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.fuser",
+            name="fuser",
+            group=1234,
+            values=[
+                "transformer"
             ],
             hidename=True,
         )
@@ -202,8 +258,8 @@ def make_generator_helper(args):
         #     name="backbone",
         #     group=1234,
         #     values=[
-        #         "ResNet18Conv",
-        #         # "ResNet50Conv",
+        #         # "ResNet18Conv",
+        #         "ResNet50Conv",
         #     ],
         # )
         # generator.add_param(
@@ -211,8 +267,8 @@ def make_generator_helper(args):
         #     name="visdim",
         #     group=1234,
         #     values=[
-        #         64,
-        #         # 512,
+        #         # 64,
+        #         512,
         #     ],
         # )
 

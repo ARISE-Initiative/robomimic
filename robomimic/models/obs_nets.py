@@ -59,7 +59,7 @@ def obs_encoder_factory(
             obs_modality2: dict
                 ...
     """
-    enc = ObservationEncoder(feature_activation=feature_activation)
+    enc = ObservationEncoder(feature_activation=feature_activation, fuser = encoder_kwargs["rgb"]["fuser"])
     for k, obs_shape in obs_shapes.items():
         obs_modality = ObsUtils.OBS_KEYS_TO_MODALITIES[k]
         enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
@@ -134,7 +134,7 @@ class ObservationEncoder(Module):
     Call @register_obs_key to register observation keys with the encoder and then
     finally call @make to create the encoder networks. 
     """
-    def __init__(self, feature_activation=nn.ReLU):
+    def __init__(self, feature_activation=nn.ReLU, fuser = None):
         """
         Args:
             feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
@@ -149,6 +149,8 @@ class ObservationEncoder(Module):
         self.obs_nets = nn.ModuleDict()
         self.obs_randomizers = nn.ModuleDict()
         self.feature_activation = feature_activation
+        self.fuser = fuser
+        self.num_images = 0
         self._locked = False
 
     def register_obs_key(
@@ -182,6 +184,8 @@ class ObservationEncoder(Module):
         """
         assert not self._locked, "ObservationEncoder: @register_obs_key called after @make"
         assert name not in self.obs_shapes, "ObservationEncoder: modality {} already exists".format(name)
+        if "image" in name:
+            self.num_images += 1
 
         if net is not None:
             assert isinstance(net, Module), "ObservationEncoder: @net must be instance of Module class"
@@ -235,6 +239,39 @@ class ObservationEncoder(Module):
         if self.feature_activation is not None:
             self.activation = self.feature_activation()
 
+        if self.fuser == "transformer":
+            ## Define a fuser which takes multiple camera features as [B, sequence of pixels, features]
+            ## and encodes them with a transformer
+            input_features = self.obs_nets["camera/image/hand_camera_left_image"].feat_shape
+            # First scales down number of features on each pixel
+            self.c1 = torch.nn.Conv1d(in_channels = input_features[1], out_channels=512, kernel_size=1)
+            self.c2 = torch.nn.Conv1d(in_channels = 512, out_channels=64, kernel_size=1)
+            layer = nn.TransformerEncoderLayer(d_model=64, nhead=8, batch_first = True, dim_feedforward = 64)
+            self.fusernetwork = nn.TransformerEncoder(layer, num_layers=6)
+            # Finally flatten and linear layer before concatenated with other low dim features
+            self.l1 = torch.nn.Linear(input_features[0] * self.num_images * 64, 2048)
+
+    def final_collation(self, feats):
+        if self.fuser is None:
+            ## Default fuser is that everything is just flattened and concatenated together
+            feats = [TensorUtils.flatten(x, begin_axis=1) for x in feats.values()]
+            return torch.cat(feats, dim=-1)
+        elif self.fuser == "transformer":
+            keys_with_images = [a for a in feats.keys() if "image" in a]
+            keys_without_images = [a for a in feats.keys() if "image" not in a]
+            non_image_feats = [TensorUtils.flatten(feats[k], begin_axis=1) for k in keys_without_images]
+
+            all_image_feats = []
+            for k in keys_with_images:
+                all_image_feats.append(feats[k])
+            all_image_feats = torch.cat(all_image_feats, dim = 1)
+            all_image_feats_postconv = self.c2(F.relu(self.c1(all_image_feats.permute(0, 2, 1)))).permute(0, 2, 1)
+            all_image_feats_posttrans = self.fusernetwork(all_image_feats_postconv)
+            output = self.l1(TensorUtils.flatten(all_image_feats_posttrans, begin_axis=1))
+            return torch.cat(non_image_feats + [output], -1)
+
+
+
     def forward(self, obs_dict):
         """
         Processes modalities according to the ordering in @self.obs_shapes. For each
@@ -259,7 +296,7 @@ class ObservationEncoder(Module):
         )
 
         # process modalities by order given by @self.obs_shapes
-        feats = []
+        feats = {}
         for k in self.obs_shapes:
             if self.obs_input_maps[k] is not None:
                 x = dict()
@@ -295,11 +332,12 @@ class ObservationEncoder(Module):
                     if rand is not None:
                         x = rand.forward_out(x)
             # flatten to [B, D]
-            x = TensorUtils.flatten(x, begin_axis=1)
-            feats.append(x)
+            # x = TensorUtils.flatten(x, begin_axis=1)
+            feats[k] = (x)
 
+        output = self.final_collation(feats)
         # concatenate all features together
-        return torch.cat(feats, dim=-1)
+        return output
 
     def output_shape(self, input_shape=None):
         """
@@ -307,6 +345,9 @@ class ObservationEncoder(Module):
         """
         feat_dim = 0
         for k in self.obs_shapes:
+            # If the fuser is a transformer for image features, don't naively concatenate flattened shapes
+            if (self.fuser == "transformer") and ("image" in k):
+                continue
             feat_shape = self.obs_shapes[k]
             for rand in self.obs_randomizers[k]:
                 if rand is not None:
@@ -317,6 +358,8 @@ class ObservationEncoder(Module):
                 if rand is not None:
                     feat_shape = rand.output_shape_out(feat_shape)
             feat_dim += int(np.prod(feat_shape))
+        if self.fuser == "transformer":
+            feat_dim += 2048
         return [feat_dim]
 
     def __repr__(self):

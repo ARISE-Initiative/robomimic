@@ -291,6 +291,7 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
         # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
+        self.observation.encoder.rgb.fuser = None                               # How to combine the outputs of multi-camera vision encoders
         self.observation.encoder.rgb.core_class = "VisualCore"                  # Default VisualCore class combines backbone (like ResNet-18) with pooling operation (like spatial softmax)
         self.observation.encoder.rgb.core_kwargs = Config()                     # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.core_kwargs.do_not_lock_keys()

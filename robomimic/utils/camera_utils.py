@@ -2029,6 +2029,17 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
             }
         )
 
+        # Adding in another Conv2 layer that is applied [H/4, W/4, features] to
+        # reduce size
+        self.num_cam_channels = 186
+        self.num_image_channels = 3840 # ResNet50
+        if self.use_cam:
+            num_channels = self.num_image_channels + self.num_cam_channels
+        else:
+            num_channels = self.num_image_channels
+        self.finalconv = torch.nn.Conv2d(num_channels, 1024, 2, stride=2)
+
+
     def get_rgb_feat(self, rgb, rgb_feat_type="resnet_all"):
         """Exract image features"""
         if rgb_feat_type == 'convnet':
@@ -2097,8 +2108,13 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
                 rgb = datum['feat']
                 rgb_flat = rgb.view(*rgb.shape[:-2], -1).permute(0, 2, 1)
                 encoding['rgb'] = rgb_flat
-
-            encoding['all'] = torch.cat([val for val in encoding.values()], -1)
+            # Adding in another Conv2 layer that is applied [H/4, W/4, features] to
+            # reduce size
+            stacked = torch.cat([val for val in encoding.values()], -1)
+            st_sh = stacked.shape
+            stacked = stacked.reshape(st_sh[0], int(np.sqrt(st_sh[1])), int(np.sqrt(st_sh[1])), st_sh[-1])
+            stacked = self.finalconv(stacked.permute(0, 3, 1, 2))
+            encoding['all'] = stacked.reshape(stacked.shape[0], stacked.shape[1], -1).permute(0, 2, 1)
             encodings.append(encoding)
 
         return encodings
@@ -2129,11 +2145,8 @@ class DeFiNeImageCamEncoder(nn.Module, ABC):
         return result
     
     def output_shape(self, input_shape):
-        num_cam_channels = 186
-        num_image_channels = 3840 # ResNet18: 512 + 256 + 128 + 64
-        num_sptial_feats = int(input_shape[1] / 4 * input_shape[2] / 4)
-        if self.use_cam:
-            num_channels = num_image_channels + num_cam_channels
-        else:
-            num_channels = num_image_channels
-        return (num_sptial_feats, num_channels)
+        # num_cam_channels = 186
+        # num_image_channels = 3840 # ResNet18: 512 + 256 + 128 + 64
+        num_sptial_feats = int(np.floor((input_shape[1] / 8))) * int(np.floor(input_shape[1] / 8))
+        # Updated to have the shapes outputted by the final conv2.
+        return (num_sptial_feats, 1024)
