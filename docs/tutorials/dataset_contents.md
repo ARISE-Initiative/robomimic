@@ -49,6 +49,9 @@ $ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --rende
 # Directly visualize the image observations in the dataset. This is especially useful for real robot datasets where there is no simulator to use for rendering.
 $ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --use-obs --render_image_names agentview_image --video_path /tmp/obs_trajectory.mp4
 
+# Visualize depth observations as well.
+$ python playback_dataset.py --dataset /path/to/dataset.hdf5 --use-obs --render_image_names agentview_image --render_depth_names agentview_depth --video_path /tmp/obs_trajectory.mp4
+
 # Play the dataset actions in the environment to verify that the recorded actions are reasonable.
 $ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --use-actions --render_image_names agentview --video_path /tmp/playback_dataset_with_actions.mp4
 

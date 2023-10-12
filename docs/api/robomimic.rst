@@ -24,6 +24,14 @@ robomimic.macros module
    :undoc-members:
    :show-inheritance:
 
+robomimic.macros\_private module
+--------------------------------
+
+.. automodule:: robomimic.macros_private
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
