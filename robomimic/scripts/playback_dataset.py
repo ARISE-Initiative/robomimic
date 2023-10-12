@@ -191,7 +191,6 @@ def playback_trajectory_with_obs(
         if video_count % video_skip == 0:
             # concatenate image obs together
             im = [traj_grp["obs/{}".format(k)][i] for k in image_names]
-            frame = np.concatenate(im, axis=1)
             depth = [depth_to_rgb(traj_grp["obs/{}".format(k)][i], depth_min=depth_min[k], depth_max=depth_max[k]) for k in depth_names] if depth_names is not None else []
             frame = np.concatenate(im + depth, axis=1)
             video_writer.append_data(frame)

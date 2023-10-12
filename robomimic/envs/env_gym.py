@@ -253,6 +253,13 @@ class EnvGym(EB.EnvBase):
         """
         return ()
 
+    @property
+    def base_env(self):
+        """
+        Grabs base simulation environment.
+        """
+        return self.env
+
     def __repr__(self):
         """
         Pretty-print env description.

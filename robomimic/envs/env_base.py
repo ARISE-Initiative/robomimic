@@ -229,4 +229,11 @@ class EnvBase(abc.ABC):
         simulation computations.
         """
         return
-    
+
+    @property
+    @abc.abstractmethod
+    def base_env(self):
+        """
+        Grabs base simulation environment.
+        """
+        return

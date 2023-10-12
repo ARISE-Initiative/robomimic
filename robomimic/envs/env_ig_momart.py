@@ -402,6 +402,13 @@ class EnvGibsonMOMART(EB.EnvBase):
         """Return tuple of exceptions to except when doing rollouts"""
         return (RuntimeError)
 
+    @property
+    def base_env(self):
+        """
+        Grabs base simulation environment.
+        """
+        return self.env
+
     def __repr__(self):
         return self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4) + \
                "\niGibson Config: \n" + json.dumps(self.ig_config, sort_keys=True, indent=4)
