@@ -33,6 +33,10 @@ Example usage:
     python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
         --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
+    # extract 84x84 image and depth observations
+    python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
+        --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 --depth
+
     # (space saving option) extract 84x84 image observations with compression and without 
     # extracting next obs (not needed for pure imitation learning algos)
     python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 \
@@ -63,6 +67,9 @@ def extract_trajectory(
     states, 
     actions,
     done_mode,
+    camera_names=None, 
+    camera_height=84, 
+    camera_width=84,
 ):
     """
     Helper function to extract observations, rewards, and dones along a trajectory using
@@ -83,6 +90,17 @@ def extract_trajectory(
     # load the initial state
     env.reset()
     obs = env.reset_to(initial_state)
+
+    # maybe add in intrinsics and extrinsics for all cameras
+    camera_info = None
+    is_robosuite_env = EnvUtils.is_robosuite_env(env=env)
+    if is_robosuite_env:
+        camera_info = get_camera_info(
+            env=env,
+            camera_names=camera_names, 
+            camera_height=camera_height, 
+            camera_width=camera_width,
+        )
 
     traj = dict(
         obs=[], 
@@ -143,10 +161,55 @@ def extract_trajectory(
         else:
             traj[k] = np.array(traj[k])
 
-    return traj
+    return traj, camera_info
+
+
+def get_camera_info(
+    env,
+    camera_names=None, 
+    camera_height=84, 
+    camera_width=84,
+):
+    """
+    Helper function to get camera intrinsics and extrinsics for cameras being used for observations.
+    """
+
+    # TODO: make this function more general than just robosuite environments
+    assert EnvUtils.is_robosuite_env(env=env)
+
+    if camera_names is None:
+        return None
+
+    camera_info = dict()
+    for cam_name in camera_names:
+        K = env.get_camera_intrinsic_matrix(camera_name=cam_name, camera_height=camera_height, camera_width=camera_width)
+        R = env.get_camera_extrinsic_matrix(camera_name=cam_name) # camera pose in world frame
+        if "eye_in_hand" in cam_name:
+            # convert extrinsic matrix to be relative to robot eef control frame
+            assert cam_name.startswith("robot0")
+            eef_site_name = env.base_env.robots[0].controller.eef_name
+            eef_pos = np.array(env.base_env.sim.data.site_xpos[env.base_env.sim.model.site_name2id(eef_site_name)])
+            eef_rot = np.array(env.base_env.sim.data.site_xmat[env.base_env.sim.model.site_name2id(eef_site_name)].reshape([3, 3]))
+            eef_pose = np.zeros((4, 4)) # eef pose in world frame
+            eef_pose[:3, :3] = eef_rot
+            eef_pose[:3, 3] = eef_pos
+            eef_pose[3, 3] = 1.0
+            eef_pose_inv = np.zeros((4, 4))
+            eef_pose_inv[:3, :3] = eef_pose[:3, :3].T
+            eef_pose_inv[:3, 3] = -eef_pose_inv[:3, :3].dot(eef_pose[:3, 3])
+            eef_pose_inv[3, 3] = 1.0
+            R = R.dot(eef_pose_inv) # T_E^W * T_W^C = T_E^C
+        camera_info[cam_name] = dict(
+            intrinsics=K.tolist(),
+            extrinsics=R.tolist(),
+        )
+    return camera_info
 
 
 def dataset_states_to_obs(args):
+    if args.depth:
+        assert len(args.camera_names) > 0, "must specify camera names if using depth"
+
     # create environment to use for data processing
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
     env = EnvUtils.create_env_for_data_processing(
@@ -155,6 +218,7 @@ def dataset_states_to_obs(args):
         camera_height=args.camera_height, 
         camera_width=args.camera_width, 
         reward_shaping=args.shaped,
+        use_depth_obs=args.depth,
     )
 
     print("==== Using environment with the following metadata ====")
@@ -193,12 +257,15 @@ def dataset_states_to_obs(args):
 
         # extract obs, rewards, dones
         actions = f["data/{}/actions".format(ep)][()]
-        traj = extract_trajectory(
+        traj, camera_info = extract_trajectory(
             env=env, 
             initial_state=initial_state, 
             states=states, 
             actions=actions,
             done_mode=args.done_mode,
+            camera_names=args.camera_names, 
+            camera_height=args.camera_height, 
+            camera_width=args.camera_width,
         )
 
         # maybe copy reward or done signal from source file
@@ -231,6 +298,11 @@ def dataset_states_to_obs(args):
         if is_robosuite_env:
             ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
         ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+
+        if camera_info is not None:
+            assert is_robosuite_env
+            ep_data_grp.attrs["camera_info"] = json.dumps(camera_info, indent=4)
+
         total_samples += traj["actions"].shape[0]
 
 
@@ -300,6 +372,13 @@ if __name__ == "__main__":
         type=int,
         default=84,
         help="(optional) width of image observations",
+    )
+
+    # flag for including depth observations per camera
+    parser.add_argument(
+        "--depth", 
+        action='store_true',
+        help="(optional) use depth observations for each camera",
     )
 
     # specifies how the "done" signal is written. If "0", then the "done" signal is 1 wherever 

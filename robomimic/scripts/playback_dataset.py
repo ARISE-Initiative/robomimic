@@ -49,6 +49,12 @@ Example usage below:
         --use-obs --render_image_names agentview_image \
         --video_path /tmp/obs_trajectory.mp4
 
+    # visualize depth observations along with image observations
+    python playback_dataset.py --dataset /path/to/dataset.hdf5 \
+        --use-obs --render_image_names agentview_image \
+        --render_depth_names agentview_depth \
+        --video_path /tmp/obs_trajectory.mp4
+
     # visualize initial states in the demonstration data
     python playback_dataset.py --dataset /path/to/dataset.hdf5 \
         --first --render_image_names agentview \
@@ -66,6 +72,7 @@ import robomimic
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
+from robomimic.utils.vis_utils import depth_to_rgb
 from robomimic.envs.env_base import EnvBase, EnvType
 
 
@@ -155,10 +162,11 @@ def playback_trajectory_with_obs(
     video_writer, 
     video_skip=5, 
     image_names=None,
+    depth_names=None,
     first=False,
 ):
     """
-    This function reads all "rgb" observations in the dataset trajectory and
+    This function reads all "rgb" (and possibly "depth") observations in the dataset trajectory and
     writes them into a video.
 
     Args:
@@ -167,10 +175,16 @@ def playback_trajectory_with_obs(
         video_skip (int): determines rate at which environment frames are written to video
         image_names (list): determines which image observations are used for rendering. Pass more than
             one to output a video with multiple image observations concatenated horizontally.
+        depth_names (list): determines which depth observations are used for rendering (if any).
         first (bool): if True, only use the first frame of each episode.
     """
     assert image_names is not None, "error: must specify at least one image observation to use in @image_names"
     video_count = 0
+
+    if depth_names is not None:
+        # compute min and max depth value across trajectory for normalization
+        depth_min = { k : traj_grp["obs/{}".format(k)][:].min() for k in depth_names }
+        depth_max = { k : traj_grp["obs/{}".format(k)][:].max() for k in depth_names }
 
     traj_len = traj_grp["actions"].shape[0]
     for i in range(traj_len):
@@ -178,6 +192,8 @@ def playback_trajectory_with_obs(
             # concatenate image obs together
             im = [traj_grp["obs/{}".format(k)][i] for k in image_names]
             frame = np.concatenate(im, axis=1)
+            depth = [depth_to_rgb(traj_grp["obs/{}".format(k)][i], depth_min=depth_min[k], depth_max=depth_max[k]) for k in depth_names] if depth_names is not None else []
+            frame = np.concatenate(im + depth, axis=1)
             video_writer.append_data(frame)
         video_count += 1
 
@@ -204,6 +220,9 @@ def playback_dataset(args):
     if args.use_obs:
         assert write_video, "playback with observations can only write to video"
         assert not args.use_actions, "playback with observations is offline and does not support action playback"
+
+    if args.render_depth_names is not None:
+        assert args.use_obs, "depth observations can only be visualized from observations currently"
 
     # create environment only if not playing back with observations
     if not args.use_obs:
@@ -253,6 +272,7 @@ def playback_dataset(args):
                 video_writer=video_writer, 
                 video_skip=args.video_skip,
                 image_names=args.render_image_names,
+                depth_names=args.render_depth_names,
                 first=args.first,
             )
             continue
@@ -351,6 +371,15 @@ if __name__ == "__main__":
         default=None,
         help="(optional) camera name(s) / image observation(s) to use for rendering on-screen or to video. Default is"
              "None, which corresponds to a predefined camera for each env type",
+    )
+
+    # depth observations to use for writing to video
+    parser.add_argument(
+        "--render_depth_names",
+        type=str,
+        nargs='+',
+        default=None,
+        help="(optional) depth observation(s) to use for rendering to video"
     )
 
     # Only use the first frame of each episode
