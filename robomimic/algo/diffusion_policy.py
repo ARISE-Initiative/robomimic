@@ -26,6 +26,10 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 
+# import torch.distributed as dist
+# from torch.nn.parallel import DistributedDataParallel as DDP
+
+
 @register_algo_factory_func("diffusion_policy")
 def algo_config_to_class(algo_config):
     """
@@ -76,8 +80,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # the final arch has 2 parts
         nets = nn.ModuleDict({
             'policy': nn.ModuleDict({
-                'obs_encoder': obs_encoder,
-                'noise_pred_net': noise_pred_net
+                'obs_encoder': torch.nn.parallel.DataParallel(obs_encoder, device_ids=list(range(0,8))),
+                'noise_pred_net': torch.nn.parallel.DataParallel(noise_pred_net, device_ids=list(range(0,8))),
             })
         })
 
@@ -172,7 +176,6 @@ class DiffusionPolicyUNet(PolicyAlgo):
         Tp = self.algo_config.horizon.prediction_horizon
         action_dim = self.ac_dim
         B = batch['actions'].shape[0]
-        
         
         with TorchUtils.maybe_no_grad(no_grad=validate):
             info = super(DiffusionPolicyUNet, self).train_on_batch(batch, epoch, validate=validate)

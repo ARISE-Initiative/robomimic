@@ -245,11 +245,11 @@ class ObservationEncoder(Module):
             input_features = self.obs_nets["camera/image/hand_camera_left_image"].feat_shape
             # First scales down number of features on each pixel
             self.c1 = torch.nn.Conv1d(in_channels = input_features[1], out_channels=512, kernel_size=1)
-            self.c2 = torch.nn.Conv1d(in_channels = 512, out_channels=64, kernel_size=1)
-            layer = nn.TransformerEncoderLayer(d_model=64, nhead=8, batch_first = True, dim_feedforward = 64)
+            self.c2 = torch.nn.Conv1d(in_channels = 512, out_channels=512, kernel_size=1)
+            layer = nn.TransformerEncoderLayer(d_model=512, nhead=8, batch_first = True)
             self.fusernetwork = nn.TransformerEncoder(layer, num_layers=6)
             # Finally flatten and linear layer before concatenated with other low dim features
-            self.l1 = torch.nn.Linear(input_features[0] * self.num_images * 64, 2048)
+            self.l1 = torch.nn.Linear(input_features[0] * self.num_images * 512, 2048)
 
     def final_collation(self, feats):
         if self.fuser is None:
