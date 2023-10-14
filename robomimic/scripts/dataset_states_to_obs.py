@@ -189,77 +189,76 @@ def extract_multiple_trajectories(index, lock, args, data_grp, total_samples):
     max_index = len(demos)
     ind = retrieve_new_index(index, lock)
     while(ind < max_index):
-        try:
-            ep = demos[ind]
+        ep = demos[ind]
 
-            # prepare initial state to reload from
-            states = f["data/{}/states".format(ep)][()]
-            initial_state = dict(states=states[0])
-            if is_robosuite_env:
-                initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
+        # prepare initial state to reload from
+        states = f["data/{}/states".format(ep)][()]
+        initial_state = dict(states=states[0])
+        if is_robosuite_env:
+            initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
 
-            # extract obs, rewards, dones
-            actions = f["data/{}/actions".format(ep)][()]
-            if "data/{}/actions_abs".format(ep) in f:
-                actions_abs = f["data/{}/actions_abs".format(ep)][()]
+        # extract obs, rewards, dones
+        actions = f["data/{}/actions".format(ep)][()]
+        if "data/{}/actions_abs".format(ep) in f:
+            actions_abs = f["data/{}/actions_abs".format(ep)][()]
+        else:
+            actions_abs = None
+        traj = extract_trajectory(
+            env=env, 
+            initial_state=initial_state, 
+            states=states, 
+            actions=actions,
+            actions_abs=actions_abs,
+            done_mode=args.done_mode,
+        )
+
+        # maybe copy reward or done signal from source file
+        if args.copy_rewards:
+            traj["rewards"] = f["data/{}/rewards".format(ep)][()]
+        if args.copy_dones:
+            traj["dones"] = f["data/{}/dones".format(ep)][()]
+
+        # store transitions
+
+        # IMPORTANT: keep name of group the same as source file, to make sure that filter keys are
+        #            consistent as well
+        lock.acquire()
+        ep_data_grp = data_grp.create_group(ep)
+        ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
+        ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
+        ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
+        ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
+        if "actions_abs" in traj:
+            ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
+        for k in traj["obs"]:
+            if args.compress:
+                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
             else:
-                actions_abs = None
-            traj = extract_trajectory(
-                env=env, 
-                initial_state=initial_state, 
-                states=states, 
-                actions=actions,
-                actions_abs=actions_abs,
-                done_mode=args.done_mode,
-            )
-
-            # maybe copy reward or done signal from source file
-            if args.copy_rewards:
-                traj["rewards"] = f["data/{}/rewards".format(ep)][()]
-            if args.copy_dones:
-                traj["dones"] = f["data/{}/dones".format(ep)][()]
-
-            # store transitions
-
-            # IMPORTANT: keep name of group the same as source file, to make sure that filter keys are
-            #            consistent as well
-            ep_data_grp = data_grp.create_group(ep)
-            ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
-            ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
-            ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
-            ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
-            if "actions_abs" in traj:
-                ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
-            for k in traj["obs"]:
+                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
+            if not args.exclude_next_obs:
                 if args.compress:
-                    ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
+                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
                 else:
-                    ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
-                if not args.exclude_next_obs:
-                    if args.compress:
-                        ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
-                    else:
-                        ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
+                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
 
-            # copy action dict (if applicable)
-            if "data/{}/action_dict".format(ep) in f:
-                action_dict = f["data/{}/action_dict".format(ep)]
-                for k in action_dict:
-                    ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
+        # copy action dict (if applicable)
+        if "data/{}/action_dict".format(ep) in f:
+            action_dict = f["data/{}/action_dict".format(ep)]
+            for k in action_dict:
+                ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
 
-            # episode metadata
-            if is_robosuite_env:
-                ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
-            if "ep_info" in f["data/{}".format(ep)].attrs:
-                ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
-            ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
-            lock.acquire()
-            total_samples.value += traj["actions"].shape[0]
-            lock.release()
-            print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
-            ind = retrieve_new_index(index, lock)
-        except Exception as e:
-            print("ERROR ", e)
+        # episode metadata
+        if is_robosuite_env:
+            ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
+        if "ep_info" in f["data/{}".format(ep)].attrs:
+            ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
+        ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+        
+        total_samples.value += traj["actions"].shape[0]
+        lock.release()
+        print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
+        ind = retrieve_new_index(index, lock)
+
     f.close()
 
 def dataset_states_to_obs_multiprocessing(args):
