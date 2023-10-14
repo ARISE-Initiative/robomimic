@@ -18,8 +18,8 @@ import torch
 
 import robomimic.utils.torch_utils as TorchUtils
 from .dataset_transformations import RLDS_TRAJECTORY_MAP_TRANSFORMS
-from .common_transformations import *
-from robomimic.utils.data_utils import *
+import robomimic.data.common_transformations as CommonTransforms
+import robomimic.utils.data_utils as DataUtils
 
 
 class RLDSTorchDataset:
@@ -33,7 +33,7 @@ class RLDSTorchDataset:
             torch_batch = {}
             for key in self.keys:
                 if key in batch.keys():
-                    torch_batch[key] = tree_map(
+                    torch_batch[key] = DataUtils.tree_map(
                         batch[key],
                         map_fn=lambda x: torch.Tensor(x).to(self.device)
                     )
@@ -51,21 +51,21 @@ def get_action_normalization_stats_rlds(obs_action_metadata, config):
     for key in config.train.action_keys:
         if key in normal_keys:
             normal_stats = {
-                'scale': obs_action_metadata[key]['std'].numpy().reshape(1, -1),
-                'offset': obs_action_metadata[key]['mean'].numpy().reshape(1, -1)
+                'scale': obs_action_metadata[key]['std'].reshape(1, -1),
+                'offset': obs_action_metadata[key]['mean'].reshape(1, -1)
             }
             stats[key] = normal_stats
         elif key in min_max_keys:
             min_max_range = obs_action_metadata[key]['max'] - obs_action_metadata[key]['min'] 
             min_max_stats = {
-                'scale': (min_max_range / 2).numpy().reshape(1, -1),
-                'offset': (obs_action_metadata[key]['min'] + min_max_range / 2).numpy().reshape(1, -1)
+                'scale': (min_max_range / 2).reshape(1, -1),
+                'offset': (obs_action_metadata[key]['min'] + min_max_range / 2).reshape(1, -1)
             }
             stats[key] = min_max_stats
         else:
             identity_stats = {
-                'scale': np.ones_like(obs_action_metadata[key]['std'].numpy()).reshape(1, -1),
-                'offset': np.zeros_like(obs_action_metadata[key]['mean'].numpy()).reshape(1, -1)
+                'scale': np.ones_like(obs_action_metadata[key]['std']).reshape(1, -1),
+                'offset': np.zeros_like(obs_action_metadata[key]['mean']).reshape(1, -1)
             }
             stats[key] = identity_stats
     return stats
@@ -104,11 +104,16 @@ def get_obs_action_metadata(
     else:
         print("Computing obs/action statistics for normalization...")
         eps_by_key = {key: [] for key in keys}
-        for episode in tqdm.tqdm(dataset.take(30000)):
-            for key in keys:
-                eps_by_key[key].append(index_nested_dict(episode, key).numpy())
-        eps_by_key = {key: np.concatenate(values) for key, values in eps_by_key.items()}
 
+        i, n_samples = 0, 10
+        dataset_iter = dataset.as_numpy_iterator()
+        for _ in tqdm.tqdm(range(n_samples)):
+            episode = next(dataset_iter)
+            i = i + 1
+            for key in keys:
+                eps_by_key[key].append(DataUtils.index_nested_dict(episode, key))
+        eps_by_key = {key: np.concatenate(values) for key, values in eps_by_key.items()}
+    
         metadata = {}        
         for key in keys:
             metadata[key] = {
@@ -117,15 +122,21 @@ def get_obs_action_metadata(
                 "max": eps_by_key[key].max(0),
                 "min": eps_by_key[key].min(0),
             }
-        del eps_by_key
         with tf.io.gfile.GFile(path, "wb") as f:
             pickle.dump(metadata, f)
         logging.info("Done!")
 
-    return {
-        k: {k2: tf.convert_to_tensor(v2, dtype=tf.float32) for k2, v2 in v.items()}
-        for k, v in metadata.items()
-    }
+    return metadata
+
+
+def decode_dataset(
+    dataset: tf.data.Dataset
+    ):
+    #Decode images
+    dataset = dataset.frame_map(
+        DataUtils.decode_images
+    )
+    return dataset
 
 
 def apply_common_transforms(
@@ -136,14 +147,11 @@ def apply_common_transforms(
     obs_action_metadata: Optional[dict] = None,
     ):
 
-    #Decode images
-    dataset = dataset.frame_map(dl.transforms.decode_images)
-    
     #Normalize observations and actions
     if obs_action_metadata is not None:
         dataset = dataset.map(
             partial(
-                normalize_obs_and_actions,
+                CommonTransforms.normalize_obs_and_actions,
                 config=config,
                 metadata=obs_action_metadata,
             ),
@@ -153,34 +161,25 @@ def apply_common_transforms(
     if config.train.goal_mode == 'last' or config.train.goal_mode == 'uniform':
         dataset = dataset.map(
             partial(
-                relabel_goals_transform,
+                CommonTransforms.relabel_goals_transform,
                 goal_mode=config.goal_mode
             ),
             num_parallel_calls=tf.data.AUTOTUNE
         )
-    #Stack frames
-    '''
-    if config.train.frame_stack is not None and config.train.frame_stack > 1:
-        dataset = dataset.map(
-            partial(
-                frame_stack_transform,
-                num_frames=config.train.frame_stack 
-            )
-        )
-    '''
+
     #Concatenate actions
     if config.train.action_keys != None:
         dataset = dataset.map(
             partial(
-                concatenate_action_transform,
+                CommonTransforms.concatenate_action_transform,
                 action_keys=config.train.action_keys
             ),
         num_parallel_calls=tf.data.AUTOTUNE
         )
-    #Get a random subset of length seq_length
+    #Get a random subset of length frame_stack + seq_length - 1
     dataset = dataset.map(
         partial(
-            random_dataset_sequence_transform_v2,
+            CommonTransforms.random_dataset_sequence_transform_v2,
             frame_stack=config.train.frame_stack,
             seq_length=config.train.seq_length,
             pad_frame_stack=config.train.pad_frame_stack,
@@ -213,13 +212,14 @@ def make_dataset(
         split = "train" if train else "val"
 
     dataset = dl.DLataset.from_rlds(builder, split=split, shuffle=shuffle)
+    dataset = decode_dataset(dataset)
     if name in RLDS_TRAJECTORY_MAP_TRANSFORMS:
         if RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['pre'] is not None:
-            dataset = dataset.map(RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['pre'])
-   
-    metadata_keys = ['action']
-    if config.train.action_keys is not None:
-        metadata_keys.extend(config.train.action_keys)
+            dataset = dataset.map(partial(
+                RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['pre'],
+                config=config)
+            )
+    metadata_keys = [k for k in config.train.action_keys]
     if config.all_obs_keys is not None:
         metadata_keys.extend([f'observation/{k}' 
             for k in config.all_obs_keys])
@@ -228,9 +228,8 @@ def make_dataset(
             builder,
             dataset,
             keys=metadata_keys,
-            load_if_exists=False
+            load_if_exists=True#False
         )
-    
     dataset = apply_common_transforms(
         dataset,
         config=config,
@@ -240,7 +239,10 @@ def make_dataset(
     )
     if name in RLDS_TRAJECTORY_MAP_TRANSFORMS:
         if RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['post'] is not None:
-            dataset = dataset.map(RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['post'])
+            dataset = dataset.map(partial(
+                RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['post'],
+                config=config)
+            )
     dataset = dataset.repeat().batch(config.train.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.as_numpy_iterator()
     dataset = RLDSTorchDataset(dataset)

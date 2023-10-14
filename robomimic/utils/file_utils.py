@@ -124,11 +124,22 @@ def get_env_metadata_from_dataset_rlds(builder):
             :`'type'`: type of environment, should be a value in EB.EnvType
             :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
     """
-    env_meta = builder.info.metadata['env_metadata']
-    #Fix weird json property that turns bool into _bool
-    DataUtils.tree_map(env_meta,
-        lambda x: bool(x) if isinstance(x, bool) else x
-    )
+    if builder.info.metadata is None:
+        env_meta = None
+    else:
+        env_meta = builder.info.metadata.get('env_metadata', None)
+    if env_meta is not None:
+        #Fix weird json property that turns bool into _bool
+        DataUtils.tree_map(env_meta,
+            lambda x: bool(x) if isinstance(x, bool) else x
+        )
+    else:
+        env_meta = {
+            'env_name': 'rlds',
+            'type': 4,
+            'env_kwargs': {},
+        }
+          
     return env_meta
 
 
@@ -233,20 +244,31 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
 
 
 def get_shape_metadata_from_dataset_rlds(builder, action_keys, all_obs_keys=None):
+    from robomimic.data.dataset_shapes import DATASET_SHAPES    
+    
     shape_meta = {}
     info = builder.info
+    name = builder.name  
+    action_dim = 0
     for key in action_keys:
-        assert len(DataUtils.index_nested_dict(
-            info.features['steps'], key).shape) == 1 # shape should be (D)
-    action_dim = sum([DataUtils.index_nested_dict(
-        info.features['steps'], key).shape[0] for key in action_keys])
+        if key in DATASET_SHAPES[name].keys():
+            action_dim += DATASET_SHAPES[name][key][0]
+        else:
+            key_shape = DataUtils.index_nested_dict(
+                info.features['steps'], key).shape
+            assert len(key_shape) == 1
+            action_dim += key_shape[0]
     shape_meta["ac_dim"] = action_dim
 
     if all_obs_keys is None:
         all_obs_keys = info.features['steps']['observation'].keys()
     shape_meta['all_obs_keys'] = all_obs_keys
-    shape_meta['all_shapes'] = OrderedDict({key: list(feature.shape) for key, feature
-        in info.features['steps']['observation'].items()})
+    shape_meta['all_shapes'] = OrderedDict()
+    for key, feature in info.features['steps']['observation'].items():
+        shape = feature.shape
+        if feature.shape[-1] == min(feature.shape):
+            shape = [shape[-1]] + list(shape[:-1])
+        shape_meta['all_shapes'][key] = shape
     shape_meta['use_images'] = np.any([isinstance(feature, tfds.features.Image)
         for key, feature in info.features['steps']['observation'].items()]) 
     

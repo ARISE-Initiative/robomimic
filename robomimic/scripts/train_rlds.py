@@ -95,7 +95,6 @@ def train(config, device):
     # load basic metadata from training file
     print("\n============= Loaded Environment Metadata =============")
     env_meta = FileUtils.get_env_metadata_from_dataset_rlds(train_builder)
-
     # update env meta if applicable
     from robomimic.utils.script_utils import deep_update
     deep_update(env_meta, config.experiment.env_meta_update_dict)

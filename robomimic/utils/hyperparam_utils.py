@@ -294,8 +294,11 @@ class ConfigGenerator(object):
             for path in json_paths:
                 # write python command to file
                 import robomimic
-                cmd = "python {}/scripts/train.py --config {}\n".format(robomimic.__path__[0], path)
-                
+                data_format = self.parameters.get('train.data_format', None)
+                if data_format is None or data_format.values[0] != 'rlds':
+                    cmd = "python {}/scripts/train.py --config {}\n".format(robomimic.__path__[0], path)
+                else:
+                    cmd = "python {}/scripts/train_rlds.py --config {}\n".format(robomimic.__path__[0], path)
                 print()
                 print(cmd)
                 f.write(cmd)

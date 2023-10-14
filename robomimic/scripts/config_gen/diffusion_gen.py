@@ -1,4 +1,5 @@
 from robomimic.scripts.config_gen.helper import *
+import os
 
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"
@@ -27,6 +28,16 @@ def make_generator_helper(args):
         values=[1000],
     )
 
+    generator.add_param(
+        key="train.data_format",
+        name="df",
+        group=1123,
+        values=[args.data_format],
+        value_names=[
+            "data_format",
+        ]
+    )
+
     # use ddim by default
     generator.add_param(
         key="algo.ddim.enabled",
@@ -51,74 +62,158 @@ def make_generator_helper(args):
 
     if args.env == "r2d2":
         generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
-            ],
+            key="train.data_format",
+            name="df",
+            group=1123,
+            values=[args.data_format],
             value_names=[
-                "pen-in-cup",
-            ],
-        )
-        generator.add_param(
-            key="train.action_keys",
-            name="ac_keys",
-            group=-1,
-            values=[
-                [
-                    "action/abs_pos",
-                    "action/abs_rot_6d",
-                    "action/gripper_position",
+                "data_format",
+            ]
+        )    
+        if args.data_format == 'hdf5':
+            generator.add_param(
+                key="train.data",
+                name="ds",
+                group=2,
+                values=[
+                    [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
                 ],
-            ],
-            value_names=[
-                "abs",
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="observation.modalities.obs.rgb",
-            name="cams",
-            group=130,
-            values=[
-                # ["camera/image/hand_camera_left_image"],
-                # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
-                # [
-                #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
-                #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
-                #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
-                # ],
-            ],
-            value_names=[
-                # "wrist",
-                # "wrist-stereo",
-                "3cams",
-                # "3cams-stereo",
-            ]
-        )
+                value_names=[
+                    "pen-in-cup",
+                ],
+            )
+            generator.add_param(
+                key="train.action_keys",
+                name="ac_keys",
+                group=-1,
+                values=[
+                    [
+                        "action/abs_pos",
+                        "action/abs_rot_6d",
+                        "action/gripper_position",
+                    ],
+                ],
+                value_names=[
+                    "abs",
+                ],
+                hidename=True,
+            )
+            generator.add_param(
+                key="observation.modalities.obs.rgb",
+                name="cams",
+                group=130,
+                values=[
+                    # ["camera/image/hand_camera_left_image"],
+                    # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
+                    ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                    # [
+                    #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
+                    #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
+                    #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
+                    # ],
+                ],
+                value_names=[
+                    # "wrist",
+                    # "wrist-stereo",
+                    "3cams",
+                    # "3cams-stereo",
+                ]
+            )
+            generator.add_param(
+                key="observation.modalities.obs.low_dim",
+                name="ldkeys",
+                group=2498,
+                values=[
+                    ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                    # [
+                    #     "robot_state/cartesian_position", "robot_state/gripper_position",
+                    #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
+                    #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
+                    #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
+                    #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
+                    # ]
+                ],
+                value_names=[
+                    "proprio",
+                    # "proprio-extrinsics",
+                ]
+            )
 
-        generator.add_param(
-            key="observation.modalities.obs.low_dim",
-            name="ldkeys",
-            group=2498,
-            values=[
-                ["robot_state/cartesian_position", "robot_state/gripper_position"],
-                # [
-                #     "robot_state/cartesian_position", "robot_state/gripper_position",
-                #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
-                #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
-                #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
-                #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
-                # ]
-            ],
-            value_names=[
-                "proprio",
-                # "proprio-extrinsics",
-            ]
-        )
 
+        elif args.data_format == 'rlds':
+            generator.add_param(
+                key="train.data",
+                name="ds",
+                group=2,
+                values=[
+                    [
+                        {"path": "/iris/u/jyang27/rlds_data",
+                       "name": "r2_d2"}, # replace with your own path
+                    ],
+                ],
+                value_names=[
+                    "pen-in-cup"
+                ],
+            )
+            generator.add_param(
+                key="train.action_keys",
+                name="ac_keys",
+                group=-1,
+                values=[
+                    [
+                        "action_dict/abs_pos",
+                        "action_dict/abs_rot_6d",
+                        "action_dict/gripper_position",
+                    ],
+                ],
+                value_names=[
+                    "abs",
+                ],
+                hidename=True,
+            )
+            generator.add_param(
+                key="observation.modalities.obs.rgb",
+                name="cams",
+                group=130,
+                values=[
+                    # ["camera/image/hand_camera_left_image"],
+                    # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
+                    ["wrist_image_left", "exterior_image_1_left", "exterior_image_2_left"],
+                    # [
+                    #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
+                    #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
+                    #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
+                    # ],
+                ],
+                value_names=[
+                    # "wrist",
+                    # "wrist-stereo",
+                    "3cams",
+                    # "3cams-stereo",
+                ]
+            )
+            generator.add_param(
+                key="observation.modalities.obs.low_dim",
+                name="ldkeys",
+                group=2498,
+                values=[
+                    ["cartesian_position", "gripper_position"],
+                    # [
+                    #     "robot_state/cartesian_position", "robot_state/gripper_position",
+                    #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
+                    #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
+                    #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
+                    #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
+                    # ]
+                ],
+                value_names=[
+                    "proprio",
+                    # "proprio-extrinsics",
+                ]
+            )
+
+        else:
+            raise ValueError
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.backbone_class",
             name="backbone",

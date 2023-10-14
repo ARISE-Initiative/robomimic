@@ -183,56 +183,143 @@ def set_env_settings(generator, args):
                 "r2d2"
             ],
         )
-        
-        # here, we list how each action key should be treated (normalized etc)
-        generator.add_param(
-            key="train.action_config",
-            name="",
-            group=-1,
-            values=[
-                {
-                    "action/cartesian_position":{
-                        "normalization": "min_max",
-                    },
-                    "action/abs_pos":{
-                        "normalization": "min_max",
-                    },
-                    "action/abs_rot_6d":{
-                        "normalization": "min_max",
-                        "format": "rot_6d",
-                        "convert_at_runtime": "rot_euler",
-                    },
-                    "action/abs_rot_euler":{
-                        "normalization": "min_max",
-                        "format": "rot_euler",
-                    },
-                    "action/gripper_position":{
-                        "normalization": "min_max",
-                    },
-                    "action/cartesian_velocity":{
-                        "normalization": None,
-                    },
-                    "action/rel_pos":{
-                        "normalization": None,
-                    },
-                    "action/rel_rot_6d":{
-                        "format": "rot_6d",
-                        "normalization": None,
-                        "convert_at_runtime": "rot_euler",
-                    },
-                    "action/rel_rot_euler":{
-                        "format": "rot_euler",
-                        "normalization": None,
-                    },
-                    "action/gripper_velocity":{
-                        "normalization": None,
-                    },
-                }
-            ],
-        )
+       
+        if args.data_format == 'hdf5': 
+            # here, we list how each action key should be treated (normalized etc)
+            generator.add_param(
+                key="train.action_config",
+                name="",
+                group=-1,
+                values=[
+                        {
+                        "action/cartesian_position":{
+                            "normalization": "min_max",
+                        },
+                        "action/abs_pos":{
+                            "normalization": "min_max",
+                        },
+                        "action/abs_rot_6d":{
+                            "normalization": "min_max",
+                            "format": "rot_6d",
+                            "convert_at_runtime": "rot_euler",
+                        },
+                        "action/abs_rot_euler":{
+                            "normalization": "min_max",
+                            "format": "rot_euler",
+                        },
+                        "action/gripper_position":{
+                            "normalization": "min_max",
+                        },
+                        "action/cartesian_velocity":{
+                            "normalization": None,
+                        },
+                        "action/rel_pos":{
+                            "normalization": None,
+                        },
+                        "action/rel_rot_6d":{
+                            "format": "rot_6d",
+                            "normalization": None,
+                            "convert_at_runtime": "rot_euler",
+                        },
+                        "action/rel_rot_euler":{
+                            "format": "rot_euler",
+                            "normalization": None,
+                        },
+                        "action/gripper_velocity":{
+                            "normalization": None,
+                        },
+                    }
+                ],
+            )
+            generator.add_param(
+                key="train.shuffled_obs_key_groups",
+                name="",
+                group=-1,
+                values=[[[
+                    (
+                    "camera/image/varied_camera_1_left_image",
+                    "camera/image/varied_camera_1_right_image",
+                    "camera/extrinsics/varied_camera_1_left",
+                    "camera/extrinsics/varied_camera_1_right",
+                    ),
+                    (
+                    "camera/image/varied_camera_2_left_image",
+                    "camera/image/varied_camera_2_right_image",
+                    "camera/extrinsics/varied_camera_2_left",
+                    "camera/extrinsics/varied_camera_2_right",
+                    ),
+                ]]],
+            )
+        elif args.data_format == 'rlds':
+            # here, we list how each action key should be treated (normalized etc)
+            generator.add_param(
+                key="train.action_config",
+                name="",
+                group=-1,
+                values=[
+                        {
+                        "action_dict/cartesian_position":{
+                            "normalization": "min_max",
+                        },
+                        "action_dict/abs_pos":{
+                            "normalization": "min_max",
+                        },
+                        "action_dict/abs_rot_6d":{
+                            "normalization": "min_max",
+                            "format": "rot_6d",
+                            "convert_at_runtime": "rot_euler",
+                        },
+                        "action_dict/abs_rot_euler":{
+                            "normalization": "min_max",
+                            "format": "rot_euler",
+                        },
+                        "action_dict/gripper_position":{
+                            "normalization": "min_max",
+                        },
+                        "action_dict/cartesian_velocity":{
+                            "normalization": None,
+                        },
+                        "action_dict/rel_pos":{
+                            "normalization": None,
+                        },
+                        "action_dict/rel_rot_6d":{
+                            "format": "rot_6d",
+                            "normalization": None,
+                            "convert_at_runtime": "rot_euler",
+                        },
+                        "action_dict/rel_rot_euler":{
+                            "format": "rot_euler",
+                            "normalization": None,
+                        },
+                        "action_dict/gripper_velocity":{
+                            "normalization": None,
+                        },
+                    }
+                ],
+            )
+            generator.add_param(
+                key="train.shuffled_obs_key_groups",
+                name="",
+                group=-1,
+                values=[[[
+                    (
+                    "wrist_image_left", 
+                    "exterior_image_1_left", 
+                    "exterior_image_2_left",
+                    ),
+                    (
+                    "wrist_image_right",
+                    "exterior_image_1_right",
+                    "exterior_image_2_right",
+                    ),
+                ]]],
+            )
+
+        else:
+            raise ValueError 
         generator.add_param(
             key="train.dataset_keys",
-            name="",
+                    name="",
             group=-1,
             values=[[]],
         )
@@ -252,26 +339,6 @@ def set_env_settings(generator, args):
                     "rel",
                 ],
             )
-        # observation key groups to swap
-        generator.add_param(
-            key="train.shuffled_obs_key_groups",
-            name="",
-            group=-1,
-            values=[[[
-                (
-                "camera/image/varied_camera_1_left_image",
-                "camera/image/varied_camera_1_right_image",
-                "camera/extrinsics/varied_camera_1_left",
-                "camera/extrinsics/varied_camera_1_right",
-                ),
-                (
-                "camera/image/varied_camera_2_left_image",
-                "camera/image/varied_camera_2_right_image",
-                "camera/extrinsics/varied_camera_2_left",
-                "camera/extrinsics/varied_camera_2_right",
-                ),  
-            ]]],
-        )
     elif args.env == "kitchen":
         generator.add_param(
             key="train.action_config",

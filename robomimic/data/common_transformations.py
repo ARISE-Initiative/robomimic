@@ -34,9 +34,10 @@ def normalize_obs_and_actions(traj, config, metadata):
     '''
     action_config = config.train.action_config
     normal_keys = [key for key in config.train.action_keys
-        if action_config[key].get('normalization', None) == 'normal']
+        if key in action_config.keys() and action_config[key].get('normalization', None) == 'normal']
+    
     min_max_keys = [key for key in config.train.action_keys
-        if action_config[key].get('normalization', None) == 'min_max']
+        if key in action_config.keys() and action_config[key].get('normalization', None) == 'min_max']
     
     for key in normal_keys:
         map_nested_dict_index(
