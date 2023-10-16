@@ -215,7 +215,7 @@ def create_env_from_metadata(
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
     env_kwargs["env_name"] = env_name
-
+    
     env = create_env(
         env_type=env_type,
         render=render, 

@@ -157,8 +157,71 @@ def retrieve_new_index(index, lock):
     lock.release()
     return tmp
     
+def write_traj_to_file(args, data_grp, total_samples, total_run, processes, is_robosuite_env, mul_queue):
+    f = h5py.File(args.dataset, "r")
+    # demos = list(f["data"].keys())
+    # inds = np.argsort([int(elem[5:]) for elem in demos])
+    # demos = [demos[i] for i in inds]
+    # length = len(demos)
+    num_processed = 0
+    print("RUNNING" * 10)
+    while(total_run.value < (processes) or not mul_queue.empty()):
+        print("HI")
+        print(processes)
+        print(total_run.value)
+        if not mul_queue.empty():
+            num_processed = num_processed + 1
+            item = mul_queue.get()
+            ep = item[0]
+            traj = item[1]
+            process_num = item[2]
+            try:
+                ep_data_grp = data_grp.create_group(ep)
+                ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
+                ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
+                ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
+                ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
+                if "actions_abs" in traj:
+                    ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
+                for k in traj["obs"]:
+                    if args.compress:
+                        ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
+                    else:
+                        ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
+                    if not args.exclude_next_obs:
+                        if args.compress:
+                            ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
+                        else:
+                            ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
 
-def extract_multiple_trajectories(index, lock, args, data_grp, total_samples):
+                # copy action dict (if applicable)
+                if "data/{}/action_dict".format(ep) in f:
+                    action_dict = f["data/{}/action_dict".format(ep)]
+                    for k in action_dict:
+                        ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
+
+                # episode metadata
+                if is_robosuite_env:
+                    ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
+                if "ep_info" in f["data/{}".format(ep)].attrs:
+                    ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
+                ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+                
+                total_samples.value += traj["actions"].shape[0]
+            except Exception as e:
+                print("__"*50)
+                print(f"Error {e}")
+                print(process_num)
+                print(ep)
+                print("__"*50)
+            print("ep {}: wrote {} transitions to group {} at process {}".format(num_processed, ep_data_grp.attrs["num_samples"], ep, process_num))
+        time.sleep(1)
+    f.close()
+    print("CORE FINISHED")
+    return
+            
+
+def extract_multiple_trajectories(process_num, index, lock, args, data_grp, total_samples, num_finished, mul_queue):
     # create environment to use for data processing
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
     env = EnvUtils.create_env_for_data_processing(
@@ -222,44 +285,58 @@ def extract_multiple_trajectories(index, lock, args, data_grp, total_samples):
 
         # IMPORTANT: keep name of group the same as source file, to make sure that filter keys are
         #            consistent as well
-        lock.acquire()
-        ep_data_grp = data_grp.create_group(ep)
-        ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
-        ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
-        ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
-        ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
-        if "actions_abs" in traj:
-            ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
-        for k in traj["obs"]:
-            if args.compress:
-                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
-            else:
-                ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
-            if not args.exclude_next_obs:
-                if args.compress:
-                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
-                else:
-                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
+        print("ADD TO QUEUE {}".format(process_num))
+        mul_queue.put([ep, traj, process_num])
+        # lock.acquire()
+        # try:
+        #     ep_data_grp = data_grp.create_group(ep)
+        #     ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
+        #     ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
+        #     ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
+        #     ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
+        #     if "actions_abs" in traj:
+        #         ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
+        #     for k in traj["obs"]:
+        #         if args.compress:
+        #             ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
+        #         else:
+        #             ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
+        #         if not args.exclude_next_obs:
+        #             if args.compress:
+        #                 ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]), compression="gzip")
+        #             else:
+        #                 ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
 
-        # copy action dict (if applicable)
-        if "data/{}/action_dict".format(ep) in f:
-            action_dict = f["data/{}/action_dict".format(ep)]
-            for k in action_dict:
-                ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
+        #     # copy action dict (if applicable)
+        #     if "data/{}/action_dict".format(ep) in f:
+        #         action_dict = f["data/{}/action_dict".format(ep)]
+        #         for k in action_dict:
+        #             ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
 
-        # episode metadata
-        if is_robosuite_env:
-            ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
-        if "ep_info" in f["data/{}".format(ep)].attrs:
-            ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
-        ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+        #     # episode metadata
+        #     if is_robosuite_env:
+        #         ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
+        #     if "ep_info" in f["data/{}".format(ep)].attrs:
+        #         ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
+        #     ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+            
+        #     total_samples.value += traj["actions"].shape[0]
+        # except Exception as e:
+        #     print("__"*50)
+        #     print(f"Error {e}")
+        #     print(process_num)
+        #     print(ep)
+        #     print("__"*50)
+        # lock.release()
         
-        total_samples.value += traj["actions"].shape[0]
-        lock.release()
-        print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
         ind = retrieve_new_index(index, lock)
-
+    print("FINSIHED\n")
+    lock.acquire()
+    num_finished.value = num_finished.value + 1
+    lock.release()
+    print("LCOK finsihed\n")
     f.close()
+    print("file closed")
 
 def dataset_states_to_obs_multiprocessing(args):
     # create environment to use for data processing
@@ -282,13 +359,21 @@ def dataset_states_to_obs_multiprocessing(args):
     index = multiprocessing.Value('i', 0)
     lock = multiprocessing.Lock()
     total_samples_shared = multiprocessing.Value('i', 0)
+    num_finished = multiprocessing.Value('i', 0)
+    mul_queue = multiprocessing.Queue()
+    
+    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
     
     start_time = time.time()
     num_processes = 10
     processes = []
     for i in range(num_processes):
-        process = multiprocessing.Process(target=extract_multiple_trajectories, args=(index, lock, args, data_grp, total_samples_shared))
+        process = multiprocessing.Process(target=extract_multiple_trajectories, args=(i, index, lock, args, data_grp, total_samples_shared, num_finished, mul_queue))
         processes.append(process)
+    
+    is_robosuite_env = EnvUtils.is_robosuite_env(env_meta)
+    process = multiprocessing.Process(target=write_traj_to_file, args=(args, data_grp,total_samples_shared, num_finished, num_processes, is_robosuite_env, mul_queue))
+    processes.append(process)
     
     for process in processes:
         process.start()
@@ -305,7 +390,7 @@ def dataset_states_to_obs_multiprocessing(args):
 
     # global metadata
     data_grp.attrs["total"] = total_samples
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
+
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
         camera_names=args.camera_names, 

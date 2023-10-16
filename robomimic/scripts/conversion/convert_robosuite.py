@@ -41,7 +41,7 @@ if __name__ == "__main__":
         help="Num demos to filter by (can be list)",
     )
     args = parser.parse_args()
-
+    print("Hello")
     f = h5py.File(args.dataset, "a") # edit mode
 
     # store env meta
@@ -84,7 +84,6 @@ if __name__ == "__main__":
     f["data"].attrs["total"] = total_samples
 
     f.close()
-
     # create 90-10 train-validation split in the dataset
     split_train_val_from_hdf5(hdf5_path=args.dataset, val_ratio=0.1)
 
@@ -94,10 +93,8 @@ if __name__ == "__main__":
         eval_dir=None,
         num_workers=10,
     )
-
     # extract corresponding action keys into action_dict
     extract_action_dict(dataset=args.dataset)
-
     # create filter keys according to number of demos
     if args.filter_num_demos is not None:
         for n in args.filter_num_demos:

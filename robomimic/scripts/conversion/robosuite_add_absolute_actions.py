@@ -24,15 +24,12 @@ class RobomimicAbsoluteActionConverter:
     def __init__(self, dataset_path, algo_name='bc'):
         # default BC config
         config = config_factory(algo_name=algo_name)
-
         # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
         # must ran before create dataset
         ObsUtils.initialize_obs_utils_with_config(config)
-
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
         abs_env_meta = copy.deepcopy(env_meta)
         abs_env_meta['env_kwargs']['controller_configs']['control_delta'] = False
-
         env = EnvUtils.create_env_from_metadata(
             env_meta=env_meta,
             render=False, 
@@ -40,7 +37,6 @@ class RobomimicAbsoluteActionConverter:
             use_image_obs=False, 
         )
         assert len(env.env.robots) in (1, 2)
-
         abs_env = EnvUtils.create_env_from_metadata(
             env_meta=abs_env_meta,
             render=False, 
@@ -206,17 +202,14 @@ def add_absolute_actions_to_dataset(dataset, eval_dir, num_workers):
     # process inputs
     dataset = pathlib.Path(dataset).expanduser()
     assert dataset.is_file()
-
     do_eval = False
     if eval_dir is not None:
         eval_dir = pathlib.Path(eval_dir).expanduser()
         assert eval_dir.parent.exists()
         do_eval = True
-    
     converter = RobomimicAbsoluteActionConverter(dataset)
     demo_keys = converter.get_demo_keys()
     del converter
-    
     # run
     with multiprocessing.Pool(num_workers) as pool:
         results = pool.map(worker, [(dataset, demo_key, do_eval) for demo_key in demo_keys])
