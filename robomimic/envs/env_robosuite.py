@@ -102,6 +102,7 @@ class EnvRobosuite(EB.EnvBase):
         """
         obs, r, done, info = self.env.step(action)
         obs = self.get_observation(obs)
+        info["is_success"] = self.is_success()
         return obs, r, self.is_done(), info
 
     def reset(self):

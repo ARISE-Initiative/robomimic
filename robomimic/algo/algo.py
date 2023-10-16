@@ -612,18 +612,21 @@ class RolloutPolicy(object):
         self.policy.set_eval()
         self.policy.reset()
 
-    def _prepare_observation(self, ob):
+    def _prepare_observation(self, ob, batched=False):
         """
         Prepare raw observation dict from environment for policy.
 
         Args:
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
+
+            batched (bool): whether the input is already batched
         """
         if self.obs_normalization_stats is not None:
             ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
-        ob = TensorUtils.to_batch(ob)
+        if not batched:
+            ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
         return ob
@@ -632,7 +635,7 @@ class RolloutPolicy(object):
         """Pretty print network description"""
         return self.policy.__repr__()
 
-    def __call__(self, ob, goal=None):
+    def __call__(self, ob, goal=None, batched=False):
         """
         Produce action from raw observation dict (and maybe goal dict) from environment.
 
@@ -640,12 +643,15 @@ class RolloutPolicy(object):
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
             goal (dict): goal observation
+            batched (bool): whether the input is already batched
         """
-        ob = self._prepare_observation(ob)
+        ob = self._prepare_observation(ob, batched=batched)
         if goal is not None:
-            goal = self._prepare_observation(goal)
+            goal = self._prepare_observation(goal, batched=batched)
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        ac = TensorUtils.to_numpy(ac[0])
+        if not batched:
+            ac = ac[0]
+        ac = TensorUtils.to_numpy(ac)
         if self.action_normalization_stats is not None:
             action_keys = self.policy.global_config.train.action_keys
             action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
