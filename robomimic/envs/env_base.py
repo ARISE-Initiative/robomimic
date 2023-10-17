@@ -25,6 +25,7 @@ class EnvBase(abc.ABC):
         render=False, 
         render_offscreen=False, 
         use_image_obs=False, 
+        use_depth_obs=False, 
         postprocess_visual_obs=True, 
         **kwargs,
     ):
@@ -40,6 +41,10 @@ class EnvBase(abc.ABC):
 
             use_image_obs (bool): if True, environment is expected to render rgb image observations
                 on every env.step call. Set this to False for efficiency reasons, if image
+                observations are not required.
+
+            use_depth_obs (bool): if True, environment is expected to render depth image observations
+                on every env.step call. Set this to False for efficiency reasons, if depth
                 observations are not required.
 
             postprocess_visual_obs (bool): if True, postprocess image observations
@@ -183,7 +188,18 @@ class EnvBase(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def create_for_data_processing(cls, camera_names, camera_height, camera_width, reward_shaping, **kwargs):
+    def create_for_data_processing(
+        cls, 
+        camera_names, 
+        camera_height, 
+        camera_width, 
+        reward_shaping, 
+        render=None, 
+        render_offscreen=None, 
+        use_image_obs=None, 
+        use_depth_obs=None, 
+        **kwargs,
+    ):
         """
         Create environment for processing datasets, which includes extracting
         observations, labeling dense / sparse rewards, and annotating dones in
@@ -194,6 +210,12 @@ class EnvBase(abc.ABC):
             camera_height (int): camera height for all cameras
             camera_width (int): camera width for all cameras
             reward_shaping (bool): if True, use shaped environment rewards, else use sparse task completion rewards
+            render (bool or None): optionally override rendering behavior. Defaults to False.
+            render_offscreen (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_image_obs (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_depth_obs (bool): if True, use depth observations
 
         Returns:
             env (EnvBase instance)
@@ -209,4 +231,11 @@ class EnvBase(abc.ABC):
         simulation computations.
         """
         return
-    
+
+    @property
+    @abc.abstractmethod
+    def base_env(self):
+        """
+        Grabs base simulation environment.
+        """
+        return
