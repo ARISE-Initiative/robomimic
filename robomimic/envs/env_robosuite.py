@@ -183,10 +183,11 @@ class EnvRobosuite(EB.EnvBase):
             self.env.viewer.set_camera(cam_id)
             return self.env.render()
         elif mode == "rgb_array":
-            im = self.env.sim.render(height=height, width=width, camera_name=camera_name)[::-1]
+            im = self.env.sim.render(height=height, width=width, camera_name=camera_name)
             if self.use_depth_obs:
-                return im[0]
-            return im
+                # render() returns a tuple when self.use_depth_obs=True
+                return im[0][::-1]
+            return im[::-1]
         else:
             raise NotImplementedError("mode={} is not implemented".format(mode))
 
@@ -203,10 +204,12 @@ class EnvRobosuite(EB.EnvBase):
         ret = {}
         for k in di:
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
+                # by default images from mujoco are flipped in height
                 ret[k] = di[k][::-1]
                 if self.postprocess_visual_obs:
                     ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
             elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
+                # by default depth images from mujoco are flipped in height
                 ret[k] = di[k][::-1]
                 if len(ret[k].shape) == 2:
                     ret[k] = ret[k][..., None] # (H, W, 1)
@@ -423,10 +426,12 @@ class EnvRobosuite(EB.EnvBase):
             camera_height (int): camera height for all cameras
             camera_width (int): camera width for all cameras
             reward_shaping (bool): if True, use shaped environment rewards, else use sparse task completion rewards
-            render (bool or None): optionally override rendering behavior
-            render_offscreen (bool or None): optionally override rendering behavior
-            use_image_obs (bool or None): optionally override rendering behavior
-            use_depth_obs (bool or None): optionally override rendering behavior
+            render (bool or None): optionally override rendering behavior. Defaults to False.
+            render_offscreen (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_image_obs (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_depth_obs (bool): if True, use depth observations
         """
         is_v1 = (robosuite.__version__.split(".")[0] == "1")
         has_camera = (len(camera_names) > 0)
