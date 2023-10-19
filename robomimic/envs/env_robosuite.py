@@ -156,7 +156,7 @@ class EnvRobosuite(EB.EnvBase):
             return self.get_observation()
         return None
 
-    def render(self, mode="human", height=None, width=None, camera_name="agentview"):
+    def render(self, mode="human", height=None, width=None, camera_name=None):
         """
         Render from simulation to either an on-screen window or off-screen to RGB array.
 
@@ -166,6 +166,10 @@ class EnvRobosuite(EB.EnvBase):
             width (int): width of image to render - only used if mode is "rgb_array"
             camera_name (str): camera name to use for rendering
         """
+        # if camera_name is None, infer from initial env kwargs
+        if camera_name is None:
+            camera_name = self._init_kwargs.get("camera_names", ["agentview"])[0]
+
         if mode == "human":
             cam_id = self.env.sim.model.camera_name2id(camera_name)
             self.env.viewer.set_camera(cam_id)
