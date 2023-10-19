@@ -602,7 +602,6 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
 
     data_loader_iter = iter(data_loader)
     for _ in LogUtils.custom_tqdm(range(num_steps)):
-
         # load next batch from data loader
         try:
             t = time.time()
@@ -613,7 +612,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
             t = time.time()
             batch = next(data_loader_iter)
         timing_stats["Data_Loading"].append(time.time() - t)
-
+        
         # process batch for training
         t = time.time()
         input_batch = model.process_batch_for_training(batch)

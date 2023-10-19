@@ -39,7 +39,6 @@ def r2d2_dataset_pre_transform(traj: Dict[str, Any],
 def r2d2_dataset_post_transform(traj: Dict[str, Any], 
     config: Dict[str, Any]) -> Dict[str, Any]:
   
-    import pdb; pdb.set_trace() 
     new_traj = {'observation': {}}
     for key in config.all_obs_keys:
         nested_keys = key.split('/')

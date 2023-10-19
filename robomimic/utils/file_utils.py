@@ -251,7 +251,7 @@ def get_shape_metadata_from_dataset_rlds(builder, action_keys, all_obs_keys=None
     name = builder.name  
     action_dim = 0
     for key in action_keys:
-        if key in DATASET_SHAPES[name].keys():
+        if name in DATASET_SHAPES.keys() and key in DATASET_SHAPES[name].keys():
             action_dim += DATASET_SHAPES[name][key][0]
         else:
             key_shape = DataUtils.index_nested_dict(
