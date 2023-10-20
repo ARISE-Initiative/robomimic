@@ -52,6 +52,10 @@ class EnvRobosuite(EB.EnvBase):
                 on every env.step call. Set this to False for efficiency reasons, if image
                 observations are not required.
 
+            use_depth_obs (bool): if True, environment is expected to render depth image observations
+                on every env.step call. Set this to False for efficiency reasons, if depth
+                observations are not required.
+
             postprocess_visual_obs (bool): if True, postprocess image observations
                 to prepare for learning. This should only be False when extracting observations
                 for saving to a dataset (to save space on RGB images for example).
