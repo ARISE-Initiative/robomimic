@@ -105,17 +105,33 @@ def train(config, device):
             for name in config.experiment.additional_envs:
                 env_names.append(name)
 
-        for env_name in env_names:
-            env = EnvUtils.create_env_from_metadata(
-                env_meta=env_meta,
-                env_name=env_name, 
-                render=False, 
-                render_offscreen=config.experiment.render_video,
-                use_image_obs=shape_meta["use_images"], 
-            )
-            env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
-            envs[env.name] = env
-            print(envs[env.name])
+        for env_name in env_names:       
+            def create_env(env_i=0):
+                env_kwargs = dict(
+                    env_meta=env_meta,
+                    env_name=env_name,
+                    render=False,
+                    render_offscreen=config.experiment.render_video,
+                    use_image_obs=shape_meta["use_images"],
+                    # seed=config.train.seed * 1000 + env_i # TODO: add seeding across environments
+                )
+                env = EnvUtils.create_env_from_metadata(**env_kwargs)
+                # handle environment wrappers
+                env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
+
+                return env
+
+            if config.experiment.rollout.batched:
+                from tianshou.env import SubprocVectorEnv
+                env_fns = [lambda env_i=i: create_env(env_i) for i in range(config.experiment.rollout.num_batch_envs)]
+                env = SubprocVectorEnv(env_fns)
+                env_name = env.get_env_attr(key="name", id=0)[0]
+            else:
+                env = create_env()
+                env_name = env.name
+            
+            envs[env_name] = env
+            print(env)
 
     print("")
 
@@ -355,11 +371,11 @@ def train(config, device):
             print("MSE Log Epoch {}".format(epoch))
             print(json.dumps(mse_log, sort_keys=True, indent=4))
         
-        # Only keep saved videos if the ckpt should be saved (but not because of validation score)
-        should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
-        if video_paths is not None and not should_save_video:
-            for env_name in video_paths:
-                os.remove(video_paths[env_name])
+        # # Only keep saved videos if the ckpt should be saved (but not because of validation score)
+        # should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
+        # if video_paths is not None and not should_save_video:
+        #     for env_name in video_paths:
+        #         os.remove(video_paths[env_name])
 
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    
