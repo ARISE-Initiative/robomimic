@@ -157,8 +157,10 @@ def retrieve_new_index(index, lock):
     lock.release()
     return tmp
     
-def write_traj_to_file(args, data_grp, total_samples, total_run, processes, is_robosuite_env, mul_queue):
+def write_traj_to_file(args, output_path, total_samples, total_run, processes, is_robosuite_env, mul_queue):
     f = h5py.File(args.dataset, "r")
+    f_out = h5py.File(output_path, "w")
+    data_grp = f_out.create_group("data")
     # demos = list(f["data"].keys())
     # inds = np.argsort([int(elem[5:]) for elem in demos])
     # demos = [demos[i] for i in inds]
@@ -166,9 +168,6 @@ def write_traj_to_file(args, data_grp, total_samples, total_run, processes, is_r
     num_processed = 0
     print("RUNNING" * 10)
     while(total_run.value < (processes) or not mul_queue.empty()):
-        print("HI")
-        print(processes)
-        print(total_run.value)
         if not mul_queue.empty():
             num_processed = num_processed + 1
             item = mul_queue.get()
@@ -215,14 +214,39 @@ def write_traj_to_file(args, data_grp, total_samples, total_run, processes, is_r
                 print(ep)
                 print("__"*50)
             print("ep {}: wrote {} transitions to group {} at process {}".format(num_processed, ep_data_grp.attrs["num_samples"], ep, process_num))
-        time.sleep(1)
+        
+    if "mask" in f:
+        f.copy("mask", f_out)
+
+    # global metadata
+    data_grp.attrs["total"] = total_samples.value
+    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
+    env = EnvUtils.create_env_for_data_processing(
+        env_meta=env_meta,
+        camera_names=args.camera_names, 
+        camera_height=args.camera_height, 
+        camera_width=args.camera_width, 
+        reward_shaping=args.shaped,
+    )
+    data_grp.attrs["env_args"] = json.dumps(env.serialize(), indent=4) # environment info
+    print("Wrote {} trajectories to {}".format(total_samples.value, output_path))
     f.close()
+    f_out.close()
     print("CORE FINISHED")
     return
-            
 
-def extract_multiple_trajectories(process_num, index, lock, args, data_grp, total_samples, num_finished, mul_queue):
+def extract_multiple_trajectories(process_num, index, lock, args2, total_samples, num_finished, mul_queue):
+    try:
+        extract_multiple_trajectories_with_error(process_num, index, lock, args2, total_samples, num_finished, mul_queue)
+    except Exception as e:
+        pass
+    lock.acquire()
+    num_finished.value = num_finished.value + 1
+    lock.release()
+
+def extract_multiple_trajectories_with_error(process_num, index, lock, args2, total_samples, num_finished, mul_queue):
     # create environment to use for data processing
+    args = deepcopy(args2)
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
@@ -240,10 +264,12 @@ def extract_multiple_trajectories(process_num, index, lock, args, data_grp, tota
     is_robosuite_env = EnvUtils.is_robosuite_env(env_meta)
 
     # list of all demonstration episodes (sorted in increasing number order)
+    lock.acquire()
     f = h5py.File(args.dataset, "r")
     demos = list(f["data"].keys())
     inds = np.argsort([int(elem[5:]) for elem in demos])
     demos = [demos[i] for i in inds]
+    lock.release()
 
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
@@ -252,41 +278,56 @@ def extract_multiple_trajectories(process_num, index, lock, args, data_grp, tota
     max_index = len(demos)
     ind = retrieve_new_index(index, lock)
     while(ind < max_index):
-        ep = demos[ind]
+        try:
+            ep = demos[ind]
 
-        # prepare initial state to reload from
-        states = f["data/{}/states".format(ep)][()]
-        initial_state = dict(states=states[0])
-        if is_robosuite_env:
-            initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
+            # prepare initial state to reload from
+            states = f["data/{}/states".format(ep)][()]
+            initial_state = dict(states=states[0])
+            if is_robosuite_env:
+                initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
 
-        # extract obs, rewards, dones
-        actions = f["data/{}/actions".format(ep)][()]
-        if "data/{}/actions_abs".format(ep) in f:
-            actions_abs = f["data/{}/actions_abs".format(ep)][()]
-        else:
-            actions_abs = None
-        traj = extract_trajectory(
-            env=env, 
-            initial_state=initial_state, 
-            states=states, 
-            actions=actions,
-            actions_abs=actions_abs,
-            done_mode=args.done_mode,
-        )
+            # extract obs, rewards, dones
+            actions = f["data/{}/actions".format(ep)][()]
+            if "data/{}/actions_abs".format(ep) in f:
+                actions_abs = f["data/{}/actions_abs".format(ep)][()]
+            else:
+                actions_abs = None
+            traj = extract_trajectory(
+                env=env, 
+                initial_state=initial_state, 
+                states=states, 
+                actions=actions,
+                actions_abs=actions_abs,
+                done_mode=args.done_mode,
+            )
 
-        # maybe copy reward or done signal from source file
-        if args.copy_rewards:
-            traj["rewards"] = f["data/{}/rewards".format(ep)][()]
-        if args.copy_dones:
-            traj["dones"] = f["data/{}/dones".format(ep)][()]
+            # maybe copy reward or done signal from source file
+            if args.copy_rewards:
+                traj["rewards"] = f["data/{}/rewards".format(ep)][()]
+            if args.copy_dones:
+                traj["dones"] = f["data/{}/dones".format(ep)][()]
 
-        # store transitions
+            # store transitions
 
-        # IMPORTANT: keep name of group the same as source file, to make sure that filter keys are
-        #            consistent as well
-        print("ADD TO QUEUE {}".format(process_num))
-        mul_queue.put([ep, traj, process_num])
+            # IMPORTANT: keep name of group the same as source file, to make sure that filter keys are
+            #            consistent as well
+            print("ADD TO QUEUE {}".format(process_num))
+            mul_queue.put([ep, traj, process_num])
+        except Exception as e:
+            print("_"*50)
+            print(process_num)
+            print("Error{}".format(e))
+            print("_"*50)
+            env = EnvUtils.create_env_for_data_processing( #when it errors, it like blows up the environment for some reason
+                env_meta=env_meta,
+                camera_names=args.camera_names, 
+                camera_height=args.camera_height, 
+                camera_width=args.camera_width, 
+                reward_shaping=args.shaped,
+            )
+        finally:
+            ind = retrieve_new_index(index, lock)
         # lock.acquire()
         # try:
         #     ep_data_grp = data_grp.create_group(ep)
@@ -329,11 +370,8 @@ def extract_multiple_trajectories(process_num, index, lock, args, data_grp, tota
         #     print("__"*50)
         # lock.release()
         
-        ind = retrieve_new_index(index, lock)
     print("FINSIHED\n")
-    lock.acquire()
-    num_finished.value = num_finished.value + 1
-    lock.release()
+
     print("LCOK finsihed\n")
     f.close()
     print("file closed")
@@ -350,8 +388,7 @@ def dataset_states_to_obs_multiprocessing(args):
             output_name = os.path.basename(args.dataset)[:-5] + "_im{}.hdf5".format(args.camera_width)
 
     output_path = os.path.join(os.path.dirname(args.dataset), output_name)
-    f_out = h5py.File(output_path, "w")
-    data_grp = f_out.create_group("data")
+    
     print("input file: {}".format(args.dataset))
     print("output file: {}".format(output_path))
 
@@ -368,11 +405,11 @@ def dataset_states_to_obs_multiprocessing(args):
     num_processes = 10
     processes = []
     for i in range(num_processes):
-        process = multiprocessing.Process(target=extract_multiple_trajectories, args=(i, index, lock, args, data_grp, total_samples_shared, num_finished, mul_queue))
+        process = multiprocessing.Process(target=extract_multiple_trajectories, args=(i, index, lock, args, total_samples_shared, num_finished, mul_queue))
         processes.append(process)
     
     is_robosuite_env = EnvUtils.is_robosuite_env(env_meta)
-    process = multiprocessing.Process(target=write_traj_to_file, args=(args, data_grp,total_samples_shared, num_finished, num_processes, is_robosuite_env, mul_queue))
+    process = multiprocessing.Process(target=write_traj_to_file, args=(args, output_path, total_samples_shared, num_finished, num_processes, is_robosuite_env, mul_queue))
     processes.append(process)
     
     for process in processes:
@@ -385,24 +422,24 @@ def dataset_states_to_obs_multiprocessing(args):
     
     f = h5py.File(args.dataset, "r")
     # copy over all filter keys that exist in the original hdf5
-    if "mask" in f:
-        f.copy("mask", f_out)
+    # if "mask" in f:
+    #     f.copy("mask", f_out)
 
-    # global metadata
-    data_grp.attrs["total"] = total_samples
+    # # global metadata
+    # data_grp.attrs["total"] = total_samples
 
-    env = EnvUtils.create_env_for_data_processing(
-        env_meta=env_meta,
-        camera_names=args.camera_names, 
-        camera_height=args.camera_height, 
-        camera_width=args.camera_width, 
-        reward_shaping=args.shaped,
-    )
-    data_grp.attrs["env_args"] = json.dumps(env.serialize(), indent=4) # environment info
-    print("Wrote {} trajectories to {}".format(total_samples, output_path))
+    # env = EnvUtils.create_env_for_data_processing(
+    #     env_meta=env_meta,
+    #     camera_names=args.camera_names, 
+    #     camera_height=args.camera_height, 
+    #     camera_width=args.camera_width, 
+    #     reward_shaping=args.shaped,
+    # )
+    # data_grp.attrs["env_args"] = json.dumps(env.serialize(), indent=4) # environment info
+    # print("Wrote {} trajectories to {}".format(total_samples, output_path))
 
     f.close()
-    f_out.close()
+    # f_out.close()
     
     end_time = time.time()
 
@@ -456,6 +493,7 @@ def dataset_states_to_obs(args):
 
     total_samples = 0
     for ind in range(len(demos)):
+    # for ind in range(1005):
         ep = demos[ind]
 
         # prepare initial state to reload from
@@ -631,4 +669,5 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    # dataset_states_to_obs(args)
     dataset_states_to_obs_multiprocessing(args)
