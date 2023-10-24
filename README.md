@@ -28,8 +28,10 @@ This script will extract absolute actions, extract the action dict, and add filt
 
 2. Extract image observations from robomimic dataset
 ```
-python robomimic/scripts/dataset_states_to_obs.py --camera_names robot0_agentview_left robot0_agentview_right robot0_eye_in_hand --compress --exclude-next-obs --dataset <ds-path>
+python robomimic/scripts/dataset_states_to_obs.py --camera_names <list-of-camera-names> --compress --exclude-next-obs --dataset <ds-path>
 ```
+The `<list-of-camera-names>` depends on the environment you are using.
+For example, for square: `agentview robot0_eye_in_hand` In some other cases: `robot0_agentview_left robot0_agentview_right robot0_eye_in_hand`
 This script will generate a new dataset with the suffix `_im84.hdf5` in the same directory as `--dataset`
 
 -------
