@@ -24,6 +24,7 @@ python robomimic/scripts/conversion/convert_robosuite.py --dataset <ds-path> --f
 ```
 `--filter_num_demos` corresponds to the number of demos to filter by. It's a list, eg. `10 30 50 100 200 500 1000`
 
+
 This script will extract absolute actions, extract the action dict, and add filter keys.
 
 2. Extract image observations from robomimic dataset
