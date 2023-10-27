@@ -21,6 +21,7 @@ Welcome to robomimic's documentation!
 
    datasets/overview
    datasets/robomimic_v0.1
+   datasets/mimicgen
    datasets/robosuite
    datasets/d4rl
    datasets/momart
