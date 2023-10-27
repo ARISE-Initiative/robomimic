@@ -35,7 +35,7 @@ class RLDSTorchDataset:
                 if key in batch.keys():
                     torch_batch[key] = DataUtils.tree_map(
                         batch[key],
-                        map_fn=lambda x: torch.Tensor(x).to(self.device)
+                        map_fn=lambda x: torch.tensor(x).to(self.device)
                     )
             yield torch_batch 
         
@@ -105,7 +105,7 @@ def get_obs_action_metadata(
         print("Computing obs/action statistics for normalization...")
         eps_by_key = {key: [] for key in keys}
 
-        i, n_samples = 0, 10
+        i, n_samples = 0, 500
         dataset_iter = dataset.as_numpy_iterator()
         for _ in tqdm.tqdm(range(n_samples)):
             episode = next(dataset_iter)
@@ -132,6 +132,7 @@ def get_obs_action_metadata(
 def decode_dataset(
     dataset: tf.data.Dataset
     ):
+
     #Decode images
     dataset = dataset.frame_map(
         DataUtils.decode_images
@@ -174,7 +175,7 @@ def apply_common_transforms(
                 CommonTransforms.concatenate_action_transform,
                 action_keys=config.train.action_keys
             ),
-        num_parallel_calls=tf.data.AUTOTUNE
+            num_parallel_calls=tf.data.AUTOTUNE
         )
     #Get a random subset of length frame_stack + seq_length - 1
     dataset = dataset.map(
@@ -191,6 +192,20 @@ def apply_common_transforms(
     
     return dataset
 
+def decode_trajectory(builder, obs_keys, episode):
+    steps = episode
+    new_steps = dict()
+    new_steps['action_dict'] = dict()
+    new_steps['observation'] = dict()
+    for key in steps["action_dict"]:
+        new_steps['action_dict'][key] = builder.info.features["steps"]['action_dict'][
+                        key
+                    ].decode_batch_example(steps["action_dict"][key])
+    for key in obs_keys:
+        new_steps['observation'][key] = builder.info.features["steps"]['observation'][
+                        key
+                    ].decode_batch_example(steps["observation"][key])
+    return new_steps
 
 def make_dataset(
     config: dict,
@@ -206,18 +221,19 @@ def make_dataset(
     data_dir = data_info['path']
 
     builder = tfds.builder(name, data_dir=data_dir)
+
     if "val" not in builder.info.splits:
         split = "train[:95%]" if train else "train[95%:]"
     else:
         split = "train" if train else "val"
 
-    dataset = dl.DLataset.from_rlds(builder, split=split, shuffle=shuffle)
-    dataset = decode_dataset(dataset)
+    dataset = dl.DLataset.from_rlds(builder, split=split, shuffle=shuffle,
+        num_parallel_reads=8)
     if name in RLDS_TRAJECTORY_MAP_TRANSFORMS:
         if RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['pre'] is not None:
             dataset = dataset.map(partial(
                 RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['pre'],
-                config=config)
+                config=config),
             )
     metadata_keys = [k for k in config.train.action_keys]
     if config.all_obs_keys is not None:
@@ -241,8 +257,9 @@ def make_dataset(
         if RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['post'] is not None:
             dataset = dataset.map(partial(
                 RLDS_TRAJECTORY_MAP_TRANSFORMS[name]['post'],
-                config=config)
-            )
+                config=config),
+    )
+    dataset = decode_dataset(dataset)
     dataset = dataset.repeat().batch(config.train.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.as_numpy_iterator()
     dataset = RLDSTorchDataset(dataset)
