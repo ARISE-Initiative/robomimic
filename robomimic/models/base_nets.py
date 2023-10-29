@@ -15,6 +15,9 @@ import torch.nn.functional as F
 from torchvision import transforms
 from torchvision import models as vision_models
 
+import sys
+sys.path.append('/home/yixuan/general_dp/robomimic')
+
 import robomimic.utils.tensor_utils as TensorUtils
 
 
@@ -1109,3 +1112,204 @@ class FeatureAggregator(Module):
             # weighted mean-pooling
             return torch.sum(x * self.agg_weight, dim=1)
         raise Exception("unexpected agg type: {}".forward(self.agg_type))
+
+class Conv1dBNReLU(Module):
+    """Applies a 1D convolution over an input signal composed of several input planes,
+    optionally followed by batch normalization and ReLU activation.
+    """
+
+    def __init__(
+            self, in_channels, out_channels, kernel_size, relu=True, bn=True, **kwargs
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.conv = nn.Conv1d(
+            in_channels, out_channels, kernel_size, bias=(not bn), **kwargs
+        )
+        self.bn = nn.BatchNorm1d(out_channels) if bn else None
+        self.relu = nn.ReLU(inplace=True) if relu else None
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
+
+
+class Conv2dBNReLU(Module):
+    """Applies a 2D convolution (optionally with batch normalization and relu activation)
+    over an input signal composed of several input planes.
+    """
+
+    def __init__(
+            self, in_channels, out_channels, kernel_size, relu=True, bn=True, **kwargs
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.conv = nn.Conv2d(
+            in_channels, out_channels, kernel_size, bias=(not bn), **kwargs
+        )
+        self.bn = nn.BatchNorm2d(out_channels) if bn else None
+        self.relu = nn.ReLU(inplace=True) if relu else None
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
+
+
+class LinearBNReLU(Module):
+    """Applies a linear transformation to the incoming data
+    optionally followed by batch normalization and relu activation
+    """
+
+    def __init__(self, in_channels, out_channels, relu=True, bn=True):
+        super(LinearBNReLU, self).__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.fc = nn.Linear(in_channels, out_channels, bias=(not bn))
+        self.bn = nn.BatchNorm1d(out_channels) if bn else None
+        self.relu = nn.ReLU(inplace=True) if relu else None
+
+    def forward(self, x):
+        x = self.fc(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
+
+def mlp_bn_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(LinearBNReLU(c_in, c_out, relu=True, bn=True))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+
+def mlp_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(LinearBNReLU(c_in, c_out, relu=True, bn=False))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+
+def mlp1d_bn_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(Conv1dBNReLU(c_in, c_out, 1, relu=True))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+
+def mlp1d_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(Conv1dBNReLU(c_in, c_out, 1, relu=True, bn=False))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+
+def mlp2d_bn_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(Conv2dBNReLU(c_in, c_out, 1, relu=True))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+
+def mlp2d_relu(in_channels, out_channels_list):
+    c_in = in_channels
+    layers = []
+    for c_out in out_channels_list:
+        layers.append(Conv2dBNReLU(c_in, c_out, 1, relu=True, bn=False))
+        c_in = c_out
+    return nn.Sequential(*layers)
+
+class PointNet(Module):
+    """PointNet for classification.
+    Notes:
+        1. The original implementation includes dropout for global MLPs.
+        2. The original implementation decays the BN momentum.
+    """
+
+    def __init__(
+            self,
+            in_channels=3,
+            local_channels=(64, 64, 64, 128, 1024),
+            global_channels=(512, 256),
+            use_bn=True,
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = (local_channels + global_channels)[-1]
+        self.use_bn = use_bn
+
+        if use_bn:
+            self.mlp_local = mlp1d_bn_relu(in_channels, local_channels)
+            self.mlp_global = mlp_bn_relu(local_channels[-1], global_channels)
+        else:
+            self.mlp_local = mlp1d_relu(in_channels, local_channels)
+            self.mlp_global = mlp_relu(local_channels[-1], global_channels)
+
+        self.reset_parameters()
+
+    def forward_internal(self, points, points_feature=None, points_mask=None) -> dict:
+        # points: [B, 3, N]; points_feature: [B, C, N], points_mask: [B, N]
+        if points_feature is not None:
+            input_feature = torch.cat([points, points_feature], dim=1)
+        else:
+            input_feature = points
+
+        local_feature = self.mlp_local(input_feature)
+        if points_mask is not None:
+            local_feature = torch.where(
+                points_mask.unsqueeze(1), local_feature, torch.zeros_like(local_feature)
+            )
+        global_feature, max_indices = torch.max(local_feature, 2)
+        output_feature = self.mlp_global(global_feature)
+
+        return {"feature": output_feature, "max_indices": max_indices}
+
+    def forward(self, feats_points):
+        # points: [B, 3 + C, N]
+        points = feats_points[:, :3, :]
+        points_feature = feats_points[:, 3:, :]
+        return self.forward_internal(points, points_feature)['feature']
+    
+    def reset_parameters(self):
+        for name, module in self.named_modules():
+            if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d)):
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d)):
+                module.momentum = 0.01
+
+def test_pointnet():
+    feat_points = torch.rand(2, 3+1024, 100)
+    point_net = PointNet(3+1024)
+    out = point_net(feat_points)
+    print(out.shape)
+
+if __name__ == '__main__':
+    test_pointnet()
