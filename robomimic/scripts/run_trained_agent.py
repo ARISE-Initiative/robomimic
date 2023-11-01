@@ -217,6 +217,10 @@ def run_trained_agent(args):
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
 
+        # Fix to get deterministic results.
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
     # maybe create video writer
     video_writer = None
     if write_video:
