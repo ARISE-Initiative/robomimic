@@ -1294,8 +1294,13 @@ class PointNet(Module):
     def forward(self, feats_points):
         # points: [B, 3 + C, N]
         points = feats_points[:, :3, :]
+        N_obj = points.shape[-1] // 100
+        points = points.reshape(-1, 3, 100, N_obj)
         # points_feature = feats_points[:, 3:, :]
         points_feature = None
+        out_feature = [self.forward_internal(points[:, :, :, i], points_feature)['feature'] for i in range(N_obj)]
+        out_feature = torch.cat(out_feature, dim=-1)
+        return out_feature
         return self.forward_internal(points, points_feature)['feature']
     
     def reset_parameters(self):
@@ -1308,7 +1313,7 @@ class PointNet(Module):
 
 def test_pointnet():
     feat_points = torch.rand(2, 3+1024, 100)
-    point_net = PointNet(3+1024)
+    point_net = PointNet(3)
     out = point_net(feat_points)
     print(out.shape)
 
