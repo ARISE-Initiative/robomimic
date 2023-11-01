@@ -1294,7 +1294,8 @@ class PointNet(Module):
     def forward(self, feats_points):
         # points: [B, 3 + C, N]
         points = feats_points[:, :3, :]
-        points_feature = feats_points[:, 3:, :]
+        # points_feature = feats_points[:, 3:, :]
+        points_feature = None
         return self.forward_internal(points, points_feature)['feature']
     
     def reset_parameters(self):
