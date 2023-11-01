@@ -324,7 +324,8 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                  output_dim=256):
         super(SpatialCore, self).__init__(input_shape=input_shape)
         self.output_dim = output_dim
-        self.nets = PointNet(in_channels=input_shape[0])
+        # self.nets = PointNet(in_channels=input_shape[0])
+        self.nets = PointNet(in_channels=3)
     
     def output_shape(self, input_shape):
         return [self.output_dim]
