@@ -339,6 +339,31 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
 
 """
 ================================================
+Spatial Test Networks (PointMLP)
+================================================
+"""
+class SpatialTest(EncoderCore, BaseNets.ConvBase):
+    """
+    A PointMLP
+    """
+    def __init__(self,
+                 input_shape,
+                 output_dim=256):
+        super(SpatialTest, self).__init__(input_shape=input_shape)
+        self.output_dim = output_dim
+        self.nets = PointMLP()
+    
+    def output_shape(self, input_shape):
+        return [self.output_dim]
+    
+    def forward(self, inputs):
+        """
+        Forward pass through visual core.
+        """
+        return super(SpatialTest, self).forward(inputs)
+
+"""
+================================================
 Observation Randomizer Networks
 ================================================
 """

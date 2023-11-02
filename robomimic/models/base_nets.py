@@ -1316,6 +1316,32 @@ class PointNet(Module):
             if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d)):
                 module.momentum = 0.01
 
+class PointMLP(Module):
+    def __init__(
+        self,
+    ):
+        super().__init__()
+        
+        self.model = nn.Sequential(
+            nn.Linear(3 * 100 * 2, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+        )
+        print('WARNING: PointMLP is only for testing purpose')
+    
+    def forward(self, points):
+        # points: [B, 3 + C, N]
+        points = points[:, :3, :]
+        B, _, N = points.shape
+        points = points.reshape(B, 3 * 100 * 2)
+        return self.model(points)
+
 def test_pointnet():
     feat_points = torch.rand(2, 3+1024, 100)
     point_net = PointNet(3)

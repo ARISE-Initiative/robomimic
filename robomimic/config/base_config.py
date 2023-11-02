@@ -276,7 +276,8 @@ class BaseConfig(Config):
         self.observation.encoder.spatial = deepcopy(self.observation.encoder.rgb)
 
         # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
-        self.observation.encoder.spatial.core_class = "SpatialCore"                   # Default ScanCore class uses Conv1D to process this modality
+        # self.observation.encoder.spatial.core_class = "SpatialCore"                   # Default ScanCore class uses Conv1D to process this modality
+        self.observation.encoder.spatial.core_class = "SpatialTest"                   # Default ScanCore class uses Conv1D to process this modality
         self.observation.encoder.scan.core_kwargs = Config()                    # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.scan.core_kwargs.do_not_lock_keys()
 
