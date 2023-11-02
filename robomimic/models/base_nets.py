@@ -1343,7 +1343,7 @@ class PointMLP(Module):
         return self.model(points)
 
 def test_pointnet():
-    feat_points = torch.rand(2, 3+1024, 100)
+    feat_points = torch.rand(2, 3+1024, 1000) # (B, C, N)
     point_net = PointNet(3)
     out = point_net(feat_points)
     print(out.shape)

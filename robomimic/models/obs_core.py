@@ -15,6 +15,8 @@ from torchvision.transforms import Lambda, Compose
 import torchvision.transforms.functional as TVF
 
 import robomimic.models.base_nets as BaseNets
+from robomimic.models.pointnet_utils import PointNetEncoder
+# from robomimic.models.pointnet2_utils import 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
@@ -321,11 +323,23 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
     """
     def __init__(self,
                  input_shape,
-                 output_dim=256):
+                 output_dim=1024):
         super(SpatialCore, self).__init__(input_shape=input_shape)
         self.output_dim = output_dim
         # self.nets = PointNet(in_channels=input_shape[0])
-        self.nets = PointNet(in_channels=3)
+        # self.nets = PointNet(in_channels=3)
+        self.net = PointNetEncoder(global_feat=True, channel=3)
+        self.pos_mlp = nn.Sequential(
+            nn.Linear(3, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+        )
     
     def output_shape(self, input_shape):
         return [self.output_dim]
@@ -335,7 +349,9 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         Forward pass through visual core.
         """
         ndim = len(self.input_shape)
-        return super(SpatialCore, self).forward(inputs)
+        inputs = inputs[:, :3, :]
+        pointnet_feats, _, _ = self.net(inputs)
+        return pointnet_feats
 
 """
 ================================================
