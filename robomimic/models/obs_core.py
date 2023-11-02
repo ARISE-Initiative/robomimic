@@ -329,17 +329,20 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         # self.nets = PointNet(in_channels=input_shape[0])
         # self.nets = PointNet(in_channels=3)
         self.net = PointNetEncoder(global_feat=True, channel=3)
-        self.pos_mlp = nn.Sequential(
-            nn.Linear(3, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-        )
+        self.use_pos = True
+        if self.use_pos:
+            self.pos_mlp = nn.Sequential(
+                nn.Linear(3, 64),
+                nn.ReLU(),
+                nn.Linear(64, 128),
+                nn.ReLU(),
+                nn.Linear(128, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, 64),
+            )
+            self.output_dim += 64
     
     def output_shape(self, input_shape):
         return [self.output_dim]
@@ -351,7 +354,12 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         ndim = len(self.input_shape)
         inputs = inputs[:, :3, :]
         pointnet_feats, _, _ = self.net(inputs)
-        return pointnet_feats
+        if self.use_pos:
+            pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1))
+            pointnet_feats = torch.cat([pointnet_feats, pos_feats], dim=-1)
+            return pointnet_feats
+        else:
+            return pointnet_feats
 
 """
 ================================================
