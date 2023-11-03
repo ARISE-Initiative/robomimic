@@ -4,19 +4,21 @@ such as encoders (e.g. EncoderCore, VisualCore, ScanCore, ...)
 and randomizers (e.g. Randomizer, CropRandomizer).
 """
 
-import abc
-import numpy as np
-import textwrap
-import random
-
 import torch
 import torch.nn as nn
 from torchvision.transforms import Lambda, Compose
 import torchvision.transforms.functional as TVF
 
+import abc
+import numpy as np
+import textwrap
+import random
+import sys
+sys.path.append('/home/yixuan22/general_dp/robomimic')
+
 import robomimic.models.base_nets as BaseNets
 from robomimic.models.pointnet_utils import PointNetEncoder
-# from robomimic.models.pointnet2_utils import 
+from robomimic.models.pointnet2_utils import PointNet2Encoder
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
@@ -323,12 +325,14 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
     """
     def __init__(self,
                  input_shape,
-                 output_dim=1024):
+                 output_dim=256):
         super(SpatialCore, self).__init__(input_shape=input_shape)
         self.output_dim = output_dim
         # self.nets = PointNet(in_channels=input_shape[0])
         # self.nets = PointNet(in_channels=3)
-        self.net = PointNetEncoder(global_feat=True, channel=3)
+        # self.nets = PointNetEncoder(global_feat=True, channel=3)
+        self.nets = PointNet2Encoder(in_channel=3)
+        self.compositional = True
         self.use_pos = True
         if self.use_pos:
             self.pos_mlp = nn.Sequential(
@@ -343,6 +347,9 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                 nn.Linear(128, 64),
             )
             self.output_dim += 64
+        
+        if self.compositional:
+            self.output_dim *= 2
     
     def output_shape(self, input_shape):
         return [self.output_dim]
@@ -352,14 +359,27 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         Forward pass through visual core.
         """
         ndim = len(self.input_shape)
+        B, D, N = inputs.shape
+        N_per_obj = 100
+        N_obj = N // N_per_obj
         inputs = inputs[:, :3, :]
-        pointnet_feats, _, _ = self.net(inputs)
+        # pointnet_feats, _, _ = self.nets(inputs)
+        if self.compositional:
+            inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
+            inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
+            pointnet_feats, _ = self.nets(inputs) # (B * N_obj, 256)
+        else:
+            pointnet_feats, _ = self.nets(inputs) # (B, 256)
+        
+        # append pos feats
         if self.use_pos:
             pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1))
-            pointnet_feats = torch.cat([pointnet_feats, pos_feats], dim=-1)
-            return pointnet_feats
-        else:
-            return pointnet_feats
+            pointnet_feats = torch.cat([pointnet_feats, pos_feats], dim=-1) # (B * N_obj or B, 256 + 64)
+        
+        if self.compositional:
+            pointnet_feats = pointnet_feats.reshape(B, self.output_dim)
+        
+        return pointnet_feats
 
 """
 ================================================
@@ -901,3 +921,11 @@ class GaussianNoiseRandomizer(Randomizer):
         msg = header + f"(input_shape={self.input_shape}, noise_mean={self.noise_mean}, noise_std={self.noise_std}, " \
                        f"limits={self.limits}, num_samples={self.num_samples})"
         return msg
+
+def test_spatial_core():
+    spatial_core = SpatialCore(input_shape=[100, 1027]).cuda()
+    pcd = torch.randn(16, 1027, 200).cuda()
+    print(spatial_core(pcd).shape)
+
+if __name__ == "__main__":
+    test_spatial_core()

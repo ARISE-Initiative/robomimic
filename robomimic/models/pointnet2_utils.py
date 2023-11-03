@@ -313,3 +313,35 @@ class PointNetFeaturePropagation(nn.Module):
             bn = self.mlp_bns[i]
             new_points = F.relu(bn(conv(new_points)))
         return new_points
+
+class PointNet2Encoder(nn.Module):
+    def __init__(self, in_channel=3):
+        super(PointNet2Encoder, self).__init__()
+        
+        # self.sa1 = PointNetSetAbstractionMsg(50, [0.02, 0.04, 0.08], [8, 16, 64], in_channel - 3,[[32, 32, 64], [64, 64, 128], [64, 96, 128]])
+        # self.sa2 = PointNetSetAbstractionMsg(10, [0.04, 0.08, 0.16], [16, 32, 64], 320,[[64, 64, 128], [128, 128, 256], [128, 128, 256]])
+        # self.sa3 = PointNetSetAbstraction(None, None, None, 640 + 3, [256, 512, 1024], True)
+        self.sa1 = PointNetSetAbstraction(npoint=64, radius=0.04, nsample=16, in_channel=in_channel, mlp=[64, 64, 128], group_all=False)
+        self.sa2 = PointNetSetAbstraction(npoint=16, radius=0.08, nsample=32, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
+        self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
+        self.fc1 = nn.Linear(1024, 512)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.drop1 = nn.Dropout(0.4)
+        self.fc2 = nn.Linear(512, 256)
+        self.bn2 = nn.BatchNorm1d(256)
+
+    def forward(self, xyz):
+        B, D, N = xyz.size()
+        if D > 3:
+            norm = xyz[:, 3:, :]
+            xyz = xyz[:, :3, :]
+        else:
+            norm = None
+        l1_xyz, l1_points = self.sa1(xyz, norm)
+        l2_xyz, l2_points = self.sa2(l1_xyz, l1_points)
+        l3_xyz, l3_points = self.sa3(l2_xyz, l2_points)
+        x = l3_points.view(B, 1024)
+        x = self.drop1(F.relu(self.bn1(self.fc1(x))))
+        x = self.bn2(self.fc2(x))
+
+        return x,l3_points
