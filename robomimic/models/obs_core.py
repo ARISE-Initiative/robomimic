@@ -319,6 +319,89 @@ class ScanCore(EncoderCore, BaseNets.ConvBase):
 Spatial Core Networks (PointNet)
 ================================================
 """
+# class SpatialCore(EncoderCore, BaseNets.ConvBase):
+#     """
+#     A PointNet
+#     """
+#     def __init__(self,
+#                  input_shape,
+#                  output_dim=256):
+#         super(SpatialCore, self).__init__(input_shape=input_shape)
+#         self.output_dim = output_dim
+#         # self.nets = PointNet(in_channels=input_shape[0])
+#         # self.nets = PointNet(in_channels=3)
+#         # self.nets = PointNetEncoder(global_feat=True, channel=3)
+#         self.nets = PointNet2Encoder(in_channel=3)
+#         self.compositional = True
+#         self.use_pos = True
+#         if self.use_pos:
+#             self.pos_mlp = nn.Sequential(
+#                 nn.Linear(3, 64),
+#                 nn.ReLU(),
+#                 nn.Linear(64, 128),
+#                 nn.ReLU(),
+#                 nn.Linear(128, 256),
+#                 nn.ReLU(),
+#                 nn.Linear(256, 128),
+#                 nn.ReLU(),
+#                 nn.Linear(128, 64),
+#             )
+#             if self.compositional:
+#                 self.output_dim += 64
+#             else:
+#                 self.output_dim += 64 * 2
+        
+#         if self.compositional:
+#             self.output_dim *= 2
+        
+#         self.post_proc_mlp = nn.Sequential(
+#             nn.Linear(self.output_dim, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, self.output_dim),
+#         )
+    
+#     def output_shape(self, input_shape):
+#         return [self.output_dim]
+    
+#     def forward(self, inputs):
+#         """
+#         Forward pass through visual core.
+#         """
+#         ndim = len(self.input_shape)
+#         B, D, N = inputs.shape
+#         N_per_obj = 100
+#         N_obj = N // N_per_obj
+#         inputs = inputs[:, :3, :]
+#         # pointnet_feats, _, _ = self.nets(inputs)
+#         if self.compositional:
+#             inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
+#             inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
+#             pointnet_feats, _ = self.nets(inputs) # (B * N_obj, 256)
+#         else:
+#             pointnet_feats, _ = self.nets(inputs) # (B, 256)
+        
+#         # append pos feats
+#         if self.use_pos:
+#             if self.compositional:
+#                 pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1))
+#             else:
+#                 inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
+#                 inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
+#                 pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1)) # (B * N_obj, 64)
+#                 pos_feats = pos_feats.reshape(B, N_obj * 64) # (B, N_obj * 64)
+#             pointnet_feats = torch.cat([pointnet_feats, pos_feats], dim=-1) # (B * N_obj or B, 256 + 64)
+        
+#         if self.compositional:
+#             pointnet_feats = pointnet_feats.reshape(B, self.output_dim)
+        
+#         pointnet_feats = self.post_proc_mlp(pointnet_feats)
+        
+#         return pointnet_feats
+
 class SpatialCore(EncoderCore, BaseNets.ConvBase):
     """
     A PointNet
@@ -329,11 +412,9 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         super(SpatialCore, self).__init__(input_shape=input_shape)
         self.output_dim = output_dim
         # self.nets = PointNet(in_channels=input_shape[0])
-        # self.nets = PointNet(in_channels=3)
-        # self.nets = PointNetEncoder(global_feat=True, channel=3)
-        self.nets = PointNet2Encoder(in_channel=3)
-        self.compositional = True
-        self.use_pos = True
+        self.nets = PointNet(in_channels=3, use_bn=False)
+        self.compositional = False
+        self.use_pos = False
         if self.use_pos:
             self.pos_mlp = nn.Sequential(
                 nn.Linear(3, 64),
@@ -346,10 +427,24 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                 nn.ReLU(),
                 nn.Linear(128, 64),
             )
-            self.output_dim += 64
+            if self.compositional:
+                self.output_dim += 64
+            else:
+                self.output_dim += 64 * 2
         
         if self.compositional:
             self.output_dim *= 2
+        
+        if self.use_pos:
+            self.post_proc_mlp = nn.Sequential(
+                nn.Linear(self.output_dim, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512, 512),
+                nn.ReLU(),
+                nn.Linear(512, self.output_dim),
+            )
     
     def output_shape(self, input_shape):
         return [self.output_dim]
@@ -367,17 +462,27 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         if self.compositional:
             inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
             inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
-            pointnet_feats, _ = self.nets(inputs) # (B * N_obj, 256)
+            # pointnet_feats, _ = self.nets(inputs) # (B * N_obj, 256)
+            pointnet_feats = self.nets(inputs) # (B * N_obj, 256)
         else:
-            pointnet_feats, _ = self.nets(inputs) # (B, 256)
+            # pointnet_feats, _ = self.nets(inputs) # (B, 256)
+            pointnet_feats = self.nets(inputs) # (B, 256)
         
         # append pos feats
         if self.use_pos:
-            pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1))
+            if self.compositional:
+                pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1))
+            else:
+                inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
+                inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
+                pos_feats = self.pos_mlp(inputs[:, :3, :].mean(dim=-1)) # (B * N_obj, 64)
+                pos_feats = pos_feats.reshape(B, N_obj * 64) # (B, N_obj * 64)
             pointnet_feats = torch.cat([pointnet_feats, pos_feats], dim=-1) # (B * N_obj or B, 256 + 64)
         
         if self.compositional:
             pointnet_feats = pointnet_feats.reshape(B, self.output_dim)
+        if self.use_pos:
+            pointnet_feats = self.post_proc_mlp(pointnet_feats)
         
         return pointnet_feats
 
