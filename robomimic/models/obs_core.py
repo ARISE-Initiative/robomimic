@@ -413,8 +413,8 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         self.output_dim = output_dim
         # self.nets = PointNet(in_channels=input_shape[0])
         self.nets = PointNet(in_channels=3, use_bn=False)
-        self.compositional = False
-        self.use_pos = False
+        self.compositional = True
+        self.use_pos = True
         if self.use_pos:
             self.pos_mlp = nn.Sequential(
                 nn.Linear(3, 64),
