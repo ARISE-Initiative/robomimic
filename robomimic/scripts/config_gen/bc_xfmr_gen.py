@@ -44,20 +44,31 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "/data/aaronl/food/food_group2_100_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "/data/aaronl/food/food_group2_100_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "/data/aaronl/group_data/food_set1_data_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "/data/aaronl/group_data/food_data_100_2_im84.hdf5", "filter_key": "100_demos"}],
                 #[{"path": "/data/aaronl/group_data/food_data_100.hdf5", "filter_key": "100_demos"}],
                 #[{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/low_dim2_im84.hdf5", "filter_key": "10000_demos"}],
-                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_table_to_cab/all/2023-10-20-08-39-00/demo_im84.hdf5", "filter_key": "1000_demos"}],
-                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_table_to_cab/all/2023-10-20-08-39-00/demo_im84.hdf5", "filter_key": "10000_demos"}],
+                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/demo_im84.hdf5", "filter_key": "10000_demos"}],
+                # [{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/low_dim5_im84.hdf5", "filter_key": "10000_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
-                "human-food",
-                # "human-100",
+                # "human-table-to-cab-group2",
+                # "human-food-set1",
+                # "human-food",
                 # "mg-100",
-                "mg-1000",
                 "mg-10000",
+                # "mg-10000",
+            ],
+        )
+        generator.add_param(
+            key="experiment.rollout.horizon",
+            name="",
+            group=3333,
+            values=[
+                1500
             ],
         )
     elif args.env == "square":
