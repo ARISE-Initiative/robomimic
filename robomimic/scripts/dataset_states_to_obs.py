@@ -368,14 +368,15 @@ def extract_multiple_trajectories(process_num, current_work_array, work_queue, l
 
     
 def retrieve_new_index(process_num, current_work_array, work_queue, lock):
-    if work_queue.empty():
-        return -1
-    try:
-        tmp = work_queue.get(False)
-        current_work_array[process_num] = tmp
-        return tmp
-    except queue.Empty:
-        return -1
+    with lock:
+        if work_queue.empty():
+            return -1
+        try:
+            tmp = work_queue.get(False)
+            current_work_array[process_num] = tmp
+            return tmp
+        except queue.Empty:
+            return -1
 
 def extract_multiple_trajectories_with_error(process_num, current_work_array, work_queue, lock, args, mul_queue):
     # create environment to use for data processing
