@@ -103,7 +103,7 @@ class ObservationEncoder(Module):
     Call @register_obs_key to register observation keys with the encoder and then
     finally call @make to create the encoder networks. 
     """
-    def __init__(self, feature_activation=nn.ReLU):
+    def __init__(self, feature_activation=None):
         """
         Args:
             feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass

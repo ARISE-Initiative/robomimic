@@ -522,14 +522,87 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
                  input_shape,
                  output_dim=256):
         super(SparseTransformer, self).__init__(input_shape=input_shape)
+        n_head = 4
+        n_layer = 8
+        p_drop_attn = 0.3
+        self.pos_feat_dim = 128
+        self.dino_feat_dim = 128
+        n_emb = self.pos_feat_dim + self.dino_feat_dim
+        self.pos_mlp = nn.Sequential(
+            nn.Linear(3, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.pos_feat_dim),
+        )
+        self.dino_feat_mlp = nn.Sequential(
+            nn.Linear(input_shape[0] - 3, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.dino_feat_dim),
+        )
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, n_emb))
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=n_emb,
+            nhead=n_head,
+            dim_feedforward=4*n_emb,
+            dropout=p_drop_attn,
+            activation='gelu',
+            batch_first=True,
+            norm_first=True
+        )
+        self.encoder = nn.TransformerEncoder(
+            encoder_layer=encoder_layer,
+            num_layers=n_layer
+        )
+        self.postproc_mlp = nn.Sequential(
+            nn.Linear(n_emb, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, output_dim),
+        )
         self.output_dim = output_dim
+        
+        # init cls token
+        nn.init.normal_(self.cls_token, std=0.02)
     
     def output_shape(self, input_shape):
         return [self.output_dim]
     
     def forward(self, inputs):
         B, D, N = inputs.shape
-        return pointnet_feats
+        inputs = inputs.permute(0, 2, 1) # (B, N, D)
+        subsample = 10
+        N_per_obj = 100
+        N_obj = N // N_per_obj
+        assert N % N_per_obj == 0 # N must be divisible by N_per_obj
+        inputs = inputs.reshape(B, N_obj, N_per_obj, D) # (B, N_obj, N_per_obj, D)
+        inputs = inputs[:, :, :subsample, :] # (B, N_obj, subsample, D)
+        inputs = inputs.reshape(B, N_obj * subsample, D) # (B, N_obj * subsample, D)
+        
+        # preprocess inputs
+        pos_feats = self.pos_mlp(inputs[..., :3].reshape(B * N_obj * subsample, 3)).reshape(B, N_obj * subsample, self.pos_feat_dim)
+        feat_feats = self.dino_feat_mlp(inputs[..., 3:].reshape(B * N_obj * subsample, D - 3)).reshape(B, N_obj * subsample, self.dino_feat_dim)
+        
+        # transformer
+        tf_input = torch.cat([pos_feats, feat_feats], dim=-1) # (B, N_obj * subsample, pos_feat_dim + dino_feat_dim)
+        tf_input = torch.cat([self.cls_token.repeat(B, 1, 1), tf_input], dim=1) # (B, N_obj * subsample + 1, pos_feat_dim + dino_feat_dim)
+        
+        tf_output = self.encoder(tf_input) # (B, N_obj * subsample + 1, pos_feat_dim + dino_feat_dim)
+        tf_output = tf_output[:, 0, :] # (B, pos_feat_dim + dino_feat_dim)
+        
+        # postprocess
+        output = self.postproc_mlp(tf_output) # (B, output_dim)
+        
+        return output
 
 """
 ================================================
