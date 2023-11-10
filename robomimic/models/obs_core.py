@@ -560,16 +560,17 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
             encoder_layer=encoder_layer,
             num_layers=n_layer
         )
-        self.postproc_mlp = nn.Sequential(
-            nn.Linear(n_emb, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, output_dim),
-        )
-        self.output_dim = output_dim
+        self.output_dim = n_emb
+        # self.postproc_mlp = nn.Sequential(
+        #     nn.Linear(n_emb, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, output_dim),
+        # )
+        # self.output_dim = output_dim
         
         # init cls token
         nn.init.normal_(self.cls_token, std=0.02)
@@ -599,10 +600,10 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
         tf_output = self.encoder(tf_input) # (B, N_obj * subsample + 1, pos_feat_dim + dino_feat_dim)
         tf_output = tf_output[:, 0, :] # (B, pos_feat_dim + dino_feat_dim)
         
-        # postprocess
-        output = self.postproc_mlp(tf_output) # (B, output_dim)
+        # # postprocess
+        # output = self.postproc_mlp(tf_output) # (B, output_dim)
         
-        return output
+        return tf_output
 
 """
 ================================================
