@@ -411,10 +411,18 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                  output_dim=256):
         super(SpatialCore, self).__init__(input_shape=input_shape)
         self.output_dim = output_dim
-        # self.nets = PointNet(in_channels=input_shape[0])
-        self.nets = PointNet(in_channels=3, use_bn=False)
         self.compositional = True
         self.use_pos = True
+        self.use_feats = False
+        self.preproc_feats = False
+        pn_net_cls = PointNet2Encoder # PointNet; PointNet2Encoder
+        if self.use_feats:
+            if self.preproc_feats:
+                self.nets = pn_net_cls(in_channels=3+4, use_bn=False)
+            else:
+                self.nets = pn_net_cls(in_channels=input_shape[0], use_bn=False)
+        else:
+            self.nets = pn_net_cls(in_channels=3, use_bn=False)
         if self.use_pos:
             self.pos_mlp = nn.Sequential(
                 nn.Linear(3, 64),
@@ -431,6 +439,20 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                 self.output_dim += 64
             else:
                 self.output_dim += 64 * 2
+        if self.preproc_feats:
+            self.preproc_mlp = nn.Sequential(
+                nn.Linear(input_shape[0] - 3, 512),
+                nn.ReLU(),
+                nn.Linear(512, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, 16),
+                nn.ReLU(),
+                nn.Linear(16, 4),
+            )
         
         if self.compositional:
             self.output_dim *= 2
@@ -454,14 +476,23 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         Forward pass through visual core.
         """
         ndim = len(self.input_shape)
+        if not self.use_feats:
+            inputs = inputs[:, :3, :]
+        else:
+            if self.preproc_feats:
+                feats = inputs[:, 3:, :]
+                B_feats, D_feats, N_feats = feats.shape
+                feats = feats.permute(0, 2, 1).reshape(B_feats * N_feats, D_feats)
+                feats = self.preproc_mlp(feats)
+                feats = feats.reshape(B_feats, N_feats, 4).permute(0, 2, 1)
+                inputs = torch.cat([inputs[:, :3, :], feats], dim=1)
         B, D, N = inputs.shape
         N_per_obj = 100
         N_obj = N // N_per_obj
-        inputs = inputs[:, :3, :]
         # pointnet_feats, _, _ = self.nets(inputs)
         if self.compositional:
-            inputs = inputs.reshape(B, 3, N_obj, N_per_obj)
-            inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, 3, N_per_obj)
+            inputs = inputs.reshape(B, D, N_obj, N_per_obj)
+            inputs = inputs.permute(0, 2, 1, 3).reshape(B * N_obj, D, N_per_obj)
             # pointnet_feats, _ = self.nets(inputs) # (B * N_obj, 256)
             pointnet_feats = self.nets(inputs) # (B * N_obj, 256)
         else:
@@ -484,6 +515,20 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         if self.use_pos:
             pointnet_feats = self.post_proc_mlp(pointnet_feats)
         
+        return pointnet_feats
+
+class SparseTransformer(EncoderCore, BaseNets.ConvBase):
+    def __init__(self,
+                 input_shape,
+                 output_dim=256):
+        super(SparseTransformer, self).__init__(input_shape=input_shape)
+        self.output_dim = output_dim
+    
+    def output_shape(self, input_shape):
+        return [self.output_dim]
+    
+    def forward(self, inputs):
+        B, D, N = inputs.shape
         return pointnet_feats
 
 """
