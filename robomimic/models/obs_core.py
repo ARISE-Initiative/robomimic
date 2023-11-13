@@ -527,7 +527,11 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
         p_drop_attn = 0.3
         self.pos_feat_dim = 128
         self.dino_feat_dim = 128
-        n_emb = self.pos_feat_dim + self.dino_feat_dim
+        self.use_feats = False
+        if self.use_feats:
+            n_emb = self.pos_feat_dim + self.dino_feat_dim
+        else:
+            n_emb = self.pos_feat_dim
         self.pos_mlp = nn.Sequential(
             nn.Linear(3, 64),
             nn.ReLU(),
@@ -581,7 +585,7 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
     def forward(self, inputs):
         B, D, N = inputs.shape
         inputs = inputs.permute(0, 2, 1) # (B, N, D)
-        subsample = 10
+        subsample = 20
         N_per_obj = 100
         N_obj = N // N_per_obj
         assert N % N_per_obj == 0 # N must be divisible by N_per_obj
@@ -591,14 +595,18 @@ class SparseTransformer(EncoderCore, BaseNets.ConvBase):
         
         # preprocess inputs
         pos_feats = self.pos_mlp(inputs[..., :3].reshape(B * N_obj * subsample, 3)).reshape(B, N_obj * subsample, self.pos_feat_dim)
-        feat_feats = self.dino_feat_mlp(inputs[..., 3:].reshape(B * N_obj * subsample, D - 3)).reshape(B, N_obj * subsample, self.dino_feat_dim)
+        if self.use_feats:
+            feat_feats = self.dino_feat_mlp(inputs[..., 3:].reshape(B * N_obj * subsample, D - 3)).reshape(B, N_obj * subsample, self.dino_feat_dim)
         
         # transformer
-        tf_input = torch.cat([pos_feats, feat_feats], dim=-1) # (B, N_obj * subsample, pos_feat_dim + dino_feat_dim)
-        tf_input = torch.cat([self.cls_token.repeat(B, 1, 1), tf_input], dim=1) # (B, N_obj * subsample + 1, pos_feat_dim + dino_feat_dim)
+        if self.use_feats:
+            tf_input = torch.cat([pos_feats, feat_feats], dim=-1) # (B, N_obj * subsample, n_emb)
+        else:
+            tf_input = pos_feats # (B, N_obj * subsample, n_emb)
+        tf_input = torch.cat([self.cls_token.repeat(B, 1, 1), tf_input], dim=1) # (B, N_obj * subsample + 1, n_emb)
         
-        tf_output = self.encoder(tf_input) # (B, N_obj * subsample + 1, pos_feat_dim + dino_feat_dim)
-        tf_output = tf_output[:, 0, :] # (B, pos_feat_dim + dino_feat_dim)
+        tf_output = self.encoder(tf_input) # (B, N_obj * subsample + 1, n_emb)
+        tf_output = tf_output[:, 0, :] # (B, n_emb)
         
         # # postprocess
         # output = self.postproc_mlp(tf_output) # (B, output_dim)
