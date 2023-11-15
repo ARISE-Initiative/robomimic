@@ -40,7 +40,7 @@ import robomimic.utils.file_utils as FileUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
-from robomimic.data.dataset import (make_dataset, get_obs_normalization_stats_rlds, 
+from robomimic.data.rtx_dataset import (make_dataset, get_obs_normalization_stats_rlds, 
     get_action_normalization_stats_rlds)
 
 def train(config, device):

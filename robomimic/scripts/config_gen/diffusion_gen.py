@@ -111,12 +111,14 @@ def make_generator_helper(args):
                     #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
                     #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
                     # ],
+                    # [],
                 ],
                 value_names=[
                     # "wrist",
                     # "wrist-stereo",
                     "3cams",
                     # "3cams-stereo",
+                    # "none",
                 ]
             )
             generator.add_param(
@@ -147,7 +149,7 @@ def make_generator_helper(args):
                 group=2,
                 values=[
                     [
-                        {"path": "/iris/u/jyang27/rlds_data",
+                        {"path": "/data/rpl/rt-x/datasets",
                        "name": "r2_d2"}, # replace with your own path
                     ],
                 ],
@@ -184,12 +186,14 @@ def make_generator_helper(args):
                     #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
                     #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
                     # ],
+                    # [],
                 ],
                 value_names=[
                     # "wrist",
                     # "wrist-stereo",
                     "3cams",
                     # "3cams-stereo",
+                    # "none",
                 ]
             )
             generator.add_param(
@@ -230,6 +234,16 @@ def make_generator_helper(args):
             values=[
                 64,
                 # 512,
+            ],
+        )
+
+        generator.add_param(
+            key="train.batch_size",
+            name="bs",
+            group=11397,
+            values=[
+                16,
+                # 128,
             ],
         )
 
@@ -349,7 +363,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/iris/u/jyang27/expdata/{env}/{mod}/{algo_name_short}".format(
+            "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

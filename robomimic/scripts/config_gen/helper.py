@@ -50,7 +50,6 @@ def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
 
 def set_env_settings(generator, args):
     if args.env in ["r2d2"]:
-        assert args.mod == "im"
         generator.add_param(
             key="experiment.rollout.enabled",
             name="",
@@ -104,17 +103,24 @@ def set_env_settings(generator, args):
                     ["robot_state/cartesian_position", "robot_state/gripper_position"]
                 ],
             )
-        if "observation.modalities.obs.rgb" not in generator.parameters:
+        
+        if args.mod == "im" and "observation.modalities.obs.rgb" not in generator.parameters:
             generator.add_param(
                 key="observation.modalities.obs.rgb",
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "camera/image/hand_camera_left_image",
-                        "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image" # uncomment to use all 3 cameras
-                    ]
+                    "camera/image/hand_camera_left_image",
+                    "camera/image/varied_camera_1_left_image",
+                    "camera/image/varied_camera_2_left_image",
                 ],
+            )
+        if args.mod == "ld":
+            generator.add_param(
+                key="observation.modalities.obs.rgb",
+                name="",
+                group=-1,
+                values=[[]],
             )
         generator.add_param(
             key="observation.encoder.rgb.obs_randomizer_class",

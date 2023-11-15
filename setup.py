@@ -31,6 +31,8 @@ setup(
         "torchvision",
         "diffusers==0.11.1",
         "pytorch3d",
+        "tensorflow_datasets",
+        "tensorflow",
     ],
     eager_resources=['*'],
     include_package_data=True,

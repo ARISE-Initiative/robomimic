@@ -9,6 +9,9 @@ def r2d2_dataset_pre_transform(traj: Dict[str, Any],
     keep_keys = [
         'observation',
         'action',
+        'is_first',
+        'is_last',
+        'is_terminal'
     ]
     ac_keys = ['cartesian_position', 'cartesian_velocity']
     new_traj = {k: v for k, v in traj.items() if k in keep_keys}
@@ -17,8 +20,12 @@ def r2d2_dataset_pre_transform(traj: Dict[str, Any],
     }
     for key in ac_keys:
         in_action = traj['action_dict'][key]
-        pos = traj['action_dict'][key][:, :3]
-        rot = traj['action_dict'][key][:, 3:6]
+        if len(traj['action_dict'][key].shape) == 2:
+            pos = traj['action_dict'][key][:, :3]
+            rot = traj['action_dict'][key][:, 3:6]
+        else:
+            pos = traj['action_dict'][key][:3]
+            rot = traj['action_dict'][key][3:6]
         
         rot_6d = TensorflowUtils.euler_angles_to_rot_6d(
             rot, convention="XYZ",
@@ -58,13 +65,21 @@ def r2d2_dataset_post_transform(traj: Dict[str, Any],
     #Set actions key
     new_traj['actions'] = traj['action']
     
+    new_traj['is_first'] = traj['is_first']
+    new_traj['is_last'] = traj['is_last']
+    new_traj['is_terminal'] = traj['is_terminal']
+    new_traj['action_dict'] = traj['action_dict']
+    
     #Use one goal per sequence
     if 'goal_observation' in traj.keys():
         new_traj['goal_obs'] = traj['goal_observation'][0]
     keep_keys = ['obs',
                 'goal_obs',
                 'actions',
-                'action_dict']
+                'action_dict',
+                'is_first',
+                'is_last',
+                'is_terminal']
     new_traj = {k: v for k, v in new_traj.items() if k in keep_keys}
     return new_traj
 
