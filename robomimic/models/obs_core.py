@@ -415,10 +415,13 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
         self.use_pos = True
         self.use_feats = False
         self.preproc_feats = False
+        self.proj_feats = False
         pn_net_cls = PointNet2Encoder # PointNet; PointNet2Encoder
         if self.use_feats:
             if self.preproc_feats:
                 self.nets = pn_net_cls(in_channels=3+4, use_bn=False)
+            elif self.proj_feats:
+                self.nets = pn_net_cls(in_channels=3+3, use_bn=False)
             else:
                 self.nets = pn_net_cls(in_channels=input_shape[0], use_bn=False)
         else:
@@ -454,6 +457,9 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                 nn.Linear(16, 4),
             )
         
+        if self.proj_feats:
+            self.feats_proj = nn.Linear(input_shape[0] - 3, 3)
+        
         if self.compositional:
             self.output_dim *= 2
         
@@ -486,6 +492,14 @@ class SpatialCore(EncoderCore, BaseNets.ConvBase):
                 feats = self.preproc_mlp(feats)
                 feats = feats.reshape(B_feats, N_feats, 4).permute(0, 2, 1)
                 inputs = torch.cat([inputs[:, :3, :], feats], dim=1)
+            elif self.proj_feats:
+                feats = inputs[:, 3:, :]
+                B_feats, D_feats, N_feats = feats.shape
+                feats = feats.permute(0, 2, 1).reshape(B_feats * N_feats, D_feats)
+                feats = self.feats_proj(feats)
+                feats = feats.reshape(B_feats, N_feats, 3).permute(0, 2, 1)
+                inputs = torch.cat([inputs[:, :3, :], feats], dim=1)
+                
         B, D, N = inputs.shape
         N_per_obj = 100
         N_obj = N // N_per_obj
