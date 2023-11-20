@@ -176,7 +176,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
     ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
-    ds_labels = [ds_cfg.get("label", "dummy") for ds_cfg in config.train.data]
+    ds_langs = [ds_cfg.get("lang", "dummy") for ds_cfg in config.train.data]
 
     meta_ds_kwargs = dict()
 
@@ -184,7 +184,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         ds_class=R2D2Dataset if config.train.data_format == "r2d2" else SequenceDataset,
         ds_kwargs=ds_kwargs,
         ds_weights=ds_weights,
-        ds_labels=ds_labels,
+        ds_langs=ds_langs,
         normalize_weights_by_ds_size=False,
         meta_ds_class=MetaDataset,
         meta_ds_kwargs=meta_ds_kwargs,
@@ -197,7 +197,7 @@ def get_dataset(
     ds_class,
     ds_kwargs,
     ds_weights,
-    ds_labels,
+    ds_langs,
     normalize_weights_by_ds_size,
     meta_ds_class=MetaDataset,
     meta_ds_kwargs=None,
@@ -211,6 +211,8 @@ def get_dataset(
 
         for k in keys:
             ds_kwargs_copy[k] = ds_kwargs[k][i]
+
+        ds_kwargs_copy["lang"] = ds_langs[i]
         
         ds_list.append(ds_class(**ds_kwargs_copy))
     
@@ -222,7 +224,6 @@ def get_dataset(
         ds = meta_ds_class(
             datasets=ds_list,
             ds_weights=ds_weights,
-            ds_labels=ds_labels,
             normalize_weights_by_ds_size=normalize_weights_by_ds_size,
             **meta_ds_kwargs
         )

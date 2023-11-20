@@ -68,28 +68,35 @@ def train(config, device):
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
-    # make sure the dataset exists
-    eval_dataset_cfg = config.train.data[0]
-    dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
-    ds_format = config.train.data_format
-    if not os.path.exists(dataset_path):
-        raise Exception("Dataset at provided path {} not found!".format(dataset_path))
+    # extract the metadata and shape metadata across all datasets
+    env_meta_list = []
+    shape_meta_list = []
+    for dataset_cfg in config.train.data:
+        dataset_path = os.path.expanduser(dataset_cfg["path"])
+        ds_format = config.train.data_format
+        if not os.path.exists(dataset_path):
+            raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
-    # load basic metadata from training file
-    print("\n============= Loaded Environment Metadata =============")
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+        # load basic metadata from training file
+        print("\n============= Loaded Environment Metadata =============")
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
 
-    # update env meta if applicable
-    from robomimic.utils.script_utils import deep_update
-    deep_update(env_meta, config.experiment.env_meta_update_dict)
+        # populate language instruction for env in env_meta
+        env_meta["lang"] = dataset_cfg.get("lang", "dummy")
 
-    shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=dataset_path,
-        action_keys=config.train.action_keys,
-        all_obs_keys=config.all_obs_keys,
-        ds_format=ds_format,
-        verbose=True
-    )
+        # update env meta if applicable
+        from robomimic.utils.script_utils import deep_update
+        deep_update(env_meta, config.experiment.env_meta_update_dict)
+        env_meta_list.append(env_meta)
+
+        shape_meta = FileUtils.get_shape_metadata_from_dataset(
+            dataset_path=dataset_path,
+            action_keys=config.train.action_keys,
+            all_obs_keys=config.all_obs_keys,
+            ds_format=ds_format,
+            verbose=True
+        )
+        shape_meta_list.append(shape_meta)
 
     if config.experiment.env is not None:
         env_meta["env_name"] = config.experiment.env
@@ -99,13 +106,22 @@ def train(config, device):
     envs = OrderedDict()
     if config.experiment.rollout.enabled:
         # create environments for validation runs
-        env_names = [env_meta["env_name"]]
+        # env_names = [env_meta["env_name"]]
 
-        if config.experiment.additional_envs is not None:
-            for name in config.experiment.additional_envs:
-                env_names.append(name)
+        # # disable this feature for now
+        # if config.experiment.additional_envs is not None:
+        #     raise NotImplementedError
+        #     for name in config.experiment.additional_envs:
+        #         env_names.append(name)
 
-        for env_name in env_names:       
+        for (dataset_i, dataset_cfg) in enumerate(config.train.data):
+            do_eval = dataset_cfg.get("eval", True)
+            if do_eval is not True:
+                continue
+            env_meta = env_meta_list[dataset_i]
+            shape_meta = shape_meta_list[dataset_i]
+            env_name = env_meta["env_name"]
+            
             def create_env(env_i=0):
                 env_kwargs = dict(
                     env_meta=env_meta,
@@ -145,8 +161,8 @@ def train(config, device):
     model = algo_factory(
         algo_name=config.algo_name,
         config=config,
-        obs_key_shapes=shape_meta["all_shapes"],
-        ac_dim=shape_meta["ac_dim"],
+        obs_key_shapes=shape_meta_list[0]["all_shapes"],
+        ac_dim=shape_meta_list[0]["ac_dim"],
         device=device,
     )
     
@@ -291,7 +307,6 @@ def train(config, device):
         video_paths = None
         rollout_check = (epoch % config.experiment.rollout.rate == 0) or (should_save_ckpt and ckpt_reason == "time")
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
-
             # wrap model as a RolloutPolicy to prepare for rollouts
             rollout_model = RolloutPolicy(
                 model,

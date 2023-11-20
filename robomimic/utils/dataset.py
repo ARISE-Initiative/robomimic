@@ -16,6 +16,7 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.action_utils as AcUtils
 import robomimic.utils.log_utils as LogUtils
+import robomimic.utils.lang_utils as LangUtils
 
 
 class SequenceDataset(torch.utils.data.Dataset):
@@ -38,6 +39,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         filter_by_attribute=None,
         load_next_obs=True,
         shuffled_obs_key_groups=None,
+        lang=None,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -89,6 +91,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             load_next_obs (bool): whether to load next_obs from the dataset
 
             shuffled_obs_key_groups (list): TODO
+
+            lang: TODO documentation
         """
         super(SequenceDataset, self).__init__()
 
@@ -112,6 +116,10 @@ class SequenceDataset(torch.utils.data.Dataset):
             self.dataset_keys = tuple(set(self.dataset_keys).union(set(self.action_keys)))
 
         self.action_config = action_config
+
+        # set up lang and language embedding
+        self.lang = lang
+        self._lang_emb = LangUtils.get_lang_emb(self.lang)
 
         self.n_frame_stack = frame_stack
         assert self.n_frame_stack >= 1
@@ -529,6 +537,10 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         # also return the sampled index
         meta["index"] = index
+
+        # language embedding
+        T = meta["actions"].shape[0]
+        meta["obs"]["lang_emb"] = np.tile(self._lang_emb, (T, 1))
 
         return meta
 
@@ -959,7 +971,6 @@ class MetaDataset(torch.utils.data.Dataset):
         datasets,
         ds_weights,
         normalize_weights_by_ds_size=False,
-        ds_labels=None,
     ):
         super(MetaDataset, self).__init__()
         self.datasets = datasets
@@ -974,20 +985,6 @@ class MetaDataset(torch.utils.data.Dataset):
         # dataset will change after the datasets are already initialized
         for ds in self.datasets:
             assert ds.hdf5_cache_mode != "all"
-        
-        # compute ds_labels to one hot ids
-        if ds_labels is None:
-            self.ds_labels = ["dummy"]
-        else:
-            self.ds_labels = ds_labels
-
-        unique_labels = sorted(set(self.ds_labels))
-
-        self.ds_labels_to_ids = {}
-        for i, label in enumerate(sorted(unique_labels)):
-            one_hot_id = np.zeros(len(unique_labels))
-            one_hot_id[i] = 1.0
-            self.ds_labels_to_ids[label] = one_hot_id
 
         # TODO: comment
         action_stats = self.get_action_stats()
@@ -1003,8 +1000,6 @@ class MetaDataset(torch.utils.data.Dataset):
         ind_in_ds = idx - self._ds_ind_bins[ds_ind]
         meta = self.datasets[ds_ind].__getitem__(ind_in_ds)
         meta["index"] = idx
-        ds_label = self.ds_labels[ds_ind]
-        T = meta["actions"].shape[0]
         return meta
 
     def get_ds_label(self, idx):

@@ -10,6 +10,7 @@ from copy import deepcopy
 import robosuite
 
 import robomimic.utils.obs_utils as ObsUtils
+import robomimic.utils.lang_utils as LangUtils
 import robomimic.envs.env_base as EB
 
 
@@ -21,7 +22,8 @@ class EnvRobosuite(EB.EnvBase):
         render=False, 
         render_offscreen=False, 
         use_image_obs=False, 
-        postprocess_visual_obs=True, 
+        postprocess_visual_obs=True,
+        lang=None, 
         **kwargs,
     ):
         """
@@ -41,6 +43,8 @@ class EnvRobosuite(EB.EnvBase):
             postprocess_visual_obs (bool): if True, postprocess image observations
                 to prepare for learning. This should only be False when extracting observations
                 for saving to a dataset (to save space on RGB images for example).
+
+            lang: TODO add documentation
         """
         self.postprocess_visual_obs = postprocess_visual_obs
 
@@ -80,6 +84,8 @@ class EnvRobosuite(EB.EnvBase):
         self._init_kwargs = deepcopy(kwargs)
         self.env = robosuite.make(self._env_name, **kwargs)
         self.base_env = self.env # for mimicgen
+        self.lang = lang
+        self._lang_emb = LangUtils.get_lang_emb(self.lang)
 
         if self._is_v1:
             # Make sure joint position observations and eef vel observations are active
@@ -214,6 +220,8 @@ class EnvRobosuite(EB.EnvBase):
             ret["eef_pos"] = np.array(di["eef_pos"])
             ret["eef_quat"] = np.array(di["eef_quat"])
             ret["gripper_qpos"] = np.array(di["gripper_qpos"])
+
+        ret["lang_emb"] = np.array(self._lang_emb)
         return ret
 
     def get_state(self):

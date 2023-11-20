@@ -801,6 +801,9 @@ class BC_Transformer_GMM(BC_Transformer):
         assert self.algo_config.gmm.enabled
         assert self.algo_config.transformer.enabled
 
+        if self.algo_config.language_conditioned:
+            self.obs_shapes["lang_emb"] = [768] # clip is 768-dim embedding
+
         self.nets = nn.ModuleDict()
         self.nets["policy"] = PolicyNets.TransformerGMMActorNetwork(
             obs_shapes=self.obs_shapes,
