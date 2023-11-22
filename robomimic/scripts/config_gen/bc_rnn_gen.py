@@ -21,19 +21,16 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "/data/aaronl/food/food_group2_100_im84.hdf5", "filter_key": "100_demos"}],
-                #[{"path": "/data/aaronl/group_data/food_data_100.hdf5", "filter_key": "100_demos"}],
-                #[{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/low_dim2_im84.hdf5", "filter_key": "10000_demos"}],
-                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_table_to_cab/all/2023-10-20-08-39-00/demo_im84.hdf5", "filter_key": "1000_demos"}],
-                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_table_to_cab/all/2023-10-20-08-39-00/demo_im84.hdf5", "filter_key": "10000_demos"}],
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
                 # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
             ],
             value_names=[
-                "human-food-100",
+                "bowls-human-100",
                 # "human-100",
                 # "mg-100",
-                "mg-1000",
+                # "mg-1000",
             ],
         )
     else:
@@ -102,7 +99,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/data/aaronl/expdata/{env}/{mod}/{algo_name_short}".format(
+            "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,

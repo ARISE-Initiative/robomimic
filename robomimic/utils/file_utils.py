@@ -135,7 +135,6 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     f = h5py.File(dataset_path, "r")
     
     if ds_format == "robomimic":
-        print(f["data"].keys())
         demo_id = list(f["data"].keys())[0]
         demo = f["data/{}".format(demo_id)]
         

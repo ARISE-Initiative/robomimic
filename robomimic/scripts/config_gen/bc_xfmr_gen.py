@@ -44,31 +44,30 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                # [{"path": "/data/aaronl/food/food_group2_100_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "/data/aaronl/group_data/food_set1_data_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "/data/aaronl/group_data/food_data_100_2_im84.hdf5", "filter_key": "100_demos"}],
-                #[{"path": "/data/aaronl/group_data/food_data_100.hdf5", "filter_key": "100_demos"}],
-                #[{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/low_dim2_im84.hdf5", "filter_key": "10000_demos"}],
-                [{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/demo_im84.hdf5", "filter_key": "10000_demos"}],
-                # [{"path": "/data/aaronl/mimicgen/kitchen_pnp_cab_to_bowl/food/2023-10-12-09-31-15/low_dim5_im84.hdf5", "filter_key": "10000_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
+                [
+                    {
+                        "path": "/home/aaronl/tmp/v2_demos/KitchenPnPCounterToCab_im84.hdf5",
+                        "filter_key": "100_demos",
+                        "lang": "pick and place the object from the counter to the cabinet",
+                    },
+                    {
+                        "path": "/home/aaronl/tmp/v2_demos/KitchenPnPCabToCounter_im84.hdf5",
+                        "filter_key": "100_demos",
+                        "lang": "pick and place the object from the cabinet to the counter",
+                    },
+                ],
             ],
             value_names=[
-                # "human-table-to-cab-group2",
-                # "human-food-set1",
-                # "human-food",
-                # "mg-100",
-                "mg-10000",
-                # "mg-10000",
+                "pnp-multi-task"
             ],
         )
         generator.add_param(
-            key="experiment.rollout.horizon",
-            name="",
-            group=3333,
+            key="algo.language_conditioned",
+            name="langcond",
+            group=145892,
             values=[
-                1500
+                True,
+                False,
             ],
         )
     elif args.env == "square":
@@ -97,7 +96,7 @@ def make_generator_helper(args):
             True,
             # False,
         ],
-        # hidename=True,
+        hidename=True,
     )
     generator.add_param(
         key="algo.transformer.supervise_all_steps",
@@ -153,7 +152,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/data/aaronl/expdata/{env}/{mod}/{algo_name_short}".format(
+            "~/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
                 mod=args.mod,
                 algo_name_short=algo_name_short,
