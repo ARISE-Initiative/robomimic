@@ -120,6 +120,11 @@ class EnvRobosuite(EB.EnvBase):
         """
         di = self.env.reset()
         return self.get_observation(di)
+    
+    #notifies the environment whether or not the next environemnt testing object should update its category
+    def update_env(self, attr, value):
+        self.env.attr = value
+        
 
     def reset_to(self, state):
         """
