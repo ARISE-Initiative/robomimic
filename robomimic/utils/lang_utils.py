@@ -10,6 +10,9 @@ lang_emb_model = CLIPTextModelWithProjection.from_pretrained(
 tz = AutoTokenizer.from_pretrained(tokenizer, TOKENIZERS_PARALLELISM=True)
 
 def get_lang_emb(lang):
+    if lang is None:
+        return None
+    
     tokens = tz(
         text=lang,                   # the sentence to be encoded
         add_special_tokens=True,             # Add [CLS] and [SEP]

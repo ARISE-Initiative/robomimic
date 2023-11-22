@@ -136,7 +136,10 @@ class EnvRobosuite(EB.EnvBase):
         """
         should_ret = False
         if "model" in state:
-            self.reset()
+            ## this reset call doesn't seem necessary.
+            ## seems ok to remove but haven't fully tested it.
+            ## removing for now
+            # self.reset()
             robosuite_version_id = int(robosuite.__version__.split(".")[1])
             if robosuite_version_id <= 3:
                 from robosuite.utils.mjcf_utils import postprocess_model_xml
