@@ -81,7 +81,10 @@ def extract_trajectory(
     assert states.shape[0] == actions.shape[0]
 
     # load the initial state
-    env.reset()
+    ## this reset call doesn't seem necessary.
+    ## seems ok to remove but haven't fully tested it.
+    ## removing for now
+    # env.reset()
     obs = env.reset_to(initial_state)
 
     traj = dict(
@@ -200,6 +203,7 @@ def dataset_states_to_obs(args):
         initial_state = dict(states=states[0])
         if is_robosuite_env:
             initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
+            initial_state["ep_meta"] = f["data/{}".format(ep)].attrs.get("ep_meta", None)
 
         # extract obs, rewards, dones
         actions = f["data/{}/actions".format(ep)][()]
@@ -253,8 +257,8 @@ def dataset_states_to_obs(args):
         # episode metadata
         if is_robosuite_env:
             ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
-        if "ep_info" in f["data/{}".format(ep)].attrs:
-            ep_data_grp.attrs["ep_info"] = f["data/{}".format(ep)].attrs["ep_info"]
+        if "ep_meta" in f["data/{}".format(ep)].attrs:
+            ep_data_grp.attrs["ep_meta"] = f["data/{}".format(ep)].attrs["ep_meta"]
         ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
         total_samples += traj["actions"].shape[0]
         print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))

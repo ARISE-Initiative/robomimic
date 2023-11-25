@@ -58,7 +58,8 @@ class RobomimicAbsoluteActionConverter:
 
     def convert_actions(self, 
             states: np.ndarray, 
-            actions: np.ndarray) -> np.ndarray:
+            actions: np.ndarray,
+            initial_state: dict) -> np.ndarray:
         """
         Given state and delta action sequence
         generate equivalent goal position and orientation for each step
@@ -81,7 +82,10 @@ class RobomimicAbsoluteActionConverter:
             dtype=stacked_actions.dtype)
         action_remainder = stacked_actions[...,6:]
         for i in range(len(states)):
-            _ = env.reset_to({'states': states[i]})
+            if i == 0:
+                _ = env.reset_to(initial_state)
+            else:
+                _ = env.reset_to({'states': states[i]})
 
             # taken from robot_env.py L#454
             for idx, robot in enumerate(env.env.robots):
@@ -108,12 +112,16 @@ class RobomimicAbsoluteActionConverter:
         # input
         states = demo['states'][:]
         actions = demo['actions'][:]
+        initial_state = dict(states=states[0])
+        initial_state["model"] = demo.attrs["model_file"]
+        initial_state["ep_meta"] = demo.attrs.get("ep_meta", None)
 
         # generate abs actions
-        abs_actions = self.convert_actions(states, actions)
+        abs_actions = self.convert_actions(states, actions, initial_state=initial_state)
         return abs_actions
 
     def convert_and_eval_demo(self, demo_key):
+        raise NotImplementedError
         env = self.env
         abs_env = self.abs_env
         file = self.file
