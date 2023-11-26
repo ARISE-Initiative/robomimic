@@ -244,7 +244,11 @@ class EnvRobosuite(EB.EnvBase):
         """
         xml = self.env.sim.model.get_xml() # model xml file
         state = np.array(self.env.sim.get_state().flatten()) # simulator state
-        return dict(model=xml, states=state)
+        info = dict(model=xml, states=state)
+        if hasattr(self.env, "get_ep_meta"):
+            # get ep_meta if applicable
+            info["ep_meta"] = json.dumps(self.env.get_ep_meta(), indent=4)
+        return info
 
     def get_reward(self):
         """
