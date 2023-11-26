@@ -16,11 +16,11 @@ validation loss (is there any other useful metric to report?)
 
 
 ## Proposed API:
-Rollout with stats is largely unchanged, but we need a different goal, horizon, and num_episodes specified for each task.  That is to say, len(envs) = len(goals) = len(horizons)...\
+Rollout with stats is largely unchanged, but we need a different goal, horizon, and num_episodes specified for each task.  That is to say, len(envs) = len(goals) = len(horizons)... 
 
 ```train_utils.rollout_with_stats(policy, envs, goals, horizons, num_episodes)```
 * **policy** - trained multi-task policy
-* **envs** - the environmet used for task evaluation
+* **envs** - the environment used for task evaluation
 * **goals** - the goal for each task
 * **num_episodes** - number of rollouts for each task
 
@@ -43,7 +43,7 @@ HDF5 API:
         - demo_1
 
 ## Proposed HDF5 Structure:
-I think the HDF5 structure need to be reformulated to emphasize tasks.  Here is one proposed method.  I believe a task can be uniquely described given an environment and a goal.  If we are going to break tasks into categories, those decisions should be made based on the information held in the .attrs fields.  
+I think the HDF5 structure needs to be reformulated to emphasize tasks.  Here is one proposed method.  I believe a task can be uniquely described given an environment and a goal.  If we are going to break tasks into categories, those decisions could be made based on the information held in the .attrs fields.  
 HDF5 API:
 - File
     - env_0 (.attrs includes env_args)
