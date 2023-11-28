@@ -68,28 +68,35 @@ def train(config, device):
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
-    # make sure the dataset exists
-    eval_dataset_cfg = config.train.data[0]
-    dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
-    ds_format = config.train.data_format
-    if not os.path.exists(dataset_path):
-        raise Exception("Dataset at provided path {} not found!".format(dataset_path))
+    # extract the metadata and shape metadata across all datasets
+    env_meta_list = []
+    shape_meta_list = []
+    for dataset_cfg in config.train.data:
+        dataset_path = os.path.expanduser(dataset_cfg["path"])
+        ds_format = config.train.data_format
+        if not os.path.exists(dataset_path):
+            raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
-    # load basic metadata from training file
-    print("\n============= Loaded Environment Metadata =============")
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+        # load basic metadata from training file
+        print("\n============= Loaded Environment Metadata =============")
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
 
-    # update env meta if applicable
-    from robomimic.utils.script_utils import deep_update
-    deep_update(env_meta, config.experiment.env_meta_update_dict)
+        # populate language instruction for env in env_meta
+        env_meta["lang"] = dataset_cfg.get("lang", "dummy")
 
-    shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=dataset_path,
-        action_keys=config.train.action_keys,
-        all_obs_keys=config.all_obs_keys,
-        ds_format=ds_format,
-        verbose=True
-    )
+        # update env meta if applicable
+        from robomimic.utils.script_utils import deep_update
+        deep_update(env_meta, config.experiment.env_meta_update_dict)
+        env_meta_list.append(env_meta)
+
+        shape_meta = FileUtils.get_shape_metadata_from_dataset(
+            dataset_path=dataset_path,
+            action_keys=config.train.action_keys,
+            all_obs_keys=config.all_obs_keys,
+            ds_format=ds_format,
+            verbose=True
+        )
+        shape_meta_list.append(shape_meta)
 
     if config.experiment.env is not None:
         env_meta["env_name"] = config.experiment.env
@@ -99,23 +106,48 @@ def train(config, device):
     envs = OrderedDict()
     if config.experiment.rollout.enabled:
         # create environments for validation runs
-        env_names = [env_meta["env_name"]]
+        # env_names = [env_meta["env_name"]]
 
-        if config.experiment.additional_envs is not None:
-            for name in config.experiment.additional_envs:
-                env_names.append(name)
+        # # disable this feature for now
+        # if config.experiment.additional_envs is not None:
+        #     raise NotImplementedError
+        #     for name in config.experiment.additional_envs:
+        #         env_names.append(name)
 
-        for env_name in env_names:
-            env = EnvUtils.create_env_from_metadata(
-                env_meta=env_meta,
-                env_name=env_name, 
-                render=False, 
-                render_offscreen=config.experiment.render_video,
-                use_image_obs=shape_meta["use_images"], 
-            )
-            env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
-            envs[env.name] = env
-            print(envs[env.name])
+        for (dataset_i, dataset_cfg) in enumerate(config.train.data):
+            do_eval = dataset_cfg.get("eval", True)
+            if do_eval is not True:
+                continue
+            env_meta = env_meta_list[dataset_i]
+            shape_meta = shape_meta_list[dataset_i]
+            env_name = env_meta["env_name"]
+            
+            def create_env(env_i=0):
+                env_kwargs = dict(
+                    env_meta=env_meta,
+                    env_name=env_name,
+                    render=False,
+                    render_offscreen=config.experiment.render_video,
+                    use_image_obs=shape_meta["use_images"],
+                    # seed=config.train.seed * 1000 + env_i # TODO: add seeding across environments
+                )
+                env = EnvUtils.create_env_from_metadata(**env_kwargs)
+                # handle environment wrappers
+                env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
+
+                return env
+
+            if config.experiment.rollout.batched:
+                from tianshou.env import SubprocVectorEnv
+                env_fns = [lambda env_i=i: create_env(env_i) for i in range(config.experiment.rollout.num_batch_envs)]
+                env = SubprocVectorEnv(env_fns)
+                env_name = env.get_env_attr(key="name", id=0)[0]
+            else:
+                env = create_env()
+                env_name = env.name
+            
+            envs[env_name] = env
+            print(env)
 
     print("")
 
@@ -129,8 +161,8 @@ def train(config, device):
     model = algo_factory(
         algo_name=config.algo_name,
         config=config,
-        obs_key_shapes=shape_meta["all_shapes"],
-        ac_dim=shape_meta["ac_dim"],
+        obs_key_shapes=shape_meta_list[0]["all_shapes"],
+        ac_dim=shape_meta_list[0]["ac_dim"],
         device=device,
     )
     
@@ -275,7 +307,6 @@ def train(config, device):
         video_paths = None
         rollout_check = (epoch % config.experiment.rollout.rate == 0) or (should_save_ckpt and ckpt_reason == "time")
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
-
             # wrap model as a RolloutPolicy to prepare for rollouts
             rollout_model = RolloutPolicy(
                 model,
@@ -355,11 +386,11 @@ def train(config, device):
             print("MSE Log Epoch {}".format(epoch))
             print(json.dumps(mse_log, sort_keys=True, indent=4))
         
-        # Only keep saved videos if the ckpt should be saved (but not because of validation score)
-        should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
-        if video_paths is not None and not should_save_video:
-            for env_name in video_paths:
-                os.remove(video_paths[env_name])
+        # # Only keep saved videos if the ckpt should be saved (but not because of validation score)
+        # should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
+        # if video_paths is not None and not should_save_video:
+        #     for env_name in video_paths:
+        #         os.remove(video_paths[env_name])
 
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    
