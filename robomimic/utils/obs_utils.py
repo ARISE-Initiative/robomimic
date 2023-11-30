@@ -944,10 +944,34 @@ class ScanModality(Modality):
 
     @classmethod
     def _default_obs_processor(cls, obs):
+        # Channel swaps ([...,] L, C) --> ([...,] C, L)
+        
+        # First, add extra dimension at 2nd to last index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+        
+        # Convert shape
+        obs = batch_image_hwc_to_chw(obs)
+        
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
     @classmethod
     def _default_obs_unprocessor(cls, obs):
+        # Channel swaps ([B,] C, L) --> ([B,] L, C)
+        
+        # First, add extra dimension at 1st index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+
+        # Convert shape
+        obs = batch_image_chw_to_hwc(obs)
+
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
 
