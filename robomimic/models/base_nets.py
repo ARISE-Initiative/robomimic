@@ -851,6 +851,11 @@ class Conv1dBase(Module):
 
         # Get activation requested
         activation = CONV_ACTIVATIONS[activation]
+        
+        # Add layer kwargs
+        conv_kwargs["out_channels"] = out_channels
+        conv_kwargs["kernel_size"] = kernel_size
+        conv_kwargs["stride"] = stride
 
         # Generate network
         self.n_layers = len(out_channels)

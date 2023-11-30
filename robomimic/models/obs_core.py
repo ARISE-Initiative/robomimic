@@ -231,8 +231,9 @@ class ScanCore(EncoderCore, BaseNets.ConvBase):
             conv_kwargs = dict()
 
         # Generate backbone network
+        # N input channels is assumed to be the first dimension
         self.backbone = BaseNets.Conv1dBase(
-            input_channel=1,
+            input_channel=self.input_shape[0],
             activation=conv_activation,
             **conv_kwargs,
         )
