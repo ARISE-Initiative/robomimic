@@ -519,11 +519,11 @@ def rollout_with_stats(
         video_paths = { k : os.path.join(video_dir, "{}{}".format(k, video_str)) for k in envs }
         video_writers = { k : imageio.get_writer(video_paths[k], fps=20) for k in envs }
 
-    for env_name, env in envs.items():
+    for env_key, env in envs.items():
         env_video_writer = None
         if write_video:
-            print("video writes to " + video_paths[env_name])
-            env_video_writer = video_writers[env_name]
+            print("video writes to " + video_paths[env_key])
+            env_video_writer = video_writers[env_key]
 
         batched = isinstance(env, SubprocVectorEnv)
 
@@ -582,7 +582,7 @@ def rollout_with_stats(
         rollout_logs = dict((k, [rollout_logs[i][k] for i in range(len(rollout_logs))]) for k in rollout_logs[0])
         rollout_logs_mean = dict((k, np.mean(v)) for k, v in rollout_logs.items())
         rollout_logs_mean["Time_Episode"] = np.sum(rollout_logs["time"]) / 60. # total time taken for rollouts in minutes
-        all_rollout_logs[env_name] = rollout_logs_mean
+        all_rollout_logs[env_key] = rollout_logs_mean
 
     if video_path is not None:
         # close video writer that was used for all envs
