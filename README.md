@@ -35,6 +35,17 @@ The `<list-of-camera-names>` depends on the environment you are using.
 For example, for square: `agentview robot0_eye_in_hand` In some other cases: `robot0_agentview_left robot0_agentview_right robot0_eye_in_hand`
 This script will generate a new dataset with the suffix `_im84.hdf5` in the same directory as `--dataset`
 
+### libero datasets
+1. Install LIBERO in your virtual environment
+```
+cd <path-to-libero-clone> && pip install -e .
+```
+2. Download LIBERO datasets
+```
+python benchmark_scripts/download_libero_datasets.py --datasets=all --download-dir=<path-to-download-dir>
+```
+This will download datasets into 4 different directories namely `libero_goal`, `libero_spatial`, `libero_object`, `libero_100`.
+
 -------
 ## Training
 There are a number of algorithms to choose from: Diffusion Policy, ACT, BC-Transformer, etc.
