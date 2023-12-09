@@ -100,13 +100,13 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     f = h5py.File(dataset_path, "r")
     if ds_format == "robomimic":
         env_meta = json.loads(f["data"].attrs["env_args"])
+        if "bddl_file_name" in env_meta["env_kwargs"]:
+            # expects libero installation for finding bddl files; could be generalized
+            import libero
+            env_meta["env_kwargs"]["bddl_file_name"] = os.path.join(os.path.dirname(libero.__path__[0]), f["data"].attrs["bddl_file_name"])
+            assert os.path.exists(env_meta["env_kwargs"]["bddl_file_name"]), f"required bddl file {env_meta['env_kwargs']['bddl_file_name']} does not exist"
     elif ds_format == "r2d2":
         env_meta = dict(f.attrs)
-    elif ds_format == "libero":
-        env_meta = json.loads(f["data"].attrs["env_args"])
-        import libero
-        env_meta["env_kwargs"]["bddl_file_name"] = os.path.join(os.path.dirname(libero.__path__[0]), f["data"].attrs["bddl_file_name"])
-        assert os.path.exists(env_meta["env_kwargs"]["bddl_file_name"]), f"required bddl file {env_meta['env_kwargs']['bddl_file_name']} does not exist"
     else:
         raise ValueError
     f.close()
@@ -139,7 +139,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     dataset_path = os.path.expanduser(dataset_path)
     f = h5py.File(dataset_path, "r")
     
-    if ds_format in ["robomimic", "libero"]:
+    if ds_format == "robomimic":
         demo_id = list(f["data"].keys())[0]
         demo = f["data/{}".format(demo_id)]
         

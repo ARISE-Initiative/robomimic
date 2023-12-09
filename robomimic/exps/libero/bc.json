@@ -93,7 +93,7 @@
         "batch_size": 32,
         "num_epochs": 3000,
         "seed": 1,
-        "data_format": "libero"
+        "data_format": "robomimic"
     },
     "algo": {
         "optim_params": {
