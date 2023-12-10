@@ -43,6 +43,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 In case pip complains about package version mismatches, please handle them manually. 
+
 2. Download LIBERO datasets
 ```
 python benchmark_scripts/download_libero_datasets.py --datasets=all --download-dir=<path-to-download-dir>
