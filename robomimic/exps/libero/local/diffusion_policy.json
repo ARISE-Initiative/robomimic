@@ -35,9 +35,9 @@
         "video_skip": 5,
         "rollout": {
             "enabled": true,
-            "n": 50,
+            "n": 10,
             "horizon": 400,
-            "rate": 20,
+            "rate": 50,
             "warmstart": 0,
             "terminate_on_success": true
         },
@@ -53,11 +53,14 @@
     "train": {
         "data": [
             {
-                "path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_10.hdf5"
+                "path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it_demo.hdf5"
+            },
+            {
+                "path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_10/KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it_demo.hdf5"
             }
         ],
         "output_dir": "/Users/vaibhav/work/imitate-behavior/mimic_bilevel/trained_models_bc/libero/",
-        "num_data_workers": 2,
+        "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
