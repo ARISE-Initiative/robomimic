@@ -36,10 +36,13 @@ For example, for square: `agentview robot0_eye_in_hand` In some other cases: `ro
 This script will generate a new dataset with the suffix `_im84.hdf5` in the same directory as `--dataset`
 
 ### libero datasets
-1. Install LIBERO in your virtual environment
+1. Install LIBERO in your virtual environment (would need to comment out robomimic and robosuite from LIBERO/requirements.txt if they are installed from source)
 ```
-cd <path-to-libero-clone> && pip install -e .
+cd <path-to-libero-clone>
+pip install -r requirements.txt
+pip install -e .
 ```
+In case pip complains about package version mismatches, please handle them manually. 
 2. Download LIBERO datasets
 ```
 python benchmark_scripts/download_libero_datasets.py --datasets=all --download-dir=<path-to-download-dir>
