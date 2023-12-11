@@ -627,6 +627,94 @@ def set_env_settings(generator, args):
             group=-1,
             values=[700],
         )
+    elif args.env == "libero":
+        generator.add_param(
+            key="experiment.rollout.enabled",
+            name="",
+            group=-1,
+            values=[
+                False
+            ],
+        )
+        generator.add_param(
+            key="train.action_config",
+            name="",
+            group=-1,
+            values=[
+                {
+                    "actions":{
+                        "normalization": "min_max",
+                    },
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
+                    "action_dict/abs_rot_axis_angle": {
+                        "normalization": "min_max",
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/abs_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/rel_pos": {
+                        "normalization": None,
+                    },
+                    "action_dict/rel_rot_axis_angle": {
+                        "normalization": None,
+                        "format": "rot_axis_angle"
+                    },
+                    "action_dict/rel_rot_6d": {
+                        "normalization": None,
+                        "format": "rot_6d"
+                    },
+                    "action_dict/gripper": {
+                        "normalization": None,
+                    }
+                }
+            ],
+        )
+        generator.add_param(
+            key="train.action_keys",
+            name="ac_keys",
+            group=-1,
+            values=[
+                [
+                    "actions"
+                ],
+            ]
+        )
+        generator.add_param(
+            key="observation.modalities.obs.low_dim",
+            name="",
+            group=-1,
+            values=[
+                [
+                    "ee_pos"
+                ]
+            ],
+        )
+        generator.add_param(
+            key="observation.modalities.obs.rgb",
+            name="",
+            group=-1,
+            values=[
+                [
+                    "agentview_rgb"
+                ]
+            ],
+        )
+        assert args.dataset_dir is not None
+        data_list = [{"path": hdf5_path, "eval": False} for hdf5_path in scan_datasets(args.dataset_dir, ".hdf5")]
+        generator.add_param(
+            key="train.data",
+            name="",
+            group=-1,
+            values=[
+                [
+                    data_list
+                ]
+            ],
+        )
     else:
         raise ValueError
 
@@ -831,6 +919,12 @@ def get_argparser():
         "--env",
         type=str,
         default='r2d2',
+    )
+
+    parser.add_argument(
+        "--dataset_dir",
+        type=str,
+        default=None,
     )
 
     parser.add_argument(
