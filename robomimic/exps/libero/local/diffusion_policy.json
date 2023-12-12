@@ -37,7 +37,7 @@
             "enabled": true,
             "n": 10,
             "horizon": 400,
-            "rate": 50,
+            "rate": 1,
             "warmstart": 0,
             "terminate_on_success": true
         },
@@ -59,7 +59,7 @@
                 "path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_10/KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it_demo.hdf5"
             }
         ],
-        "output_dir": "/Users/vaibhav/work/imitate-behavior/mimic_bilevel/trained_models_bc/libero/",
+        "output_dir": "/Users/vaibhav/work/imitate-behavior/mimic_bilevel/trained_models_dp/local/",
         "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
