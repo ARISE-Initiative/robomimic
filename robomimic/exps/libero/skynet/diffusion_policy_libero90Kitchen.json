@@ -217,7 +217,8 @@
                     "ee_pos"
                 ],
                 "rgb": [
-                    "agentview_rgb"
+                    "agentview_rgb",
+                    "eye_in_hand_rgb"
                 ],
                 "depth": [],
                 "scan": []
