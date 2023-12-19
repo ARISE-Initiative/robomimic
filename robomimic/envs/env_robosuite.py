@@ -257,7 +257,7 @@ class EnvRobosuite(EB.EnvBase):
             ret["gripper_qpos"] = np.array(di["gripper_qpos"])
 
         if self._lang_emb is not None:
-            ret["lang_emb"] = np.array(self._lang_emb)
+            ret[LangUtils.LANG_EMB_OBS_KEY] = np.array(self._lang_emb)
         return ret
 
     def get_state(self):

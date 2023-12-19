@@ -16,6 +16,7 @@ import torch
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.lang_utils as LangUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory
 from robomimic.algo import RolloutPolicy
@@ -113,12 +114,12 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None, ds_format="robomimic", verbose=False):
+def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=None, ds_format="robomimic", verbose=False):
     """
     Retrieves shape metadata from dataset.
 
     Args:
-        dataset_path (str): path to dataset
+        dataset_config (str): config for dataset
         action_keys (list): list of all action key strings
         all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
@@ -136,7 +137,7 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
     shape_meta = {}
 
     # read demo file for some metadata
-    dataset_path = os.path.expanduser(dataset_path)
+    dataset_path = os.path.expanduser(dataset_config["path"])
     f = h5py.File(dataset_path, "r")
     
     if ds_format == "robomimic":
@@ -156,7 +157,13 @@ def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None
             all_obs_keys = [k for k in demo["obs"]]
 
         for k in sorted(all_obs_keys):
-            initial_shape = demo["obs/{}".format(k)].shape[1:]
+            if k == LangUtils.LANG_EMB_OBS_KEY:
+                # NOTE: currently supporting fixed language embedding per dataset
+                ## that is fetched from dataset config and not from file
+                assert "lang" in dataset_config, "Expected 'lang' key in dataset config."
+                initial_shape = LangUtils.get_lang_emb_shape()
+            else:
+                initial_shape = demo["obs/{}".format(k)].shape[1:]
             if verbose:
                 print("obs key {} with shape {}".format(k, initial_shape))
             # Store processed shape for each obs key

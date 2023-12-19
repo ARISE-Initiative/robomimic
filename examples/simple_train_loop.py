@@ -82,7 +82,7 @@ def get_example_model(dataset_path, device):
 
     # read dataset to get some metadata for constructing model
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=dataset_path, 
+        dataset_config=config.train.data[0], 
         all_obs_keys=sorted((
             "robot0_eef_pos", 
             "robot0_eef_quat", 

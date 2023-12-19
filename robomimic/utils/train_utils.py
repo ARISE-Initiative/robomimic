@@ -20,6 +20,7 @@ import robomimic
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.log_utils as LogUtils
 import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.lang_utils as LangUtils
 
 from robomimic.utils.dataset import SequenceDataset, R2D2Dataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
@@ -153,6 +154,14 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     if dataset_path is None:
         dataset_path = config.train.data
 
+    # NOTE: currently supporting fixed language embedding per dataset
+    ## that is fetched from dataset config and not from file
+    if LangUtils.LANG_EMB_OBS_KEY in obs_keys:
+        obs_keys.remove(LangUtils.LANG_EMB_OBS_KEY)
+        ds_langs = [ds_cfg.get("lang", "dummy") for ds_cfg in config.train.data]
+    else:
+        ds_langs = [None for _ in config.train.data]
+
     ds_kwargs = dict(
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
@@ -176,7 +185,6 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
     ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
-    ds_langs = [ds_cfg.get("lang", "dummy") for ds_cfg in config.train.data]
 
     meta_ds_kwargs = dict()
 

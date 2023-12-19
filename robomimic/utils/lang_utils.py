@@ -9,6 +9,8 @@ lang_emb_model = CLIPTextModelWithProjection.from_pretrained(
 ).eval()
 tz = AutoTokenizer.from_pretrained(tokenizer, TOKENIZERS_PARALLELISM=True)
 
+LANG_EMB_OBS_KEY = "lang_emb"
+
 def get_lang_emb(lang):
     if lang is None:
         return None
@@ -25,3 +27,5 @@ def get_lang_emb(lang):
 
     return lang_emb
 
+def get_lang_emb_shape():
+    return list(get_lang_emb('dummy').shape)

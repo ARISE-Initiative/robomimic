@@ -90,7 +90,7 @@ def train(config, device):
         env_meta_list.append(env_meta)
 
         shape_meta = FileUtils.get_shape_metadata_from_dataset(
-            dataset_path=dataset_path,
+            dataset_config=dataset_cfg,
             action_keys=config.train.action_keys,
             all_obs_keys=config.all_obs_keys,
             ds_format=ds_format,

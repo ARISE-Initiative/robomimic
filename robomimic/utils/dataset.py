@@ -107,6 +107,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.load_next_obs = load_next_obs
         self.filter_by_attribute = filter_by_attribute
 
+        # set up lang and language embedding
+        self.lang = lang
+        self._lang_emb = None
+        if lang is not None:
+            self._lang_emb = LangUtils.get_lang_emb(self.lang)
+
         # get all keys that needs to be fetched
         self.obs_keys = tuple(obs_keys)
         self.action_keys = tuple(action_keys)
@@ -116,10 +122,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             self.dataset_keys = tuple(set(self.dataset_keys).union(set(self.action_keys)))
 
         self.action_config = action_config
-
-        # set up lang and language embedding
-        self.lang = lang
-        self._lang_emb = LangUtils.get_lang_emb(self.lang)
 
         self.n_frame_stack = frame_stack
         assert self.n_frame_stack >= 1
@@ -539,8 +541,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         meta["index"] = index
 
         # language embedding
-        T = meta["actions"].shape[0]
-        meta["obs"]["lang_emb"] = np.tile(self._lang_emb, (T, 1))
+        if self._lang_emb is not None:
+            T = meta["actions"].shape[0]
+            meta["obs"][LangUtils.LANG_EMB_OBS_KEY] = np.tile(self._lang_emb, (T, 1))
 
         return meta
 
