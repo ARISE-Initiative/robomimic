@@ -61,15 +61,6 @@ def make_generator_helper(args):
                 "pnp-multi-task"
             ],
         )
-        generator.add_param(
-            key="algo.language_conditioned",
-            name="langcond",
-            group=145892,
-            values=[
-                True,
-                False,
-            ],
-        )
     elif args.env == "square":
         generator.add_param(
             key="train.data",

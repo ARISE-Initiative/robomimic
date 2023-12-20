@@ -106,5 +106,3 @@ class BCConfig(BaseConfig):
         self.algo.transformer.nn_parameter_for_timesteps = True     # if true, use nn.Parameter otherwise use nn.Embedding
         self.algo.transformer.pred_future_acs = False               # shift action prediction forward to predict future actions instead of past actions
         self.algo.transformer.causal = True                         # whether the transformer is causal
-
-        self.algo.language_conditioned = False                      # whether policy is language conditioned
