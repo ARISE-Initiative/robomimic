@@ -672,6 +672,7 @@ def make_dataset(
     ).build(validate_expected_tensor_spec=False)
     
     trajectory_dataset = trajectory_transform.transform_episodic_rlds_dataset(dataset)
+
     
     # combined_dataset = tf.data.Dataset.sample_from_datasets([trajectory_dataset])
     # combined_dataset = combined_dataset.batch(2)
@@ -682,8 +683,14 @@ def make_dataset(
     dataset = trajectory_dataset
     # shuffle, repeat, pre-fetch, batch
     # dataset = dataset.cache()         # optionally keep full dataset in memory
-    dataset = dataset.shuffle(1000)    # set shuffle buffer size
-    dataset = dataset.repeat().batch(config.train.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+    dataset = dataset.shuffle(10000)    # set shuffle buffer size
+    dataset = dataset.repeat().batch(config.train.batch_size)#.prefetch(tf.data.experimental.AUTOTUNE)
+
+    # memory management
+    # options = tf.data.Options()
+    # options.autotune.ram_budget = 1024 * 1024 * 1024
+    # dataset = dataset.with_options(options)
+
     dataset = dataset.as_numpy_iterator()
     dataset = RLDSTorchDataset(dataset)
 

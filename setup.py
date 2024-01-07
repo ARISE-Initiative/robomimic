@@ -30,7 +30,7 @@ setup(
         "torch",
         "torchvision",
         "diffusers==0.11.1",
-        "pytorch3d",
+        # "pytorch3d",
         "tensorflow_datasets",
         "tensorflow",
     ],
