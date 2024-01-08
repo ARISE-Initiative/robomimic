@@ -40,8 +40,9 @@ import robomimic.utils.file_utils as FileUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
-from robomimic.data.rtx_dataset import (make_dataset, get_obs_normalization_stats_rlds, 
+from robomimic.data.rtx_dataset import (get_obs_normalization_stats_rlds, 
     get_action_normalization_stats_rlds)
+from robomimic.data.rtx_dataset_octo import make_single_dataset
 
 def train(config, device):
     """
@@ -70,10 +71,9 @@ def train(config, device):
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # Load the datasets
-    train_builder, train_loader, normalization_metadata = make_dataset(
+    train_builder, train_loader, normalization_metadata = make_single_dataset(
         config,
         train=True,
-        shuffle=True
     )
     ds_format = config.train.data_format
     assert ds_format == 'rlds'
@@ -81,11 +81,9 @@ def train(config, device):
     if config.experiment.validate:
         # cap num workers for validation dataset at 1
         num_workers = min(config.train.num_data_workers, 1)
-        valid_builder, valid_loader, _ = make_dataset(
+        valid_builder, valid_loader, _ = make_single_dataset(
             config,
             train=True,
-            shuffle=True,
-            normalization_metadata=normalization_metadata
         )
 
     else:
