@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "one_scene_two_task_lang_cond2",
+        "name": "one_scene_two_task_lang_cond2-rnn",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -28,14 +28,13 @@
             "enabled": true,
             "n": 30,
             "horizon": 400,
-            "rate": 50,
+            "rate": 20,
             "warmstart": 0,
             "terminate_on_success": true
         }
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_90/KITCHEN_SCENE2_put_the_middle_black_bowl_on_the_plate_demo.hdf5", "eval": true, "lang": "put the middle black bowl on the plate"},
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_90/KITCHEN_SCENE2_put_the_middle_black_bowl_on_top_of_the_cabinet_demo.hdf5", "eval": true, "lang": "put the middle black bowl on top of the cabinet"}
         ],
         "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/",
@@ -122,7 +121,7 @@
             "low_noise_eval": true
         },
         "gmm": {
-            "enabled": true,
+            "enabled": false,
             "num_modes": 5,
             "min_std": 0.0001,
             "std_activation": "softplus",
