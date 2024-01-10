@@ -104,7 +104,8 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
         if "bddl_file_name" in env_meta["env_kwargs"]:
             # expects libero installation for finding bddl files; could be generalized
             import libero
-            env_meta["env_kwargs"]["bddl_file_name"] = os.path.join(os.path.dirname(libero.__path__[0]), f["data"].attrs["bddl_file_name"])
+            libero_path = next(iter(libero.__path__), None)
+            env_meta["env_kwargs"]["bddl_file_name"] = os.path.join(os.path.dirname(libero_path), f["data"].attrs["bddl_file_name"])
             assert os.path.exists(env_meta["env_kwargs"]["bddl_file_name"]), f"required bddl file {env_meta['env_kwargs']['bddl_file_name']} does not exist"
     elif ds_format == "r2d2":
         env_meta = dict(f.attrs)
