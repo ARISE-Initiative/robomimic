@@ -211,7 +211,7 @@ class EnvRobosuite(EB.EnvBase):
         """
         # if camera_name is None, infer from initial env kwargs
         if camera_name is None:
-            camera_name = self._init_kwargs.get("camera_names", ["agentview"])[0]
+            camera_name = sorted(self._init_kwargs.get("camera_names", ["agentview"]))[0]
 
         if mode == "human":
             cam_id = self.env.sim.model.camera_name2id(camera_name)
