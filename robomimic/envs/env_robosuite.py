@@ -264,6 +264,10 @@ class EnvRobosuite(EB.EnvBase):
                             _k = "_".join(k.split("_")[1:])
                             if _k.startswith("eef"):
                                 _k = "ee" + _k[3:]
+                            elif _k == "gripper_qpos":
+                                _k = "gripper_states"
+                            elif _k == "joint_pos":
+                                _k = "joint_states"
                             ret[_k] = np.array(di[k])
                         else:
                             ret[k] = np.array(di[k])
