@@ -11,7 +11,7 @@ import random
 
 import torch
 import torch.nn as nn
-from torchvision.transforms import Lambda, Compose
+from torchvision.transforms import Lambda, Compose, RandomResizedCrop
 import torchvision.transforms.functional as TVF
 
 import robomimic.models.base_nets as BaseNets
@@ -575,6 +575,100 @@ class CropRandomizer(Randomizer):
         msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
             self.input_shape, self.crop_height, self.crop_width, self.num_crops)
         return msg
+
+
+class CropResizeRandomizer(Randomizer):
+    """
+    Randomly sample crop, then resize to specified size
+    """
+    def __init__(
+        self,
+        input_shape,
+        size,
+        scale,
+        ratio,
+        num_crops=1,
+        pos_enc=False,
+    ):
+        """
+        Args:
+            input_shape (tuple, list): shape of input (not including batch dimension)
+            crop_height (int): crop height
+            crop_width (int): crop width
+            resize_height (int): resize height
+            resize_width (int): resize width
+            num_crops (int): number of random crops to take
+            pos_enc (bool): if True, add 2 channels to the output to encode the spatial
+                location of the cropped pixels in the source image
+        """
+        super(CropResizeRandomizer, self).__init__()
+
+        assert len(input_shape) == 3 # (C, H, W)
+        # assert crop_height < input_shape[1]
+        # assert crop_width < input_shape[2]
+
+        self.input_shape = input_shape
+        self.size = size
+        self.scale = scale
+        self.ratio = ratio
+        self.num_crops = num_crops
+        self.pos_enc = pos_enc
+
+        self.resize_crop = RandomResizedCrop(size=size, scale=scale, ratio=ratio, interpolation=TVF.InterpolationMode.BILINEAR)
+
+    def output_shape_in(self, input_shape=None):
+        out_c = self.input_shape[0] + 2 if self.pos_enc else self.input_shape[0]
+        return [out_c, self.size[0], self.size[1]]
+
+    def output_shape_out(self, input_shape=None):
+        return list(input_shape)
+
+    def _forward_in(self, inputs):
+        """
+        Samples N random crops for each input in the batch, and then reshapes
+        inputs to [B * N, ...].
+        """
+        # assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        # out, _ = ObsUtils.sample_random_image_crops(
+        #     images=inputs,
+        #     crop_height=self.crop_height,
+        #     crop_width=self.crop_width,
+        #     num_crops=self.num_crops,
+        #     pos_enc=self.pos_enc,
+        # )
+        # # [B, N, ...] -> [B * N, ...]
+        # out = TensorUtils.join_dimensions(out, 0, 1)
+        out = self.resize_crop(inputs)
+
+        return out
+
+    def _forward_in_eval(self, inputs):
+        """
+        Do center crops during eval
+        """
+        # assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        # inputs = inputs.permute(*range(inputs.dim()-3), inputs.dim()-2, inputs.dim()-1, inputs.dim()-3)
+        # out = ObsUtils.center_crop(inputs, self.crop_height, self.crop_width)
+        # out = out.permute(*range(out.dim()-3), out.dim()-1, out.dim()-3, out.dim()-2)
+        # return out
+
+        # just resize
+        return TVF.resize(inputs, size=self.size, interpolation=TVF.InterpolationMode.BILINEAR)
+
+
+    def _forward_out(self, inputs):
+        """
+        Splits the outputs from shape [B * N, ...] -> [B, N, ...] and then average across N
+        to result in shape [B, ...] to make sure the network output is consistent with
+        what would have happened if there were no randomization.
+        """
+        batch_size = (inputs.shape[0] // self.num_crops)
+        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
+                                             target_dims=(batch_size, self.num_crops))
+        return out.mean(dim=1)
+        
+
+    
 
 
 class ColorRandomizer(Randomizer):

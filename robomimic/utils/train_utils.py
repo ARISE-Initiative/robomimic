@@ -496,6 +496,34 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
+def delete_checkpoints(ckpt_dir, top_n=3, smallest=True):
+    """
+    Delete checkpoints in a directory, keeping top @top_n checkpoints based on lowest validation loss.  Where checkpoints are saved in the form "model_epoch_{n}_best_validation_{validation loss}.pth
+    """
+    # get all checkpoints
+    all_checkpoints = []
+    for filename in os.listdir(ckpt_dir):
+        if filename.endswith(".pth"):
+            all_checkpoints.append(filename)
+    all_checkpoints = sorted(all_checkpoints)
+
+    # get validation losses
+    validation_losses = []
+    for ckpt in all_checkpoints:
+        val_loss = float(ckpt.split("best_validation_")[1].split(".pth")[0])
+
+        validation_losses.append((val_loss, ckpt))
+    # validation_losses = np.array(validation_losses)
+    validation_losses = sorted(validation_losses, key=lambda x: x[0])
+
+    # delete checkpoints
+    if smallest:
+        for ckpt in all_checkpoints[top_n:]:
+            os.remove(os.path.join(ckpt_dir, ckpt))
+    else:
+        for ckpt in all_checkpoints[:-top_n]:
+            os.remove(os.path.join(ckpt_dir, ckpt))
+
 
 def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
     """
