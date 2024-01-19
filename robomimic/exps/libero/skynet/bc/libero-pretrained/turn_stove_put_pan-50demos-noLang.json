@@ -178,13 +178,12 @@
         "modalities": {
             "obs": {
                 "low_dim": [
-                    "robot0_eef_pos",
-                    "robot0_eef_quat",
-                    "robot0_gripper_qpos"
+                    "gripper_states",
+                    "joint_states"
                 ],
                 "rgb": [
-                    "agentview_image",
-                    "robot0_eye_in_hand_image"
+                    "agentview_rgb",
+                    "eye_in_hand_rgb"
                 ],
                 "depth": [],
                 "scan": []
