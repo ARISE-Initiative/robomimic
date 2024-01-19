@@ -180,7 +180,8 @@
                 "low_dim": [
                     "robot0_eef_pos",
                     "robot0_eef_quat",
-                    "robot0_gripper_qpos"
+                    "robot0_gripper_qpos",
+                    "lang_emb"
                 ],
                 "rgb": [
                     "agentview_image",
