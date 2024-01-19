@@ -105,6 +105,10 @@ class EnvRobosuite(EB.EnvBase):
             kwargs["camera_depth"] = False # rename kwarg
 
         self._env_name = env_name
+        # TODO resolve hack to override mimicgen classes
+        if self._env_name.startswith("MG_"):
+            self._env_name = self._env_name[3:]
+
         self._init_kwargs = deepcopy(kwargs)
         self.env = robosuite.make(self._env_name, **kwargs)
         self.base_env = self.env # for mimicgen
