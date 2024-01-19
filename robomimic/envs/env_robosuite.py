@@ -263,6 +263,7 @@ class EnvRobosuite(EB.EnvBase):
                 for k in di:
                     if k.startswith(pf) and (k not in ret) and \
                             (not k.endswith("proprio-state")):
+                        ret[k] = np.array(di[k])
                         if "libero" in self.env.__class__.__name__.lower():
                             # proprioception key conventions for libero envs
                             _k = "_".join(k.split("_")[1:])
@@ -273,8 +274,6 @@ class EnvRobosuite(EB.EnvBase):
                             elif _k == "joint_pos":
                                 _k = "joint_states"
                             ret[_k] = np.array(di[k])
-                        else:
-                            ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
             ret["proprio"] = np.array(di["robot-state"])
