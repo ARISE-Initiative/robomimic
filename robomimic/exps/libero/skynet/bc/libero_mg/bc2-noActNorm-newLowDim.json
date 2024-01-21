@@ -35,7 +35,7 @@
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_8_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it"}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_8_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it_demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it"}
         ],
         "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/",
         "num_data_workers": 0,

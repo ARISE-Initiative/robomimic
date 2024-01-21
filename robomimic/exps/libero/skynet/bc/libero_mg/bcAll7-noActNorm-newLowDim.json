@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "libero_mg",
+        "name": "bcAll7-noActNorm-newLowDim",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -35,13 +35,13 @@
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_6_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the bottom drawer of the cabinet"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_8_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_40_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "put the frying pan on the cabinet shelf"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_44_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "turn on the stove"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_45_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "turn on the stove and put the frying pan on it"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_48_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "pick up the ketchup and put it in the basket"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_73_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "pick up the book and place it in the front compartment of the caddy"}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_6_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet_demo.hdf5", "eval": true, "lang": "open the bottom drawer of the cabinet"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_8_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it_demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_40_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE9_put_the_frying_pan_on_the_cabinet_shelf_demo.hdf5", "eval": true, "lang": "put the frying pan on the cabinet shelf"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_44_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE9_turn_on_the_stove_demo.hdf5", "eval": true, "lang": "turn on the stove"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_45_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE9_turn_on_the_stove_and_put_the_frying_pan_on_it_demo.hdf5", "eval": true, "lang": "turn on the stove and put the frying pan on it"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_48_n_10_targ_0_per_stage_f_nn_10/LIVING_ROOM_SCENE1_pick_up_the_ketchup_and_put_it_in_the_basket_demo.hdf5", "eval": true, "lang": "pick up the ketchup and put it in the basket"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_73_n_10_targ_0_per_stage_f_nn_10/STUDY_SCENE1_pick_up_the_book_and_place_it_in_the_front_compartment_of_the_caddy_demo.hdf5", "eval": true, "lang": "pick up the book and place it in the front compartment of the caddy"}
         ],
         "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/",
         "num_data_workers": 0,
