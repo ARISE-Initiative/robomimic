@@ -105,6 +105,10 @@ class EnvRobosuite(EB.EnvBase):
             kwargs["camera_depth"] = False # rename kwarg
 
         self._env_name = env_name
+        # TODO resolve hack to override mimicgen classes
+        if self._env_name.startswith("MG_"):
+            self._env_name = self._env_name[3:]
+
         self._init_kwargs = deepcopy(kwargs)
         self.env = robosuite.make(self._env_name, **kwargs)
         self.base_env = self.env # for mimicgen
@@ -259,14 +263,17 @@ class EnvRobosuite(EB.EnvBase):
                 for k in di:
                     if k.startswith(pf) and (k not in ret) and \
                             (not k.endswith("proprio-state")):
+                        ret[k] = np.array(di[k])
                         if "libero" in self.env.__class__.__name__.lower():
                             # proprioception key conventions for libero envs
                             _k = "_".join(k.split("_")[1:])
                             if _k.startswith("eef"):
                                 _k = "ee" + _k[3:]
+                            elif _k == "gripper_qpos":
+                                _k = "gripper_states"
+                            elif _k == "joint_pos":
+                                _k = "joint_states"
                             ret[_k] = np.array(di[k])
-                        else:
-                            ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
             ret["proprio"] = np.array(di["robot-state"])
