@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "test_easy",
+        "name": "easy10",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -31,8 +31,7 @@
             "rate": 50,
             "warmstart": 0,
             "terminate_on_success": true
-        },
-        "ckpt_path": "/srv/rl2-lab/flash8/mbronars3/workspace/CoRL24/experiments/libero/test_easy/20240108030737/models/model_epoch_700_KITCHEN_SCENE7_open_the_microwave_demo_success_0.06666666666666667.pth"
+        }
     },
     "train": {
         "data": [
@@ -131,7 +130,7 @@
             "low_noise_eval": true
         },
         "gmm": {
-            "enabled": true,
+            "enabled": false,
             "num_modes": 5,
             "min_std": 0.0001,
             "std_activation": "softplus",
