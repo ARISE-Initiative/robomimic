@@ -118,9 +118,8 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
                     new_path = pathlib.Path(libero.__path__[0]) / "libero" / "/".join(old_path_split[ind:])
                     return str(new_path)
                 env_meta["env_kwargs"]["bddl_file_name"] = convert_bddl_file_name(bddl_file_name)
-            if "env_lang" in env_meta["env_kwargs"]: del env_meta["env_kwargs"]["env_lang"]
-
             assert os.path.exists(env_meta["env_kwargs"]["bddl_file_name"]), f"required bddl file {env_meta['env_kwargs']['bddl_file_name']} does not exist"
+        if "env_lang" in env_meta["env_kwargs"]: del env_meta["env_kwargs"]["env_lang"]
     elif ds_format == "r2d2":
         env_meta = dict(f.attrs)
     else:
