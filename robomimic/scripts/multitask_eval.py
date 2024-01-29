@@ -2,6 +2,8 @@
 Script for running evaluation on a single checkpoint or all checkpoints in a folder
 
 Args:
+    train_dir (str): path to training folder, should contain config.json and checkpoints in models subfolder
+
     config_path (str): path to config file
 
     ckpt_path (str): path to checkpoint file
@@ -10,17 +12,12 @@ Args:
 
     num_envs (int): how many envs to select (only applicable if style is 'random')
 
-    all: whether to run eval on all checkpoints in a folder (folder that contains ckpt_path)
-
 Example usage:
+    # evaluate all checkpoints in train_dir/models/.  Eval run on all envs from config.train.data (config loaded from train_dir/config.json)
+    python multitask_eval.py --train_dir /path/to/training/folder
+
     # evaluate a single checkpoint on 1 random env from config.train.data
     python multitask_eval.py --config_path /path/to/config.json --ckpt_path /path/to/checkpoint.pth --style random --num_envs 1
-
-    # evaluate all checkpoints on the folder containig checkpoint.pth.  Eval run on all envs from config.train.data
-    python multitask_eval.py --config_path /path/to/config.json --ckpt_path /path/to/checkpoint.pth --all
-
-    # evaluate all checkpoints on the folder containig checkpoint.pth.  Eval run on 3 random envs from config.train.data
-    python multitask_eval.py --config_path /path/to/config.json --ckpt_path /path/to/checkpoint.pth --style random --num_envs 3 --all
 
 """
 import os
@@ -29,6 +26,7 @@ from collections import OrderedDict
 from robomimic.config import config_factory
 import argparse
 import re
+import glob
 
 import robomimic
 import robomimic.utils.train_utils as TrainUtils
@@ -53,7 +51,7 @@ def select_envs(envs, style = 'random', num_envs = 1):
     else:
         raise NotImplementedError
     
-def run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs):
+def run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs, num_episodes = None):
     """ 
         Internal helper function for running evaluation on a single checkpoint
         Would not recommend calling this function directly, specifying final_envs may be non-trivial
@@ -64,7 +62,9 @@ def run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs):
     epoch = os.path.basename(ckpt_path).split("_")[2]
     epoch = re.sub(r'[^0-9]', '', epoch)
     epoch = int(epoch)
-    num_episodes = config.experiment.rollout.n
+
+    if num_episodes is None:
+        num_episodes = config.experiment.rollout.n
     
     all_rollout_logs, video_paths = TrainUtils.rollout_with_stats(
         policy=rollout_model,
@@ -87,13 +87,17 @@ def run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs):
         print('Success rate: {}'.format(rollout_logs["Success_Rate"]))
         avg_success_rate += rollout_logs["Success_Rate"]
     avg_success_rate /= len(all_rollout_logs)
+    # Delete any existing log files for this epoch
+    for filename in glob.glob(os.path.join(log_dir, 'epoch_{}_*.json'.format(epoch))):
+        os.remove(filename)
+
     log_name = "epoch_{}_success_{}_logs.json".format(epoch, avg_success_rate)
     with open(os.path.join(log_dir, log_name), 'w') as file:
         json.dump(all_rollout_logs, file, indent=4)
     
     return avg_success_rate, epoch
     
-def run_eval(config_path, ckpt_path, style = 'random', num_envs = 1, all = False):
+def run_eval(train_folder, config_path, ckpt_path, style = 'random', num_envs = 1, num_episodes = None):
     """
         Runs eval on a single checkpoint or all checkpoints in a folder
         Args:
@@ -103,18 +107,24 @@ def run_eval(config_path, ckpt_path, style = 'random', num_envs = 1, all = False
             num_envs: how many envs to select (only applicable if style is 'random')
             all: whether to run eval on all checkpoints in a folder (folder that contains ckpt_path)  
     """
-
+    if config_path is None:
+        config_path = os.path.join(train_folder, "config.json")
     ext_cfg = json.load(open(config_path, 'r'))
-    config = config_factory(ext_cfg["algo_name"])
+    config = config_factory(ext_cfg["algo_name"], ext_cfg)
     # update config with external json - this will throw errors if
     # the external config has keys not present in the base algo config
-    with config.values_unlocked():
-        config.update(ext_cfg)
+    # with config.values_unlocked():
+    #     config.update(ext_cfg)
 
     env_meta_list = []
     shape_meta_list = []
 
-    log_dir, ckpt_dir, video_dir, vis_dir = TrainUtils.get_exp_dir(config)
+    log_dir = os.path.join(train_folder, "eval_logs")
+    video_dir = os.path.join(train_folder, "videos")
+    ckpt_dir = os.path.join(train_folder, "models")
+    # create log dir if it does not exist
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
     ObsUtils.initialize_obs_utils_with_config(config)
 
     for dataset_cfg in config.train.data:
@@ -184,17 +194,44 @@ def run_eval(config_path, ckpt_path, style = 'random', num_envs = 1, all = False
     best_epoch = 0
     best_success_rate = 0
     # folder of checkpoints and run evaluation for each chekpoint in the folder:
-    if all:
-        ckpt_dir = os.path.dirname(ckpt_path)
+    if ckpt_path is None:
+        ckpt_dir = os.path.join(train_folder, "models")
+        epochs_divisible_by_50 = []
+        other_epochs = []
         for ckpt_path in os.listdir(ckpt_dir):
             if not ckpt_path.endswith(".pth"):
-                continue    
+                continue
+            # check if checkpoint has already been evaluated
+            epoch = os.path.basename(ckpt_path).split("_")[2]
+            epoch = re.sub(r'[^0-9]', '', epoch)
+            epoch = int(epoch)
+            if epoch % 50 == 0:
+                epochs_divisible_by_50.append(ckpt_path)
+            else:
+                other_epochs.append(ckpt_path)
+        
+        for ckpt_path in epochs_divisible_by_50 + other_epochs:
+            if not ckpt_path.endswith(".pth"):
+                continue
+            # check if checkpoint has already been evaluated
+            epoch = os.path.basename(ckpt_path).split("_")[2]
+            epoch = re.sub(r'[^0-9]', '', epoch)
+            epoch = int(epoch)
+            # check if there exists a log file for this epoch, we dont know the success rate
+            log_name_root = "epoch_{}_".format(epoch)
+            if any([log_name_root in log_name for log_name in os.listdir(log_dir)]):
+                continue
+            # instantiate log file for this epoch
+            log_name = "epoch_{}_success_{}_logs.json".format(epoch, 0)
+            with open(os.path.join(log_dir, log_name), 'w') as file:
+                json.dump({}, file, indent=4)
             print("Evaluating checkpoint: {}".format(ckpt_path))
             ckpt_path = os.path.join(ckpt_dir, ckpt_path)
-            success, epoch = run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs)
+            success, epoch = run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs, num_episodes=num_episodes)
             if success > best_success_rate:
                 best_epoch = epoch
                 best_success_rate = success
+
     else:
         best_epoch, best_success_rate = run_eval_single(config, ckpt_path, video_dir, log_dir, final_envs)
 
@@ -204,27 +241,35 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    # path to training folder, should contain config.json and checkpoints in models subfolder
+    parser.add_argument(
+        "--train_dir",
+        type=str,
+        required=True,
+        help="path to folder with training data"
+    )
+
     # path to config file
     parser.add_argument(
         "--config_path", 
         type=str, 
-        required=True,
-        help="path to config file, the one used for training (although you can use a different one)"
+        default=None,
+        help="path to config file if different from train_dir/config.json"
         )
     
     # path to checkpoint file
     parser.add_argument(
         "--ckpt_path", 
         type=str, 
-        required=True,
-        help="path to checkpoint file, the one to be evaluated. If all is specified, looks at all checkpoints in same folder as this file"
+        default=None,
+        help="path to checkpoint file if you want to evaluate a single checkpoint and not all checkpoints in train_dir/models"
         )
     
-    # method for env selection
+    # method for env selection.  It takes a list of envs from config.train.data, so if you want to evaluate on a different set of envs, you need to change config.train.data
     parser.add_argument(
         "--style", 
         type=str, 
-        default='random',
+        default='all',
         help="how to select envs, currently only supports 'random' and 'all'"
         )
     
@@ -236,12 +281,13 @@ if __name__ == '__main__':
         help="how many envs to select (only applicable if style is 'random')"
         )
     
-    # single checkpoint or all checkpoints in a folder
+    # number of rollouts to run per env, default is config.experiment.rollout.n
     parser.add_argument(
-        "--all", 
-        action='store_true',
-        help="whether to run eval on all checkpoints in a folder (folder that contains ckpt_path)"
-        )
+        "--num_episodes",
+        type=int,
+        default=None,
+        help="how many rollouts to run per env, default is config.experiment.rollout.n",
+    )
 
     args = parser.parse_args()
-    run_eval(args.config_path, args.ckpt_path, args.style, args.num_envs, args.all)
+    run_eval(args.train_dir, args.config_path, args.ckpt_path, args.style, args.num_envs, args.num_episodes)
