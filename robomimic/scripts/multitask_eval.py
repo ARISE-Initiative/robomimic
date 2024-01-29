@@ -14,10 +14,13 @@ Args:
 
 Example usage:
     # evaluate all checkpoints in train_dir/models/.  Eval run on all envs from config.train.data (config loaded from train_dir/config.json)
-    python multitask_eval.py --train_dir /path/to/training/folder
+    python multitask_eval.py --train_dir /path/to/training/folder --num_episodes 50
+
+    # evaluate all checkpoints in train_dir/models/.  Eval run on all envs from config.train.data (config loaded from /path/to/config.json, not train_dir/config.json)  num_episodes is set to config.experiment.rollout.n
+    python multitask_eval.py --train_dir /path/to/training/folder --config_path /path/to/config.json
 
     # evaluate a single checkpoint on 1 random env from config.train.data
-    python multitask_eval.py --config_path /path/to/config.json --ckpt_path /path/to/checkpoint.pth --style random --num_envs 1
+    python multitask_eval.py --train_dir /path/to/training/folder --ckpt_path /path/to/checkpoint.pth --style random --num_envs 1 --num_episodes 50
 
 """
 import os
