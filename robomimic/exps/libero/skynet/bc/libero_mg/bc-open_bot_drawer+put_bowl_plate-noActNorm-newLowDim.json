@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "test-rgbFeat1024",
+        "name": "bc-open_bot_drawer+put_bowl_plate-noActNorm-newLowDim",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -28,17 +28,17 @@
             "enabled": true,
             "n": 30,
             "horizon": 400,
-            "rate": 80,
+            "rate": 20,
             "warmstart": 0,
             "terminate_on_success": true
         }
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/multi_stack/stack.hdf5", "eval": true, "lang": "place red on green"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/multi_stack/stack_inv.hdf5", "eval": true, "lang": "place green on red"}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_6_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_open_the_bottom_drawer_of_the_cabinet_demo.hdf5", "eval": true, "lang": "open the bottom drawer of the cabinet"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_9_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_put_the_black_bowl_on_the_plate_demo.hdf5", "eval": true, "lang": "put the black bowl on the plate"}
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/multistack/",
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_mg/",
         "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
@@ -208,7 +208,7 @@
             "rgb": {
                 "core_class": "VisualCore",
                 "core_kwargs": {
-                    "feature_dimension": 1024,
+                    "feature_dimension": 64,
                     "flatten": true,
                     "backbone_class": "ResNet18Conv",
                     "backbone_kwargs": {

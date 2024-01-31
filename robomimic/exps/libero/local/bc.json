@@ -180,6 +180,8 @@
             "obs": {
                 "low_dim": [
                     "ee_pos",
+                    "gripper_states",
+                    "joint_states",
                     "lang_emb"
                 ],
                 "rgb": [
