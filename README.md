@@ -63,6 +63,15 @@ After running this script you just need to run the command(s) outputted.
 
 Want to learn how to set your own config values and sweep them? Read this short [tutorial section](https://robomimic.github.io/docs/tutorials/hyperparam_scan.html#step-3-set-hyperparameter-values).
 
+-------
+## Evaluation
+In order to efficiently run evaluation, we have split up the training and eval scripts.  Our suggestion is to run train.py first, and then run multitask_eval.py once a sufficient number of checkpoints have built up.  When working on a cluster, you can launch multiple sbatch runs of multitask_eval.py and they will each eval different checkpoints and not overwrite eachother's progress.  Call multitask_eval.py as follows:
+```
+python robomimic/scripts/multitask_eval.py --train_dir path/to/training/run/directory --num_episodes 50
+```
+
+Num episodes is the number of rollouts you are running for each task.  Tasks are taken from config.train.data in the config file that is located in --train_dir.  You can alter this config if you want to change the tasks that are evaluated. There are a number of other parameters you can alter as well, so refer to the multitask_eval documentation for more information.
+
 ### Loading model checkpoint weights
 Want to intialize your model with weights from a previous model checkpoint? Set the checkpoint path under `experiment.ckpt_path` in the config.
 
