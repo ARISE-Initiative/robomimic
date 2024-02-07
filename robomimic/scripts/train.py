@@ -55,8 +55,7 @@ def train(config, device, auto_remove_exp=False):
     np.random.seed(config.train.seed)
     torch.manual_seed(config.train.seed)
 
-    # set num workers
-    torch.set_num_threads(1)
+    torch.set_num_threads(2)
 
     print("\n============= New Training Run with Config =============")
     print(config)
@@ -113,10 +112,10 @@ def train(config, device, auto_remove_exp=False):
             env = EnvUtils.create_env_from_metadata(
                 env_meta=env_meta,
                 env_name=env_name, 
-                render=config.experiment.render, 
+                render=config.experiment.render,
                 render_offscreen=config.experiment.render_video,
-                use_image_obs=shape_meta["use_images"], 
-                use_depth_obs=shape_meta["use_depths"], 
+                use_image_obs=shape_meta["use_images"],
+                use_depth_obs=shape_meta["use_depths"],
             )
             env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
             envs[env.name] = env

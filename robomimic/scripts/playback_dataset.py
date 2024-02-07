@@ -49,7 +49,7 @@ Example usage below:
         --use-obs --render_image_names agentview_image \
         --video_path /tmp/obs_trajectory.mp4
 
-    # visualize depth too
+    # visualize depth observations along with image observations
     python playback_dataset.py --dataset /path/to/dataset.hdf5 \
         --use-obs --render_image_names agentview_image \
         --render_depth_names agentview_depth \
@@ -74,6 +74,7 @@ import robomimic
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
+from robomimic.utils.vis_utils import depth_to_rgb
 from robomimic.envs.env_base import EnvBase, EnvType
 
 try:
@@ -223,7 +224,7 @@ def playback_trajectory_with_obs(
     intervention=False,
 ):
     """
-    This function reads all "rgb" observations in the dataset trajectory and
+    This function reads all "rgb" (and possibly "depth") observations in the dataset trajectory and
     writes them into a video.
 
     Args:
@@ -239,7 +240,11 @@ def playback_trajectory_with_obs(
     assert image_names is not None, "error: must specify at least one image observation to use in @image_names"
     video_count = 0
 
-    # figure out which frame indices to iterate over
+    if depth_names is not None:
+        # compute min and max depth value across trajectory for normalization
+        depth_min = { k : traj_grp["obs/{}".format(k)][:].min() for k in depth_names }
+        depth_max = { k : traj_grp["obs/{}".format(k)][:].max() for k in depth_names }
+
     traj_len = traj_grp["actions"].shape[0]
     frame_inds = range(traj_len)
     if first:
@@ -265,9 +270,6 @@ def playback_trajectory_with_obs(
             im = [traj_grp["obs/{}".format(k)][i] for k in image_names]
             depth = [depth_to_rgb(traj_grp["obs/{}".format(k)][i], depth_min=depth_min[k], depth_max=depth_max[k]) for k in depth_names] if depth_names is not None else []
             frame = np.concatenate(im + depth, axis=1)
-            if intervention and traj_grp["interventions"][i]:
-                # add red border to frame
-                frame = add_red_border(frame=frame)
             video_writer.append_data(frame)
         video_count += 1
 
@@ -385,7 +387,7 @@ def playback_dataset(args, env=None):
             assert actions is not None
             states = np.zeros(actions.shape[0])
             initial_state = dict(states=states[0])
-            
+
         # supply interventions if we need them for visualization
         interventions = None
         if args.intervention:
@@ -485,6 +487,7 @@ if __name__ == "__main__":
              "None, which corresponds to a predefined camera for each env type",
     )
 
+    # depth observations to use for writing to video
     parser.add_argument(
         "--render_depth_names",
         type=str,

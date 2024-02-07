@@ -232,6 +232,23 @@ def bc_rnn_gmm_modifier(config):
     return config
 
 
+@register_mod("bc-transformer")
+def bc_transformer_modifier(config):
+    config.algo.transformer.enabled = True
+    config.train.frame_stack = 10
+    config.train.seq_length = 1
+    return config
+
+
+@register_mod("bc-transformer-gmm")
+def bc_transformer_gmm_modifier(config):
+    config.algo.gmm.enabled = True
+    config.algo.transformer.enabled = True
+    config.train.frame_stack = 10
+    config.train.seq_length = 1
+    return config
+
+
 # add image version of all tests
 image_modifiers = OrderedDict()
 for test_name in MODIFIERS:

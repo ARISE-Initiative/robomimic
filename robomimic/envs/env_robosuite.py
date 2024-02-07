@@ -7,23 +7,16 @@ import json
 import numpy as np
 from copy import deepcopy
 
-import os
 import robosuite
 import robosuite.utils.transform_utils as T
+try:
+    # this is needed for ensuring robosuite can find the additional mimicgen environments (see https://mimicgen.github.io)
+    import mimicgen_envs
+except ImportError:
+    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
-
-try:
-    import mimicgen
-except ImportError:
-    print("WARNING: could not import mimicgen robosuite envs")
-
-try:
-    # try to import mimicgen environments
-    import mimicgen_envs
-except ImportError:
-    print("WARNING: could not import mimicgen envs")
 
 # protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
 try:
@@ -41,8 +34,8 @@ class EnvRobosuite(EB.EnvBase):
         render=False, 
         render_offscreen=False, 
         use_image_obs=False, 
-        use_depth_obs=False, 
-        postprocess_visual_obs=True, 
+        use_depth_obs=False,
+        postprocess_visual_obs=True,
         **kwargs,
     ):
         """
@@ -200,10 +193,11 @@ class EnvRobosuite(EB.EnvBase):
             self.env.viewer.set_camera(cam_id)
             return self.env.render()
         elif mode == "rgb_array":
-            im = self.env.sim.render(height=height, width=width, camera_name=camera_name)[::-1]
+            im = self.env.sim.render(height=height, width=width, camera_name=camera_name)
             if self.use_depth_obs:
-                return im[0]
-            return im
+                # render() returns a tuple when self.use_depth_obs=True
+                return im[0][::-1]
+            return im[::-1]
         else:
             raise NotImplementedError("mode={} is not implemented".format(mode))
 
@@ -220,14 +214,25 @@ class EnvRobosuite(EB.EnvBase):
         ret = {}
         for k in di:
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
+                # by default images from mujoco are flipped in height
                 ret[k] = di[k][::-1]
+                if self.postprocess_visual_obs:
+                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
+            elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
+                # by default depth images from mujoco are flipped in height
+                ret[k] = di[k][::-1]
+                if len(ret[k].shape) == 2:
+                    ret[k] = ret[k][..., None] # (H, W, 1)
+                assert len(ret[k].shape) == 3
+                # scale entries in depth map to correspond to real distance.
+                ret[k] = self.get_real_depth_map(ret[k])
                 if self.postprocess_visual_obs:
                     ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
             elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
                 ret[k] = di[k][::-1]
                 if len(ret[k].shape) == 2:
                     ret[k] = ret[k][..., None] # (H, W, 1)
-                assert len(ret[k].shape) == 3 
+                assert len(ret[k].shape) == 3
                 # scale entries in depth map to correspond to real distance.
                 ret[k] = self.get_real_depth_map(ret[k])
                 if self.postprocess_visual_obs:
@@ -242,7 +247,8 @@ class EnvRobosuite(EB.EnvBase):
                 # ensures that we don't accidentally add robot wrist images a second time
                 pf = robot.robot_model.naming_prefix
                 for k in di:
-                    if k.startswith(pf) and (k not in ret) and (not k.endswith("proprio-state")):
+                    if k.startswith(pf) and (k not in ret) and \
+                            (not k.endswith("proprio-state")):
                         ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
@@ -422,10 +428,10 @@ class EnvRobosuite(EB.EnvBase):
         camera_height, 
         camera_width, 
         reward_shaping, 
-        render=None, 
-        render_offscreen=None, 
-        use_image_obs=None, 
-        use_depth_obs=None, 
+        render=None,
+        render_offscreen=None,
+        use_image_obs=None,
+        use_depth_obs=None,
         **kwargs,
     ):
         """
@@ -439,10 +445,12 @@ class EnvRobosuite(EB.EnvBase):
             camera_height (int): camera height for all cameras
             camera_width (int): camera width for all cameras
             reward_shaping (bool): if True, use shaped environment rewards, else use sparse task completion rewards
-            render (bool or None): optionally override rendering behavior
-            render_offscreen (bool or None): optionally override rendering behavior
-            use_image_obs (bool or None): optionally override rendering behavior
-            use_depth_obs (bool or None): optionally override rendering behavior
+            render (bool or None): optionally override rendering behavior. Defaults to False.
+            render_offscreen (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_image_obs (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_depth_obs (bool): if True, use depth observations
         """
         is_v1 = (robosuite.__version__.split(".")[0] == "1")
         has_camera = (len(camera_names) > 0)
@@ -489,9 +497,9 @@ class EnvRobosuite(EB.EnvBase):
         # note that @postprocess_visual_obs is False since this env's images will be written to a dataset
         return cls(
             env_name=env_name,
-            render=(False if render is None else render), 
-            render_offscreen=(has_camera if render_offscreen is None else render_offscreen), 
-            use_image_obs=(has_camera if use_image_obs is None else use_image_obs), 
+            render=(False if render is None else render),
+            render_offscreen=(has_camera if render_offscreen is None else render_offscreen),
+            use_image_obs=(has_camera if use_image_obs is None else use_image_obs),
             use_depth_obs=use_depth_obs,
             postprocess_visual_obs=False,
             **kwargs,

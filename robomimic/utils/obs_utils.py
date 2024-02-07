@@ -380,7 +380,7 @@ def process_frame(frame, channel_dim, scale):
     assert (frame.shape[-1] == channel_dim)
     frame = TU.to_float(frame)
     if scale is not None:
-        frame /= scale
+        frame = frame / scale
         frame = frame.clip(0.0, 1.0)
     frame = batch_image_hwc_to_chw(frame)
 
@@ -443,7 +443,7 @@ def unprocess_frame(frame, channel_dim, scale):
     assert frame.shape[-3] == channel_dim # check for channel dimension
     frame = batch_image_chw_to_hwc(frame)
     if scale is not None:
-        frame *= scale
+        frame = scale * frame
     return frame
 
 
@@ -464,7 +464,7 @@ def get_processed_shape(obs_modality, input_shape):
 
 def normalize_dict(dict, normalization_stats):
     """
-    Normalize dict using the provided "offset" and "scale" entries 
+    Normalize dict using the provided "offset" and "scale" entries
     for each observation key. The dictionary will be
     modified in-place.
 
@@ -506,7 +506,7 @@ def normalize_dict(dict, normalization_stats):
 
 def unnormalize_dict(dict, normalization_stats):
     """
-    Unnormalize dict using the provided "offset" and "scale" entries 
+    Unnormalize dict using the provided "offset" and "scale" entries
     for each observation key. The dictionary will be
     modified in-place.
 
@@ -983,10 +983,34 @@ class ScanModality(Modality):
 
     @classmethod
     def _default_obs_processor(cls, obs):
+        # Channel swaps ([...,] L, C) --> ([...,] C, L)
+
+        # First, add extra dimension at 2nd to last index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+
+        # Convert shape
+        obs = batch_image_hwc_to_chw(obs)
+
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
     @classmethod
     def _default_obs_unprocessor(cls, obs):
+        # Channel swaps ([B,] C, L) --> ([B,] L, C)
+
+        # First, add extra dimension at 1st index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+
+        # Convert shape
+        obs = batch_image_chw_to_hwc(obs)
+
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
 

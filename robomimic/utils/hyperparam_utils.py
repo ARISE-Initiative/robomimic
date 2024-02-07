@@ -41,7 +41,7 @@ class ConfigGenerator(object):
         assert isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
-    def add_param(self, key, name, group, values, value_names=None, hidename=False):
+    def add_param(self, key, name, group, values, value_names=None):
         """
         Add parameter to the hyperparameter sweep.
 
@@ -267,7 +267,7 @@ class ConfigGenerator(object):
                         value_name = maybe_parameter_names[k]
                     else:
                         value_name = setting[k]
-            
+
                     json_dict["meta"]["hp_keys"].append(key_name)
                     json_dict["meta"]["hp_values"].append(value_name)
 
@@ -289,9 +289,8 @@ class ConfigGenerator(object):
             f.write("#!/bin/bash\n\n")
             for path in json_paths:
                 # write python command to file
-                import robomimic
-                cmd = "python {}/scripts/train.py --config {}\n".format(robomimic.__path__[0], path)
-                
+                cmd = "python train.py --config {}\n".format(path)
+
                 print()
                 print(cmd)
                 f.write(cmd)

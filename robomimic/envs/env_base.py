@@ -28,7 +28,7 @@ class EnvBase(abc.ABC):
         render_offscreen=False, 
         use_image_obs=False, 
         use_depth_obs=False,
-        postprocess_visual_obs=True, 
+        postprocess_visual_obs=True,
         **kwargs,
     ):
         """
@@ -191,15 +191,15 @@ class EnvBase(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def create_for_data_processing(
-        cls, 
-        camera_names, 
-        camera_height, 
-        camera_width, 
-        reward_shaping, 
-        render=None, 
-        render_offscreen=None, 
-        use_image_obs=None, 
-        use_depth_obs=None, 
+        cls,
+        camera_names,
+        camera_height,
+        camera_width,
+        reward_shaping,
+        render=None,
+        render_offscreen=None,
+        use_image_obs=None,
+        use_depth_obs=None,
         **kwargs,
     ):
         """
@@ -212,10 +212,12 @@ class EnvBase(abc.ABC):
             camera_height (int): camera height for all cameras
             camera_width (int): camera width for all cameras
             reward_shaping (bool): if True, use shaped environment rewards, else use sparse task completion rewards
-            render (bool or None): optionally override rendering behavior
-            render_offscreen (bool or None): optionally override rendering behavior
-            use_image_obs (bool or None): optionally override rendering behavior
-            use_depth_obs (bool or None): optionally override rendering behavior
+            render (bool or None): optionally override rendering behavior. Defaults to False.
+            render_offscreen (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_image_obs (bool or None): optionally override rendering behavior. The default value is True if
+                @camera_names is non-empty, False otherwise.
+            use_depth_obs (bool): if True, use depth observations
 
         Returns:
             env (EnvBase instance)

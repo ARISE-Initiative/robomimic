@@ -12,10 +12,12 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 from torchvision import models as vision_models
 from torchvision import transforms
 
 import robomimic.utils.tensor_utils as TensorUtils
+
 
 CONV_ACTIVATIONS = {
     "relu": nn.ReLU,
@@ -55,7 +57,7 @@ def transformer_args_from_config(transformer_config):
         transformer_activation=transformer_config.activation,
         transformer_nn_parameter_for_timesteps=transformer_config.nn_parameter_for_timesteps,
     )
-    
+
     if "num_layers" in transformer_config:
         transformer_args["transformer_num_layers"] = transformer_config.num_layers
 
@@ -87,11 +89,20 @@ class Sequential(torch.nn.Sequential, Module):
     """
     Compose multiple Modules together (defined above).
     """
-    def __init__(self, *args):
+    def __init__(self, *args, has_output_shape = True):
+        """
+        Args:
+            has_output_shape (bool, optional): indicates whether output_shape can be called on the Sequential module.
+                torch.nn modules do not have an output_shape, but Modules (defined above) do. Defaults to True.
+        """
         for arg in args:
-            assert isinstance(arg, Module)
+            if has_output_shape:
+                assert isinstance(arg, Module)
+            else:
+                assert isinstance(arg, nn.Module)
         torch.nn.Sequential.__init__(self, *args)
         self.fixed = False
+        self.has_output_shape = has_output_shape
 
     def output_shape(self, input_shape=None):
         """
@@ -105,6 +116,8 @@ class Sequential(torch.nn.Sequential, Module):
         Returns:
             out_shape ([int]): list of integers corresponding to output shape
         """
+        if not self.has_output_shape:
+            raise NotImplementedError("Output shape is not defined for this module")
         out_shape = input_shape
         for module in self:
             out_shape = module.output_shape(out_shape)
@@ -573,7 +586,7 @@ class R3MConv(ConvBase):
             transforms.CenterCrop(224),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
-        self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())))
+        self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())), has_output_shape = False)
         if freeze:
             self.nets.freeze()
 
@@ -839,6 +852,11 @@ class Conv1dBase(Module):
 
         # Get activation requested
         activation = CONV_ACTIVATIONS[activation]
+
+        # Add layer kwargs
+        conv_kwargs["out_channels"] = out_channels
+        conv_kwargs["kernel_size"] = kernel_size
+        conv_kwargs["stride"] = stride
 
         # Generate network
         self.n_layers = len(out_channels)

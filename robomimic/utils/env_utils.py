@@ -216,6 +216,7 @@ def create_env(
         render=render, 
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs,
+        use_depth_obs=use_depth_obs,
         postprocess_visual_obs=True,
         **kwargs,
     )
@@ -227,11 +228,11 @@ def create_env(
 def create_env_from_metadata(
     env_meta,
     env_name=None,
-    env_class=None,  
+    env_class=None,
     render=False, 
     render_offscreen=False, 
     use_image_obs=False, 
-    use_depth_obs=False, 
+    use_depth_obs=False,
 ):
     """
     Create environment.
@@ -271,8 +272,8 @@ def create_env_from_metadata(
     env = create_env(
         env_type=env_type,
         env_name=env_name,  
-        env_class=env_class, 
-        render=render, 
+        env_class=env_class,
+        render=render,
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs, 
         use_depth_obs=use_depth_obs,
@@ -289,10 +290,10 @@ def create_env_for_data_processing(
     camera_width, 
     reward_shaping,
     env_class=None,
-    render=None, 
-    render_offscreen=None, 
-    use_image_obs=None, 
-    use_depth_obs=None, 
+    render=None,
+    render_offscreen=None,
+    use_image_obs=None,
+    use_depth_obs=None,
 ):
     """
     Creates environment for processing dataset observations and rewards.
@@ -326,7 +327,6 @@ def create_env_for_data_processing(
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
     if env_class is None:
-        render_ov = False if render is None else render
         env_class = get_env_class(env_type=env_type)
 
     # remove possibly redundant values in kwargs
@@ -347,9 +347,9 @@ def create_env_for_data_processing(
         camera_height=camera_height, 
         camera_width=camera_width, 
         reward_shaping=reward_shaping, 
-        render=render, 
-        render_offscreen=render_offscreen, 
-        use_image_obs=use_image_obs, 
+        render=render,
+        render_offscreen=render_offscreen,
+        use_image_obs=use_image_obs,
         use_depth_obs=use_depth_obs,
         **env_kwargs,
     )
@@ -361,8 +361,7 @@ def set_env_specific_obs_processing(env_meta=None, env_type=None, env=None):
     """
     Sets env-specific observation processing. As an example, robosuite depth observations
     correspond to raw depth and should not be normalized by default, while default depth
-    processing normalizes and clips all values to [0, 1]. As another example, depth
-    observations on the real robot are uint16 and will be converted to float during processing.
+    processing normalizes and clips all values to [0, 1].
     """
     if is_robosuite_env(env_meta=env_meta, env_type=env_type, env=env):
         from robomimic.utils.obs_utils import DepthModality, process_frame, unprocess_frame
@@ -372,29 +371,6 @@ def set_env_specific_obs_processing(env_meta=None, env_type=None, env=None):
         DepthModality.set_obs_unprocessor(unprocessor=(
             lambda obs: unprocess_frame(frame=obs, channel_dim=1, scale=None)
         ))
-    elif is_real_robot_gprs_env(env_meta=env_meta, env_type=env_type, env=env):
-        from robomimic.envs.env_real_panda_gprs import get_depth_scale
-        from robomimic.utils.obs_utils import DepthModality, batch_image_hwc_to_chw, batch_image_chw_to_hwc
-        from robomimic.utils.tensor_utils import to_float, to_uint16
-        
-        # NOTE: assuming that depth scales for front and wrist camera are about the same right now...
-        scale = get_depth_scale(camera_name="front")
-
-        def new_process_frame(frame):
-            assert (frame.shape[-1] == 1)
-            frame = to_float(frame)
-            frame *= scale
-            return batch_image_hwc_to_chw(frame)
-
-        def new_unprocess_frame(frame):
-            raise Exception("real robot depth unprocessor is wrong since torch does not support uint16")
-            assert frame.shape[-3] == 1 # check for channel dimension
-            frame = batch_image_chw_to_hwc(frame)
-            frame /= scale
-            return to_uint16(frame)
-
-        DepthModality.set_obs_processor(processor=new_process_frame)
-        DepthModality.set_obs_unprocessor(unprocessor=new_unprocess_frame)
 
 
 def wrap_env_from_config(env, config):
@@ -402,7 +378,7 @@ def wrap_env_from_config(env, config):
     Wraps environment using the provided Config object to determine which wrappers
     to use (if any).
     """
-    if config.train.frame_stack > 1:
+    if ("frame_stack" in config.train) and (config.train.frame_stack > 1):
         from robomimic.envs.wrappers import FrameStackWrapper
         env = FrameStackWrapper(env, num_frames=config.train.frame_stack)
 
