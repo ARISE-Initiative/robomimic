@@ -5,6 +5,7 @@ from typing import Callable, Union
 import math
 from collections import OrderedDict, deque
 from packaging.version import parse as parse_version
+import copy
 
 import torch
 import torch.nn as nn
@@ -102,10 +103,12 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # setup EMA
         ema = None
         if self.algo_config.ema.enabled:
-            ema = EMAModel(model=nets, power=self.algo_config.ema.power)
+            ema = EMAModel(parameters=nets.parameters(), power=self.algo_config.ema.power)
                 
         # set attrs
         self.nets = nets
+        self._shadow_nets = copy.deepcopy(self.nets).eval()
+        self._shadow_nets.requires_grad_(False)
         self.noise_scheduler = noise_scheduler
         self.ema = ema
         self.action_check_done = False
@@ -224,7 +227,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 
                 # update Exponential Moving Average of the model weights
                 if self.ema is not None:
-                    self.ema.step(self.nets)
+                    self.ema.step(self.nets.parameters())
                 
                 step_info = {
                     'policy_grad_norms': policy_grad_norms
@@ -322,7 +325,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # select network
         nets = self.nets
         if self.ema is not None:
-            nets = self.ema.averaged_model
+            self.ema.copy_to(parameters=self._shadow_nets.parameters())
+            nets = self._shadow_nets
         
         # encode obs
         inputs = {
@@ -374,7 +378,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         """
         return {
             "nets": self.nets.state_dict(),
-            "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
+            "ema": self.ema.state_dict() if self.ema is not None else None,
         }
 
     def deserialize(self, model_dict):
@@ -387,7 +391,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         """
         self.nets.load_state_dict(model_dict["nets"])
         if model_dict.get("ema", None) is not None:
-            self.ema.averaged_model.load_state_dict(model_dict["ema"])
+            self.ema.load_state_dict(model_dict["ema"])
         
 
 # =================== Vision Encoder Utils =====================

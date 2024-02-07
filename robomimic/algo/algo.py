@@ -271,7 +271,7 @@ class Algo(object):
                     if d[k] is not None:
                         d[k] = ObsUtils.process_obs_dict(d[k])
                         if obs_normalization_stats is not None:
-                            d[k] = ObsUtils.normalize_obs(d[k], obs_normalization_stats=obs_normalization_stats)
+                            d[k] = ObsUtils.normalize_dict(d[k], obs_normalization_stats=obs_normalization_stats)
                 elif isinstance(d[k], dict):
                     # search down into dictionary
                     recurse_helper(d[k])

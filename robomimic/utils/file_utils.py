@@ -82,7 +82,7 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
     return demo_keys
 
 
-def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=True):
+def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_specific_obs_processors=True):
     """
     Retrieves env metadata from dataset.
 

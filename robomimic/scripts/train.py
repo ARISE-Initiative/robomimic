@@ -72,8 +72,11 @@ def train(config, device, auto_remove_exp=False):
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # make sure the dataset exists
-    eval_dataset_cfg = config.train.data[0]
-    dataset_path = os.path.expandvars(os.path.expanduser(eval_dataset_cfg["path"]))
+    if isinstance(config.train.data, str):
+        dataset_path = os.path.expandvars(os.path.expanduser(config.train.data))
+    else:
+        eval_dataset_cfg = config.train.data[0]
+        dataset_path = os.path.expandvars(os.path.expanduser(eval_dataset_cfg["path"]))
     ds_format = config.train.data_format
     if not os.path.exists(dataset_path):
         raise Exception("Dataset at provided path {} not found!".format(dataset_path))
