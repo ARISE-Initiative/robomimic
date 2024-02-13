@@ -146,7 +146,7 @@ def train(config, device):
                 env = create_env()
                 env_name = env.name
             
-            env_key = os.path.splitext(os.path.basename(dataset_cfg['path']))[0]
+            env_key = os.path.splitext(os.path.basename(dataset_cfg['path']))[0] if not dataset_cfg.get('key', None) else dataset_cfg['key']
             envs[env_key] = env
             print(env)
 
