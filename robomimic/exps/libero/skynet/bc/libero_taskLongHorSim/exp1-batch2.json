@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "test",
+        "name": "bc-taskLongHorSim-exp1_batch2",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -26,19 +26,22 @@
         "video_skip": 5,
         "rollout": {
             "enabled": true,
-            "n": 1,
+            "n": 30,
             "horizon": 400,
-            "rate": 1,
+            "rate": 50,
             "warmstart": 0,
             "terminate_on_success": true
         }
     },
     "train": {
         "data": [
-            {"path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_90/KITCHEN_SCENE2_put_the_middle_black_bowl_on_the_plate_demo.hdf5", "eval": true, "lang": "put the middle black bowl on the plate", "key": "task_0"},
-            {"path": "/Users/vaibhav/work/robomimicV2/LIBERO/datasets/libero_90/KITCHEN_SCENE2_put_the_middle_black_bowl_on_top_of_the_cabinet_demo.hdf5", "eval": true, "lang": "put the middle black bowl on top of the cabinet"}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/LIBERO/datasets/libero_mg_data/demo_src_libero_90_8_n_10_targ_0_per_stage_f_nn_10/KITCHEN_SCENE1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it_demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "task_8"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_9_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the black bowl on the plate demo", "key": "task_9"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_12_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the black bowl at the back on the plate", "key": "task_12"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_14_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the middle black bowl on the plate", "key": "task_14"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_16_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "stack the black bowl at the front on the black bowl in the middle", "key": "task_16"}
         ],
-        "output_dir": "/Users/vaibhav/work/robomimicV2/robomimic/trained_models_bc/libero/local/",
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_taskLongHorSim/",
         "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
@@ -56,7 +59,7 @@
         ],
         "action_config": {
             "actions": {
-                "normalization": "min_max"
+                "normalization": null
             },
             "action_dict/abs_pos": {
                 "normalization": "min_max"
@@ -179,14 +182,14 @@
         "modalities": {
             "obs": {
                 "low_dim": [
-                    "ee_pos",
-                    "gripper_states",
-                    "joint_states",
+                    "robot0_eef_pos",
+                    "robot0_eef_quat",
+                    "robot0_gripper_qpos",
                     "lang_emb"
                 ],
                 "rgb": [
-                    "agentview_rgb",
-                    "eye_in_hand_rgb"
+                    "agentview_image",
+                    "robot0_eye_in_hand_image"
                 ],
                 "depth": [],
                 "scan": []
