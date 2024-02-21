@@ -486,7 +486,6 @@ class ConvBase(Module):
             )
         return x
 
-
 class ResNet18Conv(ConvBase):
     """
     A ResNet18 block that can be used to process input images.
@@ -541,6 +540,91 @@ class ResNet18Conv(ConvBase):
         header = '{}'.format(str(self.__class__.__name__))
         return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
 
+class Vit(ConvBase):
+    """
+    Vision transformer
+    """
+    def __init__(
+        self,
+        input_channel=3,
+        vit_model_class = 'vit_b',
+        freeze = True
+    ):
+        """
+        Using pretrained observation encoder network proposed in Vision Transformers 
+        git clone https://github.com/facebookresearch/dinov2
+        pip install -r requirements.txt
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer to handle the number
+                of input channels.
+            vit_model_class (str): select one of the vit pretrained model "vit_b", "vit_l", "vit_s" or "vit_g"
+            freeze (bool): if True, use a frozen ViT pretrained model.
+        """
+        super(Vit, self).__init__()
+
+        assert input_channel == 3 
+        assert vit_model_class in ["vit_b", "vit_l" ,"vit_g", "vit_s"] # make sure the selected vit model do exist
+
+        # cut the last fc layer
+        self._input_channel = input_channel
+        self._vit_model_class = vit_model_class
+        self._freeze = freeze
+        self._input_coord_conv = False
+        self._pretrained = False
+
+        self.preprocess = nn.Sequential(
+            transforms.Resize((294,294)),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        )
+        
+        try:
+            if self._vit_model_class=="vit_s":
+                self.nets = dinov2_vits14_lc = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14_lc')
+            if self._vit_model_class=="vit_l":
+                self.nets = dinov2_vits14_lc = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14_lc')
+            if self._vit_model_class=="vit_g":
+                self.nets = dinov2_vits14_lc = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitg14_lc')
+            if self._vit_model_class=="vit_b":
+                self.nets = dinov2_vits14_lc = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14_lc')
+        except ImportError:
+            print("WARNING: could not load Vit")
+
+        if freeze:
+            for param in self.nets.parameters():
+                param.requires_grad = False
+
+        if self._freeze:
+            self.nets.eval()
+
+    def forward(self, inputs):
+        x = self.preprocess(inputs)
+        x = self.nets(x)
+        return x    
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module.
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend
+                on the size of the input, or if they assume fixed size input.
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+
+        out_dim = 1000
+
+        return [out_dim, 1, 1]
+
+    def __repr__(self):
+        """Pretty print network."""
+        print("**Number of learnable params:",sum(p.numel() for p in self.nets.parameters() if p.requires_grad)," Freeze:",self._freeze)
+        print("**Number of params:",sum(p.numel() for p in self.nets.parameters()))
+
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={}, pretrained={}, freeze={})'.format(self._input_channel, self._input_coord_conv, self._pretrained, self._freeze)
 
 class R3MConv(ConvBase):
     """

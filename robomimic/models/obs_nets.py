@@ -25,6 +25,7 @@ from robomimic.models.base_nets import Module, Sequential, MLP, RNN_Base, ResNet
     FeatureAggregator
 from robomimic.models.obs_core import VisualCore, Randomizer
 from robomimic.models.transformers import PositionalEncoding, GPT_Backbone
+from robomimic.models.base_nets import Vit
 
 
 def obs_encoder_factory(
@@ -101,13 +102,13 @@ class ObservationEncoder(Module):
     Module that processes inputs by observation key and then concatenates the processed
     observation keys together. Each key is processed with an encoder head network.
     Call @register_obs_key to register observation keys with the encoder and then
-    finally call @make to create the encoder networks. 
+    finally call @make to create the encoder networks.
     """
     def __init__(self, feature_activation=nn.ReLU):
         """
         Args:
             feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
-                None to apply no activation. 
+                None to apply no activation.
         """
         super(ObservationEncoder, self).__init__()
         self.obs_shapes = OrderedDict()
@@ -120,12 +121,12 @@ class ObservationEncoder(Module):
         self._locked = False
 
     def register_obs_key(
-        self, 
+        self,
         name,
-        shape, 
-        net_class=None, 
-        net_kwargs=None, 
-        net=None, 
+        shape,
+        net_class=None,
+        net_kwargs=None,
+        net=None,
         randomizer=None,
         share_net_from=None,
     ):
@@ -143,7 +144,7 @@ class ObservationEncoder(Module):
                 instead of creating a different net
             randomizer (Randomizer instance): if provided, use this Module to augment observation keys
                 coming in to the encoder, and possibly augment the processed output as well
-            share_net_from (str): if provided, use the same instance of @net_class 
+            share_net_from (str): if provided, use the same instance of @net_class
                 as another observation key. This observation key must already exist in this encoder.
                 Warning: Note that this does not share the observation key randomizer
         """
@@ -362,7 +363,7 @@ class ObservationGroupEncoder(Module):
 
     The class takes a dictionary of dictionaries, @observation_group_shapes.
     Each key corresponds to a observation group (e.g. 'obs', 'subgoal', 'goal')
-    and each OrderedDict should be a map between modalities and 
+    and each OrderedDict should be a map between modalities and
     expected input shapes (e.g. { 'image' : (3, 120, 160) }).
     """
     def __init__(
@@ -403,7 +404,7 @@ class ObservationGroupEncoder(Module):
         # type checking
         assert isinstance(observation_group_shapes, OrderedDict)
         assert np.all([isinstance(observation_group_shapes[k], OrderedDict) for k in observation_group_shapes])
-        
+
         self.observation_group_shapes = observation_group_shapes
 
         # create an observation encoder per observation group
@@ -421,7 +422,7 @@ class ObservationGroupEncoder(Module):
 
         Args:
             inputs (dict): dictionary that maps observation groups to observation
-                dictionaries of torch.Tensor batches that agree with 
+                dictionaries of torch.Tensor batches that agree with
                 @self.observation_group_shapes. All observation groups in
                 @self.observation_group_shapes must be present, but additional
                 observation groups can also be present. Note that these are specified
@@ -567,7 +568,7 @@ class MIMO_MLP(Module):
         """
         return { k : list(self.output_shapes[k]) for k in self.output_shapes }
 
-    def forward(self, **inputs):
+    def forward(self, return_latent=False, **inputs):
         """
         Process each set of inputs in its own observation group.
 
@@ -583,6 +584,8 @@ class MIMO_MLP(Module):
         """
         enc_outputs = self.nets["encoder"](**inputs)
         mlp_out = self.nets["mlp"](enc_outputs)
+        if return_latent:
+            return self.nets["decoder"](mlp_out), enc_outputs.detach(), mlp_out.detach()
         return self.nets["decoder"](mlp_out)
 
     def _to_string(self):
@@ -603,7 +606,6 @@ class MIMO_MLP(Module):
         msg += textwrap.indent("\n\ndecoder={}".format(self.nets["decoder"]), indent)
         msg = header + '(' + msg + '\n)'
         return msg
-
 
 class RNN_MIMO_MLP(Module):
     """
