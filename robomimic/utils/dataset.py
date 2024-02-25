@@ -40,6 +40,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         load_next_obs=True,
         shuffled_obs_key_groups=None,
         lang=None,
+        demo_limit=None,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -139,7 +140,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.pad_frame_stack = pad_frame_stack
         self.get_pad_mask = get_pad_mask
 
-        self.load_demo_info(filter_by_attribute=self.filter_by_attribute)
+        self.load_demo_info(filter_by_attribute=self.filter_by_attribute, demo_limit=demo_limit)
 
         # maybe prepare for observation normalization
         self.obs_normalization_stats = None
@@ -187,7 +188,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         self.close_and_delete_hdf5_handle()
 
-    def load_demo_info(self, filter_by_attribute=None, demos=None):
+    def load_demo_info(self, filter_by_attribute=None, demos=None, demo_limit=None):
         """
         Args:
             filter_by_attribute (str): if provided, use the provided filter key
@@ -208,6 +209,10 @@ class SequenceDataset(torch.utils.data.Dataset):
         # sort demo keys
         inds = np.argsort([int(elem[5:]) for elem in self.demos])
         self.demos = [self.demos[i] for i in inds]
+
+        # limit number of demos
+        if demo_limit is not None:
+            self.demos = self.demos[:demo_limit]
 
         self.n_demos = len(self.demos)
 

@@ -193,6 +193,9 @@ class BaseConfig(Config):
         self.train.frame_stack = 1
         self.train.pad_frame_stack = True
 
+        # whether or not to limit the number of samples in the dataset
+        self.train.demo_limit = None
+
         # keys from hdf5 to load into each batch, besides "obs" and "next_obs". If algorithms
         # require additional keys from each trajectory in the hdf5, they should be specified here.
         self.train.dataset_keys = (
