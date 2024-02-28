@@ -77,7 +77,12 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     # video directory
     video_dir = os.path.join(base_output_dir, time_str, "videos")
     os.makedirs(video_dir)
-    return log_dir, output_dir, video_dir
+
+    # vis directory
+    vis_dir = os.path.join(base_output_dir, time_str, "vis")
+    os.makedirs(vis_dir)
+    
+    return log_dir, output_dir, video_dir, vis_dir
 
 
 def load_data_for_training(config, obs_keys):
@@ -100,8 +105,6 @@ def load_data_for_training(config, obs_keys):
     if valid_filter_by_attribute is not None:
         assert config.experiment.validate, "specified validation filter key {}, but config.experiment.validate is not set".format(valid_filter_by_attribute)
 
-    action_keys = config.train.action_keys
-
     # load the dataset into memory
     if config.experiment.validate:
         assert not config.train.hdf5_normalize_obs, "no support for observation normalization with validation data yet"
@@ -118,16 +121,16 @@ def load_data_for_training(config, obs_keys):
         )
         assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
             "validation demonstrations!"
-        train_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=train_filter_by_attribute)
-        valid_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=valid_filter_by_attribute)
+        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
+        valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
     else:
-        train_dataset = dataset_factory(config, obs_keys, action_keys, filter_by_attribute=train_filter_by_attribute)
+        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = None
 
     return train_dataset, valid_dataset
 
 
-def dataset_factory(config, obs_keys, action_keys, filter_by_attribute=None, dataset_path=None):
+def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=None):
     """
     Create a SequenceDataset instance to pass to a torch DataLoader.
 
@@ -152,19 +155,22 @@ def dataset_factory(config, obs_keys, action_keys, filter_by_attribute=None, dat
     ds_kwargs = dict(
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
-        action_keys=action_keys,
+        action_keys=config.train.action_keys,
         dataset_keys=config.train.dataset_keys,
+        action_config=config.train.action_config,
         load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
         frame_stack=config.train.frame_stack,
         seq_length=config.train.seq_length,
         pad_frame_stack=config.train.pad_frame_stack,
         pad_seq_length=config.train.pad_seq_length,
-        get_pad_mask=False,
+        get_pad_mask=True,
         goal_mode=config.train.goal_mode,
+        truncated_geom_factor=config.train.truncated_geom_factor,
         hdf5_cache_mode=config.train.hdf5_cache_mode,
         hdf5_use_swmr=config.train.hdf5_use_swmr,
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
-        filter_by_attribute=filter_by_attribute
+        filter_by_attribute=filter_by_attribute,
+        shuffled_obs_key_groups=config.train.shuffled_obs_key_groups,
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
@@ -197,25 +203,40 @@ def get_dataset(
     meta_ds_kwargs=None,
 ):
     ds_list = []
-    for i in range(len(ds_weights)):
-        
-        ds_kwargs_copy = deepcopy(ds_kwargs)
+    ds_weights_filtered = []
 
-        keys = ["hdf5_path", "filter_by_attribute"]
-
-        for k in keys:
-            ds_kwargs_copy[k] = ds_kwargs[k][i]
+    alllen = len(ds_weights)
+    for i in range(alllen):
+        t0 = time.time()
+        # The old way
+        # ds_kwargs_copy = deepcopy(ds_kwargs)
+        # keys = ["hdf5_path", "filter_by_attribute"]
+        # for k in keys:
+        #     ds_kwargs_copy[k] = ds_kwargs[k][i]
+        ds_kwargs_copy = {}
+        for k in ds_kwargs.keys():
+            if k in ["hdf5_path", "filter_by_attribute"]:
+                ds_kwargs_copy[k] = ds_kwargs[k][i]
+            else:
+                ds_kwargs_copy[k] = ds_kwargs[k]
         
-        ds_list.append(ds_class(**ds_kwargs_copy))
+        try:
+            ds_list.append(ds_class(**ds_kwargs_copy))
+            ds_weights_filtered.append(ds_weights[i])
+        except:
+            pass
+        t3 = time.time()
+        print(f"{i} / {alllen} in {t3-t0}") 
     
-    if len(ds_weights) == 1:
+    assert len(ds_weights_filtered) == len(ds_list)
+    if len(ds_weights_filtered) == 1:
         ds = ds_list[0]
     else:
         if meta_ds_kwargs is None:
             meta_ds_kwargs = dict()
         ds = meta_ds_class(
             datasets=ds_list,
-            ds_weights=ds_weights,
+            ds_weights=ds_weights_filtered,
             ds_labels=ds_labels,
             normalize_weights_by_ds_size=normalize_weights_by_ds_size,
             **meta_ds_kwargs
@@ -516,7 +537,7 @@ def should_save_from_rollout_logs(
     )
 
 
-def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None):
+def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None, action_normalization_stats=None):
     """
     Save model to a torch pth file.
 
@@ -535,6 +556,8 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
             normalization. This should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
+
+        action_normalization_stats (dict): TODO
     """
     env_meta = deepcopy(env_meta)
     shape_meta = deepcopy(shape_meta)
@@ -549,11 +572,14 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         assert config.train.hdf5_normalize_obs
         obs_normalization_stats = deepcopy(obs_normalization_stats)
         params["obs_normalization_stats"] = TensorUtils.to_list(obs_normalization_stats)
+    if action_normalization_stats is not None:
+        action_normalization_stats = deepcopy(action_normalization_stats)
+        params["action_normalization_stats"] = TensorUtils.to_list(action_normalization_stats)
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
 
-def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
+def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None, data_loader_iter=None):
     """
     Run an epoch of training or validation.
 
@@ -583,14 +609,17 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         model.set_eval()
     else:
         model.set_train()
-    if num_steps is None:
-        num_steps = len(data_loader)
+    # if num_steps is None:
+    #     num_steps = len(data_loader)
 
     step_log_all = []
     timing_stats = dict(Data_Loading=[], Process_Batch=[], Train_Batch=[], Log_Info=[])
     start_time = time.time()
 
-    data_loader_iter = iter(data_loader)
+    if data_loader_iter is None:
+        data_loader_iter = iter(data_loader)
+    else:
+        data_loader_iter = data_loader_iter
     for _ in LogUtils.custom_tqdm(range(num_steps)):
 
         # load next batch from data loader
@@ -636,7 +665,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.
     step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
 
-    return step_log_all
+    return step_log_all, data_loader_iter
 
 
 def is_every_n_steps(interval, current_step, skip_zero=False):

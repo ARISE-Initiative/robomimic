@@ -96,24 +96,31 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
             :`'type'`: type of environment, should be a value in EB.EnvType
             :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
     """
-    dataset_path = os.path.expanduser(dataset_path)
-    f = h5py.File(dataset_path, "r")
+    if ds_format != "r2d2_rlds":
+        dataset_path = os.path.expanduser(dataset_path)
+        f = h5py.File(dataset_path, "r")
+
     if ds_format == "robomimic":
         env_meta = json.loads(f["data"].attrs["env_args"])
+        f.close()
     elif ds_format == "r2d2":
         env_meta = dict(f.attrs)
+        f.close()
+    elif ds_format == "r2d2_rlds":
+        # TODO(Ashwin): find a proper way to extract this; this info isn't actually used though
+        env_meta = {}
     else:
         raise ValueError
-    f.close()
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="robomimic", verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, batch, action_keys, all_obs_keys=None, ds_format="robomimic", verbose=False, config=None):
     """
     Retrieves shape metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+        action_keys (list): list of all action key strings
         all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
         verbose (bool): if True, include print statements
@@ -128,17 +135,19 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
     """
 
     shape_meta = {}
-
-    # read demo file for some metadata
-    dataset_path = os.path.expanduser(dataset_path)
-    f = h5py.File(dataset_path, "r")
     
     if ds_format == "robomimic":
+        # read demo file for some metadata
+        dataset_path = os.path.expanduser(dataset_path)
+        f = h5py.File(dataset_path, "r")
+
         demo_id = list(f["data"].keys())[0]
         demo = f["data/{}".format(demo_id)]
-
-        # action dimension
-        shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
+        
+        for key in action_keys:
+            assert len(demo[key].shape) == 2 # shape should be (B, D)
+        action_dim = sum([demo[key].shape[1] for key in action_keys])
+        shape_meta["ac_dim"] = action_dim
 
         # observation dimensions
         all_shapes = OrderedDict()
@@ -156,8 +165,18 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
                 obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
                 input_shape=initial_shape,
             )
+        f.close()
     elif ds_format == "r2d2":
-        shape_meta['ac_dim'] = f["action/cartesian_velocity"].shape[1] + 1 # 1 for "action/gripper_velocity"
+        # read demo file for some metadata
+        dataset_path = os.path.expanduser(dataset_path)
+        f = h5py.File(dataset_path, "r")
+
+        print(dataset_path)
+        for key in action_keys:
+            print(key, f[key].shape)
+            assert len(f[key].shape) == 2 # shape should be (B, D)
+        action_dim = sum([f[key].shape[1] for key in action_keys])
+        shape_meta["ac_dim"] = action_dim
         
         # observation dimensions
         all_shapes = OrderedDict()
@@ -166,10 +185,29 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
         for k in [
             "robot_state/cartesian_position",
             "robot_state/gripper_position",
-            "robot_state/joint_positions",
-            "camera/image/hand_camera_image",
-            "camera/image/varied_camera_left_image",
-            "camera/image/varied_camera_right_image",
+            # "robot_state/joint_positions",
+            "camera/image/hand_camera_left_image",
+            # "camera/image/hand_camera_right_image",
+            "camera/image/varied_camera_1_left_image",
+            # "camera/image/varied_camera_1_right_image",
+            "camera/image/varied_camera_2_left_image",
+            # "camera/image/varied_camera_2_right_image",
+            # "camera/extrinsics/hand_camera_left",
+            # "camera/extrinsics/hand_camera_left_gripper_offset",
+            # "camera/extrinsics/hand_camera_right",
+            # "camera/extrinsics/hand_camera_right_gripper_offset",
+            # "camera/extrinsics/varied_camera_1_left",
+            # "camera/extrinsics/varied_camera_1_right",
+            # "camera/extrinsics/varied_camera_2_left",
+            # "camera/extrinsics/varied_camera_2_right",
+            # "camera/intrinsics/hand_camera_left",
+            # "camera/intrinsics/hand_camera_right",
+            # "camera/intrinsics/varied_camera_1_left",
+            # "camera/intrinsics/varied_camera_1_right",
+            # "camera/intrinsics/varied_camera_2_left",
+            # "camera/intrinsics/varied_camera_2_right",
+            "lang_fixed/language_distilbert",
+            "lang_fixed/language_raw"
         ]:
             initial_shape = f["observation/{}".format(k)].shape[1:]
             if len(initial_shape) == 0:
@@ -179,15 +217,38 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, ds_format="
                 obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
                 input_shape=initial_shape,
             )
+
+            ## Special case for goal image conditioning, images become 6 channel
+            if (config.train.goal_mode is not None) and (ObsUtils.OBS_KEYS_TO_MODALITIES[k] == 'rgb'):
+                all_shapes[k][0] *= 2
+        f.close()
+    elif ds_format == "r2d2_rlds":
+        all_shapes = OrderedDict()
+        for k in [
+            "robot_state/cartesian_position",
+            "robot_state/gripper_position",
+            "camera/image/varied_camera_1_left_image",
+            # "camera/image/varied_camera_1_right_image",
+            "camera/image/varied_camera_2_left_image",
+        ]:
+            if k in batch["obs"]:
+                initial_shape = batch["obs"][k].shape[2:]
+
+                if len(initial_shape) == 0:
+                    initial_shape = (1,)
+
+                all_shapes[k] = ObsUtils.get_processed_shape(
+                    obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
+                    input_shape=initial_shape,
+                )
+
+        shape_meta = {'ac_dim': batch["actions"].shape[-1]}
     else:
         raise ValueError
-
-    f.close()
 
     shape_meta['all_shapes'] = all_shapes
     shape_meta['all_obs_keys'] = all_obs_keys
     shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
-
     return shape_meta
 
 
@@ -418,6 +479,13 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
             for k in obs_normalization_stats[m]:
                 obs_normalization_stats[m][k] = np.array(obs_normalization_stats[m][k])
 
+    # maybe restore action normalization stats
+    action_normalization_stats = ckpt_dict.get("action_normalization_stats", None)
+    if action_normalization_stats is not None:
+        for m in action_normalization_stats:
+            for k in action_normalization_stats[m]:
+                action_normalization_stats[m][k] = np.array(action_normalization_stats[m][k])
+
     if device is None:
         # get torch device
         device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)
@@ -432,7 +500,11 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     )
     model.deserialize(ckpt_dict["model"])
     model.set_eval()
-    model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats)
+    model = RolloutPolicy(
+        model,
+        obs_normalization_stats=obs_normalization_stats,
+        action_normalization_stats=action_normalization_stats
+    )
     if verbose:
         print("============= Loaded Policy =============")
         print(model)
@@ -474,6 +546,8 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
     )
+    config, _ = config_from_checkpoint(algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False)
+    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
     if verbose:
         print("============= Loaded Environment =============")
         print(env)

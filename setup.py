@@ -29,6 +29,9 @@ setup(
         "egl_probe>=1.0.1",
         "torch",
         "torchvision",
+        "diffusers==0.11.1",
+        "opencv-python",
+        "transformers==4.34.0"
     ],
     eager_resources=['*'],
     include_package_data=True,

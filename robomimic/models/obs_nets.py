@@ -59,37 +59,68 @@ def obs_encoder_factory(
             obs_modality2: dict
                 ...
     """
-    enc = ObservationEncoder(feature_activation=feature_activation)
+    enc = ObservationEncoder(feature_activation=feature_activation, fuser = encoder_kwargs["rgb"]["fuser"])
     for k, obs_shape in obs_shapes.items():
         obs_modality = ObsUtils.OBS_KEYS_TO_MODALITIES[k]
         enc_kwargs = deepcopy(ObsUtils.DEFAULT_ENCODER_KWARGS[obs_modality]) if encoder_kwargs is None else \
             deepcopy(encoder_kwargs[obs_modality])
-
-        for obs_module, cls_mapping in zip(("core", "obs_randomizer"),
-                                      (ObsUtils.OBS_ENCODER_CORES, ObsUtils.OBS_RANDOMIZERS)):
-            # Sanity check for kwargs in case they don't exist / are None
-            if enc_kwargs.get(f"{obs_module}_kwargs", None) is None:
-                enc_kwargs[f"{obs_module}_kwargs"] = {}
-            # Add in input shape info
-            enc_kwargs[f"{obs_module}_kwargs"]["input_shape"] = obs_shape
-            # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
-            if enc_kwargs[f"{obs_module}_class"] is not None:
-                enc_kwargs[f"{obs_module}_kwargs"] = extract_class_init_kwargs_from_dict(
-                    cls=cls_mapping[enc_kwargs[f"{obs_module}_class"]],
-                    dic=enc_kwargs[f"{obs_module}_kwargs"],
-                    copy=False,
-                )
+            
+        # Sanity check for kwargs in case they don't exist / are None
+        if enc_kwargs.get("core_kwargs", None) is None:
+            enc_kwargs["core_kwargs"] = {}
+        # Add in input shape info
+        enc_kwargs["core_kwargs"]["input_shape"] = obs_shape
+        # If group class is specified, then make sure corresponding kwargs only contain relevant kwargs
+        if enc_kwargs["core_class"] is not None:
+            enc_kwargs["core_kwargs"] = extract_class_init_kwargs_from_dict(
+                cls=ObsUtils.OBS_ENCODER_CORES[enc_kwargs["core_class"]],
+                dic=enc_kwargs["core_kwargs"],
+                copy=False,
+            )
 
         # Add in input shape info
-        randomizer = None if enc_kwargs["obs_randomizer_class"] is None else \
-            ObsUtils.OBS_RANDOMIZERS[enc_kwargs["obs_randomizer_class"]](**enc_kwargs["obs_randomizer_kwargs"])
+        randomizers = []
+        obs_randomizer_class_list = enc_kwargs["obs_randomizer_class"]
+        obs_randomizer_kwargs_list = enc_kwargs["obs_randomizer_kwargs"]
+
+        if not isinstance(obs_randomizer_class_list, list):
+            obs_randomizer_class_list = [obs_randomizer_class_list]
+
+        if not isinstance(obs_randomizer_kwargs_list, list):
+            obs_randomizer_kwargs_list = [obs_randomizer_kwargs_list]
+
+        for rand_class, rand_kwargs in zip(obs_randomizer_class_list, obs_randomizer_kwargs_list):            
+            rand = None
+            if rand_class is not None:
+                rand_kwargs["input_shape"] = obs_shape
+                rand_kwargs = extract_class_init_kwargs_from_dict(
+                    cls=ObsUtils.OBS_RANDOMIZERS[rand_class],
+                    dic=rand_kwargs,
+                    copy=False,
+                )
+                rand = ObsUtils.OBS_RANDOMIZERS[rand_class](**rand_kwargs)
+            randomizers.append(rand)
+
+        input_maps = enc_kwargs.get("input_maps", {})
+
+        if any("camera/image/varied_camera" in s for s in enc.obs_shapes.keys()) and ("camera/image/varied_camera" in k):
+            existing_varied_cam = [a for a in enc.obs_shapes.keys() if "camera/image/varied_camera" in a][0]
+            share = existing_varied_cam
+            net_class = None
+            net_kwargs = None
+        else: 
+            share = None
+            net_class = enc_kwargs["core_class"]
+            net_kwargs = enc_kwargs["core_kwargs"]
 
         enc.register_obs_key(
             name=k,
             shape=obs_shape,
-            net_class=enc_kwargs["core_class"],
-            net_kwargs=enc_kwargs["core_kwargs"],
-            randomizer=randomizer,
+            input_map=input_maps.get(k, None),
+            net_class=net_class,
+            net_kwargs=net_kwargs,
+            randomizers=randomizers,
+            share_net_from=share,
         )
 
     enc.make()
@@ -103,7 +134,7 @@ class ObservationEncoder(Module):
     Call @register_obs_key to register observation keys with the encoder and then
     finally call @make to create the encoder networks. 
     """
-    def __init__(self, feature_activation=nn.ReLU):
+    def __init__(self, feature_activation=nn.ReLU, fuser = None):
         """
         Args:
             feature_activation: non-linearity to apply after each obs net - defaults to ReLU. Pass
@@ -111,22 +142,26 @@ class ObservationEncoder(Module):
         """
         super(ObservationEncoder, self).__init__()
         self.obs_shapes = OrderedDict()
+        self.obs_input_maps = OrderedDict()
         self.obs_nets_classes = OrderedDict()
         self.obs_nets_kwargs = OrderedDict()
         self.obs_share_mods = OrderedDict()
         self.obs_nets = nn.ModuleDict()
         self.obs_randomizers = nn.ModuleDict()
         self.feature_activation = feature_activation
+        self.fuser = fuser
+        self.num_images = 0
         self._locked = False
 
     def register_obs_key(
         self, 
         name,
-        shape, 
+        shape,
+        input_map=None,
         net_class=None, 
         net_kwargs=None, 
         net=None, 
-        randomizer=None,
+        randomizers=None,
         share_net_from=None,
     ):
         """
@@ -149,6 +184,8 @@ class ObservationEncoder(Module):
         """
         assert not self._locked, "ObservationEncoder: @register_obs_key called after @make"
         assert name not in self.obs_shapes, "ObservationEncoder: modality {} already exists".format(name)
+        if "image" in name:
+            self.num_images += 1
 
         if net is not None:
             assert isinstance(net, Module), "ObservationEncoder: @net must be instance of Module class"
@@ -161,17 +198,19 @@ class ObservationEncoder(Module):
             assert share_net_from in self.obs_shapes
 
         net_kwargs = deepcopy(net_kwargs) if net_kwargs is not None else {}
-        if randomizer is not None:
-            assert isinstance(randomizer, Randomizer)
-            if net_kwargs is not None:
-                # update input shape to visual core
-                net_kwargs["input_shape"] = randomizer.output_shape_in(shape)
+        for rand in randomizers:
+            if rand is not None:
+                assert isinstance(rand, Randomizer)
+                if net_kwargs is not None:
+                    # update input shape to visual core
+                    net_kwargs["input_shape"] = rand.output_shape_in(shape)
 
         self.obs_shapes[name] = shape
+        self.obs_input_maps[name] = input_map
         self.obs_nets_classes[name] = net_class
         self.obs_nets_kwargs[name] = net_kwargs
         self.obs_nets[name] = net
-        self.obs_randomizers[name] = randomizer
+        self.obs_randomizers[name] = nn.ModuleList(randomizers)
         self.obs_share_mods[name] = share_net_from
 
     def make(self):
@@ -200,6 +239,76 @@ class ObservationEncoder(Module):
         if self.feature_activation is not None:
             self.activation = self.feature_activation()
 
+        if self.fuser == "transformer":
+            ## Define a fuser which takes multiple camera features as [B, sequence of pixels, features]
+            ## and encodes them with a transformer
+            input_features = self.obs_nets["camera/image/hand_camera_left_image"].feat_shape
+            # First scales down number of features on each pixel
+            self.c1 = torch.nn.Conv1d(in_channels = input_features[1], out_channels=512, kernel_size=1)
+            self.c2 = torch.nn.Conv1d(in_channels = 512, out_channels=512, kernel_size=1)
+            layer = nn.TransformerEncoderLayer(d_model=512, nhead=8, batch_first = True)
+            self.fusernetwork = nn.TransformerEncoder(layer, num_layers=6)
+            # Finally flatten and linear layer before concatenated with other low dim features
+            self.l1 = torch.nn.Linear(input_features[0] * self.num_images * 512, 2048)
+        elif self.fuser == "perceiver":
+            from transformers import PerceiverModel, PerceiverConfig
+            ## Define a fuser which takes multiple camera features as [B, sequence of pixels, features]
+            ## and encodes them with a transformer
+            input_features = self.obs_nets["camera/image/hand_camera_left_image"].feat_shape
+            # Copied all values from here: https://github.com/TRI-ML/vidar/blob/main/vidar/arch/networks/perceiver/DeFiNeNet.py#L102
+            self.percveiver_config = PerceiverConfig(
+                d_latents=512,
+                d_model=input_features[1],
+                num_latents=512,
+                hidden_act='gelu',
+                hidden_dropout_prob=0.25,
+                initializer_range=0.02,
+                layer_norm_eps=1e-12,
+                num_blocks=1,
+                num_cross_attention_heads=1,
+                num_self_attends_per_block=8,
+                num_self_attention_heads=8,
+                qk_channels=None,
+                v_channels=None,
+            )
+            self.fusernetwork = PerceiverModel(self.percveiver_config)
+            # Finally flatten and linear layer before concatenated with other low dim features
+            self.l1 = torch.nn.Linear(512 * 512, 2048)
+
+    def final_collation(self, feats):
+        if self.fuser is None:
+            ## Extremely hacky fix to handle the expected shape of raw language
+            featsnew = [TensorUtils.flatten(x, begin_axis=1) for k, x in feats.items() if "raw" not in k]
+            if 'lang_fixed/language_raw' in feats.keys():
+                featsnew += [torch.zeros(featsnew[0].shape[0], 1).to(featsnew[0].device)]
+            a = torch.cat(featsnew, dim=-1)
+            return a
+
+        keys_with_images = [a for a in feats.keys() if "image" in a]
+        keys_without_images = [a for a in feats.keys() if "image" not in a]
+        non_image_feats = [TensorUtils.flatten(feats[k], begin_axis=1) for k in keys_without_images]
+
+        all_image_feats = []
+        for k in keys_with_images:
+            all_image_feats.append(feats[k])
+        
+        if self.fuser == "transformer":
+            all_image_feats = torch.cat(all_image_feats, dim = 1)
+            all_image_feats_postconv = self.c2(F.relu(self.c1(all_image_feats.permute(0, 2, 1)))).permute(0, 2, 1)
+            all_image_feats_posttrans = self.fusernetwork(all_image_feats_postconv)
+            output = self.l1(TensorUtils.flatten(all_image_feats_posttrans, begin_axis=1))
+            return torch.cat(non_image_feats + [output], -1)
+        elif self.fuser == "perceiver":
+            # Concatenate all embeddings before applying Perceiver block like here:
+            # https://github.com/TRI-ML/vidar/blob/main/vidar/arch/networks/perceiver/DeFiNeNet.py#L357
+            all_image_feats = torch.cat(all_image_feats, dim = 1)
+            all_image_feats_posttrans = self.fusernetwork(all_image_feats).last_hidden_state
+            output = self.l1(TensorUtils.flatten(all_image_feats_posttrans, begin_axis=1))
+            # TODO (Ashwin): Ideally should include low-dim features in perceiver input too
+            return torch.cat(non_image_feats + [output], -1)
+        else:
+            raise NotImplementedError("Unsupported fuser")
+
     def forward(self, obs_dict):
         """
         Processes modalities according to the ordering in @self.obs_shapes. For each
@@ -224,26 +333,48 @@ class ObservationEncoder(Module):
         )
 
         # process modalities by order given by @self.obs_shapes
-        feats = []
+        feats = {}
         for k in self.obs_shapes:
-            x = obs_dict[k]
+            if self.obs_input_maps[k] is not None:
+                x = dict()
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    x[input_name] = obs_dict[input_obs_key]
+            else:
+                x = obs_dict[k]
             # maybe process encoder input with randomizer
-            if self.obs_randomizers[k] is not None:
-                x = self.obs_randomizers[k].forward_in(x)
+            if isinstance(x, dict):
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    randomizers = self.obs_randomizers[input_obs_key]
+                    for rand in randomizers:
+                        if rand is not None:
+                            x[input_name] = rand.forward_in(x[input_name])
+            else:
+                for rand in self.obs_randomizers[k]:
+                    if rand is not None:
+                        x = rand.forward_in(x)
             # maybe process with obs net
             if self.obs_nets[k] is not None:
                 x = self.obs_nets[k](x)
                 if self.activation is not None:
                     x = self.activation(x)
             # maybe process encoder output with randomizer
-            if self.obs_randomizers[k] is not None:
-                x = self.obs_randomizers[k].forward_out(x)
+            if isinstance(x, dict):
+                for input_name, input_obs_key in self.obs_input_maps[k].items():
+                    randomizers = self.obs_randomizers[input_obs_key]
+                    for rand in randomizers:
+                        if rand is not None:
+                            x[input_name] = rand.forward_out(x[input_name])
+            else:
+                for rand in self.obs_randomizers[k]:
+                    if rand is not None:
+                        x = rand.forward_out(x)
             # flatten to [B, D]
-            x = TensorUtils.flatten(x, begin_axis=1)
-            feats.append(x)
+            # x = TensorUtils.flatten(x, begin_axis=1)
+            feats[k] = (x)
 
+        output = self.final_collation(feats)
         # concatenate all features together
-        return torch.cat(feats, dim=-1)
+        return output
 
     def output_shape(self, input_shape=None):
         """
@@ -251,14 +382,21 @@ class ObservationEncoder(Module):
         """
         feat_dim = 0
         for k in self.obs_shapes:
+            # If the fuser is not None for image features, don't naively concatenate flattened shapes
+            if (self.fuser is not None) and ("image" in k):
+                continue
             feat_shape = self.obs_shapes[k]
-            if self.obs_randomizers[k] is not None:
-                feat_shape = self.obs_randomizers[k].output_shape_in(feat_shape)
+            for rand in self.obs_randomizers[k]:
+                if rand is not None:
+                    feat_shape = rand.output_shape_in(feat_shape)
             if self.obs_nets[k] is not None:
                 feat_shape = self.obs_nets[k].output_shape(feat_shape)
-            if self.obs_randomizers[k] is not None:
-                feat_shape = self.obs_randomizers[k].output_shape_out(feat_shape)
+            for rand in self.obs_randomizers[k]:
+                if rand is not None:
+                    feat_shape = rand.output_shape_out(feat_shape)
             feat_dim += int(np.prod(feat_shape))
+        if self.fuser is not None:
+            feat_dim += 2048
         return [feat_dim]
 
     def __repr__(self):
@@ -415,6 +553,15 @@ class ObservationGroupEncoder(Module):
                 encoder_kwargs=encoder_kwargs,
             )
 
+        self.out_size = 512
+        self.combine = nn.Sequential(
+                nn.Linear(self.combo_output_shape(), 1024),
+                nn.ReLU(),
+                nn.Linear(1024, 512),
+                nn.ReLU(),
+                nn.Linear(512, self.out_size)
+            )
+
     def forward(self, **inputs):
         """
         Process each set of inputs in its own observation group.
@@ -445,9 +592,11 @@ class ObservationGroupEncoder(Module):
                 self.nets[obs_group].forward(inputs[obs_group])
             )
 
-        return torch.cat(outputs, dim=-1)
+        combo = torch.cat(outputs, dim=-1)
+        out = self.combine(combo)
+        return out
 
-    def output_shape(self):
+    def combo_output_shape(self):
         """
         Compute the output shape of this encoder.
         """
@@ -455,7 +604,13 @@ class ObservationGroupEncoder(Module):
         for obs_group in self.observation_group_shapes:
             # get feature dimension of these keys
             feat_dim += self.nets[obs_group].output_shape()[0]
-        return [feat_dim]
+        return feat_dim
+
+    def output_shape(self):
+        """
+        Compute the output shape of this encoder.
+        """
+        return [self.out_size]
 
     def __repr__(self):
         """Pretty print network."""

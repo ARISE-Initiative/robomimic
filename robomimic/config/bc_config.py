@@ -104,3 +104,5 @@ class BCConfig(BaseConfig):
         self.algo.transformer.activation = "gelu"                   # activation function for MLP in Transformer Block
         self.algo.transformer.supervise_all_steps = False           # if true, supervise all intermediate actions, otherwise only final one
         self.algo.transformer.nn_parameter_for_timesteps = True     # if true, use nn.Parameter otherwise use nn.Embedding
+        self.algo.transformer.pred_future_acs = False               # shift action prediction forward to predict future actions instead of past actions
+        self.algo.transformer.causal = True                         # whether the transformer is causal

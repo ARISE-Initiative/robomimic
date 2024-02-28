@@ -530,6 +530,63 @@ class ResNet18Conv(ConvBase):
         return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
 
 
+class ResNet50Conv(ConvBase):
+    """
+    A ResNet50 block that can be used to process input images.
+    """
+    def __init__(
+        self,
+        input_channel=3,
+        pretrained=False,
+        input_coord_conv=False,
+    ):
+        """
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer in ResNet to handle the number
+                of input channels.
+            pretrained (bool): if True, load pretrained weights for all ResNet layers.
+            input_coord_conv (bool): if True, use a coordinate convolution for the first layer
+                (a convolution where input channels are modified to encode spatial pixel location)
+        """
+        super(ResNet50Conv, self).__init__()
+        net = vision_models.resnet50(pretrained=pretrained)
+
+        if input_coord_conv:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif input_channel != 3:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # cut the last fc layer
+        self._input_coord_conv = input_coord_conv
+        self._input_channel = input_channel
+        self.nets = torch.nn.Sequential(*(list(net.children())[:-2]))
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+        out_h = int(math.ceil(input_shape[1] / 32.))
+        out_w = int(math.ceil(input_shape[2] / 32.))
+        return [2048, out_h, out_w]
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+
+
 class R3MConv(ConvBase):
     """
     Base class for ConvNets pretrained with R3M (https://arxiv.org/abs/2203.12601)

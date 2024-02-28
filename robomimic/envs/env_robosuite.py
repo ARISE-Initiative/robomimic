@@ -7,7 +7,6 @@ import json
 import numpy as np
 from copy import deepcopy
 
-import mujoco_py
 import robosuite
 
 import robomimic.utils.obs_utils as ObsUtils
@@ -80,6 +79,7 @@ class EnvRobosuite(EB.EnvBase):
         self._env_name = env_name
         self._init_kwargs = deepcopy(kwargs)
         self.env = robosuite.make(self._env_name, **kwargs)
+        self.base_env = self.env # for mimicgen
 
         if self._is_v1:
             # Make sure joint position observations and eef vel observations are active
@@ -200,7 +200,8 @@ class EnvRobosuite(EB.EnvBase):
                 # ensures that we don't accidentally add robot wrist images a second time
                 pf = robot.robot_model.naming_prefix
                 for k in di:
-                    if k.startswith(pf) and (k not in ret) and (not k.endswith("proprio-state")):
+                    if k.startswith(pf) and (k not in ret) and \
+                            (not k.endswith("proprio-state")):
                         ret[k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
@@ -374,7 +375,7 @@ class EnvRobosuite(EB.EnvBase):
         that the entire training run doesn't crash because of a bad policy that causes unstable
         simulation computations.
         """
-        return (mujoco_py.builder.MujocoException)
+        return (Exception)
 
     def __repr__(self):
         """

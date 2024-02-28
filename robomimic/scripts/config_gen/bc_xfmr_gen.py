@@ -13,101 +13,125 @@ def make_generator_helper(args):
     if args.ckpt_mode is None:
         args.ckpt_mode = "off"
 
-    generator.add_param(
-        key="train.num_data_workers",
-        name="",
-        group=-1,
-        values=[4],
-    )
-    generator.add_param(
-        key="experiment.save.every_n_epochs",
-        name="",
-        group=-1,
-        values=[
-            100
-        ],
-    )
-
-    # run rollouts at epoch 0 only
-    generator.add_param(
-        key="experiment.rollout.warmstart",
-        name="",
-        group=-1,
-        values=[
-            -1,
-        ],
-    )
-    generator.add_param(
-        key="train.num_epochs",
-        name="",
-        group=-1,
-        values=[40],
-    )
-    generator.add_param(
-        key="experiment.rollout.rate",
-        name="",
-        group=-1,
-        values=[10],
-    )
-
     if args.env == "r2d2":
         generator.add_param(
             key="train.data",
             name="ds",
             group=2,
             values=[
-                [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im84.h5")],
-                [{"path": p} for p in scan_datasets("~/code/r2d2/data/success/2023-05-23_t2c-cans", postfix="trajectory_im128.h5")],
+                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
             ],
             value_names=[
-                "pnp-t2c-cans-84",
-                "pnp-t2c-cans-128",
+                "pen-in-cup",
             ],
         )
         generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
-            name="",
+            key="observation.modalities.obs.rgb",
+            name="cams",
+            group=130,
+            values=[
+                # ["camera/image/hand_camera_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+            ],
+            value_names=[
+                # "wrist",
+                "3cams",
+            ]
+        )
+    elif args.env == "kitchen":
+        generator.add_param(
+            key="train.data",
+            name="ds",
             group=2,
             values=[
-                76,
-                116
+                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
+                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
+            ],
+            value_names=[
+                "bowls-human-100",
+                # "human-100",
+                # "mg-100",
+                # "mg-1000",
             ],
         )
+    elif args.env == "square":
         generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
-            name="",
+            key="train.data",
+            name="ds",
             group=2,
             values=[
-                76,
-                116
+                [
+                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
+                ],
+            ],
+            value_names=[
+                "square",
             ],
         )
     else:
         raise ValueError
 
-    if "experiment.ckpt_path" in generator.parameters:
-        generator.add_param(
-            key="algo.optim_params.policy.learning_rate.initial",
-            name="lrinit",
-            group=110,
-            values=[
-                1e-5,
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="algo.optim_params.policy.learning_rate.lr_scheduler_type",
-            name="lrsch",
-            group=111,
-            values=[
-                # "linear",
-                None,
-            ],
-            value_names=[
-                "none"
-            ],
-            hidename=True,
-        )
+    # change default settings: predict 10 steps into future
+    generator.add_param(
+        key="algo.transformer.pred_future_acs",
+        name="predfuture",
+        group=1,
+        values=[
+            True,
+            # False,
+        ],
+        # hidename=True,
+    )
+    generator.add_param(
+        key="algo.transformer.supervise_all_steps",
+        name="supallsteps",
+        group=1,
+        values=[
+            True,
+            # False,
+        ],
+        hidename=True,
+    )
+    generator.add_param(
+        key="algo.transformer.causal",
+        name="causal",
+        group=1,
+        values=[
+            False,
+            # True,
+        ],
+        hidename=True,
+    )
+    generator.add_param(
+        key="train.seq_length",
+        name="",
+        group=-1,
+        values=[10],
+        hidename=True,
+    )
+
+    generator.add_param(
+        key="algo.gmm.min_std",
+        name="mindstd",
+        group=271314,
+        values=[
+            0.03,
+            #0.0001,
+        ],
+        hidename=True,
+    )
+    generator.add_param(
+        key="train.max_grad_norm",
+        name="maxgradnorm",
+        group=18371,
+        values=[
+            # None,
+            100.0,
+        ],
+        hidename=True,
+    )
     
     generator.add_param(
         key="train.output_dir",
@@ -120,16 +144,6 @@ def make_generator_helper(args):
                 algo_name_short=algo_name_short,
             )
         ],
-    )
-
-    generator.add_param(
-        key="experiment.rollout.enabled",
-        name="",
-        group=-1,
-        values=[
-            True
-        ],
-        hidename=False,
     )
 
     return generator

@@ -39,8 +39,11 @@ def recursive_dict_list_tuple_apply(x, type_func_dict):
             if isinstance(x, t):
                 return f(x)
         else:
-            raise NotImplementedError(
-                'Cannot handle data type %s' % str(type(x)))
+            ## Pretty hacky fix to avoid error when strings get converted to tensors
+            ## TODO (surajnair) try and clean this up at some point
+            return x
+            # raise NotImplementedError(
+            #     'Cannot handle data type %s' % str(type(x)))
 
 
 def map_tensor(x, func):

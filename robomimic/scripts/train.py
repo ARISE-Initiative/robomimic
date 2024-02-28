@@ -25,21 +25,28 @@ import psutil
 import sys
 import socket
 import traceback
+import tqdm
 
 from collections import OrderedDict
 
 import torch
 from torch.utils.data import DataLoader
+import tensorflow as tf
 
 import robomimic
 import robomimic.utils.train_utils as TrainUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
+import robomimic.utils.action_utils as ActionUtils
 import robomimic.utils.file_utils as FileUtils
+from robomimic.utils.dataset import action_stats_to_normalization_stats
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
+from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transform, R2D2_TO_RLDS_OBS_KEY_MAP, R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP, TorchRLDSDataset
+
+from octo.data.dataset import make_interleaved_dataset
 
 
 def train(config, device):
@@ -57,7 +64,7 @@ def train(config, device):
     print("\n============= New Training Run with Config =============")
     print(config)
     print("")
-    log_dir, ckpt_dir, video_dir = TrainUtils.get_exp_dir(config)
+    log_dir, ckpt_dir, video_dir, vis_dir = TrainUtils.get_exp_dir(config)
 
     if config.experiment.logging.terminal_output_to_txt:
         # log stdout and stderr to a text file
@@ -68,22 +75,151 @@ def train(config, device):
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
-    # make sure the dataset exists
-    eval_dataset_cfg = config.train.data[0]
-    dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
     ds_format = config.train.data_format
-    if not os.path.exists(dataset_path):
-        raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
-    # load basic metadata from training file
-    print("\n============= Loaded Environment Metadata =============")
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
-    shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=dataset_path,
-        all_obs_keys=config.all_obs_keys,
-        ds_format=ds_format,
-        verbose=True
-    )
+    if ds_format == "r2d2_rlds":
+        # # load basic metadata from training file
+        # print("\n============= Loaded Environment Metadata =============")
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=None, ds_format=ds_format)
+         # TODO (Ashwin): make sure setting to None here is OK, are observations pre-normalized the way we want?
+        obs_normalization_stats = None
+
+        # FOR RLDS
+        tf.config.set_visible_devices([], "GPU")
+
+        obs_modalities = config.observation.modalities.obs.rgb
+        # NOTE(Ashwin): must be 2 cam for now, can clean this up later
+        assert(len(obs_modalities) == 2)
+
+        BASE_DATASET_KWARGS = {
+                "data_dir": config.train.data_path,
+                "image_obs_keys": {"primary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
+                "state_obs_keys": [R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
+                "language_key": "language_instruction",
+                "action_proprio_normalization_type": "bounds",
+                "absolute_action_mask": [True] * 10,
+                "action_normalization_mask": [True] * 10,
+                "standardize_fn": droid_dataset_transform,
+            }
+
+        # you can add more datasets here & the sampling weights below if you want to mix
+        dataset_names = config.train.dataset_names
+        dataset_kwargs_list = [
+            {"name": d_name,  **BASE_DATASET_KWARGS} for d_name in dataset_names
+        ]
+
+        # TODO(Ashwin): Wrap more of the parameters below in the robomimic configs
+        dataset = make_interleaved_dataset(
+            dataset_kwargs_list,
+            config.train.sample_weights,
+            train=True,
+            shuffle_buffer_size=config.train.shuffle_buffer_size,
+            batch_size=None,  # batching will be handles in PyTorch Dataloader object
+            balance_weights=True,
+            traj_transform_kwargs=dict(
+                # NOTE(Ashwin): window_size and future_action_window_size may break if 
+                # not using diffusion policy
+                window_size=config.algo.horizon.observation_horizon,
+                future_action_window_size=config.algo.horizon.prediction_horizon-1,
+                subsample_length=100,
+                skip_unlabeled=True,    # skip all trajectories without language
+            ),
+            frame_transform_kwargs=dict(
+                image_augment_kwargs=dict(
+                ),
+                resize_size=dict(
+                    primary=config.observation.image_dim,
+                    secondary=config.observation.image_dim,
+                ),
+                num_parallel_calls=200,
+            ),
+            traj_transform_threads=48,
+            traj_read_threads=48,
+        )
+        # TODO(Ashwin): this assumes that you are doing co-training and that the co-training dataset
+        # that corresponds to the eval setting is last
+        rlds_dataset_stats = dataset.dataset_statistics[-1]["action"]
+        action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats, config.train.action_keys, config.train.action_shapes)
+        action_config = config.train.action_config
+        action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
+        dataset = dataset.map(robomimic_transform, num_parallel_calls=48)
+
+        pytorch_dataset = TorchRLDSDataset(dataset)
+        train_loader = DataLoader(
+            pytorch_dataset,
+            batch_size=config.train.batch_size,
+            num_workers=0,  # important to keep this to 0 so PyTorch does not mess with the parallelism
+        )
+
+
+        # For RLDS, get batch from train loader to compute shapes
+        data_loader_iter = iter(train_loader)
+        rlds_batch = next(data_loader_iter)
+
+        shape_meta = FileUtils.get_shape_metadata_from_dataset(
+            dataset_path=None,
+            batch=rlds_batch,
+            action_keys=config.train.action_keys,
+            all_obs_keys=config.all_obs_keys,
+            ds_format=ds_format,
+            verbose=True,
+            config = config
+        )
+    else:
+        # make sure the dataset exists
+        eval_dataset_cfg = config.train.data[0]
+        dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
+
+        if not os.path.exists(dataset_path):
+            raise Exception("Dataset at provided path {} not found!".format(dataset_path))
+
+        # # load basic metadata from training file
+        print("\n============= Loaded Environment Metadata =============")
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+
+        # update env meta if applicable
+        from robomimic.utils.script_utils import deep_update
+        deep_update(env_meta, config.experiment.env_meta_update_dict)
+
+
+        shape_meta = FileUtils.get_shape_metadata_from_dataset(
+            dataset_path=dataset_path,
+            batch=None,
+            action_keys=config.train.action_keys,
+            all_obs_keys=config.all_obs_keys,
+            ds_format=ds_format,
+            verbose=True,
+            config = config
+        )
+        # load training data
+        trainset, validset = TrainUtils.load_data_for_training(
+            config, obs_keys=shape_meta["all_obs_keys"])
+        train_sampler = trainset.get_dataset_sampler()
+        print("\n============= Training Dataset =============")
+        print(trainset)
+        print("")
+        if validset is not None:
+            print("\n============= Validation Dataset =============")
+            print(validset)
+            print("")
+
+        # # maybe retreve statistics for normalizing observations
+        obs_normalization_stats = None
+        if config.train.hdf5_normalize_obs:
+            obs_normalization_stats = trainset.get_obs_normalization_stats()
+
+        # maybe retreve statistics for normalizing actions
+        action_normalization_stats = trainset.get_action_normalization_stats()
+
+        # initialize data loaders
+        train_loader = DataLoader(
+            dataset=trainset,
+            sampler=train_sampler,
+            batch_size=config.train.batch_size,
+            shuffle=(train_sampler is None),
+            num_workers=config.train.num_data_workers,
+            drop_last=True
+        )
 
     if config.experiment.env is not None:
         env_meta["env_name"] = config.experiment.env
@@ -132,38 +268,22 @@ def train(config, device):
     with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
         json.dump(config, outfile, indent=4)
 
+    # if checkpoint is specified, load in model weights
+    ckpt_path = config.experiment.ckpt_path
+    if ckpt_path is not None:
+        print("LOADING MODEL WEIGHTS FROM " + ckpt_path)
+        from robomimic.utils.file_utils import maybe_dict_from_checkpoint
+        ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
+        model.deserialize(ckpt_dict["model"])
+
     print("\n============= Model Summary =============")
     print(model)  # print model summary
     print("")
 
-    # load training data
-    trainset, validset = TrainUtils.load_data_for_training(
-        config, obs_keys=shape_meta["all_obs_keys"])
-    train_sampler = trainset.get_dataset_sampler()
-    print("\n============= Training Dataset =============")
-    print(trainset)
-    print("")
-    if validset is not None:
-        print("\n============= Validation Dataset =============")
-        print(validset)
-        print("")
+    ##### ------------------------------------------------------------------------------------ ######
 
-    # maybe retreve statistics for normalizing observations
-    obs_normalization_stats = None
-    if config.train.hdf5_normalize_obs:
-        obs_normalization_stats = trainset.get_obs_normalization_stats()
-
-    # initialize data loaders
-    train_loader = DataLoader(
-        dataset=trainset,
-        sampler=train_sampler,
-        batch_size=config.train.batch_size,
-        shuffle=(train_sampler is None),
-        num_workers=config.train.num_data_workers,
-        drop_last=True
-    )
-
-    if config.experiment.validate:
+    # TODO(Ashwin): Support loading validation splits for RLDS
+    if ds_format != "r2d2_rlds" and config.experiment.validate:
         # cap num workers for validation dataset at 1
         num_workers = min(config.train.num_data_workers, 1)
         valid_sampler = validset.get_dataset_sampler()
@@ -195,13 +315,15 @@ def train(config, device):
     train_num_steps = config.experiment.epoch_every_n_steps
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
 
+    data_loader_iter = iter(train_loader)
     for epoch in range(1, config.train.num_epochs + 1): # epoch numbers start at 1
-        step_log = TrainUtils.run_epoch(
+        step_log, data_loader_iter = TrainUtils.run_epoch(
             model=model,
             data_loader=train_loader,
             epoch=epoch,
             num_steps=train_num_steps,
             obs_normalization_stats=obs_normalization_stats,
+            data_loader_iter = data_loader_iter
         )
         model.on_epoch_end(epoch)
 
@@ -260,7 +382,11 @@ def train(config, device):
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
 
             # wrap model as a RolloutPolicy to prepare for rollouts
-            rollout_model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats)
+            rollout_model = RolloutPolicy(
+                model,
+                obs_normalization_stats=obs_normalization_stats,
+                action_normalization_stats=action_normalization_stats,
+            )
 
             num_episodes = config.experiment.rollout.n
             all_rollout_logs, video_paths = TrainUtils.rollout_with_stats(
@@ -305,6 +431,62 @@ def train(config, device):
             if updated_stats["ckpt_reason"] is not None:
                 ckpt_reason = updated_stats["ckpt_reason"]
 
+        # check if we need to save model MSE
+        #TODO(Ashwin): support MSE Logging with RLDS dataloading
+        if ds_format != "r2d2_rlds":
+            should_save_mse = False
+            if config.experiment.mse.enabled:
+                if config.experiment.mse.every_n_epochs is not None and epoch % config.experiment.mse.every_n_epochs == 0:
+                    should_save_mse = True
+                if config.experiment.mse.on_save_ckpt and should_save_ckpt:
+                    should_save_mse = True
+            if should_save_mse:
+                print("Computing MSE ...")
+                if config.experiment.mse.visualize:
+                    save_vis_dir = os.path.join(vis_dir, epoch_ckpt_name)
+                else:
+                    save_vis_dir = None
+                mse_log, vis_log = model.compute_mse_visualize(
+                    trainset,
+                    validset,
+                    num_samples=config.experiment.mse.num_samples,
+                    savedir=save_vis_dir,
+                )
+                for k, v in mse_log.items():
+                    data_logger.record("{}".format(k), v, epoch)
+                
+                for k, v in vis_log.items():
+                    data_logger.record("{}".format(k), v, epoch, data_type='image')
+
+
+                print("MSE Log Epoch {}".format(epoch))
+                print(json.dumps(mse_log, sort_keys=True, indent=4))
+        else:
+            should_save_batch_samples = False
+            # TODO(Ashwin): eventually clean up to use different config parameters for
+            # batch visualization vs. mse visualization
+            if config.experiment.mse.enabled:
+                if config.experiment.mse.every_n_epochs is not None and epoch % config.experiment.mse.every_n_epochs == 0:
+                    should_save_batch_samples = True
+                if config.experiment.mse.on_save_ckpt and should_save_ckpt:
+                    should_save_batch_samples = True
+            if should_save_batch_samples:
+                print("Computing Batch Visualization ...")
+                if config.experiment.mse.visualize:
+                    save_vis_dir = os.path.join(vis_dir, epoch_ckpt_name)
+                else:
+                    save_vis_dir = None
+                vis_log = model.compute_batch_visualize(
+                    batch=rlds_batch,
+                    num_samples=config.experiment.mse.num_samples,
+                    savedir=save_vis_dir,
+                )
+
+                for k, v in vis_log.items():
+                    data_logger.record("{}".format(k), v, epoch, data_type='image')
+
+                print("Batch Log Epoch {}".format(epoch))
+        
         # Only keep saved videos if the ckpt should be saved (but not because of validation score)
         should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
         if video_paths is not None and not should_save_video:
@@ -312,7 +494,7 @@ def train(config, device):
                 os.remove(video_paths[env_name])
 
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
-        if should_save_ckpt:
+        if should_save_ckpt:    
             TrainUtils.save_model(
                 model=model,
                 config=config,
@@ -320,6 +502,7 @@ def train(config, device):
                 shape_meta=shape_meta,
                 ckpt_path=os.path.join(ckpt_dir, epoch_ckpt_name + ".pth"),
                 obs_normalization_stats=obs_normalization_stats,
+                action_normalization_stats=action_normalization_stats,
             )
 
         # Finally, log memory usage in MB
@@ -344,7 +527,7 @@ def main(args):
     else:
         config = config_factory(args.algo)
 
-    if args.dataset is not None:
+    if config.train.data_format != "r2d2_rlds" and args.dataset is not None:
         config.train.data = args.dataset
 
     if args.name is not None:
@@ -362,7 +545,9 @@ def main(args):
         # train and validate (if enabled) for 3 gradient steps, for 2 epochs
         config.experiment.epoch_every_n_steps = 3
         config.experiment.validation_epoch_every_n_steps = 3
-        config.train.num_epochs = 2
+        config.train.num_epochs = 200
+        config.experiment.mse.every_n_epochs = 2
+        config.experiment.save.every_n_epochs = 1
 
         # if rollouts are enabled, try 2 rollouts at end of each epoch, with 10 environment steps
         config.experiment.rollout.rate = 1
@@ -428,4 +613,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
-

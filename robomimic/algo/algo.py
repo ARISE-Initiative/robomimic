@@ -10,13 +10,21 @@ These factory functions are registered into a global dictionary with the
 import textwrap
 from copy import deepcopy
 from collections import OrderedDict
+import random
 
 import torch.nn as nn
+import torch
+import os
+import numpy as np
+import imageio
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
+import robomimic.utils.action_utils as AcUtils
+import robomimic.utils.vis_utils as VisUtils
 
+from torch.utils.data import DataLoader
 
 # mapping from algo name to factory functions that map algo configs to algo class names
 REGISTERED_ALGO_FACTORY_FUNCS = OrderedDict()
@@ -225,7 +233,7 @@ class Algo(object):
             if k in batch and batch[k] is not None:
                 batch[k] = ObsUtils.process_obs_dict(batch[k])
                 if obs_normalization_stats is not None:
-                    batch[k] = ObsUtils.normalize_obs(batch[k], obs_normalization_stats=obs_normalization_stats)
+                    batch[k] = ObsUtils.normalize_dict(batch[k], obs_normalization_stats=obs_normalization_stats)
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -337,6 +345,176 @@ class PolicyAlgo(Algo):
         """
         raise NotImplementedError
 
+    def compute_traj_pred_actual_actions(self, traj, return_images=False):
+        """
+        traj is an R2D2Dataset object representing one trajectory
+        This function is slow (>1s per trajectory) because there is no batching 
+        and instead loops through all timesteps one by one
+        TODO: documentation
+        """
+        if return_images:
+            image_keys = [item for item in traj.__getitem__(0)['obs'].keys() if "image" in item]
+            images = {key: [] for key in image_keys}
+        else:
+            images = None
+
+        dataloader = DataLoader(
+            dataset=traj,
+            sampler=None,
+            batch_size=1,
+            shuffle=False,
+            num_workers=1,
+            drop_last=True,
+        )
+
+        self.reset()
+        actual_actions = [] 
+        predicted_actions = [] 
+        
+        # loop through each timestep
+        for batch in iter(dataloader):
+            batch = self.process_batch_for_training(batch)
+
+            if return_images:
+                for image_key in image_keys:
+                    im = batch["obs"][image_key][0][-1]
+                    im = TensorUtils.to_numpy(im).astype(np.uint32)
+                    images[image_key].append(im)
+
+            batch = self.postprocess_batch_for_training(batch, obs_normalization_stats=None) # ignore obs_normalization for now
+
+            model_output = self.get_action(batch["obs"])
+
+            actual_action = TensorUtils.to_numpy(
+                batch["actions"][0][0]
+            )
+            predicted_action = TensorUtils.to_numpy(
+                model_output[0]
+            )
+
+            actual_actions.append(actual_action)
+            predicted_actions.append(predicted_action)
+            
+        actual_actions = np.array(actual_actions)
+        predicted_actions = np.array(predicted_actions)
+        return actual_actions, predicted_actions, images
+
+    def compute_batch_visualize(self, batch, num_samples, savedir=None):
+        visualize = savedir is not None
+
+        varied_cam_1_images = batch["obs"]['camera/image/varied_camera_1_left_image'][:num_samples][:, 0, :, :, :]
+        varied_cam_2_images = batch["obs"]['camera/image/varied_camera_2_left_image'][:num_samples][:, 0, :, :, :]
+        images = {
+            "varied_camera_1_image": varied_cam_1_images,
+            "varied_camera_2_image": varied_cam_2_images
+        }
+
+        if visualize:
+            print("Saving batch visualization plots to {}".format(savedir))
+
+        vis_log = {}
+        if visualize:
+            save_path = os.path.join(savedir, "batch_images.png")
+            VisUtils.make_batch_vis_plot(
+                save_path=save_path,
+                images=images,
+            )
+            try:
+                vis_log[traj_key] = imageio.imread(save_path)
+            except:
+                pass
+
+        return vis_log
+    
+    def compute_mse_visualize(self, trainset, validset, num_samples, savedir=None):
+        """If savedir is not None, then also visualize the model predictions and save them to savedir"""
+        visualize = savedir is not None
+
+        # set model into eval mode
+        self.set_eval()
+        eval_data = [d for d in trainset.datasets if "eval" in d.hdf5_path]
+        broad_data = [d for d in trainset.datasets if "eval" not in d.hdf5_path]
+        if len(eval_data) < int(num_samples / 2):
+            training_sampled_data = random.sample(broad_data, int(num_samples))
+        elif len(broad_data) < int(num_samples / 2):
+            training_sampled_data = random.sample(eval_data, int(num_samples))
+        else:
+            training_sampled_data = random.sample(eval_data, int(num_samples / 2)) + random.sample(broad_data, int(num_samples / 2))
+
+        
+        if validset is not None:
+            random_state = np.random.RandomState(0)
+            valid_indices = random_state.choice(
+                len(validset.datasets),
+                min(len(validset.datasets), num_samples)
+            ).astype(int)
+            validation_sampled_data = [validset.datasets[idx] for idx in valid_indices]
+        
+            inference_datasets_mapping = {"Train": training_sampled_data, "Valid": validation_sampled_data} 
+        else:
+            inference_datasets_mapping = {"Train": training_sampled_data}
+
+        # extract action name for visualization
+        action_keys = self.global_config.train.action_keys
+        training_sample=training_sampled_data[0][0]
+        modified_action_keys = [element.replace("action/", "") for element in action_keys]
+        action_names = []
+        
+        for i, action_key in enumerate(action_keys):
+            if isinstance(training_sample[action_key][0], np.ndarray):
+                action_names.extend([f'{modified_action_keys[i]}_{j+1}' for j in range(len(training_sample[action_key][0]))])
+            else:
+                action_names.append(modified_action_keys[i])
+
+        if visualize:
+            print("Saving model prediction plots to {}".format(savedir))
+
+        mse_log = {}
+        vis_log = {}
+        # loop through training and validation sets
+        for inference_key in inference_datasets_mapping:
+            actual_actions_all_traj = [] # (NxT, D)
+            predicted_actions_all_traj = [] # (NxT, D)
+
+            # loop through each trajectory
+            traj_num = 1
+            for d in inference_datasets_mapping[inference_key]:
+                actual_actions, predicted_actions, images = self.compute_traj_pred_actual_actions(d, return_images=visualize)
+                actual_actions_all_traj.append(actual_actions)
+                predicted_actions_all_traj.append(predicted_actions)
+                if visualize:
+                    traj_key = "{}_traj_{}".format(inference_key.lower(), traj_num)
+                    save_path = os.path.join(savedir, traj_key + ".png")                
+                    VisUtils.make_model_prediction_plot(
+                        hdf5_path=d.hdf5_path,
+                        save_path=save_path,
+                        images=images,
+                        action_names=action_names,
+                        actual_actions=actual_actions,
+                        predicted_actions=predicted_actions,
+                    )
+                    try:
+                        vis_log[traj_key] = imageio.imread(save_path)
+                    except:
+                        pass
+                traj_num += 1
+            
+            actual_actions_all_traj = np.concatenate(actual_actions_all_traj, axis=0)
+            predicted_actions_all_traj = np.concatenate(predicted_actions_all_traj, axis=0)        
+            accuracy_thresholds = np.logspace(-3,-5, num=3).tolist()
+            mse = torch.nn.functional.mse_loss(
+                torch.tensor(predicted_actions_all_traj), 
+                torch.tensor(actual_actions_all_traj), 
+                reduction='none'
+            ) # (NxT, D)
+            mse_log[f'{inference_key}/action_mse_error'] = mse.mean().item() # average MSE across all timesteps averaged across all action dimensions (D,)
+            
+            # compute percentage of timesteps that have MSE less than the accuracy thresholds
+            for accuracy_threshold in accuracy_thresholds:
+                mse_log[f'{inference_key}/action_accuracy@{accuracy_threshold}'] = (torch.less(mse,accuracy_threshold).float().mean().item())
+        
+        return mse_log, vis_log
+    
 
 class ValueAlgo(Algo):
     """
@@ -448,7 +626,7 @@ class RolloutPolicy(object):
     """
     Wraps @Algo object to make it easy to run policies in a rollout loop.
     """
-    def __init__(self, policy, obs_normalization_stats=None):
+    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None):
         """
         Args:
             policy (Algo instance): @Algo object to wrap to prepare for rollouts
@@ -460,6 +638,7 @@ class RolloutPolicy(object):
         """
         self.policy = policy
         self.obs_normalization_stats = obs_normalization_stats
+        self.action_normalization_stats = action_normalization_stats
 
     def start_episode(self):
         """
@@ -477,7 +656,7 @@ class RolloutPolicy(object):
                 and np.array values for each key)
         """
         if self.obs_normalization_stats is not None:
-            ob = ObsUtils.normalize_obs(ob, obs_normalization_stats=self.obs_normalization_stats)
+            ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
         ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
@@ -500,5 +679,25 @@ class RolloutPolicy(object):
         ob = self._prepare_observation(ob)
         if goal is not None:
             goal = self._prepare_observation(goal)
-        ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        return TensorUtils.to_numpy(ac[0])
+        ac = self.policy.get_action(obs_dict=ob, goal_mode=self.goal_mode, eval_mode=self.eval_mode)
+        ac = TensorUtils.to_numpy(ac[0])
+        if self.action_normalization_stats is not None:
+            action_keys = self.policy.global_config.train.action_keys
+            action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
+            ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
+            ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
+            action_config = self.policy.global_config.train.action_config
+            for key, value in ac_dict.items():
+                this_format = action_config[key].get("format", None)
+                if this_format == "rot_6d":
+                    rot_6d = torch.from_numpy(value).unsqueeze(0)
+                    conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
+                    if conversion_format == "rot_axis_angle":
+                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze().numpy()
+                    elif conversion_format == "rot_euler":
+                        rot = TorchUtils.rot_6d_to_euler_angles(rot_6d=rot_6d, convention="XYZ").squeeze().numpy()
+                    else:
+                        raise ValueError
+                    ac_dict[key] = rot
+            ac = AcUtils.action_dict_to_vector(ac_dict, action_keys=action_keys)
+        return ac

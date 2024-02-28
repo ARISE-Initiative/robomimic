@@ -67,7 +67,7 @@ class DataLogger(object):
 
             assert Macros.WANDB_ENTITY is not None, "WANDB_ENTITY macro is set to None." \
                     "\nSet this macro in {base_path}/macros_private.py" \
-                    "\nIf this file does not exist, first run {base_path}/scripts/setup_macros.py".format(base_path=robomimic.__path__[0])
+                    "\nIf this file does not exist, first run python {base_path}/scripts/setup_macros.py".format(base_path=robomimic.__path__[0])
             
             # attempt to set up wandb 10 times. If unsuccessful after these trials, don't use wandb
             num_attempts = 10
@@ -128,6 +128,8 @@ class DataLogger(object):
                         stat_k_name = '{}-{}'.format(k, stat_k)
                         self._tb_logger.add_scalar(stat_k_name, stat_v, epoch)
             elif data_type == 'image':
+                if len(v.shape) == 3:
+                    v = v[None, ...]
                 self._tb_logger.add_images(k, img_tensor=v, global_step=epoch, dataformats="NHWC")
 
         if self._wandb_logger is not None:
@@ -139,7 +141,8 @@ class DataLogger(object):
                         for (stat_k, stat_v) in stats.items():
                             self._wandb_logger.log({stat_k: stat_v}, step=epoch)
                 elif data_type == 'image':
-                    raise NotImplementedError
+                    import wandb
+                    self._wandb_logger.log({k: wandb.Image(v)}, step=epoch)
             except Exception as e:
                 log_warning("wandb logging: {}".format(e))
 

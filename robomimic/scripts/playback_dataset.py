@@ -61,6 +61,7 @@ import h5py
 import argparse
 import imageio
 import numpy as np
+import random
 
 import robomimic
 import robomimic.utils.obs_utils as ObsUtils
@@ -233,9 +234,12 @@ def playback_dataset(args):
         demos = list(f["data"].keys())
     inds = np.argsort([int(elem[5:]) for elem in demos])
     demos = [demos[i] for i in inds]
-
+    
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
+        # if not args.dont_shuffle_demos:
+        #     random.shuffle(demos)
+        random.shuffle(demos)
         demos = demos[:args.n]
 
     # maybe dump video

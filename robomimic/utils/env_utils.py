@@ -214,10 +214,10 @@ def create_env_from_metadata(
         env_name = env_meta["env_name"]
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
+    env_kwargs["env_name"] = env_name
 
     env = create_env(
         env_type=env_type,
-        env_name=env_name,  
         render=render, 
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs, 
