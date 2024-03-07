@@ -1,9 +1,33 @@
 from robomimic.scripts.config_gen.helper import *
 import random
 import json
-import numpy as np
 
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
+# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/", postfix="trajectory_im128.h5")]
+# import pdb; pdb.set_trace()
+# with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
+# # with open("/mnt/fsx/surajnair/datasets/r2d2_eval/manifest.json", "r") as f: evaldataset = json.load(f)
+# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/TRI_2/", postfix="trajectory_im128.h5")]
+# # with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
+# # evaldataset = evaldataset[:200]
+# # broaddataset = broaddataset[:2000]
+# random.shuffle(evaldataset)
+# random.shuffle(broaddataset)
+# N_EVAL = len(evaldataset)
+# N_BROAD = len(broaddataset)
+
+## Getting all language labeled data
+with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as file:
+        langs = json.load(file)
+
+## Getting broad data
+broaddataset = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/' in l['path']]
+broaddataset = broaddataset[:2000]
+N_BROAD = len(broaddataset)
+
+## Getting multitask eval data
+evaldataset_multitask = [{'path': l['path']} for l in langs if 'TRI_bowls' in l['path']]
+N_EVAL_MULTI = len(evaldataset_multitask)
+print(N_BROAD, N_EVAL_MULTI)
 
 
 def make_generator_helper(args):
@@ -20,49 +44,24 @@ def make_generator_helper(args):
         args.ckpt_mode = "off"
 
     generator.add_param(
-        key="train.data_format",
+        key="train.num_data_workers",
         name="",
         group=-1,
-        values=[
-            "r2d2_rlds"
-        ],
+        values=[8],
     )
 
     generator.add_param(
         key="train.num_epochs",
         name="",
         group=-1,
-        values=[100000],
-    )
-
-    generator.add_param(
-        key="train.data_path",
-        name="",
-        group=-1,
-        values=["/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"],
-    )
-
-    generator.add_param(
-        key="train.shuffle_buffer_size",
-        name="",
-        group=-1,
-        values=[500000],
+        values=[1000],
     )
 
     generator.add_param(
         key="train.batch_size",
-        name="bz",
-        group=1212111,
-        values=[128],
-        hidename=False,
-    )
-
-    generator.add_param(
-        key="algo.noise_samples",
-        name="noise_samples",
-        group=1010101,
+        name="",
+        group=-1,
         values=[8],
-        value_names=["8"]
     )
 
     # use ddim by default
@@ -89,23 +88,21 @@ def make_generator_helper(args):
 
     if args.env == "r2d2":
         generator.add_param(
-            key="train.sample_weights",
-            name="sample_weights",
-            group=-1,
+            key="train.data",
+            name="ds",
+            group=2,
             values=[
-                [1, 1],
+                # broaddataset + evaldataset,
+                [{"path": p["path"], "weight": (0.5 / N_EVAL_MULTI if "eval" in p["path"] else 0.5 / N_BROAD)} for p in broaddataset + evaldataset_multitask],
+                # broaddataset,
+                evaldataset_multitask,
+                ],
+	    value_names=[
+                # "mixed_unbalanced",
+                "mixed_balanced",
+                # "broad",
+                "eval_multi",
             ],
-        )
-        generator.add_param(
-            key="train.dataset_names",
-            name="dataset_names",
-            group=24988,
-            values=[
-                ["r2_d2", "r2_d2_cmu_toaster"],
-            ],
-            value_names=[
-                "r2_d2__r2_d2_cmu_toaster"
-            ]
         )
         generator.add_param(
             key="train.action_keys",
@@ -124,40 +121,15 @@ def make_generator_helper(args):
             hidename=True,
         )
         generator.add_param(
-            key="train.action_shapes",
-            name="ac_shapes",
-            group=-1,
-            values=[
-                [
-                    (1, 3),
-                    (1, 6),
-                    (1, 1),
-                ],
-            ],
-            value_names=[
-                "ac_shapes",
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="observation.image_dim",
-            name="",
-            group=-1,
-            values=[
-                [128, 128],
-            ],
-            hidename=True,
-        )
-        generator.add_param(
             key="observation.modalities.obs.rgb",
             name="cams",
             group=130,
             values=[
                 # ["camera/image/hand_camera_left_image"],
                 # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                ["camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
+                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
                 # [
-                    # "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
+                #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
                 #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
                 #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
                 # ],
@@ -165,42 +137,20 @@ def make_generator_helper(args):
             value_names=[
                 # "wrist",
                 # "wrist-stereo",
-                "2cams",
+                "3cams",
                 # "3cams-stereo",
             ]
         )
         generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_class",
-            name="obsrand",
-            group=130,
-            values=[
-                # "ColorRandomizer", # jitter only
-                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="observation.encoder.rgb.obs_randomizer_kwargs",
-            name="obsrandargs",
-            group=130,
-            values=[
-                # {}, # jitter only
-                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
-            ],
-            hidename=True,
-        )
-
-        ### CONDITIONING
-        generator.add_param(
             key="train.goal_mode",
             name="goal_mode",
-            group=24986,
+            group=5678,
             values = [
-                # "geom",
                 None, # Change this to "geom" to do goal conditioning
-
+                # "geom"
             ]
         )
+
         generator.add_param(
             key="train.truncated_geom_factor",
             name="truncated_geom_factor",
@@ -211,24 +161,119 @@ def make_generator_helper(args):
             ]
         )
         generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_class",
+            name="obsrand",
+            group=130,
+            values=[
+                # "CropRandomizer", # crop only
+                # "ColorRandomizer", # jitter only
+                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="observation.encoder.rgb.obs_randomizer_kwargs",
+            name="obsrandargs",
+            group=-1,
+            values=[
+                # {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}, # crop only
+                # {}, # jitter only
+                # [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
+                [{}, {"crop_height": 224, "crop_width": 224, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
+            ],
+            hidename=True,
+        )
+
+        generator.add_param(
             key="observation.modalities.obs.low_dim",
             name="ldkeys",
             group=24986,
             values=[
-                ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                # ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                [
+                    "robot_state/cartesian_position", "robot_state/gripper_position",
+                    "camera/extrinsics/hand_camera_left", "camera/intrinsics/hand_camera_left", # "camera/extrinsics/hand_camera_left_gripper_offset", 
+                    "camera/extrinsics/hand_camera_right", "camera/intrinsics/hand_camera_right", # "camera/extrinsics/hand_camera_right_gripper_offset",
+                    "camera/extrinsics/varied_camera_1_left", "camera/intrinsics/varied_camera_1_left",
+                    "camera/extrinsics/varied_camera_1_right", "camera/intrinsics/varied_camera_1_right",
+                    "camera/extrinsics/varied_camera_2_left", "camera/intrinsics/varied_camera_2_left",
+                    "camera/extrinsics/varied_camera_2_right", "camera/intrinsics/varied_camera_2_right",
+                ],
+                [
+                    "robot_state/cartesian_position", "robot_state/gripper_position",
+                    "camera/extrinsics/hand_camera_left", "camera/intrinsics/hand_camera_left", # "camera/extrinsics/hand_camera_left_gripper_offset", 
+                    "camera/extrinsics/hand_camera_right", "camera/intrinsics/hand_camera_right", # "camera/extrinsics/hand_camera_right_gripper_offset",
+                    "camera/extrinsics/varied_camera_1_left", "camera/intrinsics/varied_camera_1_left",
+                    "camera/extrinsics/varied_camera_1_right", "camera/intrinsics/varied_camera_1_right",
+                    "camera/extrinsics/varied_camera_2_left", "camera/intrinsics/varied_camera_2_left",
+                    "camera/extrinsics/varied_camera_2_right", "camera/intrinsics/varied_camera_2_right",
+                    "lang_fixed/language_distilbert"
+                ]
             ],
             value_names=[
-                "proprio-lang",
+                # "proprio",
+                "proprio-cam",
+                "proprio-cam-lang",
             ],
             hidename=False,
+        )
+        ## All of the following are needed for DeFiNe style encoding
+        generator.add_param(
+            key="observation.encoder.rgb.input_maps",
+            name="",
+            group=24986,
+            values=[
+                {
+                    "camera/image/hand_camera_left_image": {
+                        "image": "camera/image/hand_camera_left_image",
+                        "intrinsics": "camera/intrinsics/hand_camera_left",
+                        "extrinsics": "camera/extrinsics/hand_camera_left",
+                    },
+                    "camera/image/varied_camera_1_left_image": {
+                        "image": "camera/image/varied_camera_1_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_1_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_1_left",
+                    },
+                    "camera/image/varied_camera_2_left_image": {
+                        "image": "camera/image/varied_camera_2_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_2_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_2_left",
+                    },
+                },
+                {
+                    "camera/image/hand_camera_left_image": {
+                        "image": "camera/image/hand_camera_left_image",
+                        "intrinsics": "camera/intrinsics/hand_camera_left",
+                        "extrinsics": "camera/extrinsics/hand_camera_left",
+                        "lang_emb" : "lang_fixed/language_distilbert"
+                    },
+                    "camera/image/varied_camera_1_left_image": {
+                        "image": "camera/image/varied_camera_1_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_1_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_1_left",
+                        "lang_emb" : "lang_fixed/language_distilbert"
+                    },
+                    "camera/image/varied_camera_2_left_image": {
+                        "image": "camera/image/varied_camera_2_left_image",
+                        "intrinsics": "camera/intrinsics/varied_camera_2_left",
+                        "extrinsics": "camera/extrinsics/varied_camera_2_left",
+                        "lang_emb" : "lang_fixed/language_distilbert"
+                    },
+                },
+            ],
+            value_names=[
+                "define",
+                "define-lang",
+            ],
+            hidename=True,
         )
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.backbone_kwargs.use_cam",
             name="",
             group=2498,
             values=[
-                False,
-                # True,
+                # False,
+                True,
             ],
             hidename=True,
         )
@@ -246,13 +291,13 @@ def make_generator_helper(args):
             key="observation.encoder.rgb.core_class",
             name="visenc",
             group=-1,
-            values=["VisualCore"],
+            values=["DeFiNeVisualCore"],
         )
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.backbone_class",
             name="",
             group=-1,
-            values=["ResNet50Conv"],
+            values=["DeFiNeImageCamEncoder"],
             hidename=True,
         )
         generator.add_param(
@@ -293,11 +338,32 @@ def make_generator_helper(args):
             name="",
             group=1234,
             values=[
-                False,
+                True,
+                # True,
+                # False,
             ],
             hidename=False,
         )
 
+
+        # generator.add_param(
+        #     key="observation.encoder.rgb.core_kwargs.backbone_class",
+        #     name="backbone",
+        #     group=1234,
+        #     values=[
+        #         # "ResNet18Conv",
+        #         "ResNet50Conv",
+        #     ],
+        # )
+        # generator.add_param(
+        #     key="observation.encoder.rgb.core_kwargs.feature_dimension",
+        #     name="visdim",
+        #     group=1234,
+        #     values=[
+        #         # 64,
+        #         512,
+        #     ],
+        # )
 
     elif args.env == "kitchen":
         generator.add_param(
@@ -399,7 +465,7 @@ def make_generator_helper(args):
         values=[
             "/mnt/fsx/surajnair/expdata/{env}/{mod}/{algo_name_short}".format(
                 env=args.env,
-                mod=args.mod, 
+                mod=args.mod,
                 algo_name_short=algo_name_short,
             )
         ],

@@ -90,15 +90,17 @@ def train(config, device):
         obs_modalities = config.observation.modalities.obs.rgb
         # NOTE(Ashwin): must be 2 cam for now, can clean this up later
         assert(len(obs_modalities) == 2)
+        ac_dim = sum([ac_comp[1] for ac_comp in config.train.action_shapes])
 
         BASE_DATASET_KWARGS = {
                 "data_dir": config.train.data_path,
                 "image_obs_keys": {"primary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
                 "state_obs_keys": [R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
                 "language_key": "language_instruction",
+                "keys_to_normalize":  {"action": "action"},
                 "action_proprio_normalization_type": "bounds",
-                "absolute_action_mask": [True] * 10,
-                "action_normalization_mask": [True] * 10,
+                "absolute_action_mask": [True] * ac_dim,
+                "action_normalization_mask": [True] * ac_dim,
                 "standardize_fn": droid_dataset_transform,
             }
 
@@ -115,7 +117,7 @@ def train(config, device):
             train=True,
             shuffle_buffer_size=config.train.shuffle_buffer_size,
             batch_size=None,  # batching will be handles in PyTorch Dataloader object
-            balance_weights=True,
+            balance_weights=False,
             traj_transform_kwargs=dict(
                 # NOTE(Ashwin): window_size and future_action_window_size may break if 
                 # not using diffusion policy
@@ -136,9 +138,7 @@ def train(config, device):
             traj_transform_threads=48,
             traj_read_threads=48,
         )
-        # TODO(Ashwin): this assumes that you are doing co-training and that the co-training dataset
-        # that corresponds to the eval setting is last
-        rlds_dataset_stats = dataset.dataset_statistics[-1]["action"]
+        rlds_dataset_stats = dataset.dataset_statistics["action"]
         action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats, config.train.action_keys, config.train.action_shapes)
         action_config = config.train.action_config
         action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
@@ -150,7 +150,6 @@ def train(config, device):
             batch_size=config.train.batch_size,
             num_workers=0,  # important to keep this to 0 so PyTorch does not mess with the parallelism
         )
-
 
         # For RLDS, get batch from train loader to compute shapes
         data_loader_iter = iter(train_loader)

@@ -1,7 +1,6 @@
 from robomimic.scripts.config_gen.helper import *
 import random
 import json
-import numpy as np
 
 # fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/", postfix="trajectory_im128.h5")]
 # import pdb; pdb.set_trace()
@@ -16,40 +15,6 @@ import numpy as np
 # N_EVAL = len(evaldataset)
 # N_BROAD = len(broaddataset)
 
-## Getting all OXE
-with open("/mnt/fsx/surajnair/datasets/oxe_hdf5/manifest_oxe.json", 'r') as file:
-    oxe = json.load(file)
-N_OXE = len(oxe)
-
-## Getting all stanford data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang_stanford_eval.json", 'r') as file:
-    langs = json.load(file)
-stanford_singletask_eraser = [{'path': l['path']} for l in langs if 'stanford_eval_0125' in l['path']]
-N_STANFORD_ERASER = len(stanford_singletask_eraser)
-
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_stanford_evgr_laundry.json", 'r') as file:
-    stanford_singletask_laundry = json.load(file)
-N_STANFORD_LAUNDRY = len(stanford_singletask_laundry)
-
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_stanford_evgr_cooking.json", 'r') as file:
-    stanford_singletask_cooking = json.load(file)
-N_STANFORD_COOKING = len(stanford_singletask_cooking)
-
-
-## Getting all TRI data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_chips.json", 'r') as file:
-    langs = json.load(file)
-chips_singletask = [{'path': l['path']} for l in langs if 'TRI_chips_only_1_21' in l['path']]
-N_CHIPS = len(chips_singletask)
-
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_frenchpress.json", 'r') as file:
-    tri_frenchpress = json.load(file)
-N_FRENCHPRESS = len(tri_frenchpress)
-
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_pot.json", 'r') as file:
-    tri_pot = json.load(file)
-N_POT = len(tri_pot)
-
 ## Getting all language labeled data
 with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as file:
     langs = json.load(file)
@@ -58,37 +23,50 @@ with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as fi
 broaddataset_full = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/' in l['path']]
 N_BROAD_FULL = len(broaddataset_full)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/filter_traj_20scene_10k_episodes_success.json", 'r') as file:
-    subset = json.load(file)
+chips_singletask = [{'path': l['path']} for l in langs if 'TRI_chips_only_1_21' in l['path']]
+N_CHIPS = len(chips_singletask)
 
-broaddataset_filtered = [{'path': l['path']} for l in broaddataset_full if "/".join(l['path'].split("/")[7:-1])+"/" in subset]
-N_BROAD_FILTERED = len(broaddataset_filtered)
+## Getting all language labeled data
+with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang_filtered.json", 'r') as file:
+        langs = json.load(file)
 
-broaddataset_filtered_random = np.random.choice(broaddataset_full, N_BROAD_FILTERED).tolist()
-N_BROAD_FILTERED_RANDOM = len(broaddataset_filtered_random)
+## Getting broad data
+broaddataset = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/' in l['path']]
+N_BROAD = len(broaddataset)
 
-cmutoast_singletask = [{'path': l['path']} for l in langs if 'r2_d2_toaster3_cmu_rgb' in l['path']]
-N_CMU_TOASTER = len(cmutoast_singletask)
+## Getting multitask eval data
+# evaldataset_multitask = [{'path': l['path']} for l in langs if 'TRI_1_10_multitask_food_in_bowl' in l['path']]
+# N_EVAL_MULTI = len(evaldataset_multitask)
 
-cmu_multi = [{'path': l['path']} for l in langs if 'cmu_rgb' in l['path']]
-N_CMU_MULTI = len(cmu_multi)
+# apple_singletask = [{'path': l['path']} for l in langs if 'TRI_1_10_multitask_food_in_bowl/apple' in l['path']]
+# N_APPLE = len(apple_singletask)
 
+## Getting single task eval data (food in bowl)
+# evaldataset_foodinbowl = [{'path': l['path']} for l in langs if 'TRI_food_in_bowl' in l['path']]
+# evaldataset_foodinbowl = evaldataset_foodinbowl[:20]
+# N_EVAL_FOODINBOWL = len(evaldataset_foodinbowl)
 
-print(f"Broad Datapoints: R2D2 {N_BROAD_FULL, N_BROAD_FILTERED, N_BROAD_FILTERED_RANDOM} OXE {N_OXE} \
-      \nSingle Task TRI Datapoints: CHIPS {N_CHIPS} POT {N_POT} FRENCHPRESS {N_FRENCHPRESS} \
-      \nStanford Datapoints: Eraser {N_STANFORD_ERASER} Laundry {N_STANFORD_LAUNDRY} Cooking {N_STANFORD_COOKING} \
-      \nCMU Datapoints: {N_CMU_MULTI, N_CMU_TOASTER} ")
+## Getting single task eval data (open microwave)
+# evaldataset_openmicro = [{'path': l['path']} for l in langs if 'TRI_microwave_open' in l['path']]
+# N_EVAL_OPENMICRO = len(evaldataset_openmicro)
+
+## Getting single task eval data (close microwave)
+# evaldataset_closemicro = [{'path': l['path']} for l in langs if 'TRI_microwave_close' in l['path']]
+# N_EVAL_CLOSEMICRO = len(evaldataset_closemicro)
+
+print(f"Broad Datapoints: {N_BROAD, N_BROAD_FULL} \
+      \nSingle Task CHIPS Datapoints: {N_CHIPS} ")
     #  \nMultitask Eval Datapoints: {N_EVAL_MULTI} \
     #   \nSingle Task APPLE Datapoints: {N_APPLE}")
     # #   \nSingle Task Microwave Close Datapoints {N_EVAL_CLOSEMICRO}")
 
 
 def make_generator_helper(args):
-    algo_name_short = "diffusion_policy"
+    algo_name_short = "bc_xfmr"
 
     generator = get_generator(
-        algo_name="diffusion_policy",
-        config_file=os.path.join(base_path, 'robomimic/exps/templates/diffusion_policy.json'),
+        algo_name="bc",
+        config_file=os.path.join(base_path, 'robomimic/exps/templates/bc_transformer.json'),
         args=args,
         algo_name_short=algo_name_short,
         pt=True,
@@ -118,36 +96,6 @@ def make_generator_helper(args):
         hidename=False,
     )
 
-    generator.add_param(
-        key="algo.noise_samples",
-        name="noise_samples",
-        group=1010101,
-        values=[8],
-        value_names=["8"]
-    )
-
-    # use ddim by default
-    generator.add_param(
-        key="algo.ddim.enabled",
-        name="ddim",
-        group=1001,
-        values=[
-            True,
-            # False,
-        ],
-        hidename=True,
-    )
-    generator.add_param(
-        key="algo.ddpm.enabled",
-        name="ddpm",
-        group=1001,
-        values=[
-            False,
-            # True,
-        ],
-        hidename=True,
-    )
-
     if args.env == "r2d2":
         generator.add_param(
             key="train.action_keys",
@@ -170,7 +118,7 @@ def make_generator_helper(args):
             name="cams",
             group=130,
             values=[
-                # ["camera/image/hand_camera_left_image"],
+                ["camera/image/hand_camera_left_image"],
                 # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
                 ["camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
                 # [
@@ -180,7 +128,7 @@ def make_generator_helper(args):
                 # ],
             ],
             value_names=[
-                # "wrist",
+                "wrist",
                 # "wrist-stereo",
                 "2cams",
                 # "3cams-stereo",
@@ -191,7 +139,7 @@ def make_generator_helper(args):
             name="obsrand",
             group=130,
             values=[
-                # "ColorRandomizer", # jitter only
+                "ColorRandomizer", # jitter only
                 ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
             ],
             hidename=True,
@@ -201,7 +149,7 @@ def make_generator_helper(args):
             name="obsrandargs",
             group=130,
             values=[
-                # {}, # jitter only
+                {}, # jitter only
                 [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
             ],
             hidename=True,
@@ -213,7 +161,7 @@ def make_generator_helper(args):
             name="goal_mode",
             group=24986,
             values = [
-                # "geom",
+                "geom",
                 None, # Change this to "geom" to do goal conditioning
 
             ]
@@ -224,7 +172,6 @@ def make_generator_helper(args):
             group=5555,
             values = [
                 0.3,
-                # 0.5
             ]
         )
         generator.add_param(
@@ -232,7 +179,7 @@ def make_generator_helper(args):
             name="ldkeys",
             group=24986,
             values=[
-                # ["robot_state/cartesian_position", "robot_state/gripper_position"],
+                ["robot_state/cartesian_position", "robot_state/gripper_position"],
                 [
                     "robot_state/cartesian_position", "robot_state/gripper_position",
                     "lang_fixed/language_distilbert"
@@ -240,7 +187,7 @@ def make_generator_helper(args):
             ],
             value_names=[
                 # "proprio",
-                # "proprio",
+                "proprio",
                 "proprio-lang",
             ],
             hidename=False,
@@ -326,93 +273,71 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                # stanford_singletask_cooking,
-                # stanford_singletask_laundry,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_laundry],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_laundry],
-                # stanford_singletask_eraser,
-                # cmutoast_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + cmutoast_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + cmutoast_singletask],
-                # stanford_singletask_cooking,
-                # stanford_singletask_laundry,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_laundry],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_laundry],
-                # tri_pot,
-                # tri_frenchpress,
-                # [{"path": p["path"], "weight": (0.5 / N_POT if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + tri_pot],
-                # [{"path": p["path"], "weight": (0.5 / N_FRENCHPRESS if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + tri_frenchpress],
-                # [{"path": p["path"], "weight": (0.5 / N_POT if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + tri_pot],
-                # [{"path": p["path"], "weight": (0.5 / N_FRENCHPRESS if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + tri_frenchpress],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + chips_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_MULTI if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + cmu_multi],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + cmutoast_singletask],
-                # stanford_singletask_eraser,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_eraser],
-                # cmu_multi,
-                cmutoast_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_MULTI if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + cmu_multi],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + cmutoast_singletask],
-                # broaddataset_full,
-                # chips_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD)} for p in broaddataset + chips_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + chips_singletask],
+                chips_singletask,
+                [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD)} for p in broaddataset + chips_singletask],
+                [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + chips_singletask],
                 ],
 	    value_names=[
-                # "stanford_cooking", 
-                # "stanford_laundry",
-                # "filteredr2d2_stanford_cooking", 
-                # "filteredr2d2_stanford_laundry",
-                # "filteredrandomr2d2_stanford_cooking", 
-                # "filteredrandomr2d2_stanford_laundry",
-                # "stanford_eraser", 
-                # "cmu_toast",
-                # "filteredr2d2_stanford_eraser", 
-                # "filteredr2d2_cmu_toast",
-                # "filteredrandomr2d2_stanford_eraser", 
-                # "filteredrandomr2d2_cmu_toast",
-                # "stanford_cooking",
-                # "stanford_laundry",
-                # "oxe_balanced_stanford_cooking",
-                # "oxe_balanced_stanford_laundry",
-                # "fullr2d2_balanced_stanford_cooking",
-                # "fullr2d2_balanced_stanford_laundry",
-                # "tri_pot",
-                # "tri_frenchpress",
-                # "oxe_balanced_tri_pot",
-                # "oxe_balanced_tri_frenchpress",
-                # "fullr2d2_balanced_tri_pot",
-                # "fullr2d2_balanced_tri_frenchpress",
-                # "oxe_balanced_stanford_eraser",
-                # "oxe_balanced_chips",
-                # "oxe_balanced_cmu_multi",
-                # "oxe_balanced_cmu_toast",
-                # "stanford_eraser", 
-                # "fullr2d2_balanced_stanford_eraser"
-                # "cmu_multi", 
-                "cmu_toast_hdf5",
-                # "fullr2d2_balanced_cmu_multi", 
-                # "fullr2d2_balanced_cmu_toast",
-                # "broad",
-                # "eval_chips", 
-                # "balanced_chips", 
-                # "full_balanced_chips", 
+                "eval_chips", 
+                "balanced_chips", 
+                "full_balanced_chips", 
             ],
         )
 
         generator.add_param(
-            key="train.hdf5_cache_mode",
+            key="algo.transformer.supervise_all_steps",
+            name="supallsteps",
+            group=1,
+            values=[
+                True,
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="algo.transformer.pred_future_acs",
+            name="futureacs",
+            group=1,
+            values=[
+                False,
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="algo.transformer.causal",
+            name="causal",
+            group=1,
+            values=[
+                False,
+            ],
+            hidename=True,
+        )
+        generator.add_param(
+            key="train.frame_stack",
             name="",
             group=-1,
-            values=[None],
-            value_names=[""],
+            values=[2],
+            hidename=True,
+        )
+        generator.add_param(
+            key="train.seq_length",
+            name="H",
+            group=-1,
+            values=[2],
+            hidename=False,
+        )
+        generator.add_param(
+            key="algo.transformer.context_length",
+            name="",
+            group=-1,
+            values=[2],
+            hidename=True,
+        )
+        generator.add_param(
+            key="algo.gmm.enabled",
+            name="",
+            group=-1,
+            values=[False],
+            hidename=True,
         )
 
 
