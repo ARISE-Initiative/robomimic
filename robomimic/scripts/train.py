@@ -118,6 +118,7 @@ def train(config, device):
             shuffle_buffer_size=config.train.shuffle_buffer_size,
             batch_size=None,  # batching will be handles in PyTorch Dataloader object
             balance_weights=False,
+            do_combined_normalization=True,
             traj_transform_kwargs=dict(
                 # NOTE(Ashwin): window_size and future_action_window_size may break if 
                 # not using diffusion policy
