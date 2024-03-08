@@ -2,9 +2,17 @@ from robomimic.scripts.config_gen.helper import *
 import random
 import json
 import numpy as np
+from collections import OrderedDict
 
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
-
+DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
+EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
+EXP_NAMES = OrderedDict(
+    [
+        ("r2_d2__r2_d2_cmu_toaster", {"datasets": ["r2_d2", "r2_d2_cmu_toaster"], 
+                                      "sample_weights": [1, 1]}),
+        ("r2_d2_cmu_toaster", {"datasets": ["r2_d2_cmu_toaster"], 
+                                      "sample_weights": [1]})                                    
+    ])
 
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"
@@ -39,7 +47,7 @@ def make_generator_helper(args):
         key="train.data_path",
         name="",
         group=-1,
-        values=["/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"],
+        values=[DATA_PATH],
     )
 
     generator.add_param(
@@ -131,9 +139,9 @@ def make_generator_helper(args):
         generator.add_param(
             key="train.sample_weights",
             name="sample_weights",
-            group=-1,
+            group=24988,
             values=[
-                [1, 1],
+                EXP_NAMES[k]["sample_weights"] for k in EXP_NAMES.keys()
             ],
         )
         generator.add_param(
@@ -141,11 +149,9 @@ def make_generator_helper(args):
             name="dataset_names",
             group=24988,
             values=[
-                ["r2_d2", "r2_d2_cmu_toaster"],
+                EXP_NAMES[k]["datasets"] for k in EXP_NAMES.keys()
             ],
-            value_names=[
-                "r2_d2__r2_d2_cmu_toaster"
-            ]
+            value_names=list(EXP_NAMES.keys())
         )
         generator.add_param(
             key="train.action_keys",
@@ -437,7 +443,8 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/mnt/fsx/surajnair/expdata/{env}/{mod}/{algo_name_short}".format(
+            "{exp_log_path}/{env}/{mod}/{algo_name_short}".format(
+                exp_log_path=EXP_LOG_PATH,
                 env=args.env,
                 mod=args.mod, 
                 algo_name_short=algo_name_short,

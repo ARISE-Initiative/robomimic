@@ -44,7 +44,7 @@ from robomimic.utils.dataset import action_stats_to_normalization_stats
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
-from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transform, droid_TO_RLDS_OBS_KEY_MAP, droid_TO_RLDS_LOW_DIM_OBS_KEY_MAP, TorchRLDSDataset
+from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transform, DROID_TO_RLDS_OBS_KEY_MAP, DROID_TO_RLDS_LOW_DIM_OBS_KEY_MAP, TorchRLDSDataset
 
 from octo.data.dataset import make_interleaved_dataset
 
@@ -93,8 +93,8 @@ def train(config, device):
 
         BASE_DATASET_KWARGS = {
                 "data_dir": config.train.data_path,
-                "image_obs_keys": {"primary": droid_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": droid_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
-                "state_obs_keys": [droid_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
+                "image_obs_keys": {"primary": DROID_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": DROID_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
+                "state_obs_keys": [DROID_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
                 "language_key": "language_instruction",
                 "keys_to_normalize":  {"action": "action"},
                 "action_proprio_normalization_type": "bounds",

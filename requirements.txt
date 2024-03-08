@@ -12,4 +12,5 @@ egl_probe>=1.0.1
 torch
 torchvision
 diffusers==0.11.1
-pytorch3d==0.7.3
+opencv-python
+transformers==4.34.0

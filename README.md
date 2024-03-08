@@ -1,59 +1,45 @@
-# robomimic
+# DROID Policy Learning and Evaluation Codebase
 
-[**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
+This repository contains all code for the policy learning and evaluation experiments in DROID(TODO(Karl/Sasha): add link to DROID website), a project aimed at collecting a large-scale dataset in-the-wild robot manipulation dataset for the robot learning resaerch community. This codebase is built as a fork of the popular repository for imitation learning algorithm development, `robomimic`, about which further information can be found here: [**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative).
 
 -------
 ## Installation
-1. Clone the repo with the `--recurse-submodules` flag.
-2. (if applicable) switch to `droid` branch
-3. Run `pip install -e .` in `robomimic`
-4. Run `pip install -e .` in `robomimic/act/detr`
+Create a python3 conda environment (tested with Python 3.10) and run the following:
+
+1. Create python 3.10 conda environment: `conda create --name droid_policy_learning python=3.10`
+2. Install [octo](https://github.com/octo-models/octo)
+3. Clone the repo
+4. Switch to the `r2d2` branch
+5. Run `pip install -e .` in `robomimic`
+
+If you are running policy evaluation on a DROID robot station, then you also need to have DROID installed in the same conda environment. To do that, please follow the instructions [here](https://github.com/AlexanderKhazatsky/DROID).
 
 -------
-## Pre-processing datasets
-Before training, you need to pre-process your datasets to ensure they're the correct format.
-### droid datasets
-Convert the raw droid data using this simple script:
-```
-python robomimic/scripts/convertion/convert_droid.py --folder <folder-containing-droid-data>
-```
-### robosuite datasets
-1. Convert the raw robosuite dataset to robomimic format
-```
-python robomimic/scripts/conversion/convert_robosuite.py --dataset <ds-path> --filter_num_demos <list-of-numbers>
-```
-`--filter_num_demos` corresponds to the number of demos to filter by. It's a list, eg. `10 30 50 100 200 500 1000`
+## Preparing Datasets
+We provide all DROID datasets in RLDS, which makes it easy to co-train with various other robot-learning datasets (such as those in the [Open X-Embodiment](https://robotics-transformer-x.github.io/)).
 
-This script will extract absolute actions, extract the action dict, and add filter keys.
-
-2. Extract image observations from robomimic dataset
-```
-python robomimic/scripts/dataset_states_to_obs.py --camera_names robot0_agentview_left robot0_agentview_right robot0_eye_in_hand --compress --exclude-next-obs --dataset <ds-path>
-```
-This script will generate a new dataset with the suffix `_im84.hdf5` in the same directory as `--dataset`
+To prepare datasets, first download the desired training split of DROID here(TODO(Karl/Sasha): insert link and details based on what the splits are).
+If you want to additionally train DROID policies on task-specific data collected in your own DROID hardware platform, follow the instructions [here](https://github.com/kpertsch/droid_dataset_builder?tab=readme-ov-file) to convert the data to an RLDS format that can be used for DROID policy learning. Make sure
+that all datasets you want to train on are under the same root directory `DATA_PATH`.
 
 -------
 ## Training
-There are a number of algorithms to choose from: Diffusion Policy, ACT, BC-Transformer, etc.
+To train policies, update `DATA_PATH`, `EXP_LOG_PATH`, and `EXP_NAMES` in `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` and then run:
 
-Each algorithm has its own config generator script. For example for diffusion policy run:
-```
-python robomimic/scripts/config_gen/diffusion_gen.py --name <run-name>
-```
-You can add `--debug` to generate small runs for testing. Running this script will generate training run commands. You can use this script for generating a single run or multiple (for comparing settings and hyperparameter tuning).
-After running this script you just need to run the command(s) outputted.
+`python robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` --wandb_proj_name <WANDB_PROJ_NAME>`
 
-Want to learn how to set your own config values and sweep them? Read this short [tutorial section](https://robomimic.github.io/docs/tutorials/hyperparam_scan.html#step-3-set-hyperparameter-values).
+This will generate a python command that can be run to launch training. You can also update other training parameters within `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py`. Please see the `robomimic` documentation for more information on how `robomimic` configs are defined. The three
+most important parameters in this file are:
 
-### Loading model checkpoint weights
-Want to intialize your model with weights from a previous model checkpoint? Set the checkpoint path under `experiment.ckpt_path` in the config.
+- `DATA_PATH`: This is the directory in which all RLDS datasets were prepared.
+- `EXP_LOG_PATH`: This is the path at which experimental data (eg. policy checkpoints) will be stored.
+- `EXP_NAMES`: This defines the name of each experiment (as will be logged in `wandb`), the RLDS datasets corresponding to that experiment, and the desired sample weights between those datasets. See `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` for a template on how this should be formatted.
 
--------
-## Logging and viewing results
-Read this short [tutorial page](https://robomimic.github.io/docs/tutorials/viewing_results.html).
+The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce this based on your RAM availability. For best results, we recommend using `shuffle_buffer_size >= 100000` if possible.
 
 -------
-## Real robot evaluation (droid only)
-Use this forked droid: https://github.com/snasiriany/droid/tree/robomimic-eval. Note that the branch is `robomimic-eval`.
+## Evaluation on a DROID robot station
+Make sure DROID is installed and follow the policy evaluation instructions at the bottom of the README. 
 
-Run this script: https://github.com/snasiriany/droid/blob/robomimic-eval/scripts/evaluation/evaluate_policy.py. Before doing so, make sure to fill out `CKPT_PATH` with the path to the saved robomimic checkpoint you wish to evaluate.
+-------
+## TODO(Suraj): Debugging with HDF5 based policies 
