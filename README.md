@@ -1,4 +1,4 @@
-# DROID Policy Learning and Evaluation Codebase
+# DROID Policy Learning and Evaluation
 
 This repository contains all code for the policy learning and evaluation experiments in DROID(TODO(Karl/Sasha): add link to DROID website), a project aimed at collecting a large-scale dataset in-the-wild robot manipulation dataset for the robot learning resaerch community. This codebase is built as a fork of the popular repository for imitation learning algorithm development, `robomimic`, about which further information can be found here: [**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative).
 
@@ -35,11 +35,13 @@ most important parameters in this file are:
 - `EXP_LOG_PATH`: This is the path at which experimental data (eg. policy checkpoints) will be stored.
 - `EXP_NAMES`: This defines the name of each experiment (as will be logged in `wandb`), the RLDS datasets corresponding to that experiment, and the desired sample weights between those datasets. See `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` for a template on how this should be formatted.
 
-The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce this based on your RAM availability. For best results, we recommend using `shuffle_buffer_size >= 100000` if possible.
+The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce this based on your RAM availability. For best results, we recommend using `shuffle_buffer_size >= 100000` if possible. All polices were trained on a single NVIDIA A100 GPU.
+
+To specify your information for Weights and Biases logging, make sure to update the `WANDB_ENTITY` and `WANDB_API_KEY` values in `robomimic/macros.py`.
 
 -------
 ## Evaluation on a DROID robot station
 Make sure DROID is installed and follow the policy evaluation instructions at the bottom of the README. 
 
 -------
-## TODO(Suraj): Debugging with HDF5 based policies 
+## TODO(Suraj): Debugging with HDF5 based policies + help cleanup unnecessary files
