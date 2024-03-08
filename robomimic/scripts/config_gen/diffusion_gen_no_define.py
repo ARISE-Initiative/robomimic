@@ -2,12 +2,12 @@ from robomimic.scripts.config_gen.helper import *
 import random
 import json
 
-# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/", postfix="trajectory_im128.h5")]
+# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/", postfix="trajectory_im128.h5")]
 # import pdb; pdb.set_trace()
-# with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
-# # with open("/mnt/fsx/surajnair/datasets/r2d2_eval/manifest.json", "r") as f: evaldataset = json.load(f)
-# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/TRI_2/", postfix="trajectory_im128.h5")]
-# # with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
+# with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
+# # with open("/mnt/fsx/surajnair/datasets/droid_eval/manifest.json", "r") as f: evaldataset = json.load(f)
+# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/TRI_2/", postfix="trajectory_im128.h5")]
+# # with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
 # # evaldataset = evaldataset[:200]
 # # broaddataset = broaddataset[:2000]
 # random.shuffle(evaldataset)
@@ -16,11 +16,11 @@ import json
 # N_BROAD = len(broaddataset)
 
 ## Getting all language labeled data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json", 'r') as file:
         langs = json.load(file)
 
 ## Getting broad data
-broaddataset = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/' in l['path']]
+broaddataset = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/droid-data/lab-uploads/' in l['path']]
 broaddataset = broaddataset[:2000]
 N_BROAD = len(broaddataset)
 
@@ -85,7 +85,7 @@ def make_generator_helper(args):
         hidename=True,
     )
 
-    if args.env == "r2d2":
+    if args.env == "droid":
         generator.add_param(
             key="train.data",
             name="ds",

@@ -47,12 +47,12 @@ def robomimic_transform(trajectory: Dict[str, Any]) -> Dict[str, Any]:
         "actions": trajectory["action"][1:],
     }
 
-R2D2_TO_RLDS_OBS_KEY_MAP = {
+DROID_TO_RLDS_OBS_KEY_MAP = {
     "camera/image/varied_camera_1_left_image": "exterior_image_1_left",
     "camera/image/varied_camera_2_left_image": "exterior_image_2_left"
 }
 
-R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP = {
+DROID_TO_RLDS_LOW_DIM_OBS_KEY_MAP = {
     "robot_state/cartesian_position": "cartesian_position",
     "robot_state/gripper_position": "gripper_position",
 }

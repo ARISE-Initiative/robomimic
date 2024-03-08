@@ -347,7 +347,7 @@ class PolicyAlgo(Algo):
 
     def compute_traj_pred_actual_actions(self, traj, return_images=False):
         """
-        traj is an R2D2Dataset object representing one trajectory
+        traj is an DROIDDataset object representing one trajectory
         This function is slow (>1s per trajectory) because there is no batching 
         and instead loops through all timesteps one by one
         TODO: documentation

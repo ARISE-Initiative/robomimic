@@ -5,17 +5,17 @@
 -------
 ## Installation
 1. Clone the repo with the `--recurse-submodules` flag.
-2. (if applicable) switch to `r2d2` branch
+2. (if applicable) switch to `droid` branch
 3. Run `pip install -e .` in `robomimic`
 4. Run `pip install -e .` in `robomimic/act/detr`
 
 -------
 ## Pre-processing datasets
 Before training, you need to pre-process your datasets to ensure they're the correct format.
-### r2d2 datasets
-Convert the raw r2d2 data using this simple script:
+### droid datasets
+Convert the raw droid data using this simple script:
 ```
-python robomimic/scripts/convertion/convert_r2d2.py --folder <folder-containing-r2d2-data>
+python robomimic/scripts/convertion/convert_droid.py --folder <folder-containing-droid-data>
 ```
 ### robosuite datasets
 1. Convert the raw robosuite dataset to robomimic format
@@ -53,7 +53,7 @@ Want to intialize your model with weights from a previous model checkpoint? Set 
 Read this short [tutorial page](https://robomimic.github.io/docs/tutorials/viewing_results.html).
 
 -------
-## Real robot evaluation (r2d2 only)
-Use this forked r2d2: https://github.com/snasiriany/r2d2/tree/robomimic-eval. Note that the branch is `robomimic-eval`.
+## Real robot evaluation (droid only)
+Use this forked droid: https://github.com/snasiriany/droid/tree/robomimic-eval. Note that the branch is `robomimic-eval`.
 
-Run this script: https://github.com/snasiriany/r2d2/blob/robomimic-eval/scripts/evaluation/evaluate_policy.py. Before doing so, make sure to fill out `CKPT_PATH` with the path to the saved robomimic checkpoint you wish to evaluate.
+Run this script: https://github.com/snasiriany/droid/blob/robomimic-eval/scripts/evaluation/evaluate_policy.py. Before doing so, make sure to fill out `CKPT_PATH` with the path to the saved robomimic checkpoint you wish to evaluate.

@@ -336,7 +336,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         Ta = self.algo_config.horizon.action_horizon
 
         if eval_mode:
-            from r2d2.misc.parameters import hand_camera_id, varied_camera_1_id, varied_camera_2_id
+            from droid.misc.parameters import hand_camera_id, varied_camera_1_id, varied_camera_2_id
             root_path = os.path.join(os. getcwd(), "eval_params")
 
             if goal_mode is not None:

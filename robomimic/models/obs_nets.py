@@ -304,7 +304,7 @@ class ObservationEncoder(Module):
             all_image_feats = torch.cat(all_image_feats, dim = 1)
             all_image_feats_posttrans = self.fusernetwork(all_image_feats).last_hidden_state
             output = self.l1(TensorUtils.flatten(all_image_feats_posttrans, begin_axis=1))
-            # TODO (Ashwin): Ideally should include low-dim features in perceiver input too
+            # TODO(Ashwin): Ideally should include low-dim features in perceiver input too
             return torch.cat(non_image_feats + [output], -1)
         else:
             raise NotImplementedError("Unsupported fuser")

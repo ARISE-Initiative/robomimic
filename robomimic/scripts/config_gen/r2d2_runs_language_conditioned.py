@@ -3,12 +3,12 @@ import random
 import json
 import numpy as np
 
-# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/", postfix="trajectory_im128.h5")]
+# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/", postfix="trajectory_im128.h5")]
 # import pdb; pdb.set_trace()
-# with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
-# # with open("/mnt/fsx/surajnair/datasets/r2d2_eval/manifest.json", "r") as f: evaldataset = json.load(f)
-# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/r2d2_eval/TRI_2/", postfix="trajectory_im128.h5")]
-# # with open("/mnt/fsx/surajnair/datasets/r2d2_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
+# with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
+# # with open("/mnt/fsx/surajnair/datasets/droid_eval/manifest.json", "r") as f: evaldataset = json.load(f)
+# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/TRI_2/", postfix="trajectory_im128.h5")]
+# # with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
 # # evaldataset = evaldataset[:200]
 # # broaddataset = broaddataset[:2000]
 # random.shuffle(evaldataset)
@@ -22,43 +22,43 @@ with open("/mnt/fsx/surajnair/datasets/oxe_hdf5/manifest_oxe.json", 'r') as file
 N_OXE = len(oxe)
 
 ## Getting all stanford data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang_stanford_eval.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang_stanford_eval.json", 'r') as file:
     langs = json.load(file)
 stanford_singletask_eraser = [{'path': l['path']} for l in langs if 'stanford_eval_0125' in l['path']]
 N_STANFORD_ERASER = len(stanford_singletask_eraser)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_stanford_evgr_laundry.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_stanford_evgr_laundry.json", 'r') as file:
     stanford_singletask_laundry = json.load(file)
 N_STANFORD_LAUNDRY = len(stanford_singletask_laundry)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_stanford_evgr_cooking.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_stanford_evgr_cooking.json", 'r') as file:
     stanford_singletask_cooking = json.load(file)
 N_STANFORD_COOKING = len(stanford_singletask_cooking)
 
 
 ## Getting all TRI data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_chips.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_chips.json", 'r') as file:
     langs = json.load(file)
 chips_singletask = [{'path': l['path']} for l in langs if 'TRI_chips_only_1_21' in l['path']]
 N_CHIPS = len(chips_singletask)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_frenchpress.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_frenchpress.json", 'r') as file:
     tri_frenchpress = json.load(file)
 N_FRENCHPRESS = len(tri_frenchpress)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_tri_pot.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_pot.json", 'r') as file:
     tri_pot = json.load(file)
 N_POT = len(tri_pot)
 
 ## Getting all language labeled data
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json", 'r') as file:
     langs = json.load(file)
 
 ## Getting broad data
-broaddataset_full = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/' in l['path']]
+broaddataset_full = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/droid-data/lab-uploads/' in l['path']]
 N_BROAD_FULL = len(broaddataset_full)
 
-with open("/mnt/fsx/surajnair/datasets/r2d2-data/filter_traj_20scene_10k_episodes_success.json", 'r') as file:
+with open("/mnt/fsx/surajnair/datasets/droid-data/filter_traj_20scene_10k_episodes_success.json", 'r') as file:
     subset = json.load(file)
 
 broaddataset_filtered = [{'path': l['path']} for l in broaddataset_full if "/".join(l['path'].split("/")[7:-1])+"/" in subset]
@@ -74,7 +74,7 @@ cmu_multi = [{'path': l['path']} for l in langs if 'cmu_rgb' in l['path']]
 N_CMU_MULTI = len(cmu_multi)
 
 
-print(f"Broad Datapoints: R2D2 {N_BROAD_FULL, N_BROAD_FILTERED, N_BROAD_FILTERED_RANDOM} OXE {N_OXE} \
+print(f"Broad Datapoints: DROID {N_BROAD_FULL, N_BROAD_FILTERED, N_BROAD_FILTERED_RANDOM} OXE {N_OXE} \
       \nSingle Task TRI Datapoints: CHIPS {N_CHIPS} POT {N_POT} FRENCHPRESS {N_FRENCHPRESS} \
       \nStanford Datapoints: Eraser {N_STANFORD_ERASER} Laundry {N_STANFORD_LAUNDRY} Cooking {N_STANFORD_COOKING} \
       \nCMU Datapoints: {N_CMU_MULTI, N_CMU_TOASTER} ")
@@ -148,7 +148,7 @@ def make_generator_helper(args):
         hidename=True,
     )
 
-    if args.env == "r2d2":
+    if args.env == "droid":
         generator.add_param(
             key="train.action_keys",
             name="ac_keys",
@@ -368,38 +368,38 @@ def make_generator_helper(args):
 	    value_names=[
                 # "stanford_cooking", 
                 # "stanford_laundry",
-                # "filteredr2d2_stanford_cooking", 
-                # "filteredr2d2_stanford_laundry",
-                # "filteredrandomr2d2_stanford_cooking", 
-                # "filteredrandomr2d2_stanford_laundry",
+                # "filtereddroid_stanford_cooking", 
+                # "filtereddroid_stanford_laundry",
+                # "filteredrandomdroid_stanford_cooking", 
+                # "filteredrandomdroid_stanford_laundry",
                 # "stanford_eraser", 
                 # "cmu_toast",
-                # "filteredr2d2_stanford_eraser", 
-                # "filteredr2d2_cmu_toast",
-                # "filteredrandomr2d2_stanford_eraser", 
-                # "filteredrandomr2d2_cmu_toast",
+                # "filtereddroid_stanford_eraser", 
+                # "filtereddroid_cmu_toast",
+                # "filteredrandomdroid_stanford_eraser", 
+                # "filteredrandomdroid_cmu_toast",
                 # "stanford_cooking",
                 # "stanford_laundry",
                 # "oxe_balanced_stanford_cooking",
                 # "oxe_balanced_stanford_laundry",
-                # "fullr2d2_balanced_stanford_cooking",
-                # "fullr2d2_balanced_stanford_laundry",
+                # "fulldroid_balanced_stanford_cooking",
+                # "fulldroid_balanced_stanford_laundry",
                 # "tri_pot",
                 # "tri_frenchpress",
                 # "oxe_balanced_tri_pot",
                 # "oxe_balanced_tri_frenchpress",
-                # "fullr2d2_balanced_tri_pot",
-                # "fullr2d2_balanced_tri_frenchpress",
+                # "fulldroid_balanced_tri_pot",
+                # "fulldroid_balanced_tri_frenchpress",
                 # "oxe_balanced_stanford_eraser",
                 # "oxe_balanced_chips",
                 # "oxe_balanced_cmu_multi",
                 # "oxe_balanced_cmu_toast",
                 # "stanford_eraser", 
-                # "fullr2d2_balanced_stanford_eraser"
+                # "fulldroid_balanced_stanford_eraser"
                 # "cmu_multi", 
                 "cmu_toast_hdf5",
-                # "fullr2d2_balanced_cmu_multi", 
-                # "fullr2d2_balanced_cmu_toast",
+                # "fulldroid_balanced_cmu_multi", 
+                # "fulldroid_balanced_cmu_toast",
                 # "broad",
                 # "eval_chips", 
                 # "balanced_chips", 

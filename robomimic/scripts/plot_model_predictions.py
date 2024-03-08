@@ -23,15 +23,15 @@ TODO: track rotation magnitude seperately (https://docs.scipy.org/doc/scipy/refe
 # the configs of the models to be plotted
 model_config_mapping = {
     # "bottle_less_obs": {
-    #     "model":"/home/zehan/expdata/r2d2/im/bc_xfmr/google_bc_baseline/bottle_less_obs/20230815225106/models/model_epoch_60.pth",
-    #     'folder':"/home/zehan/expdata/r2d2/im/bc_xfmr/google_bc_baseline/bottle_less_obs/20230815225106/test_inference_figures/",
+    #     "model":"/home/zehan/expdata/droid/im/bc_xfmr/google_bc_baseline/bottle_less_obs/20230815225106/models/model_epoch_60.pth",
+    #     'folder':"/home/zehan/expdata/droid/im/bc_xfmr/google_bc_baseline/bottle_less_obs/20230815225106/test_inference_figures/",
     #     # "action_names": ['x', 'y', 'z', 'roll', 'pitch', 'yaw', "gripper_action" , 'terminate'],
     #     "action_names": None,
     #     "trajectory_name_regex": r'(\d+_trajectory_im\d+)'
     # },
-    "r2d2_wire": {
-        # "model": "/home/soroushn/expdata/r2d2/im/diffusion_policy/debug/ds_pen-in-cup_cams_3cams/20230830160945/models/model_epoch_2.pth",
-        "model": "/home/soroushn/expdata/r2d2/im/bc_xfmr/debug/ds_pen-in-cup_cams_3cams_predfuture_True_ac_keys_rel/20230830161631/models/model_epoch_2.pth",
+    "droid_wire": {
+        # "model": "/home/soroushn/expdata/droid/im/diffusion_policy/debug/ds_pen-in-cup_cams_3cams/20230830160945/models/model_epoch_2.pth",
+        "model": "/home/soroushn/expdata/droid/im/bc_xfmr/debug/ds_pen-in-cup_cams_3cams_predfuture_True_ac_keys_rel/20230830161631/models/model_epoch_2.pth",
         "folder": "/home/soroushn/tmp/model_predictions",
         # "action_names": ['x', 'y', 'z', 'r', 'p', 'y', "gripper_pos"], # use custom names
         "action_names": None, # use default names, see line 71

@@ -34,7 +34,7 @@ def make_generator_helper(args):
         values=[100.0],
     )
 
-    if args.env == "r2d2":
+    if args.env == "droid":
         generator.add_param(
             key="train.data",
             name="ds",

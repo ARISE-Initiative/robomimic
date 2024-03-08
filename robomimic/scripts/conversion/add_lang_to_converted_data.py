@@ -1,5 +1,5 @@
 """
-Add image information to existing r2d2 hdf5 file
+Add image information to existing droid hdf5 file
 """
 import h5py
 import os
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         "--folder",
         type=str,
         help="folder containing hdf5's to add camera images to",
-        default="~/datasets/r2d2/success"
+        default="~/datasets/droid/success"
     )
 
     parser.add_argument(
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json", 'r') as file:
+    with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json", 'r') as file:
         langs = json.load(file)
     langs = [l for l in langs if "TRI_chips_only_1_21" in l["path"]]
     datasets = langs
@@ -90,8 +90,8 @@ if __name__ == "__main__":
 
 
 
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/AUTOLab/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/CLVR/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/GuptaLab/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/AUTOLab/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/CLVR/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/GuptaLab/success --imsize 128
         
-# python robomimic/scripts/conversion/add_lang_to_converted_data.py --folder /mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-eval/TRI_1_10_multitask_food_in_bowl/ --imsize 256
+# python robomimic/scripts/conversion/add_lang_to_converted_data.py --folder /mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval/TRI_1_10_multitask_food_in_bowl/ --imsize 256

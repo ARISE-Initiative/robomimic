@@ -119,7 +119,7 @@ class ACT(BC_VAE):
         Returns:
             predictions (dict): dictionary containing network outputs
         """
-        # TODO (Ashwin): remove this once we add in the robomimic observation encoders
+        # TODO(Ashwin): remove this once we add in the robomimic observation encoders
         for k in self.proprio_keys:
             batch["obs"][k] = batch["obs"][k].reshape((batch["obs"][k].shape[0], -1))
         proprio = [batch["obs"][k] for k in self.proprio_keys]
@@ -177,7 +177,7 @@ class ACT(BC_VAE):
         """
         assert not self.nets.training
 
-        # TODO (Ashwin): remove this once we add in the robomimic observation encoders
+        # TODO(Ashwin): remove this once we add in the robomimic observation encoders
         for k in self.proprio_keys:
             obs_dict[k] = obs_dict[k].reshape((obs_dict[k].shape[0], -1))
         proprio = [obs_dict[k] for k in self.proprio_keys]

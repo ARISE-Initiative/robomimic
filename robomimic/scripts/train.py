@@ -44,7 +44,7 @@ from robomimic.utils.dataset import action_stats_to_normalization_stats
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
-from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transform, R2D2_TO_RLDS_OBS_KEY_MAP, R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP, TorchRLDSDataset
+from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transform, droid_TO_RLDS_OBS_KEY_MAP, droid_TO_RLDS_LOW_DIM_OBS_KEY_MAP, TorchRLDSDataset
 
 from octo.data.dataset import make_interleaved_dataset
 
@@ -77,25 +77,24 @@ def train(config, device):
 
     ds_format = config.train.data_format
 
-    if ds_format == "r2d2_rlds":
+    if ds_format == "droid_rlds":
         # # load basic metadata from training file
         # print("\n============= Loaded Environment Metadata =============")
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=None, ds_format=ds_format)
-         # TODO (Ashwin): make sure setting to None here is OK, are observations pre-normalized the way we want?
         obs_normalization_stats = None
 
         # FOR RLDS
         tf.config.set_visible_devices([], "GPU")
 
         obs_modalities = config.observation.modalities.obs.rgb
-        # NOTE(Ashwin): must be 2 cam for now, can clean this up later
+        # NOTE: Must be 2 cam for now, can clean this up later
         assert(len(obs_modalities) == 2)
         ac_dim = sum([ac_comp[1] for ac_comp in config.train.action_shapes])
 
         BASE_DATASET_KWARGS = {
                 "data_dir": config.train.data_path,
-                "image_obs_keys": {"primary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": R2D2_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
-                "state_obs_keys": [R2D2_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
+                "image_obs_keys": {"primary": droid_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": droid_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
+                "state_obs_keys": [droid_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
                 "language_key": "language_instruction",
                 "keys_to_normalize":  {"action": "action"},
                 "action_proprio_normalization_type": "bounds",
@@ -110,21 +109,20 @@ def train(config, device):
             {"name": d_name,  **BASE_DATASET_KWARGS} for d_name in dataset_names
         ]
 
-        # TODO(Ashwin): Wrap more of the parameters below in the robomimic configs
         dataset = make_interleaved_dataset(
             dataset_kwargs_list,
             config.train.sample_weights,
             train=True,
             shuffle_buffer_size=config.train.shuffle_buffer_size,
             batch_size=None,  # batching will be handles in PyTorch Dataloader object
-            balance_weights=True,
+            balance_weights=False,
             do_combined_normalization=True,
             traj_transform_kwargs=dict(
                 # NOTE(Ashwin): window_size and future_action_window_size may break if 
                 # not using diffusion policy
                 window_size=config.algo.horizon.observation_horizon,
                 future_action_window_size=config.algo.horizon.prediction_horizon-1,
-                subsample_length=100,
+                subsample_length=config.train.subsample_length,
                 skip_unlabeled=True,    # skip all trajectories without language
             ),
             frame_transform_kwargs=dict(
@@ -134,10 +132,10 @@ def train(config, device):
                     primary=config.observation.image_dim,
                     secondary=config.observation.image_dim,
                 ),
-                num_parallel_calls=200,
+                num_parallel_calls=config.train.num_parallel_calls,
             ),
-            traj_transform_threads=48,
-            traj_read_threads=48,
+            traj_transform_threads=config.train.traj_transform_threads,
+            traj_read_threads=config.train.traj_read_threads,
         )
         # Note: If we have statistics for multiple datasets separately, use the last one (assumes last one is the dataset from the target domain)
         # rlds_dataset_stats will only be a list if do_combined_normalization is set to False
@@ -145,7 +143,7 @@ def train(config, device):
         action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats["action"], config.train.action_keys, config.train.action_shapes)
         action_config = config.train.action_config
         action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
-        dataset = dataset.map(robomimic_transform, num_parallel_calls=48)
+        dataset = dataset.map(robomimic_transform, num_parallel_calls=config.train.traj_transform_threads)
 
         pytorch_dataset = TorchRLDSDataset(dataset)
         train_loader = DataLoader(
@@ -285,7 +283,7 @@ def train(config, device):
     ##### ------------------------------------------------------------------------------------ ######
 
     # TODO(Ashwin): Support loading validation splits for RLDS
-    if ds_format != "r2d2_rlds" and config.experiment.validate:
+    if ds_format != "droid_rlds" and config.experiment.validate:
         # cap num workers for validation dataset at 1
         num_workers = min(config.train.num_data_workers, 1)
         valid_sampler = validset.get_dataset_sampler()
@@ -435,7 +433,7 @@ def train(config, device):
 
         # check if we need to save model MSE
         #TODO(Ashwin): support MSE Logging with RLDS dataloading
-        if ds_format != "r2d2_rlds":
+        if ds_format != "droid_rlds":
             should_save_mse = False
             if config.experiment.mse.enabled:
                 if config.experiment.mse.every_n_epochs is not None and epoch % config.experiment.mse.every_n_epochs == 0:
@@ -529,7 +527,7 @@ def main(args):
     else:
         config = config_factory(args.algo)
 
-    if config.train.data_format != "r2d2_rlds" and args.dataset is not None:
+    if config.train.data_format != "droid_rlds" and args.dataset is not None:
         config.train.data = args.dataset
 
     if args.name is not None:

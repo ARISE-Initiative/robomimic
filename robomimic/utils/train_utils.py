@@ -21,7 +21,7 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.log_utils as LogUtils
 import robomimic.utils.file_utils as FileUtils
 
-from robomimic.utils.dataset import SequenceDataset, R2D2Dataset, MetaDataset
+from robomimic.utils.dataset import SequenceDataset, DROIDDataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
@@ -181,7 +181,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     meta_ds_kwargs = dict()
 
     dataset = get_dataset(
-        ds_class=R2D2Dataset if config.train.data_format == "r2d2" else SequenceDataset,
+        ds_class=DROIDDataset if config.train.data_format == "droid" else SequenceDataset,
         ds_kwargs=ds_kwargs,
         ds_weights=ds_weights,
         ds_labels=ds_labels,

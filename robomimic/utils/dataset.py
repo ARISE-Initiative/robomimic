@@ -725,7 +725,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         return None
 
 
-class R2D2Dataset(SequenceDataset):
+class DROIDDataset(SequenceDataset):
     def get_action_traj(self, ep):
         action_traj = dict()
         for key in self.action_keys:

@@ -3,7 +3,7 @@ import random
 import json
 import numpy as np
 
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
+DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
 
 
 def make_generator_helper(args):
@@ -24,7 +24,7 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "r2d2_rlds"
+            "droid_rlds"
         ],
     )
 
@@ -39,7 +39,7 @@ def make_generator_helper(args):
         key="train.data_path",
         name="",
         group=-1,
-        values=["/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"],
+        values=["/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"],
     )
 
     generator.add_param(
@@ -55,6 +55,46 @@ def make_generator_helper(args):
         group=1212111,
         values=[128],
         hidename=False,
+    )
+
+    generator.add_param(
+        key="train.subsample_length",
+        name="subsample_length",
+        group=7070707,
+        values=[
+            100
+        ],
+        hidename=True,
+    )
+
+    generator.add_param(
+        key="train.num_parallel_calls",
+        name="num_parallel_calls",
+        group=404040404,
+        values=[
+            200
+        ],
+        hidename=True,
+    )
+
+    generator.add_param(
+        key="train.traj_transform_threads",
+        name="traj_transform_threads",
+        group=303030303,
+        values=[
+            48
+        ],
+        hidename=True,
+    )
+
+    generator.add_param(
+        key="train.traj_read_threads",
+        name="traj_read_threads",
+        group=908090809,
+        values=[
+            48
+        ],
+        hidename=True,
     )
 
     generator.add_param(
@@ -87,7 +127,7 @@ def make_generator_helper(args):
         hidename=True,
     )
 
-    if args.env == "r2d2":
+    if args.env == "droid":
         generator.add_param(
             key="train.sample_weights",
             name="sample_weights",

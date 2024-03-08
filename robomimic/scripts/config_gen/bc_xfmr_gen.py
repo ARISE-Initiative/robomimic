@@ -13,7 +13,7 @@ def make_generator_helper(args):
     if args.ckpt_mode is None:
         args.ckpt_mode = "off"
 
-    if args.env == "r2d2":
+    if args.env == "droid":
         generator.add_param(
             key="train.data",
             name="ds",

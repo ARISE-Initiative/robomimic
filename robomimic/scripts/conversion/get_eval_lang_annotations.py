@@ -4,9 +4,9 @@ import numpy as np
 import os
 import csv
 
-EVAL_DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-eval/"
+EVAL_DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval/"
 RAW_ANNOTATIONS = os.path.join(EVAL_DATA_ROOT_DIR, "tri-multi-task-eval-lang-annotations.csv")
-METADATA_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-eval-json/"
+METADATA_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval-json/"
 
 def read_csv(file_path):
     data_list = []

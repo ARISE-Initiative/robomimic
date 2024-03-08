@@ -49,7 +49,7 @@ def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
 
 
 def set_env_settings(generator, args):
-    if args.env in ["r2d2"]:
+    if args.env in ["droid"]:
         assert args.mod == "im"
         generator.add_param(
             key="experiment.rollout.enabled",
@@ -134,7 +134,7 @@ def set_env_settings(generator, args):
                     116
                 ],
             )
-        # remove spatial softmax by default for r2d2 dataset
+        # remove spatial softmax by default for droid dataset
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.pool_class",
             name="",
@@ -667,7 +667,7 @@ def set_mod_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    "r2d2"
+                    "droid"
                 ],
             )
         if "train.num_epochs" not in generator.parameters:
@@ -823,7 +823,7 @@ def get_argparser():
     parser.add_argument(
         "--env",
         type=str,
-        default='r2d2',
+        default='droid',
     )
 
     parser.add_argument(

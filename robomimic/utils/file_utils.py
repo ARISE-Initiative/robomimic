@@ -96,17 +96,17 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
             :`'type'`: type of environment, should be a value in EB.EnvType
             :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
     """
-    if ds_format != "r2d2_rlds":
+    if ds_format != "droid_rlds":
         dataset_path = os.path.expanduser(dataset_path)
         f = h5py.File(dataset_path, "r")
 
     if ds_format == "robomimic":
         env_meta = json.loads(f["data"].attrs["env_args"])
         f.close()
-    elif ds_format == "r2d2":
+    elif ds_format == "droid":
         env_meta = dict(f.attrs)
         f.close()
-    elif ds_format == "r2d2_rlds":
+    elif ds_format == "droid_rlds":
         # TODO(Ashwin): find a proper way to extract this; this info isn't actually used though
         env_meta = {}
     else:
@@ -166,7 +166,7 @@ def get_shape_metadata_from_dataset(dataset_path, batch, action_keys, all_obs_ke
                 input_shape=initial_shape,
             )
         f.close()
-    elif ds_format == "r2d2":
+    elif ds_format == "droid":
         # read demo file for some metadata
         dataset_path = os.path.expanduser(dataset_path)
         f = h5py.File(dataset_path, "r")
@@ -222,7 +222,7 @@ def get_shape_metadata_from_dataset(dataset_path, batch, action_keys, all_obs_ke
             if (config.train.goal_mode is not None) and (ObsUtils.OBS_KEYS_TO_MODALITIES[k] == 'rgb'):
                 all_shapes[k][0] *= 2
         f.close()
-    elif ds_format == "r2d2_rlds":
+    elif ds_format == "droid_rlds":
         all_shapes = OrderedDict()
         for k in [
             "robot_state/cartesian_position",

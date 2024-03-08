@@ -1,5 +1,5 @@
 """
-Add image information to existing r2d2 hdf5 file
+Add image information to existing droid hdf5 file
 """
 import h5py
 import os
@@ -23,11 +23,11 @@ import pyzed.sl as sl
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 
-from r2d2.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
-from r2d2.trajectory_utils.trajectory_reader import TrajectoryReader
-from r2d2.camera_utils.info import camera_type_to_string_dict
+from droid.camera_utils.wrappers.recorded_multi_camera_wrapper import RecordedMultiCameraWrapper
+from droid.trajectory_utils.trajectory_reader import TrajectoryReader
+from droid.camera_utils.info import camera_type_to_string_dict
 
-from r2d2.camera_utils.camera_readers.zed_camera import ZedCamera, standard_params
+from droid.camera_utils.camera_readers.zed_camera import ZedCamera, standard_params
 
 
 DISNEY_IMAGE_NAME_TO_CAM_KEY_MAPPING = {'hand_camera_left_image': '16522755_left', 'hand_camera_right_image': '16522755_right', 'varied_camera_1_left_image': '29431508_left', 'varied_camera_1_right_image': '29431508_right', 'varied_camera_2_left_image': '29513368_left', 'varied_camera_2_right_image': '29513368_right'}
@@ -291,7 +291,7 @@ if __name__ == "__main__":
         "--folder",
         type=str,
         help="folder containing hdf5's to add camera images to",
-        default="~/datasets/r2d2/success"
+        default="~/datasets/droid/success"
     )
 
     parser.add_argument(
@@ -309,8 +309,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    # langs = json.load("/mnt/fsx/surajnair/datasets/r2d2-data/manifest_lang.json")
-    # with open("/mnt/fsx/surajnair/datasets/r2d2-data/manifest.json", 'r') as file:
+    # langs = json.load("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json")
+    # with open("/mnt/fsx/surajnair/datasets/droid-data/manifest.json", 'r') as file:
     #     files = json.load(file)
     # # files = [os.path.join(os.path.dirname(l["path"]), "trajectory.h5") for l in langs if ("eval" in l["path"])]
     # datasets = files
@@ -345,9 +345,9 @@ if __name__ == "__main__":
         #         pass
 
 
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/AUTOLab/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/CLVR/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py --folder /mnt/fsx/surajnair/datasets/r2d2_full_raw/GuptaLab/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/AUTOLab/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/CLVR/success --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/GuptaLab/success --imsize 128
 
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py  --imsize 256
-# /mnt/fsx/surajnair/mambaforge/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_r2d2.py  --imsize 128
+# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py  --imsize 256
+# /mnt/fsx/surajnair/mambaforge/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py  --imsize 128

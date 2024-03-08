@@ -3,12 +3,12 @@ import json
 import numpy as np
 import os
 
-DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads/"
-ANNOTATIONS_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-json/"
+DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads/"
+ANNOTATIONS_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads-json/"
 AGGREGATED_ANNOTATIONS_PATH = os.path.join(ANNOTATIONS_DIR, "aggregated-annotations.json")
 
-EVAL_DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-eval/"
-EVAL_ANNOTATIONS_DIR = "/mnt/fsx/surajnair/datasets/r2d2-data/lab-uploads-eval-json/"
+EVAL_DATA_ROOT_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval/"
+EVAL_ANNOTATIONS_DIR = "/mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval-json/"
 AGGREGATED_ANNOTATIONS_EVAL_PATH = os.path.join(EVAL_ANNOTATIONS_DIR, "aggregated_annotations_eval.json")
 
 with open(AGGREGATED_ANNOTATIONS_PATH, "r") as a_file:
