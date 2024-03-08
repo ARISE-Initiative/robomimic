@@ -26,7 +26,7 @@ that all datasets you want to train on are under the same root directory `DATA_P
 ## Training
 To train policies, update `DATA_PATH`, `EXP_LOG_PATH`, and `EXP_NAMES` in `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` and then run:
 
-`python robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` --wandb_proj_name <WANDB_PROJ_NAME>`
+`python robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py --wandb_proj_name <WANDB_PROJ_NAME>`
 
 This will generate a python command that can be run to launch training. You can also update other training parameters within `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py`. Please see the `robomimic` documentation for more information on how `robomimic` configs are defined. The three
 most important parameters in this file are:
