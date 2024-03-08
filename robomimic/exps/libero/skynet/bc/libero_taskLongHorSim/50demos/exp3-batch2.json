@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "bc-taskLongHorSim-exp3_batch1",
+        "name": "bc-taskLongHorSim-exp3_batch2-50demos",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -36,10 +36,10 @@
     "train": {
         "data": [
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_10_7_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "put both the alphabet soup and the cream cheese box in the basket", "key": "task_7"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_46_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "pick up the alphabet soup and put it in the basket", "key": "task_46"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_47_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "pick up the cream cheese box and put it in the basket", "key": "task_47"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_50_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "pick up the alphabet soup and put it in the basket", "key": "task_50"},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_51_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "pick up the butter and put it in the basket", "key": "task_51"}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_58_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "pick up the ketchup and put it in the tray", "key": "task_58"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_65_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the red mug on the left plate", "key": "task_65"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_67_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the white mug on the left plate", "key": "task_67"},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0211/demo_src_libero_90_69_n_10_targ_0_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the chocolate pudding to the left of the plate", "key": "task_69"}
         ],
         "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_taskLongHorSim/",
         "num_data_workers": 0,
@@ -49,6 +49,7 @@
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
         "seq_length": 10,
+        "demo_limit": 50,
         "dataset_keys": [
             "actions",
             "rewards",

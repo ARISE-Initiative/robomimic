@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "bc-taskLongHorSim-exp3_batch1",
+        "name": "bc-taskLongHorSim-exp3_batch1-50demos",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -49,6 +49,7 @@
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
         "seq_length": 10,
+        "demo_limit": 50,
         "dataset_keys": [
             "actions",
             "rewards",
