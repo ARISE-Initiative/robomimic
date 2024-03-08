@@ -117,7 +117,7 @@ def train(config, device):
             train=True,
             shuffle_buffer_size=config.train.shuffle_buffer_size,
             batch_size=None,  # batching will be handles in PyTorch Dataloader object
-            balance_weights=False,
+            balance_weights=True,
             do_combined_normalization=True,
             traj_transform_kwargs=dict(
                 # NOTE(Ashwin): window_size and future_action_window_size may break if 
@@ -139,8 +139,10 @@ def train(config, device):
             traj_transform_threads=48,
             traj_read_threads=48,
         )
-        rlds_dataset_stats = dataset.dataset_statistics["action"]
-        action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats, config.train.action_keys, config.train.action_shapes)
+        # Note: If we have statistics for multiple datasets separately, use the last one (assumes last one is the dataset from the target domain)
+        # rlds_dataset_stats will only be a list if do_combined_normalization is set to False
+        rlds_dataset_stats = dataset.dataset_statistics[-1] if isinstance(dataset.dataset_statistics, list) else dataset.dataset_statistics
+        action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats["action"], config.train.action_keys, config.train.action_shapes)
         action_config = config.train.action_config
         action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
         dataset = dataset.map(robomimic_transform, num_parallel_calls=48)
