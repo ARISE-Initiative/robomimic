@@ -44,4 +44,5 @@ To specify your information for Weights and Biases logging, make sure to update 
 Make sure DROID is installed and follow the policy evaluation instructions at the bottom of the README. 
 
 -------
-## TODO(Suraj): Debugging with HDF5 based policies + help cleanup unnecessary files
+## TODO(Suraj): Describe debugging with HDF5 based policies and how to train lang/goal conditioned policies with them
+## TODO(Suraj): Help cleanup unnecessary files
