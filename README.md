@@ -41,7 +41,7 @@ To specify your information for Weights and Biases logging, make sure to update 
 
 -------
 ## Evaluation on a DROID robot station
-Make sure DROID is installed and follow the policy evaluation instructions at the bottom of the README. 
+Make sure [DROID](https://github.com/AlexanderKhazatsky/DROID) is installed and follow the policy evaluation instructions at the bottom of the README. 
 
 -------
 ## TODO(Suraj): Describe debugging with HDF5 based policies and how to train lang/goal conditioned policies with them
