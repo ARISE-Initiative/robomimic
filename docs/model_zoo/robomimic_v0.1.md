@@ -10,16 +10,9 @@ See the ["Using Pretrained Models"](../tutorials/using_pretrained_models.html) t
 </div>
 
 <div class="admonition warning">
-<p class="admonition-title">Warning: use correct robomimic and robosuite versions!</p>
+<p class="admonition-title">Warning: use correct robosuite branch!</p>
 
-When using these trained models, please make sure that robosuite is on the [`offline_study` branch](https://github.com/ARISE-Initiative/robosuite/tree/offline_study), and that robomimic is on the [`v0.1` branch](https://github.com/ARISE-Initiative/robomimic/tree/v0.1).
-
-</div>
-
-<div class="admonition note">
-<p class="admonition-title">Troubleshooting download issues</p>
-
-Some users (eg. using Chrome) may experience issues with the dataset download links. If you are experiencing these issues, follow these steps: (1) right click on the download link, (2) select the option to copy the linked url, and (3) copy paste the link in a new tab.
+When using these trained models, please make sure that robosuite is on the `offline_study` branch of robosuite.
 
 </div>
 

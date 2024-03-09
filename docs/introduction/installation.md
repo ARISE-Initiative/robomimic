@@ -177,7 +177,6 @@ $ cd <PATH_TO_ROBOMIMIC_INSTALL_DIR>/docs
 $ make clean
 $ make apidoc
 $ make html
-$ cp -r images _build/html/
 ```
 
 There should be a generated `_build` folder - navigate to `_build/html/` and open `index.html` in a web browser to view the documentation.

@@ -39,7 +39,7 @@ Make sure to add the `--debug` flag to your experiments as a sanity check that y
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
 
-This example [requires robosuite](./installation.html#install-simulators) to be installed (under the `v1.4.1` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
+This example [requires robosuite](./installation.html#robosuite) to be installed (under the `v1.4.1` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
 
 </div>
 

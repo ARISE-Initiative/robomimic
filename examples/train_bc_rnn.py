@@ -62,7 +62,7 @@ def robosuite_hyperparameters(config):
     ## evaluation rollout config ##
     config.experiment.rollout.enabled = True                    # enable evaluation rollouts
     config.experiment.rollout.n = 50                            # number of rollouts per evaluation
-    config.experiment.rollout.horizon = 400                     # set horizon based on length of demonstrations (can be obtained with scripts/get_dataset_info.py)
+    config.experiment.rollout.horizon = 400                     # maximum number of env steps per rollout
     config.experiment.rollout.rate = 50                         # do rollouts every @rate epochs
     config.experiment.rollout.warmstart = 0                     # number of epochs to wait before starting rollouts
     config.experiment.rollout.terminate_on_success = True       # end rollout early after task success

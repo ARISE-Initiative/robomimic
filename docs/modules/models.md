@@ -43,7 +43,7 @@ config.observation.encoder.rgb.core_class = "MyCustomRGBEncoder"
 config.observation.encoder.rgb.core_kwargs = ...
 ```
 
-Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](https://github.com/ARISE-Initiative/robomimic/blob/master/examples/simple_obs_nets.py).
+Any corresponding keyword arguments that should be passed to the encoder constructor should be specified in `core_kwargs` in the config. For more information on creating your own custom encoder, please see our [example script](../introduction/examples.html#custom-observation-modalities-example).
 
 Below, we provide descriptions of specific EncoderCore-based classes used to encode RGB and depth observations (`VisualCore`) and range scanner observations (`ScanCore`).
 
@@ -196,13 +196,13 @@ These networks take an observation dictionary as input (and possibly additional 
 ### ValueNetwork
 - A basic value network that predicts values from observations. Can optionally be goal conditioned on future observations.
 ### DistributionalActionValueNetwork
-- Distributional Q (action-value) network that outputs a categorical distribution over a discrete grid of value atoms. See the [paper](https://arxiv.org/abs/1707.06887) for more details.
+- Distributional Q (action-value) network that outputs a categorical distribution over a discrete grid of value atoms. See the [paper](https://arxiv.org/pdf/1707.06887.pdf) for more details.
 
 ## Implemented VAEs
 The library implements a general VAE architecture and a number of prior distributions. See `robomimic/models/vae_nets.py` for complete implementations.
 
 ### VAE
-A general Variational Autoencoder (VAE) implementation, as described in this [paper](https://arxiv.org/abs/1312.6114).
+A general Variational Autoencoder (VAE) implementation, as described in https://arxiv.org/abs/1312.6114.
 
 Models a distribution p(X) or a conditional distribution p(X | Y), where each variable can consist of multiple modalities. The target variable X, whose distribution is modeled, is specified through the `input_shapes` argument, which is a map between modalities (strings) and expected shapes. In this way, a variable that consists of multiple kinds of data (e.g. image and flat-dimensional) can be modeled as well. A separate `output_shapes` argument is used to specify the expected reconstructions - this allows for asymmetric reconstruction (for example, reconstructing low-resolution images).
 

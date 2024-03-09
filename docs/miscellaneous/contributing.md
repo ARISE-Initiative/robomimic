@@ -2,7 +2,7 @@
 
 Our team wholeheartedly welcomes the community to contribute to robomimic. Contributions from members of the community will help ensure the long-term success of this project. Before you plan to make contributions, here are important resources to get started with:
 
-- Read the robomimic [documentation](https://robomimic.github.io/docs/introduction/overview.html) and [paper](https://arxiv.org/abs/2108.03298)
+- Read the robomimic [documentation](https://arise-initiative.github.io/robomimic-web/docs/overview.html) and [paper](https://arxiv.org/abs/2108.03298)
 - Check our latest status from existing [issues](https://github.com/ARISE-Initiative/robomimic/issues), [pull requests](https://github.com/ARISE-Initiative/robomimic/pulls), and [branches](https://github.com/ARISE-Initiative/robomimic/branches) and avoid duplicate efforts
 - Join our [ARISE Slack](https://ariseinitiative.slack.com) workspace for technical discussions. Please [email us](mailto:yukez@cs.utexas.edu) to be added to the workspace.
 

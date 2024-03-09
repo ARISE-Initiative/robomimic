@@ -64,9 +64,6 @@ $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name low
 # For including image observations
 $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image.hdf5 --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 
-# For including depth observations too
-python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name depth.hdf5 --done_mode 2 --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84 --depth
-
 # Using dense rewards
 $ python dataset_states_to_obs.py --dataset /path/to/demo.hdf5 --output_name image_dense.hdf5 --done_mode 2 --dense --camera_names agentview robot0_eye_in_hand --camera_height 84 --camera_width 84
 

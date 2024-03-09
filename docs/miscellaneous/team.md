@@ -4,12 +4,11 @@
 
 These people contributed directly to the codebase and helped build it.
 
-- [Ajay Mandlekar](https://ai.stanford.edu/~amandlek/)
-- [Danfei Xu](https://faculty.cc.gatech.edu/~danfei/)
+- [Ajay Mandlekar](http://web.stanford.edu/~amandlek/)
+- [Danfei Xu](https://cs.stanford.edu/~danfei/)
 - [Josiah Wong](https://www.jowo.me/about)
 - [Soroush Nasiriany](http://snasiriany.me/)
 - [Chen Wang](http://www.chenwangjeremy.net/)
-- [Matthew Bronars](https://bronars.github.io/)
 
 ## Mentors
 

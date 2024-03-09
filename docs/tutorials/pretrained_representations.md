@@ -26,17 +26,7 @@ config.observation.encoder.rgb.core_kwargs.pool_class = None                    
 config.observation.encoder.rgb.core_kwargs.backbone_class = 'MVPConv'                                   # MVP backbone for image observations (unused if no image observations)
 config.observation.encoder.rgb.core_kwargs.backbone_kwargs.mvp_model_class = 'vitb-mae-egosoup'         # MVP model class (vits-mae-hoi, vits-mae-in, vits-sup-in, vitb-mae-egosoup, vitl-256-mae-egosoup)
 config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                      # whether to freeze network during training or allow finetuning
-config.observation.encoder.rgb.core_kwargs.pool_class = None                                  # no pooling class for pretraining model
-
-# Set data loader attributes for image observations
-config.train.num_data_workers = 2                           # 2 data workers for image datasets
-config.train.hdf5_cache_mode = "low_dim"                    # only cache non-image data         
-
-# Ensure that you are using image observation modalities, names may depend on your dataset naming convention
-config.observation.modalities.obs.rgb = [
-                    "agentview_image",
-                    "robot0_eye_in_hand_image"
-                ]                                                  
+config.observation.encoder.rgb.core_kwargs.pool_class = None                                            # no pooling class for pretraining model
 ```
 
 Alternatively, if you are using a config json, you can set the appropriate keys in your json.

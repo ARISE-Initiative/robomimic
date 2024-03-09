@@ -18,10 +18,10 @@ The repository offers a simple utility script (`get_dataset_info.py`) to view th
 - the [environment metadata](../modules/environments.html#initialize-an-environment-from-a-dataset) in the dataset, which is used to construct the same simulator environment that the data was collected on
 - the dataset structure for the first demonstration
 
-Pass the `--verbose` argument to print the list of demonstration keys under each filter key, and the dataset structure for all demonstrations. An example, using the small hdf5 dataset packaged with the repository in `tests/assets/test_v141.hdf5` is shown below.
+Pass the `--verbose` argument to print the list of demonstration keys under each filter key, and the dataset structure for all demonstrations. An example, using the small hdf5 dataset packaged with the repository in `tests/assets/test.hdf5` is shown below.
 
 ```sh
-$ python get_dataset_info.py --dataset ../../tests/assets/test_v141.hdf5
+$ python get_dataset_info.py --dataset ../../tests/assets/test.hdf5
 ```
 
 <div class="admonition tip">
@@ -36,7 +36,7 @@ Any user wishing to write custom code that works with robomimic datasets should 
 <div class="admonition note">
 <p class="admonition-title">Note: These examples are compatible with any robomimic dataset.</p>
 
-The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test_v141.hdf5` (which requires robosuite v1.4.1), but you can run these examples with any robomimic hdf5 dataset.
+The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test.hdf5`, but you can run these examples with any robomimic hdf5 dataset. If you are using the default dataset, please make sure that robosuite is on the `offline_study` branch of robosuite -- this is necessary for the playback scripts to function properly.
 
 </div>
 
@@ -44,17 +44,14 @@ Use the `playback_dataset.py` script to easily view dataset trajectories.
 
 ```sh
 # For the first 5 trajectories, load environment simulator states one-by-one, and render "agentview" and "robot0_eye_in_hand" cameras to video at /tmp/playback_dataset.mp4
-$ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --render_image_names agentview robot0_eye_in_hand --video_path /tmp/playback_dataset.mp4 --n 5
+$ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --render_image_names agentview robot0_eye_in_hand --video_path /tmp/playback_dataset.mp4 --n 5
 
 # Directly visualize the image observations in the dataset. This is especially useful for real robot datasets where there is no simulator to use for rendering.
-$ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --use-obs --render_image_names agentview_image --video_path /tmp/obs_trajectory.mp4
-
-# Visualize depth observations as well.
-$ python playback_dataset.py --dataset /path/to/dataset.hdf5 --use-obs --render_image_names agentview_image --render_depth_names agentview_depth --video_path /tmp/obs_trajectory.mp4
+$ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --use-obs --render_image_names agentview_image --video_path /tmp/obs_trajectory.mp4
 
 # Play the dataset actions in the environment to verify that the recorded actions are reasonable.
-$ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --use-actions --render_image_names agentview --video_path /tmp/playback_dataset_with_actions.mp4
+$ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --use-actions --render_image_names agentview --video_path /tmp/playback_dataset_with_actions.mp4
 
 # Visualize only the initial demonstration frames.
-$ python playback_dataset.py --dataset ../../tests/assets/test_v141.hdf5 --first --render_image_names agentview --video_path /tmp/dataset_task_inits.mp4
+$ python playback_dataset.py --dataset ../../tests/assets/test.hdf5 --first --render_image_names agentview --video_path /tmp/dataset_task_inits.mp4
 ```

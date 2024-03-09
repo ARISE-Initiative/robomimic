@@ -20,7 +20,6 @@ Datasets capture recorded environment data and are used as inputs to a given off
 |          **Dataset**          | <center>**Task Types**</center> | **Downloading** | **Postprocessing**  |
 | ----------------------------- | :-------------: | :-------------: | :-------------: |
 | [**robomimic v0.1**](robomimic_v0.1.html)| Sim + Real Robot Manipulation | [Link](robomimic_v0.1.html#downloading)  | [Link](robomimic_v0.1.html#postprocessing)  |
-| [**MimicGen**](mimicgen.html)              | Sim Robot Manipulation | [Link](mimicgen.html#downloading)  | [Link](mimicgen.html#postprocessing)  |
 | [**D4RL**](d4rl.html)                      | Sim Locomotion | [Link](d4rl.html#downloading)  | [Link](d4rl.html#postprocessing)  |
 | [**MOMART**](momart.html)                    | Sim Mobile Manipulation | [Link](momart.html#downloading)  | [Link](momart.html#postprocessing)  |
 | [**RoboTurk Pilot**](roboturk_pilot.html)            | Sim Robot Manipulation | [Link](roboturk_pilot.html#downloading)  | [Link](roboturk_pilot.html#postprocessing)  |
@@ -43,7 +42,7 @@ python train.py --dataset <PATH_TO_POSTPROCESSED_DATASET> --config <PATH_TO_CONF
 <div class="admonition note">
 <p class="admonition-title">Create Your Own Environment Wrapper!</p>
 
-If you want to generate your own dataset in a custom environment platform that is not listed above, please see [this page](../modules/environments.md#implement-an-environment-wrapper).
+If you want to generate your own dataset in a custom environment platform that is not listed above, please see [THIS PAGE](../modules/environments.md#implement-an-environment-wrapper).
 
 </div>
 
