@@ -51,10 +51,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--folder",
+        "--manifest_file",
         type=str,
-        help="folder containing hdf5's to add camera images to",
-        default="~/datasets/droid/success"
+        help="manifest file path",
     )
 
     parser.add_argument(
@@ -66,32 +65,12 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json", 'r') as file:
-        langs = json.load(file)
-    langs = [l for l in langs if "TRI_chips_only_1_21" in l["path"]]
-    datasets = langs
-    print(datasets)
-
-    # datasets = []
-    # for root, dirs, files in os.walk(os.path.expanduser(args.folder)):
-    #     for f in files:
-    #         if f == f"trajectory_im{args.imsize}.h5":
-    #             datasets.append(os.path.join(root, f))
+    with open(args.manifest_file, 'r') as file:
+        datasets = json.load(file)
 
     print("adding lang to datasets...")
     random.shuffle(datasets)
     for item in tqdm(datasets):
         d, l = item['path'], item['lang']
         d = os.path.expanduser(d)
-        # try:
         add_lang(d, l, args)
-        # except:
-        #     print(d, "Failed")
-
-
-
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/AUTOLab/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/CLVR/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/GuptaLab/success --imsize 128
-        
-# python robomimic/scripts/conversion/add_lang_to_converted_data.py --folder /mnt/fsx/surajnair/datasets/droid-data/lab-uploads-eval/TRI_1_10_multitask_food_in_bowl/ --imsize 256

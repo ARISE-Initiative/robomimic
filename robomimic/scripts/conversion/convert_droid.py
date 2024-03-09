@@ -30,10 +30,6 @@ from droid.camera_utils.info import camera_type_to_string_dict
 from droid.camera_utils.camera_readers.zed_camera import ZedCamera, standard_params
 
 
-DISNEY_IMAGE_NAME_TO_CAM_KEY_MAPPING = {'hand_camera_left_image': '16522755_left', 'hand_camera_right_image': '16522755_right', 'varied_camera_1_left_image': '29431508_left', 'varied_camera_1_right_image': '29431508_right', 'varied_camera_2_left_image': '29513368_left', 'varied_camera_2_right_image': '29513368_right'}
-DISNEY_CAM_ID_TO_TYPE = {'16522755': 'hand_camera', '29431508': 'varied_camera', '29513368': 'varied_camera'}
-
-
 def get_cam_instrinsics(svo_path):
     """
     utility function to get camera intrinsics
@@ -45,13 +41,12 @@ def get_cam_instrinsics(svo_path):
 def convert_dataset(path, args):
     output_path = os.path.join(os.path.dirname(path), "trajectory_im{}.h5".format(args.imsize))
     recording_folderpath = os.path.join(os.path.dirname(path), "recordings", "SVO")
+
     if os.path.exists(output_path):
         # dataset already exists, skip
         f = h5py.File(output_path)
         if "observation/camera/image/hand_camera_left_image" in f.keys():
             # print("Skipping finished")
-            if os.path.exists(recording_folderpath):
-                shutil.rmtree(recording_folderpath)
             return
         f.close()
 
@@ -103,8 +98,6 @@ def convert_dataset(path, args):
         else:
             raise ValueError
         
-    if "TRI_" in path:
-        CAM_ID_TO_TYPE = DISNEY_CAM_ID_TO_TYPE
 
     # sort the camera ids: important to maintain consistency of cams between train and eval!
     hand_cam_ids = sorted(hand_cam_ids)
@@ -120,9 +113,6 @@ def convert_dataset(path, args):
             cam_name = "varied_camera_{}_{}_image".format(i+1, side)
             cam_key = "{}_{}".format(varied_cam_ids[i], side)
             IMAGE_NAME_TO_CAM_KEY_MAPPING[cam_name] = cam_key
-
-    if "TRI_" in path:
-        IMAGE_NAME_TO_CAM_KEY_MAPPING = DISNEY_IMAGE_NAME_TO_CAM_KEY_MAPPING
 
     cam_data = {cam_name: [] for cam_name in IMAGE_NAME_TO_CAM_KEY_MAPPING.keys()}
     traj_reader = TrajectoryReader(path, read_images=False)
@@ -260,8 +250,6 @@ def convert_dataset(path, args):
     f.close()
     camera_reader.disable_cameras()
     del camera_reader
-    # print("Deleting", recording_folderpath)
-    # shutil.rmtree(recording_folderpath)
 
 def remove_timesteps(f, timesteps_to_remove):
     total_timesteps = f["action/cartesian_position"].shape[0]
@@ -309,12 +297,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    # langs = json.load("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json")
-    # with open("/mnt/fsx/surajnair/datasets/droid-data/manifest.json", 'r') as file:
-    #     files = json.load(file)
-    # # files = [os.path.join(os.path.dirname(l["path"]), "trajectory.h5") for l in langs if ("eval" in l["path"])]
-    # datasets = files
-
     datasets = []
     j = os.walk(os.path.expanduser(args.folder))
     import pdb; pdb.set_trace()
@@ -325,8 +307,6 @@ if __name__ == "__main__":
                 datasets.append(os.path.join(root, f))
                 print(len(datasets))
 
-
-
     print("converting datasets...")
     random.shuffle(datasets)
     failed = 0
@@ -335,19 +315,5 @@ if __name__ == "__main__":
         try:
             convert_dataset(d, args)
         except Exception as e:
-            print(d, "Failed", failed, e)
-            traceback.print_exc()
             failed += 1
-        #     try:
-        #         output_path = os.path.join(os.path.dirname(d), "trajectory_im{}.h5".format(args.imsize))
-        #         os.remove(output_path)
-        #     except:
-        #         pass
-
-
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/AUTOLab/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/CLVR/success --imsize 128
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py --folder /mnt/fsx/surajnair/datasets/droid_full_raw/GuptaLab/success --imsize 128
-
-# /opt/conda/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py  --imsize 256
-# /mnt/fsx/surajnair/mambaforge/envs/zed/bin/python /mnt/fsx/surajnair/code/robomimic/robomimic/scripts/conversion/convert_droid.py  --imsize 128
+            print(f"{failed} Failed")

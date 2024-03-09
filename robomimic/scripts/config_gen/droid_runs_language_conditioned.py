@@ -3,84 +3,19 @@ import random
 import json
 import numpy as np
 
-# fulldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/", postfix="trajectory_im128.h5")]
-# import pdb; pdb.set_trace()
-# with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "r") as f: broaddataset = json.load(f)
-# # with open("/mnt/fsx/surajnair/datasets/droid_eval/manifest.json", "r") as f: evaldataset = json.load(f)
-# evaldataset = [{"path": p} for p in scan_datasets("/mnt/fsx/surajnair/datasets/droid_eval/TRI_2/", postfix="trajectory_im128.h5")]
-# # with open("/mnt/fsx/surajnair/datasets/droid_full_raw/manifest.json", "w") as f: json.dump(fulldataset, f)
-# # evaldataset = evaldataset[:200]
-# # broaddataset = broaddataset[:2000]
-# random.shuffle(evaldataset)
-# random.shuffle(broaddataset)
-# N_EVAL = len(evaldataset)
-# N_BROAD = len(broaddataset)
+MANIFEST_PATH = "/mnt/fsx/surajnair/code/droid_cleanup/manifest_test.json"
+# MANIFEST_2_PATH = ""
+EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
 
-## Getting all OXE
-with open("/mnt/fsx/surajnair/datasets/oxe_hdf5/manifest_oxe.json", 'r') as file:
-    oxe = json.load(file)
-N_OXE = len(oxe)
+## Define training Dataset
+with open(MANIFEST_PATH, 'r') as file:
+    dataset1 = json.load(file)
+N_D1 = len(dataset1)
 
-## Getting all stanford data
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang_stanford_eval.json", 'r') as file:
-    langs = json.load(file)
-stanford_singletask_eraser = [{'path': l['path']} for l in langs if 'stanford_eval_0125' in l['path']]
-N_STANFORD_ERASER = len(stanford_singletask_eraser)
-
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_stanford_evgr_laundry.json", 'r') as file:
-    stanford_singletask_laundry = json.load(file)
-N_STANFORD_LAUNDRY = len(stanford_singletask_laundry)
-
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_stanford_evgr_cooking.json", 'r') as file:
-    stanford_singletask_cooking = json.load(file)
-N_STANFORD_COOKING = len(stanford_singletask_cooking)
-
-
-## Getting all TRI data
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_chips.json", 'r') as file:
-    langs = json.load(file)
-chips_singletask = [{'path': l['path']} for l in langs if 'TRI_chips_only_1_21' in l['path']]
-N_CHIPS = len(chips_singletask)
-
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_frenchpress.json", 'r') as file:
-    tri_frenchpress = json.load(file)
-N_FRENCHPRESS = len(tri_frenchpress)
-
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_tri_pot.json", 'r') as file:
-    tri_pot = json.load(file)
-N_POT = len(tri_pot)
-
-## Getting all language labeled data
-with open("/mnt/fsx/surajnair/datasets/droid-data/manifest_lang.json", 'r') as file:
-    langs = json.load(file)
-
-## Getting broad data
-broaddataset_full = [{'path': l['path']} for l in langs if '/mnt/fsx/surajnair/datasets/droid-data/lab-uploads/' in l['path']]
-N_BROAD_FULL = len(broaddataset_full)
-
-with open("/mnt/fsx/surajnair/datasets/droid-data/filter_traj_20scene_10k_episodes_success.json", 'r') as file:
-    subset = json.load(file)
-
-broaddataset_filtered = [{'path': l['path']} for l in broaddataset_full if "/".join(l['path'].split("/")[7:-1])+"/" in subset]
-N_BROAD_FILTERED = len(broaddataset_filtered)
-
-broaddataset_filtered_random = np.random.choice(broaddataset_full, N_BROAD_FILTERED).tolist()
-N_BROAD_FILTERED_RANDOM = len(broaddataset_filtered_random)
-
-cmutoast_singletask = [{'path': l['path']} for l in langs if 'r2_d2_toaster3_cmu_rgb' in l['path']]
-N_CMU_TOASTER = len(cmutoast_singletask)
-
-cmu_multi = [{'path': l['path']} for l in langs if 'cmu_rgb' in l['path']]
-N_CMU_MULTI = len(cmu_multi)
-
-
-print(f"Broad Datapoints: DROID {N_BROAD_FULL, N_BROAD_FILTERED, N_BROAD_FILTERED_RANDOM} OXE {N_OXE} \
-      \nSingle Task TRI Datapoints: CHIPS {N_CHIPS} POT {N_POT} FRENCHPRESS {N_FRENCHPRESS} \
-      \nStanford Datapoints: Eraser {N_STANFORD_ERASER} Laundry {N_STANFORD_LAUNDRY} Cooking {N_STANFORD_COOKING} \
-      \nCMU Datapoints: {N_CMU_MULTI, N_CMU_TOASTER} ")
-    #  \nMultitask Eval Datapoints: {N_EVAL_MULTI} \
-    #   \nSingle Task APPLE Datapoints: {N_APPLE}")
-    # #   \nSingle Task Microwave Close Datapoints {N_EVAL_CLOSEMICRO}")
+## Optionally define a co-training dataset
+# with open(MANIFEST_2_PATH, 'r') as file:
+#     dataset2 = json.load(file)
+# N_D2 = len(dataset2)
 
 
 def make_generator_helper(args):
@@ -326,84 +261,12 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                # stanford_singletask_cooking,
-                # stanford_singletask_laundry,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_laundry],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_laundry],
-                # stanford_singletask_eraser,
-                # cmutoast_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED)} for p in broaddataset_filtered + cmutoast_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FILTERED_RANDOM)} for p in broaddataset_filtered_random + cmutoast_singletask],
-                # stanford_singletask_cooking,
-                # stanford_singletask_laundry,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_laundry],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_COOKING if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_cooking],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_LAUNDRY if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_laundry],
-                # tri_pot,
-                # tri_frenchpress,
-                # [{"path": p["path"], "weight": (0.5 / N_POT if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + tri_pot],
-                # [{"path": p["path"], "weight": (0.5 / N_FRENCHPRESS if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + tri_frenchpress],
-                # [{"path": p["path"], "weight": (0.5 / N_POT if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + tri_pot],
-                # [{"path": p["path"], "weight": (0.5 / N_FRENCHPRESS if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + tri_frenchpress],
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + stanford_singletask_eraser],
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + chips_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_MULTI if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + cmu_multi],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_OXE)} for p in oxe + cmutoast_singletask],
-                # stanford_singletask_eraser,
-                # [{"path": p["path"], "weight": (0.5 / N_STANFORD_ERASER if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + stanford_singletask_eraser],
-                # cmu_multi,
-                cmutoast_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_MULTI if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + cmu_multi],
-                # [{"path": p["path"], "weight": (0.5 / N_CMU_TOASTER if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + cmutoast_singletask],
-                # broaddataset_full,
-                # chips_singletask,
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD)} for p in broaddataset + chips_singletask],
-                # [{"path": p["path"], "weight": (0.5 / N_CHIPS if "eval" in p["path"] else 0.5 / N_BROAD_FULL)} for p in broaddataset_full + chips_singletask],
-                ],
+                dataset1,
+                # [{"path": p["path"], "weight": (0.5 / N_D1} for p in dataset1] + [{"path": p["path"], "weight": (0.5 / N_D2} for p in dataset2],
+            ],
 	    value_names=[
-                # "stanford_cooking", 
-                # "stanford_laundry",
-                # "filtereddroid_stanford_cooking", 
-                # "filtereddroid_stanford_laundry",
-                # "filteredrandomdroid_stanford_cooking", 
-                # "filteredrandomdroid_stanford_laundry",
-                # "stanford_eraser", 
-                # "cmu_toast",
-                # "filtereddroid_stanford_eraser", 
-                # "filtereddroid_cmu_toast",
-                # "filteredrandomdroid_stanford_eraser", 
-                # "filteredrandomdroid_cmu_toast",
-                # "stanford_cooking",
-                # "stanford_laundry",
-                # "oxe_balanced_stanford_cooking",
-                # "oxe_balanced_stanford_laundry",
-                # "fulldroid_balanced_stanford_cooking",
-                # "fulldroid_balanced_stanford_laundry",
-                # "tri_pot",
-                # "tri_frenchpress",
-                # "oxe_balanced_tri_pot",
-                # "oxe_balanced_tri_frenchpress",
-                # "fulldroid_balanced_tri_pot",
-                # "fulldroid_balanced_tri_frenchpress",
-                # "oxe_balanced_stanford_eraser",
-                # "oxe_balanced_chips",
-                # "oxe_balanced_cmu_multi",
-                # "oxe_balanced_cmu_toast",
-                # "stanford_eraser", 
-                # "fulldroid_balanced_stanford_eraser"
-                # "cmu_multi", 
-                "cmu_toast_hdf5",
-                # "fulldroid_balanced_cmu_multi", 
-                # "fulldroid_balanced_cmu_toast",
-                # "broad",
-                # "eval_chips", 
-                # "balanced_chips", 
-                # "full_balanced_chips", 
+                "justdataset1",
+                # "dataset1and2cotrain"
             ],
         )
 
@@ -514,7 +377,8 @@ def make_generator_helper(args):
         name="",
         group=-1,
         values=[
-            "/mnt/fsx/surajnair/expdata/{env}/{mod}/{algo_name_short}".format(
+            "{exp_log_path}/{env}/{mod}/{algo_name_short}".format(
+                exp_log_path=EXP_LOG_PATH,
                 env=args.env,
                 mod=args.mod, 
                 algo_name_short=algo_name_short,
