@@ -9,11 +9,11 @@ DEBUG = False
 VISUALIZE_RANDOMIZER = False
 
 # wandb entity (eg. username or team name)
-WANDB_ENTITY = None
+WANDB_ENTITY = "tri"
 
 # wandb api key (obtain from https://wandb.ai/authorize)
 # alternatively, set up wandb from terminal with `wandb login`
-WANDB_API_KEY = None
+WANDB_API_KEY = "10eb447cdaa881ddb7748e1ebb4814706c2be903"
 
 try:
     from robomimic.macros_private import *
