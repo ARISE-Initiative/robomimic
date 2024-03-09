@@ -86,5 +86,3 @@ most important parameters in this file are:
 - `MANIFEST_PATH`: This is the manifest JSON for the training data you want to use.
 - `MANIFEST_2_PATH`: You can optionally set a second manfiest for another dataset to do 50-50 co-training with. 
 - `EXP_LOG_PATH`: This is the path at which experimental data (eg. policy checkpoints) will be stored.
-
-## TODO(Suraj): Help cleanup unnecessary files
