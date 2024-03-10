@@ -1,26 +1,36 @@
 # DROID Policy Learning and Evaluation
 
-This repository contains all code for the policy learning and evaluation experiments in DROID(TODO(Karl/Sasha): add link to DROID website), a project aimed at collecting a large-scale dataset in-the-wild robot manipulation dataset for the robot learning resaerch community. This codebase is built as a fork of the popular repository for imitation learning algorithm development, `robomimic`, about which further information can be found here: [**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative).
+This repository contains code for training and evaluating policies on the DROID(TODO(Karl/Sasha): add link to DROID website) dataset. DROID is a large-scale, in-the-wild robot manipulation dataset. This codebase is built as a fork of [`robomimic`](https://robomimic.github.io/), a popular repository for imitation learning algorithm development. For more information about DROID, please see the following links: [**[Homepage]**](XXX) &ensp; [**[Documentation]**](XXX) &ensp; [**[Paper]**](XXX) &ensp; [**[Dataset Visualizer]**](XXX).
 
 -------
 ## Installation
 Create a python3 conda environment (tested with Python 3.10) and run the following:
 
 1. Create python 3.10 conda environment: `conda create --name droid_policy_learning python=3.10`
-2. Install [octo](https://github.com/octo-models/octo)
-3. Clone the repo
-4. Switch to the `r2d2` branch
-5. Run `pip install -e .` in `robomimic`
+2. Activate the conda environment: `conda activate droid_policy_learning`
+3. Install [octo](https://github.com/octo-models/octo) (used for data loading)
+4. Run `pip install -e .` in `robomimic`
 
-If you are running policy evaluation on a DROID robot station, then you also need to have DROID installed in the same conda environment. To do that, please follow the instructions [here](https://github.com/AlexanderKhazatsky/DROID).
+With this you are all set up for training policies on DROID. If you want to evaluate your policies on a real robot DROID setup, 
+please install the DROID robot controller in the same conda environment (follow the instructions [here](https://github.com/AlexanderKhazatsky/DROID)).
 
 -------
 ## Preparing Datasets
-We provide all DROID datasets in RLDS, which makes it easy to co-train with various other robot-learning datasets (such as those in the [Open X-Embodiment](https://robotics-transformer-x.github.io/)).
+We provide all DROID datasets in RLDS format, which makes it easy to co-train with various other robot-learning datasets (such as those in the [Open X-Embodiment](https://robotics-transformer-x.github.io/)).
 
-To prepare datasets, first download the desired training split of DROID here(TODO(Karl/Sasha): insert link and details based on what the splits are).
-If you want to additionally train DROID policies on task-specific data collected in your own DROID hardware platform, follow the instructions [here](https://github.com/kpertsch/droid_dataset_builder?tab=readme-ov-file) to convert the data to an RLDS format that can be used for DROID policy learning. Make sure
-that all datasets you want to train on are under the same root directory `DATA_PATH`.
+To download the DROID dataset from the Google cloud bucket, install the [gsutil package](https://cloud.google.com/storage/docs/gsutil_install) and run the following command (Note: the full dataset is XXX TB in size):
+```
+gsutil -m cp -r XXX <path_to_your_target_dir>
+```
+
+We also provide a small (2GB) example dataset with 100 DROID trajectories that uses the same format as the full RLDS dataset and can be used for code prototyping and debugging:
+```
+gsutil -m cp -r XXX <path_to_your_target_dir>
+```
+
+For good performance of DROID policies in your target setting, it is helpful to include a small number of demonstrations in your target domain into the training mix ("co-training"). 
+Please follow the instructions [here](XXX) for collecting a small teleoperated dataset in your target domain and converting it to the RLDS training format.
+Make sure that all datasets you want to train on are under the same root directory `DATA_PATH`.
 
 -------
 ## Training
@@ -35,6 +45,7 @@ most important parameters in this file are:
 - `EXP_LOG_PATH`: This is the path at which experimental data (eg. policy checkpoints) will be stored.
 - `EXP_NAMES`: This defines the name of each experiment (as will be logged in `wandb`), the RLDS datasets corresponding to that experiment, and the desired sample weights between those datasets. See `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py` for a template on how this should be formatted.
 
+During training, we use a [_shuffle buffer_](https://www.tensorflow.org/api_docs/python/tf/data/Dataset#shuffle) to ensure that training samples are properly randomized. It is important to use a large enough shuffle buffer size.
 The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce this based on your RAM availability. For best results, we recommend using `shuffle_buffer_size >= 100000` if possible. All polices were trained on a single NVIDIA A100 GPU.
 
 To specify your information for Weights and Biases logging, make sure to update the `WANDB_ENTITY` and `WANDB_API_KEY` values in `robomimic/macros.py`.
@@ -72,3 +83,14 @@ all resulting prompts in the terminal. To replicate experiments from the paper, 
 ## Training Policies with HDF5 Format
 Natively, robomimic uses HDF5 files to store and load data. While we mainly support RLDS as the data format for training with DROID, [here](https://github.com/ashwin-balakrishna96/robomimic/tree/r2d2/README_hdf5.md) are instructions for how to run training with the HDF5 data format.
 
+------------
+## Citation
+
+```
+@misc{droid_2024,
+    title={DROID: A Large-Scale In-The-Wild Robot Manipulation Dataset},
+    author = {XXX},
+    howpublished  = {\url{XXX}},
+    year = {2024},
+}
+```
