@@ -44,45 +44,31 @@ To specify your information for Weights and Biases logging, make sure to update 
 Make sure [DROID](https://github.com/AlexanderKhazatsky/DROID) is installed and follow the policy evaluation instructions at the bottom of the README. 
 
 -------
+## Code Structure
+
+|                           | File                                                    | Description                                                                   |
+|---------------------------|---------------------------------------------------------|-------------------------------------------------------------------------------|
+| Hyperparameters           | [droid_runs_language_conditioned_rlds.py](robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py)     | Generates a config based on defined hyperparameters  |
+| Training Loop             | [train.py](robomimic/scripts/train.py)                  | Main training script.                                                         |
+| Datasets                  | [dataset.py](octo/data/dataset.py)                      | Functions for creating datasets and computing dataset statistics,             |
+| RLDS Data Processing      | [rlds_utils.py](robomimic/utils/rlds_utils.py)    | Processing to convert RLDS dataset into dataset compatible for DROID training                      |
+| General Algorithm Class   | [algo.py](robomimic/algo/algo.py)             | Defines a high level template for all algorithms (eg. diffusion policy) to extend           |
+| Diffusion Policy          | [diffusion_policy.py](robomimic/algo/diffusion_policy.py)    | Implementation of diffusion policy |
+| Observation Processing    | [obs_nets.py](robomimic/models/obs_nets.py)    | General observation pre-processing/encoding |
+| Visualization             | [vis_utils.py](robomimic/utils/vis_utils.py) | Utilities for generating trajectory visualizations                      |
+
+-------
+
+## Evaluating Trained Policies
+To evaluate policies, make sure that you additionally install DROID (https://github.com/AlexanderKhazatsky/DROID) in your conda environment and then run:
+```python
+python scripts/evaluation/evaluate_policy.py
+```
+from the DROID root directory. Make sure to use the appropriate command line arguments for the model checkpoint path and whether to do goal or language conditioning, and then follow
+all resulting prompts in the terminal. To replicate experiments from the paper, use the language conditioning mode.
+
+-------
 
 ## Training Policies with HDF5 Format
-While we recommend using RLDS, HDF5 can be useful for debugging on smaller datasets, and is supported by robomimic natively. 
+Natively, robomimic uses HDF5 files to store and load data. While we mainly support RLDS as the data format for training with DROID, [here](https://github.com/ashwin-balakrishna96/robomimic/tree/r2d2/README_hdf5.md) are instructions for how to run training with the HDF5 data format.
 
-### Convert from raw DROID data format to HDF5
-
-First you need to make sure to install the ZED SDK, follow the instructions [here](https://www.stereolabs.com/docs/installation/linux/) for your CUDA version and the accompanying `pyzed` package. Then run
-`python robomimic/scripts/conversion/convert_droid.py  --folder <PATH_TO_DROID_DATA_FOLDER> --imsize 128`
-which will populate each demo folder with an HDF5 file `trajectory_im128.h5` which contains the full observations and actions for that demo. 
-
-### Composing a manifest file
-You may want to subselect certain demos to train on. As a result, we assume that you define a manifest json file which contains a list of demos, including the path to each H5 file and the associated language instruction. For example:
-```
-[
-    {
-        "path": "/fullpathA/trajectory_im128.h5",
-        "lang": "Put the apple on the plate"
-    },
-    {
-        "path": "/fullpathB/trajectory_im128.h5",
-        "lang": "Move the fork to the sink"
-    },
-    ...
-]
-```
-
-### Adding language embeddings to HDF5
-For the files and language specified in the above manifest JSON, run:
-`python robomimic/scripts/conversion/add_lang_to_converted_data.py --manifest_file <PATH_TO_MANIFEST_FILE> --imsize 128`
-to compute DistilBERT embeddings of each language instruction and add it as an observation key to the HDF5. 
-
-### Run training
-To train policies, update `MANIFEST_PATH`, `EXP_LOG_PATH`, in `robomimic/scripts/config_gen/droid_runs_language_conditioned.py` and then run:
-
-`python robomimic/scripts/config_gen/droid_runs_language_conditioned.py --wandb_proj_name <WANDB_PROJ_NAME>`
-
-This will generate a python command that can be run to launch training. You can also update other training parameters within `robomimic/scripts/config_gen/droid_runs_language_conditioned_rlds.py`. Please see the `robomimic` documentation for more information on how `robomimic` configs are defined. The three
-most important parameters in this file are:
-
-- `MANIFEST_PATH`: This is the manifest JSON for the training data you want to use.
-- `MANIFEST_2_PATH`: You can optionally set a second manfiest for another dataset to do 50-50 co-training with. 
-- `EXP_LOG_PATH`: This is the path at which experimental data (eg. policy checkpoints) will be stored.
