@@ -17,7 +17,7 @@ def scan_datasets(folder, postfix=".h5"):
     return dataset_paths
 
 
-def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
+def get_generator(algo_name, config_file, args, exp_log_path='', algo_name_short=None, pt=False):
     if args.wandb_proj_name is None:
         strings = [
             algo_name_short if (algo_name_short is not None) else algo_name,
@@ -32,7 +32,7 @@ def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
     else:
         curr_time = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d-%y-%H-%M-%S')
         generated_config_dir=os.path.join(
-            '/mnt/fsx/surajnair/', 'tmp/autogen_configs/ril', algo_name, args.env, args.mod, args.name, curr_time, "json",
+            exp_log_path, 'tmp/autogen_configs/ril', algo_name, args.env, args.mod, args.name, curr_time, "json",
         )
 
     generator = HyperparamUtils.ConfigGenerator(

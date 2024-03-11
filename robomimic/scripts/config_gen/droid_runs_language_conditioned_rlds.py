@@ -21,6 +21,7 @@ def make_generator_helper(args):
         algo_name="diffusion_policy",
         config_file=os.path.join(base_path, 'robomimic/exps/templates/diffusion_policy.json'),
         args=args,
+        exp_log_path=EXP_LOG_PATH,
         algo_name_short=algo_name_short,
         pt=True,
     )
