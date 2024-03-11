@@ -61,7 +61,6 @@ def extract_trajectory(
     initial_state, 
     states, 
     actions,
-    actions_abs,
     done_mode,
 ):
     """
@@ -81,10 +80,7 @@ def extract_trajectory(
     assert states.shape[0] == actions.shape[0]
 
     # load the initial state
-    ## this reset call doesn't seem necessary.
-    ## seems ok to remove but haven't fully tested it.
-    ## removing for now
-    # env.reset()
+    env.reset()
     obs = env.reset_to(initial_state)
 
     traj = dict(
@@ -96,9 +92,6 @@ def extract_trajectory(
         states=np.array(states), 
         initial_state_dict=initial_state,
     )
-    if actions_abs is not None:
-        traj["actions_abs"] = np.array(actions_abs)
-    
     traj_len = states.shape[0]
     # iteration variable @t is over "next obs" indices
     for t in range(1, traj_len + 1):
@@ -181,14 +174,7 @@ def dataset_states_to_obs(args):
         demos = demos[:args.n]
 
     # output file in same directory as input file
-    output_name = args.output_name
-    if output_name is None:
-        if len(args.camera_names) == 0:
-            output_name = os.path.basename(args.dataset)[:-5] + "_ld.hdf5"
-        else:
-            output_name = os.path.basename(args.dataset)[:-5] + "_im{}.hdf5".format(args.camera_width)
-
-    output_path = os.path.join(os.path.dirname(args.dataset), output_name)
+    output_path = os.path.join(os.path.dirname(args.dataset), args.output_name)
     f_out = h5py.File(output_path, "w")
     data_grp = f_out.create_group("data")
     print("input file: {}".format(args.dataset))
@@ -203,20 +189,14 @@ def dataset_states_to_obs(args):
         initial_state = dict(states=states[0])
         if is_robosuite_env:
             initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
-            initial_state["ep_meta"] = f["data/{}".format(ep)].attrs.get("ep_meta", None)
 
         # extract obs, rewards, dones
         actions = f["data/{}/actions".format(ep)][()]
-        if "data/{}/actions_abs".format(ep) in f:
-            actions_abs = f["data/{}/actions_abs".format(ep)][()]
-        else:
-            actions_abs = None
         traj = extract_trajectory(
             env=env, 
             initial_state=initial_state, 
             states=states, 
             actions=actions,
-            actions_abs=actions_abs,
             done_mode=args.done_mode,
         )
 
@@ -235,8 +215,6 @@ def dataset_states_to_obs(args):
         ep_data_grp.create_dataset("states", data=np.array(traj["states"]))
         ep_data_grp.create_dataset("rewards", data=np.array(traj["rewards"]))
         ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
-        if "actions_abs" in traj:
-            ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
         for k in traj["obs"]:
             if args.compress:
                 ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]), compression="gzip")
@@ -248,17 +226,9 @@ def dataset_states_to_obs(args):
                 else:
                     ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
 
-        # copy action dict (if applicable)
-        if "data/{}/action_dict".format(ep) in f:
-            action_dict = f["data/{}/action_dict".format(ep)]
-            for k in action_dict:
-                ep_data_grp.create_dataset("action_dict/{}".format(k), data=np.array(action_dict[k][()]))
-
         # episode metadata
         if is_robosuite_env:
             ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
-        if "ep_meta" in f["data/{}".format(ep)].attrs:
-            ep_data_grp.attrs["ep_meta"] = f["data/{}".format(ep)].attrs["ep_meta"]
         ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
         total_samples += traj["actions"].shape[0]
         print("ep {}: wrote {} transitions to group {}".format(ind, ep_data_grp.attrs["num_samples"], ep))
@@ -289,6 +259,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_name",
         type=str,
+        required=True,
         help="name of output hdf5 dataset",
     )
 
