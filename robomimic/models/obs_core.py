@@ -698,9 +698,7 @@ class ColorRandomizer(Randomizer):
         # Create lambda to aggregate all color randomizings at once
         transform = self.get_batch_transform(N=self.num_samples)
 
-        out = transform(inputs)
-
-        return out
+        return transform(inputs)
 
     def _forward_out(self, inputs):
         """
