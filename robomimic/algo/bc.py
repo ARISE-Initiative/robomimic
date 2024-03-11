@@ -671,6 +671,7 @@ class BC_RNN_GMM(BC_RNN):
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log
 
+
 class BC_Transformer(BC):
     """
     BC training with a Transformer policy.
@@ -765,6 +766,7 @@ class BC_Transformer(BC):
         assert not self.nets.training
 
         return self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)[:, -1, :]
+
 
 class BC_Transformer_GMM(BC_Transformer):
     """
