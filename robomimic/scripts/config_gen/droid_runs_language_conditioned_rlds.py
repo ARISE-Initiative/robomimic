@@ -4,6 +4,9 @@ import json
 import numpy as np
 from collections import OrderedDict
 
+#############################################################################
+# *************** Replace with your paths/config information ****************
+
 DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
 EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
 EXP_NAMES = OrderedDict(
@@ -13,6 +16,8 @@ EXP_NAMES = OrderedDict(
         ("r2_d2_cmu_toaster", {"datasets": ["r2_d2_cmu_toaster"], 
                                       "sample_weights": [1]})                                    
     ])
+
+#############################################################################
 
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"

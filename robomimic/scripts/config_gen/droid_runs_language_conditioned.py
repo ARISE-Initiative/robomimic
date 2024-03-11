@@ -3,6 +3,9 @@ import random
 import json
 import numpy as np
 
+#############################################################################
+# *************** Replace with your paths/config information ****************
+
 MANIFEST_PATH = "/mnt/fsx/surajnair/code/droid_cleanup/manifest_test.json"
 # MANIFEST_2_PATH = ""
 EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
@@ -17,6 +20,7 @@ N_D1 = len(dataset1)
 #     dataset2 = json.load(file)
 # N_D2 = len(dataset2)
 
+#############################################################################
 
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"
