@@ -182,8 +182,6 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
         msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
         msg = header + '(' + msg + '\n)'
         return msg
-    
-
 
 
 """
@@ -668,10 +666,7 @@ class ColorRandomizer(Randomizer):
                 each sub-set of samples along batch dimension, assumed to be the FIRST dimension in the inputted tensor
                 Note: This function will MULTIPLY the first dimension by N
         """
-        return Lambda(lambda x: 
-                      torch.stack([
-                          self.get_transform()(x_) for x_ in x for _ in range(N)])
-                      )
+        return Lambda(lambda x: torch.stack([self.get_transform()(x_) for x_ in x for _ in range(N)]))
 
     def output_shape_in(self, input_shape=None):
         # outputs are same shape as inputs

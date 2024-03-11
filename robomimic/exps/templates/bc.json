@@ -9,7 +9,6 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
-        "mse":{},
         "save": {
             "enabled": true,
             "every_n_seconds": null,

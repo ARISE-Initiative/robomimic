@@ -684,14 +684,13 @@ class BC_Transformer(BC):
         assert self.algo_config.transformer.enabled
 
         self.nets = nn.ModuleDict()
-        self.nets["policy"] = torch.nn.parallel.DataParallel(
-                PolicyNets.TransformerActorNetwork(
-                    obs_shapes=self.obs_shapes,
-                    goal_shapes=self.goal_shapes,
-                    ac_dim=self.ac_dim,
-                    encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
-                    **BaseNets.transformer_args_from_config(self.algo_config.transformer),
-                ), device_ids=list(range(0,torch.cuda.device_count())))
+        self.nets["policy"] = PolicyNets.TransformerActorNetwork(
+            obs_shapes=self.obs_shapes,
+            goal_shapes=self.goal_shapes,
+            ac_dim=self.ac_dim,
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
+            **BaseNets.transformer_args_from_config(self.algo_config.transformer),
+        )
         self._set_params_from_config()
         self.nets = self.nets.float().to(self.device)
         
@@ -777,7 +776,7 @@ class BC_Transformer(BC):
         """
         assert not self.nets.training
 
-        output = self.nets["policy"](obs_dict=obs_dict, actions=None, goal_dict=goal_dict)
+        output = self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)
 
         if self.supervise_all_steps:
             if self.algo_config.transformer.pred_future_acs:
@@ -801,6 +800,9 @@ class BC_Transformer_GMM(BC_Transformer):
         """
         assert self.algo_config.gmm.enabled
         assert self.algo_config.transformer.enabled
+
+        if self.algo_config.language_conditioned:
+            self.obs_shapes["lang_emb"] = [768] # clip is 768-dim embedding
 
         self.nets = nn.ModuleDict()
         self.nets["policy"] = PolicyNets.TransformerGMMActorNetwork(

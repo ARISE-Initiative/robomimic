@@ -13,7 +13,7 @@ def make_generator_helper(args):
     if args.ckpt_mode is None:
         args.ckpt_mode = "off"
 
-    if args.env == "droid":
+    if args.env == "r2d2":
         generator.add_param(
             key="train.data",
             name="ds",
@@ -44,16 +44,30 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
+                [
+                    {
+                        "path": "/home/aaronl/tmp/v2_demos/KitchenPnPCounterToCab_im84.hdf5",
+                        "filter_key": "100_demos",
+                        "lang": "pick and place the object from the counter to the cabinet",
+                    },
+                    {
+                        "path": "/home/aaronl/tmp/v2_demos/KitchenPnPCabToCounter_im84.hdf5",
+                        "filter_key": "100_demos",
+                        "lang": "pick and place the object from the cabinet to the counter",
+                    },
+                ],
             ],
             value_names=[
-                "bowls-human-100",
-                # "human-100",
-                # "mg-100",
-                # "mg-1000",
+                "pnp-multi-task"
+            ],
+        )
+        generator.add_param(
+            key="algo.language_conditioned",
+            name="langcond",
+            group=145892,
+            values=[
+                True,
+                False,
             ],
         )
     elif args.env == "square":
@@ -82,7 +96,7 @@ def make_generator_helper(args):
             True,
             # False,
         ],
-        # hidename=True,
+        hidename=True,
     )
     generator.add_param(
         key="algo.transformer.supervise_all_steps",
