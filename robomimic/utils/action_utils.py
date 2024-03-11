@@ -43,7 +43,7 @@ def get_action_stats_dict(rlds_dataset_stats, action_keys, action_shapes):
         end_idx = start_idx + this_act_dim
         action_stats[key] = dict()
         for sub_key in rlds_dataset_stats.keys():
-            action = rlds_dataset_stats[sub_key]
+            action = np.array(rlds_dataset_stats[sub_key])
             action_stats[key][sub_key] = action[...,start_idx:end_idx].reshape(
                 action.shape[:-1]+tuple(this_act_shape))
         start_idx = end_idx
