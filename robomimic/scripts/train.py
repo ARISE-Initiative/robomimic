@@ -111,7 +111,7 @@ def train(config, device):
         ]
         # Compute combined normalization stats
         combined_dataset_statistics = combine_dataset_statistics(
-            [make_dataset_from_rlds(**dataset_kwargs, train=train)[1] for dataset_kwargs in dataset_kwargs_list]
+            [make_dataset_from_rlds(**dataset_kwargs, train=True)[1] for dataset_kwargs in dataset_kwargs_list]
         )
 
         dataset = make_interleaved_dataset(
