@@ -63,7 +63,7 @@ def make_generator_helper(args):
         key="train.shuffle_buffer_size",
         name="",
         group=-1,
-        values=[500],
+        values=[500000],
     )
 
     generator.add_param(
