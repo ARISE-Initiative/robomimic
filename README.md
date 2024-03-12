@@ -51,10 +51,6 @@ The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce
 To specify your information for Weights and Biases logging, make sure to update the `WANDB_ENTITY` and `WANDB_API_KEY` values in `robomimic/macros.py`.
 
 -------
-## Evaluation on a DROID robot station
-Make sure [DROID](https://github.com/AlexanderKhazatsky/DROID) is installed and follow the policy evaluation instructions at the bottom of the README. 
-
--------
 ## Code Structure
 
 |                           | File                                                    | Description                                                                   |
@@ -71,7 +67,7 @@ Make sure [DROID](https://github.com/AlexanderKhazatsky/DROID) is installed and 
 -------
 
 ## Evaluating Trained Policies
-To evaluate policies, make sure that you additionally install DROID (https://github.com/AlexanderKhazatsky/DROID) in your conda environment and then run:
+To evaluate policies, make sure that you additionally install [DROID](https://github.com/AlexanderKhazatsky/DROID) in your conda environment and then run:
 ```python
 python scripts/evaluation/evaluate_policy.py
 ```
