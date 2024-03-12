@@ -79,7 +79,7 @@ all resulting prompts in the terminal. To replicate experiments from the paper, 
 -------
 
 ## Training Policies with HDF5 Format
-Natively, robomimic uses HDF5 files to store and load data. While we mainly support RLDS as the data format for training with DROID, [here](https://github.com/ashwin-balakrishna96/robomimic/tree/r2d2/README_hdf5.md) are instructions for how to run training with the HDF5 data format.
+Natively, robomimic uses HDF5 files to store and load data. While we mainly support RLDS as the data format for training with DROID, [here](robomimic/README_hdf5.md) are instructions for how to run training with the HDF5 data format.
 
 ------------
 ## Citation

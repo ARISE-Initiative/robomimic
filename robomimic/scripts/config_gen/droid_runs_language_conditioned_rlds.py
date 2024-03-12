@@ -7,13 +7,16 @@ from collections import OrderedDict
 #############################################################################
 # *************** Replace with your paths/config information ****************
 
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
+# Note: Assumes naming of dataset in "datasets" for the full DROID dataset is
+# droid
+
+DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
 EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
 EXP_NAMES = OrderedDict(
     [
-        ("r2_d2__r2_d2_cmu_toaster", {"datasets": ["r2_d2", "r2_d2_cmu_toaster"], 
+        ("droid_droid_cmu_toaster", {"datasets": ["droid", "droid_cmu_toaster"],
                                       "sample_weights": [1, 1]}),
-        ("r2_d2_cmu_toaster", {"datasets": ["r2_d2_cmu_toaster"], 
+        ("droid_cmu_toaster", {"datasets": ["droid"],
                                       "sample_weights": [1]})                                    
     ])
 
@@ -60,7 +63,7 @@ def make_generator_helper(args):
         key="train.shuffle_buffer_size",
         name="",
         group=-1,
-        values=[500000],
+        values=[500],
     )
 
     generator.add_param(

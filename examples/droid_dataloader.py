@@ -9,13 +9,14 @@ from robomimic.utils.dataset import action_stats_to_normalization_stats
 
 from octo.data.dataset import make_dataset_from_rlds, make_interleaved_dataset
 from octo.data.utils.data_utils import combine_dataset_statistics
+from octo.utils.spec import ModuleSpec
 
 tf.config.set_visible_devices([], "GPU")
 
 # ------------------------------ Get Dataset Information ------------------------------
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_r2d2"
-DATASET_NAMES = ["r2_d2", "r2_d2_cmu_toaster"]
-sample_weights = [1, 1]
+DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
+DATASET_NAMES =  ["droid"] # You can add additional co-training datasets here
+sample_weights = [1] # Add to this if you add additional co-training datasets
 
 # ------------------------------ Get Observation Information ------------------------------
 obs_modalities = ["camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"]
@@ -87,9 +88,12 @@ BASE_DATASET_KWARGS = {
         "standardize_fn": droid_dataset_transform,
     }
 
-# you can add more datasets here & the sampling weights below if you want to mix
+filter_functions = [[ModuleSpec.create(
+                        "robomimic.utils.rlds_utils:filter_success"
+                        )] if d_name == "droid" else [] \
+                    for d_name in DATASET_NAMES]
 dataset_kwargs_list = [
-    {"name": d_name,  **BASE_DATASET_KWARGS} for d_name in DATASET_NAMES
+    {"name": d_name, "filter_functions": f_functions, **BASE_DATASET_KWARGS} for d_name, f_functions in zip(DATASET_NAMES, filter_functions)
 ]
 # Compute combined normalization stats
 combined_dataset_statistics = combine_dataset_statistics(

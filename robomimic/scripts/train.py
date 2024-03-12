@@ -105,17 +105,15 @@ def train(config, device):
                 "absolute_action_mask": is_abs_action,
                 "action_normalization_mask": is_abs_action,
                 "standardize_fn": droid_dataset_transform,
-                "filter_functions": [
-                    ModuleSpec.create(
-                        "robomimic.utils.rlds_utils:filter_success"
-                    ),
-                ]
          }
 
-        # you can add more datasets here & the sampling weights below if you want to mix
         dataset_names = config.train.dataset_names
+        filter_functions = [[ModuleSpec.create(
+                                "robomimic.utils.rlds_utils:filter_success"
+                                )] if d_name == "droid" else [] \
+                            for d_name in dataset_names]
         dataset_kwargs_list = [
-            {"name": d_name,  **BASE_DATASET_KWARGS} for d_name in dataset_names
+            {"name": d_name, "filter_functions": f_functions, **BASE_DATASET_KWARGS} for d_name, f_functions in zip(dataset_names, filter_functions)
         ]
         # Compute combined normalization stats
         combined_dataset_statistics = combine_dataset_statistics(
