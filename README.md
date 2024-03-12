@@ -50,6 +50,8 @@ The default `shuffle_buffer_size` is set to `500000`, but you may need to reduce
 
 To specify your information for Weights and Biases logging, make sure to update the `WANDB_ENTITY` and `WANDB_API_KEY` values in `robomimic/macros.py`.
 
+We also provide a stand-alone example to load data from DROID [here](examples/droid_dataloader.py)
+
 -------
 ## Code Structure
 

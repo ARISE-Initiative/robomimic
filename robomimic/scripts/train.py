@@ -91,16 +91,18 @@ def train(config, device):
         # NOTE: Must be 2 cam for now, can clean this up later
         assert(len(obs_modalities) == 2)
         ac_dim = sum([ac_comp[1] for ac_comp in config.train.action_shapes])
+        action_config = config.train.action_config
+        is_abs_action = [action_config[k]["normalization"] != None for k in action_config.keys()]
 
         BASE_DATASET_KWARGS = {
                 "data_dir": config.train.data_path,
                 "image_obs_keys": {"primary": DROID_TO_RLDS_OBS_KEY_MAP[obs_modalities[0]], "secondary": DROID_TO_RLDS_OBS_KEY_MAP[obs_modalities[1]]},
-                "state_obs_keys": [DROID_TO_RLDS_LOW_DIM_OBS_KEY_MAP[a] for a in config.observation.modalities.obs.low_dim],
+                "state_obs_keys": [DROID_TO_RLDS_LOW_DIM_OBS_KEY_MAP[obs_key] for obs_key in config.observation.modalities.obs.low_dim],
                 "language_key": "language_instruction",
                 "norm_skip_keys":  ["proprio"],
                 "action_proprio_normalization_type": "bounds",
-                "absolute_action_mask": [True] * ac_dim,
-                "action_normalization_mask": [True] * ac_dim,
+                "absolute_action_mask": is_abs_action,
+                "action_normalization_mask": is_abs_action,
                 "standardize_fn": droid_dataset_transform,
             }
 
@@ -119,7 +121,7 @@ def train(config, device):
             config.train.sample_weights,
             train=True,
             shuffle_buffer_size=config.train.shuffle_buffer_size,
-            batch_size=None,  # batching will be handles in PyTorch Dataloader object
+            batch_size=None,  # batching will be handled in PyTorch Dataloader object
             balance_weights=False,
             dataset_statistics=combined_dataset_statistics,
             traj_transform_kwargs=dict(
@@ -142,11 +144,10 @@ def train(config, device):
             traj_transform_threads=config.train.traj_transform_threads,
             traj_read_threads=config.train.traj_read_threads,
         )
-        # Note: If we have statistics for multiple datasets separately, use the last one (assumes last one is the dataset from the target domain)
-        # rlds_dataset_stats will only be a list if do_combined_normalization is set to False
-        rlds_dataset_stats = dataset.dataset_statistics[-1] if isinstance(dataset.dataset_statistics, list) else dataset.dataset_statistics
+        # Note: If we have separated statistics for multiple datasets, use the first one (assumed to be DROID)
+        # Otherwise, use the combined dataset statistics.
+        rlds_dataset_stats = dataset.dataset_statistics[0] if isinstance(dataset.dataset_statistics, list) else dataset.dataset_statistics
         action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats["action"], config.train.action_keys, config.train.action_shapes)
-        action_config = config.train.action_config
         action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
         dataset = dataset.map(robomimic_transform, num_parallel_calls=config.train.traj_transform_threads)
 
