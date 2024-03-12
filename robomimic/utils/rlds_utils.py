@@ -5,6 +5,13 @@ import tensorflow as tf
 import torch
 import tensorflow_graphics.geometry.transformation as tfg
 
+def filter_success(trajectory: dict[str, any]):
+    # only keep trajectories that have "success" in the file path
+    return tf.strings.regex_full_match(
+        trajectory['traj_metadata']['episode_metadata']['file_path'][0],
+        ".*/success/.*"
+    )
+
 
 def euler_to_rmat(euler):
     return tfg.rotation_matrix_3d.from_euler(euler)

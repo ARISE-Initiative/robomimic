@@ -48,6 +48,7 @@ from robomimic.utils.rlds_utils import droid_dataset_transform, robomimic_transf
 
 from octo.data.dataset import make_dataset_from_rlds, make_interleaved_dataset
 from octo.data.utils.data_utils import combine_dataset_statistics
+from octo.utils.spec import ModuleSpec
 
 
 def train(config, device):
@@ -104,7 +105,12 @@ def train(config, device):
                 "absolute_action_mask": is_abs_action,
                 "action_normalization_mask": is_abs_action,
                 "standardize_fn": droid_dataset_transform,
-            }
+                "filter_functions": [
+                    ModuleSpec.create(
+                        "robomimic.utils.rlds_utils:filter_success"
+                    ),
+                ]
+         }
 
         # you can add more datasets here & the sampling weights below if you want to mix
         dataset_names = config.train.dataset_names
