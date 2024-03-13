@@ -89,6 +89,6 @@ train_loader = DataLoader(
     num_workers=0,  # important to keep this to 0 so PyTorch does not mess with the parallelism
 )
 
-for i, sample in tqdm.tqdm(enumerate(train_loader)):i)
+for i, sample in tqdm.tqdm(enumerate(train_loader)):
     if i == 5000:
         break
