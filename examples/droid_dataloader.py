@@ -14,7 +14,7 @@ from octo.utils.spec import ModuleSpec
 tf.config.set_visible_devices([], "GPU")
 
 # ------------------------------ Get Dataset Information ------------------------------
-DATA_PATH = "" # UPDATE WITH PATH TO RLDS DATASETS
+DATA_PATH = ""
 DATASET_NAMES =  ["droid"] # You can add additional co-training datasets here
 sample_weights = [1] # Add to this if you add additional co-training datasets
 
@@ -23,57 +23,7 @@ obs_modalities = ["camera/image/varied_camera_1_left_image", "camera/image/varie
 obs_low_dim_modalities = ["robot_state/cartesian_position", "robot_state/gripper_position"]
 
 # ------------------------------ Get Action Information ------------------------------
-action_keys = [
-    "action/abs_pos",
-    "action/abs_rot_6d",
-    "action/gripper_position"]
-action_shapes=[
-    (1, 3), 
-    (1, 6), 
-    (1, 1)]
-
-ac_dim = sum([ac_comp[1] for ac_comp in action_shapes])
-
-action_config = {
-    "action/cartesian_position":{
-        "normalization": "min_max",
-    },
-    "action/abs_pos":{
-        "normalization": "min_max",
-    },
-    "action/abs_rot_6d":{
-        "normalization": "min_max",
-        "format": "rot_6d",
-        "convert_at_runtime": "rot_euler",
-    },
-    "action/abs_rot_euler":{
-        "normalization": "min_max",
-        "format": "rot_euler",
-    },
-    "action/gripper_position":{
-        "normalization": "min_max",
-    },
-    "action/cartesian_velocity":{
-        "normalization": None,
-    },
-    "action/rel_pos":{
-        "normalization": None,
-    },
-    "action/rel_rot_6d":{
-        "format": "rot_6d",
-        "normalization": None,
-        "convert_at_runtime": "rot_euler",
-    },
-    "action/rel_rot_euler":{
-        "format": "rot_euler",
-        "normalization": None,
-    },
-    "action/gripper_velocity":{
-        "normalization": None,
-    },
-}
-
-is_abs_action = [action_config[k]["normalization"] != None for k in action_config.keys()]
+is_abs_action = [True] * 5 + [False] * 5
 
 # ------------------------------ Construct Dataset ------------------------------
 BASE_DATASET_KWARGS = {
@@ -95,7 +45,8 @@ filter_functions = [[ModuleSpec.create(
 dataset_kwargs_list = [
     {"name": d_name, "filter_functions": f_functions, **BASE_DATASET_KWARGS} for d_name, f_functions in zip(DATASET_NAMES, filter_functions)
 ]
-# Compute combined normalization stats
+
+# Compute combined normalization stats. Note: can also set this to None to normalize each dataset separately.
 combined_dataset_statistics = combine_dataset_statistics(
     [make_dataset_from_rlds(**dataset_kwargs, train=True)[1] for dataset_kwargs in dataset_kwargs_list]
 )
@@ -127,9 +78,6 @@ dataset = make_interleaved_dataset(
     traj_read_threads=48,
 )
 
-rlds_dataset_stats = dataset.dataset_statistics
-action_stats = ActionUtils.get_action_stats_dict(rlds_dataset_stats["action"], action_keys, action_shapes)
-action_normalization_stats = action_stats_to_normalization_stats(action_stats, action_config)
 dataset = dataset.map(robomimic_transform, num_parallel_calls=48)
 
 # ------------------------------ Create Dataloader ------------------------------
