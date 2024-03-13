@@ -93,7 +93,7 @@ def train(config, device):
         assert(len(obs_modalities) == 2)
         ac_dim = sum([ac_comp[1] for ac_comp in config.train.action_shapes])
         action_config = config.train.action_config
-        is_abs_action = [action_config[k]["normalization"] != None for k in action_config.keys()]
+        is_abs_action = [True] * ac_dim
 
         BASE_DATASET_KWARGS = {
                 "data_dir": config.train.data_path,

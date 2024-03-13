@@ -23,7 +23,7 @@ obs_modalities = ["camera/image/varied_camera_1_left_image", "camera/image/varie
 obs_low_dim_modalities = ["robot_state/cartesian_position", "robot_state/gripper_position"]
 
 # ------------------------------ Get Action Information ------------------------------
-is_abs_action = [True] * 5 + [False] * 5
+is_abs_action = [True] * 10
 
 # ------------------------------ Construct Dataset ------------------------------
 BASE_DATASET_KWARGS = {
