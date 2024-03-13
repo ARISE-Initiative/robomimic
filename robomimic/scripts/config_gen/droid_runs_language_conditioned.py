@@ -6,9 +6,9 @@ import numpy as np
 #############################################################################
 # *************** Replace with your paths/config information ****************
 
-MANIFEST_PATH = "/mnt/fsx/surajnair/code/droid_cleanup/manifest_test.json"
+MANIFEST_PATH = "" # UPDATE WITH PATH TO MANIFEST
 # MANIFEST_2_PATH = ""
-EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
+EXP_LOG_PATH = ""  # UPDATE WITH PATH TO DESIRED LOGGING DIRECTORY
 
 ## Define training Dataset
 with open(MANIFEST_PATH, 'r') as file:

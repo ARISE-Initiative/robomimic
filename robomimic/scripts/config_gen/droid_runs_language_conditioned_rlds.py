@@ -10,14 +10,15 @@ from collections import OrderedDict
 # Note: Assumes naming of dataset in "datasets" for the full DROID dataset is
 # droid
 
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
-EXP_LOG_PATH = "/mnt/fsx/surajnair/expdata"
+DATA_PATH = ""    # UPDATE WITH PATH TO RLDS DATASETS
+EXP_LOG_PATH = "" # UPDATE WITH PATH TO DESIRED LOGGING DIRECTORY
 EXP_NAMES = OrderedDict(
     [
-        ("droid_droid_cmu_toaster", {"datasets": ["droid", "droid_cmu_toaster"],
-                                      "sample_weights": [1, 1]}),
-        ("droid_cmu_toaster", {"datasets": ["droid"],
-                                      "sample_weights": [1]})                                    
+        # Note: you can add co-training dataset here appending
+        # a new dataset to "datasets" and adjusting "sample_weights"
+        # accordingly
+        ("droid", {"datasets": ["droid"],
+                   "sample_weights": [1]})                                    
     ])
 
 #############################################################################

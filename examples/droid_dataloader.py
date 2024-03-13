@@ -14,7 +14,7 @@ from octo.utils.spec import ModuleSpec
 tf.config.set_visible_devices([], "GPU")
 
 # ------------------------------ Get Dataset Information ------------------------------
-DATA_PATH = "/mnt/fsx/ashwinbalakrishna/datasets/rlds_droid"
+DATA_PATH = "" # UPDATE WITH PATH TO RLDS DATASETS
 DATASET_NAMES =  ["droid"] # You can add additional co-training datasets here
 sample_weights = [1] # Add to this if you add additional co-training datasets
 
@@ -141,6 +141,6 @@ train_loader = DataLoader(
     num_workers=0,  # important to keep this to 0 so PyTorch does not mess with the parallelism
 )
 
-for i, sample in tqdm.tqdm(enumerate(train_loader)):
+for i, sample in tqdm.tqdm(enumerate(train_loader)):i)
     if i == 5000:
         break
