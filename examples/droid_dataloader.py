@@ -14,7 +14,7 @@ from octo.utils.spec import ModuleSpec
 tf.config.set_visible_devices([], "GPU")
 
 # ------------------------------ Get Dataset Information ------------------------------
-DATA_PATH = ""
+DATA_PATH = "" # UPDATE WITH PATH TO RLDS DATASETS
 DATASET_NAMES =  ["droid"] # You can add additional co-training datasets here
 sample_weights = [1] # Add to this if you add additional co-training datasets
 
@@ -46,7 +46,7 @@ dataset_kwargs_list = [
     {"name": d_name, "filter_functions": f_functions, **BASE_DATASET_KWARGS} for d_name, f_functions in zip(DATASET_NAMES, filter_functions)
 ]
 
-# Compute combined normalization stats. Note: can also set this to None to normalize each dataset separately.
+# Compute combined normalization stats. Note: can also set this to None to normalize each dataset separately
 combined_dataset_statistics = combine_dataset_statistics(
     [make_dataset_from_rlds(**dataset_kwargs, train=True)[1] for dataset_kwargs in dataset_kwargs_list]
 )
