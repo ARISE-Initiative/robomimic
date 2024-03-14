@@ -33,10 +33,8 @@ class PrintLogger(object):
         self.log_file.flush()
 
     def flush(self):
-        # this flush method is needed for python 3 compatibility.
-        # this handles the flush command by doing nothing.
-        # you might want to specify some extra behavior here.
-        pass
+        # ensure stdout gets flushed
+        self.terminal.flush()
 
 
 class DataLogger(object):
