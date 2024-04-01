@@ -16,7 +16,7 @@ from torchvision import transforms
 from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
-
+from robomimic.models.vit_rein import Reins, LoRAReins, MLPhead
 
 CONV_ACTIVATIONS = {
     "relu": nn.ReLU,
@@ -539,6 +539,7 @@ class ResNet18Conv(ConvBase):
         """Pretty print network."""
         header = '{}'.format(str(self.__class__.__name__))
         return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+        
 class ViT_Rein(ConvBase):
     """
     ViT LoRA using Rein method
@@ -547,6 +548,8 @@ class ViT_Rein(ConvBase):
         self,
         input_channel=3,
         vit_model_class = 'vit_b',
+        lora_dim = 16,
+        patch_size = 16,
         freeze = True):
         """
         Using pretrained observation encoder network proposed in Vision Transformers 
@@ -570,6 +573,9 @@ class ViT_Rein(ConvBase):
         self._freeze = freeze
         self._input_coord_conv = False
         self._pretrained = False
+        self._lora_dim = lora_dim
+        self._patch_size = patch_size
+        self._out_indices = [7, 11, 15, 23],
 
         self.preprocess = nn.Sequential(
             transforms.Resize((294,294)),
@@ -587,17 +593,41 @@ class ViT_Rein(ConvBase):
                 self.nets = dinov2_vits14_lc = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitb14_lc')
         except ImportError:
             print("WARNING: could not load Vit")
+            
+        try :
+            self._rein_layers = LoRAReins(lora_dim=self._lora_dim, num_layers=len(self.nets.backbone.blocks),embed_dims = self.nets.backbone.patch_embed.proj.out_channels,patch_size=self._patch_size)
+            self._mlp_lora_head = MLPhead(in_dim=3*self.nets.backbone.patch_embed.proj.out_channels, out_dim = 5*self.nets.backbone.patch_embed.proj.out_channels)
+        except ImportError:
+            print("WARNING: could not load rein layer")
 
-        if freeze:
+        
+        if self._freeze:
             for param in self.nets.parameters():
                 param.requires_grad = False
-
-        if self._freeze:
             self.nets.eval()
 
     def forward(self, inputs):
         x = self.preprocess(inputs)
-        x = self.nets(x)
+        x = self.nets.backbone.patch_embed(x)
+        for idx, blk in enumerate(self.nets.backbone.blocks):
+            x = blk(x)
+            x = self._rein_layers.forward(
+                x,
+                idx,
+                batch_first=True,
+                has_cls_token=True,
+            )
+
+        q_avg = x.mean(dim=1).unsqueeze(1)
+        q_max = torch.max(x,1)[0].unsqueeze(1)
+        q_N = x[:,x.shape[1]-1,:].unsqueeze(1)
+
+        _q = torch.cat((q_avg, q_max, q_N), dim=1)
+
+        x = self.nets.backbone.norm(_q)
+        x = x.flatten(-2,-1)
+        x = self._mlp_lora_head(x)
+        x = self.nets.linear_head(x)
         return x    
 
     def output_shape(self, input_shape):

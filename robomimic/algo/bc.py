@@ -107,7 +107,8 @@ class BC(PolicyAlgo):
                 will be used for training 
         """
         input_batch = dict()
-        input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
+        #input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
+        input_batch["obs"] = {k: v[:, 0, :] if v.ndim != 1 else v for k, v in batch['obs'].items()}
         input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
         # we move to device first before float conversion because image observation modalities will be uint8 -
