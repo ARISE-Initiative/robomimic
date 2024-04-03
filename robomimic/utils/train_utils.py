@@ -496,6 +496,43 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
+def delete_checkpoints(ckpt_dir, top_n=3, smallest=True):
+    """
+    Delete checkpoints in a directory, keeping top @top_n checkpoints based on lowest validation loss.  Where checkpoints are saved in the form "model_epoch_{n}_best_validation_{validation loss}.pth
+    """
+    # get all checkpoints
+    all_checkpoints = []
+    for filename in os.listdir(ckpt_dir):
+        if filename.endswith(".pth"):
+            all_checkpoints.append(filename)
+    all_checkpoints = sorted(all_checkpoints)
+
+    # get validation losses
+    validation_losses = []
+    for ckpt in all_checkpoints:
+        val_loss = float(ckpt.split("best_validation_")[1].split(".pth")[0])
+
+        validation_losses.append((val_loss, ckpt))
+    # validation_losses = np.array(validation_losses)
+    validation_losses = sorted(validation_losses, key=lambda x: x[0])
+
+    # delete checkpoints
+    if smallest:
+        for ckpt in all_checkpoints[top_n:]:
+            os.remove(os.path.join(ckpt_dir, ckpt))
+    else:
+        for ckpt in all_checkpoints[:-top_n]:
+            os.remove(os.path.join(ckpt_dir, ckpt))
+
+def get_gpu_usage_mb(index):
+    """Returns the GPU usage in B."""
+    h = nvmlDeviceGetHandleByIndex(index)
+    info = nvmlDeviceGetMemoryInfo(h)
+    print(f'total    : {info.total}')
+    print(f'free     : {info.free}')
+    print(f'used     : {info.used}')
+
+    return info.used / 1024 / 1024
 
 def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
     """
@@ -522,6 +559,9 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
     Returns:
         step_log_all (dict): dictionary of logged training metrics averaged across all batches
     """
+
+    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
+    
     epoch_timestamp = time.time()
     if validate:
         model.set_eval()

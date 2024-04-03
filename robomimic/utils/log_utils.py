@@ -43,7 +43,7 @@ class DataLogger(object):
     """
     Logging class to log metrics to tensorboard and/or retrieve running statistics about logged data.
     """
-    def __init__(self, log_dir, config, log_tb=True, log_wandb=False):
+    def __init__(self, log_dir, config, log_tb=True, log_wandb=False, uid=None):
         """
         Args:
             log_dir (str): base path to store logs
@@ -56,6 +56,7 @@ class DataLogger(object):
         if log_tb:
             from tensorboardX import SummaryWriter
             self._tb_logger = SummaryWriter(os.path.join(log_dir, 'tb'))
+        
 
         if log_wandb:
             import wandb
@@ -79,7 +80,7 @@ class DataLogger(object):
                     self._wandb_logger.init(
                         entity=Macros.WANDB_ENTITY,
                         project=config.experiment.logging.wandb_proj_name,
-                        name=config.experiment.name,
+                        name=uid if uid else config.experiment.name,
                         dir=log_dir,
                         mode=("offline" if attempt == num_attempts - 1 else "online"),
                     )
