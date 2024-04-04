@@ -134,6 +134,7 @@ def is_robosuite_env(env_meta=None, env_type=None, env=None):
     Determines whether the environment is a robosuite environment. Accepts
     either env_meta, env_type, or env.
     """
+    return False
     return check_env_type(type_to_check=EB.EnvType.ROBOSUITE_TYPE, env_meta=env_meta, env_type=env_type, env=env)
 
 
