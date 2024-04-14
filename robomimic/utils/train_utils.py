@@ -622,6 +622,105 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
 
     return step_log_all
 
+def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=False, num_steps=None, obs_normalization_stats=None):
+    """
+    Run an epoch of training or validation.
+
+    Args:
+        model (Algo instance): model to train
+
+        data_loader (DataLoader instance): data loader that will be used to serve batches of data
+            to the model
+
+        epoch (int): epoch number
+
+        validate (bool): whether this is a training epoch or validation epoch. This tells the model
+            whether to do gradient steps or purely do forward passes.
+
+        num_steps (int): if provided, this epoch lasts for a fixed number of batches (gradient steps),
+            otherwise the epoch is a complete pass through the training dataset
+
+        obs_normalization_stats (dict or None): if provided, this should map observation keys to dicts
+            with a "mean" and "std" of shape (1, ...) where ... is the default
+            shape for the observation.
+
+    Returns:
+        step_log_all (dict): dictionary of logged training metrics averaged across all batches
+    """
+
+    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
+    # breakpoint()
+    epoch_timestamp = time.time()
+    if validate:
+        model.set_eval()
+    else:
+        model.set_train()
+    if num_steps is None:
+        num_steps = len(data_loader)
+
+    step_log_all = []
+    timing_stats = dict(Data_Loading=[], Process_Batch=[], Train_Batch=[], Log_Info=[])
+    start_time = time.time()
+
+    data_loader_iter = iter(data_loader)
+    data_loader_2_iter = iter(data_loader_2)
+    # breakpoint()
+    for _ in LogUtils.custom_tqdm(range(num_steps)):
+
+        # load next batch from data loader
+        try:
+            t = time.time()
+            batch = next(data_loader_iter)
+            batch_2 = next(data_loader_2_iter)
+        except StopIteration:
+            # reset for next dataset pass
+            data_loader_iter = iter(data_loader)
+            data_loader_2_iter = iter(data_loader_2)
+            t = time.time()
+            batch = next(data_loader_iter)
+            batch_2 = next(data_loader_2_iter)
+        timing_stats["Data_Loading"].append(time.time() - t)
+
+        # process batch for training
+        t = time.time()
+        # breakpoint()
+        input_batch = model.process_batch_for_training(batch)
+        input_batch_2 = model.process_batch_for_training(batch_2)
+
+        # breakpoint()
+        input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
+        input_batch_2 = model.postprocess_batch_for_training(input_batch_2, obs_normalization_stats=obs_normalization_stats)
+
+        timing_stats["Process_Batch"].append(time.time() - t)
+
+        # forward and backward pass
+        t = time.time()
+        # breakpoint()
+        info = model.train_on_batch([input_batch, input_batch_2], epoch, validate=validate)
+        timing_stats["Train_Batch"].append(time.time() - t)
+
+        # tensorboard logging
+        t = time.time()
+        step_log = model.log_info(info)
+        step_log_all.append(step_log)
+        timing_stats["Log_Info"].append(time.time() - t)
+
+    # flatten and take the mean of the metrics
+    step_log_dict = {}
+    for i in range(len(step_log_all)):
+        for k in step_log_all[i]:
+            if k not in step_log_dict:
+                step_log_dict[k] = []
+            step_log_dict[k].append(step_log_all[i][k])
+    step_log_all = dict((k, float(np.mean(v))) for k, v in step_log_dict.items())
+
+    # add in timing stats
+    for k in timing_stats:
+        # sum across all training steps, and convert from seconds to minutes
+        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.
+    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
+
+    return step_log_all
 
 def is_every_n_steps(interval, current_step, skip_zero=False):
     """
