@@ -2,14 +2,20 @@
 A script to try playing random actions in LIBERO environments.
 
 Example usage:
+    python scripts/demo_libero.py 
+
     python scripts/demo_libero.py --reset --bddl_file_name KITCHEN_SCENE1_D1_open_the_top_drawer_of_the_cabinet_and_put_the_bowl_in_it.bddl
     python scripts/demo_libero.py --reset --bddl_file_name KITCHEN_SCENE2_D1_open_the_top_drawer_of_the_cabinet.bddl
     python scripts/demo_libero.py --reset --bddl_file_name KITCHEN_SCENE10_close_the_top_drawer_of_the_cabinet_and_put_the_black_bowl_on_top_of_it.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_target.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp1_motion_varyTask.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_spatial_varyObjSpat.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_spatial_varyRecepSpat.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyCamPose.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyLighting.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyObjTex.bddl
-    python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyObjGeom1.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyTableTex.bddl
+
 """
 import os
 import json
