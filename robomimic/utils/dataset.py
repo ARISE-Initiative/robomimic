@@ -212,7 +212,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         This property allows for a lazy hdf5 file open.
         """
         if self._hdf5_file is None:
-            self._hdf5_file = h5py.File(self.hdf5_path, 'r', swmr=self.hdf5_use_swmr, libver='latest')
+            print("opening hdf5")
+            self._hdf5_file = h5py.File(self.hdf5_path, 'r', swmr=self.hdf5_use_swmr, libver='latest', rdcc_nbytes=1e10)
         return self._hdf5_file
 
     def close_and_delete_hdf5_handle(self):
