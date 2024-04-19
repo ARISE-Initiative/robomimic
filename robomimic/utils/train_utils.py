@@ -180,11 +180,11 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
         filter_by_attribute=filter_by_attribute,
         shuffled_obs_key_groups=config.train.shuffled_obs_key_groups,
-        demo_limit=config.train.demo_limit,
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
     ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
+    ds_kwargs["demo_limit"] = [ds_cfg.get("demo_limit", config.train.demo_limit) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
 
     meta_ds_kwargs = dict()
@@ -216,7 +216,7 @@ def get_dataset(
         
         ds_kwargs_copy = deepcopy(ds_kwargs)
 
-        keys = ["hdf5_path", "filter_by_attribute"]
+        keys = ["hdf5_path", "filter_by_attribute", "demo_limit"]
 
         for k in keys:
             ds_kwargs_copy[k] = ds_kwargs[k][i]
