@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "bc-finetune-exp1VisualVaryCamPose",
+        "name": "bcrnn-exp1MotionVaryTask",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -36,9 +36,9 @@
     "train": {
         "data": [
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_target_n_10_targ_robomimicV2exp1Target_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "target", "demo_limit": 10},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryCamPose_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyCamPose", "demo_limit": 50}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_target_n_10_targ_robomimicV2exp1MotionVaryTask_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "cotrain-varyTask", "demo_limit": 50}
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/target10-cotrain50/",
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp1/target10-cotrain50/",
         "num_data_workers": 0,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
