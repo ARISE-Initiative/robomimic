@@ -38,7 +38,7 @@
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demos_1000/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryTableTex_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "put the bowl in the basket", "key": "varyTableTex", "demo_limit": 1000}
         ],
         "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp1/single-task/",
-        "num_data_workers": 0,
+        "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
