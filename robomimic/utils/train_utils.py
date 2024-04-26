@@ -358,9 +358,9 @@ def run_rollout(
                         policy_ob = deepcopy(policy_ob)
                         for env_i in range(len(env)):
                             cam_imgs = []
-                            for im_name in ["robot0_agentview_left_image", "robot0_agentview_right_image", "robot0_eye_in_hand_image"]:
+                            for im_name in ["agentview_image", "robot0_eye_in_hand_image"]:
                                 im = TensorUtils.to_numpy(
-                                    policy_ob[im_name][env_i, -1]
+                                    policy_ob[im_name][env_i]
                                 )
                                 im = np.transpose(im, (1, 2, 0))
                                 if policy_ob.get("ret", None) is not None:
