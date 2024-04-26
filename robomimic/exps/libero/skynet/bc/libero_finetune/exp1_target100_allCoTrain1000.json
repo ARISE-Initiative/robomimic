@@ -30,7 +30,9 @@
             "horizon": 1600,
             "rate": 50,
             "warmstart": 0,
-            "terminate_on_success": true
+            "terminate_on_success": true,
+            "batched": true,
+            "num_batch_envs": 5
         }
     },
     "train": {
