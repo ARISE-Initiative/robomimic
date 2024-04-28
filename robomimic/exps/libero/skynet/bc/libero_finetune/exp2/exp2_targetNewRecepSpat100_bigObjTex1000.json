@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "bcrnn-exp2PreIndepTestVisualObjTex",
+        "name": "bcrnn-exp2-targetNewRecepSpat100-bigObjTex1000",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -30,20 +30,18 @@
             "horizon": 1600,
             "rate": 50,
             "warmstart": 0,
-            "terminate_on_success": true
+            "terminate_on_success": true,
+            "batched": true,
+            "num_batch_envs": 5
         }
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/TODO - dataset with all normal variations but obj tex OOD/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "target", "demo_limit": 10},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryObjTex_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyObjTex", "demo_limit": 50},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryTableTex_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyTableTex", "demo_limit": 50},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryCamPose_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyCamPose", "demo_limit": 50},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1VisualVaryLighting_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyLighting", "demo_limit": 50},
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0413/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp1SpatialVaryRecepSpat_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-varyRecepSpat", "demo_limit": 50}
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0426/demos_1000/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp2TargetNewRecepSpat_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "put the bowl in the basket", "key": "target-newRecepSpat", "demo_limit": 100},
+            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0426/demos_1000/demo_src_robomimic_v2_exp1_visual_varyObjTex_n_10_targ_robomimicV2exp2BigVisualObjTex_per_stage_f_nn_10/demo.hdf5", "eval": false, "lang": "put the bowl in the basket", "key": "cotrain-bigObjTex", "demo_limit": 1000}
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp2/",
-        "num_data_workers": 0,
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp2/target100-cotrain1000/",
+        "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
         "hdf5_load_next_obs": false,
