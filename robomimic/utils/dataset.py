@@ -13,7 +13,7 @@ import torch.utils.data
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.log_utils as LogUtils
-
+import time
 
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(
@@ -467,7 +467,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return meta
 
-    def get_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
+    def get_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, dont_load_fut=None):
         """
         Extract a (sub)sequence of data items from a demo given the @keys of the items.
 
@@ -477,10 +477,13 @@ class SequenceDataset(torch.utils.data.Dataset):
             keys (tuple): list of keys to extract
             num_frames_to_stack (int): numbers of frame to stack. Seq gets prepended with repeated items if out of range
             seq_length (int): sequence length to extract. Seq gets post-pended with repeated items if out of range
+            dont_load_fut (list): list of keys to not load future items for
 
         Returns:
             a dictionary of extracted items.
         """
+        if dont_load_fut is None:
+            dont_load_fut = []
         assert num_frames_to_stack >= 0
         assert seq_length >= 1
 
@@ -504,16 +507,20 @@ class SequenceDataset(torch.utils.data.Dataset):
         # fetch observation from the dataset file
         seq = dict()
         for k in keys:
+            t = time.time()
             data = self.get_dataset_for_ep(demo_id, k)
-            seq[k] = data[seq_begin_index: seq_end_index]
+            true_end_index = seq_begin_index + 1 if k.split("/")[-1] in dont_load_fut else seq_end_index
+            seq[k] = data[seq_begin_index: true_end_index]
 
-        seq = TensorUtils.pad_sequence(seq, padding=(seq_begin_pad, seq_end_pad), pad_same=True)
+        for k in seq:
+            if k.split("/")[-1] not in dont_load_fut:
+                seq[k] = TensorUtils.pad_sequence(seq[k], padding=(seq_begin_pad, seq_end_pad), pad_same=True)
         pad_mask = np.array([0] * seq_begin_pad + [1] * (seq_end_index - seq_begin_index) + [0] * seq_end_pad)
         pad_mask = pad_mask[:, None].astype(bool)
 
         return seq, pad_mask
 
-    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs"):
+    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs", dont_load_fut=False):
         """
         Extract a (sub)sequence of observation items from a demo given the @keys of the items.
 
@@ -534,6 +541,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             keys=tuple('{}/{}'.format(prefix, k) for k in keys),
             num_frames_to_stack=num_frames_to_stack,
             seq_length=seq_length,
+            dont_load_fut=dont_load_fut
         )
         obs = {k.split('/')[1]: obs[k] for k in obs}  # strip the prefix
         if self.get_pad_mask:

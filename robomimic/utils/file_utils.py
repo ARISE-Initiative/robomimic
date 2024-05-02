@@ -111,7 +111,7 @@ def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False, ac_key="actions"):
     """
     Retrieves shape metadata from dataset.
 
@@ -120,6 +120,7 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
         all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
         verbose (bool): if True, include print statements
+        ac_dim (bool): whether to pull ac_dim
 
     Returns:
         shape_meta (dict): shape metadata. Contains the following keys:
@@ -140,7 +141,7 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
     demo = f["data/{}".format(demo_id)]
 
     # action dimension
-    shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
+    shape_meta['ac_dim'] = f[f"data/{demo_id}/{ac_key}"].shape[1]
 
     # observation dimensions
     all_shapes = OrderedDict()
