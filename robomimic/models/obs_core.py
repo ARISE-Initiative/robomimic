@@ -781,7 +781,7 @@ class GaussianNoiseRandomizer(Randomizer):
         out = TensorUtils.repeat_by_expand_at(inputs, repeats=self.num_samples, dim=0)
 
         # Sample noise across all samples
-        out = torch.rand(size=out.shape).to(inputs.device) * self.noise_std + self.noise_mean + out
+        out = torch.randn(size=out.shape).to(inputs.device) * self.noise_std + self.noise_mean + out
 
         # Possibly clamp
         if self.limits is not None:
