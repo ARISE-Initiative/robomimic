@@ -663,7 +663,7 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
     start_time = time.time()
 
     data_loader_iter = iter(data_loader)
-    data_loader_2_iter = iter(data_loader_2)
+    data_loader_2_iter = None if data_loader_2 is None else iter(data_loader_2)
     # breakpoint()
     for _ in LogUtils.custom_tqdm(range(num_steps)):
 
@@ -671,32 +671,35 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
         try:
             t = time.time()
             batch = next(data_loader_iter)
-            batch_2 = next(data_loader_2_iter)
+            batch_2 = None if data_loader_2_iter is None else next(data_loader_2_iter)
         except StopIteration:
             # reset for next dataset pass
             data_loader_iter = iter(data_loader)
-            data_loader_2_iter = iter(data_loader_2)
+            data_loader_2_iter = None if data_loader_2 is None else iter(data_loader_2)
             t = time.time()
             batch = next(data_loader_iter)
-            batch_2 = next(data_loader_2_iter)
+            batch_2 = None if data_loader_2_iter is None else next(data_loader_2_iter)
         timing_stats["Data_Loading"].append(time.time() - t)
 
         # process batch for training
         t = time.time()
         # breakpoint()
         input_batch = model.process_batch_for_training(batch)
-        input_batch_2 = model.process_batch_for_training(batch_2)
+        input_batch_2 = None if batch_2 is None else model.process_batch_for_training(batch_2)
 
         # breakpoint()
         input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
-        input_batch_2 = model.postprocess_batch_for_training(input_batch_2, obs_normalization_stats=obs_normalization_stats)
+        input_batch_2 = None if input_batch_2 is None else model.postprocess_batch_for_training(input_batch_2, obs_normalization_stats=obs_normalization_stats)
 
         timing_stats["Process_Batch"].append(time.time() - t)
 
         # forward and backward pass
         t = time.time()
         # breakpoint()
-        info = model.train_on_batch([input_batch, input_batch_2], epoch, validate=validate)
+        if input_batch_2 is not None:
+            info = model.train_on_batch([input_batch, input_batch_2], epoch, validate=validate)
+        else:
+            info = model.train_on_batch(input_batch, epoch, validate=validate)
         timing_stats["Train_Batch"].append(time.time() - t)
 
         # tensorboard logging
