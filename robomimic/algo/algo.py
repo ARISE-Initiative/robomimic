@@ -118,6 +118,7 @@ class Algo(object):
         self.global_config = global_config
 
         self.ac_dim = ac_dim
+        self.ac_key = global_config.train.ac_key
         self.device = device
         self.obs_key_shapes = obs_key_shapes
 
