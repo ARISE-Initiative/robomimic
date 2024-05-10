@@ -362,6 +362,8 @@ def run_rollout(
                                 im = TensorUtils.to_numpy(
                                     policy_ob[im_name][env_i]
                                 )
+                                if len(im.shape) == 4: # stacked frames
+                                    im = im[-1]
                                 im = np.transpose(im, (1, 2, 0))
                                 if policy_ob.get("ret", None) is not None:
                                     im_ret = TensorUtils.to_numpy(
