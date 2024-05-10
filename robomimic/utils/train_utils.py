@@ -194,7 +194,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         ds_kwargs=ds_kwargs,
         ds_weights=ds_weights,
         ds_langs=ds_langs,
-        normalize_weights_by_ds_size=False,
+        normalize_weights_by_ds_size=config.train.normalize_weights_by_ds_size,
         meta_ds_class=MetaDataset,
         meta_ds_kwargs=meta_ds_kwargs,
     )

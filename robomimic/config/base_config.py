@@ -158,6 +158,9 @@ class BaseConfig(Config):
 
         ## dataset loader config ##
 
+        # whether or not to normalize dataset weights by size
+        self.train.normalize_weights_by_ds_size = False
+
         # num workers for loading data - generally set to 0 for low-dim datasets, and 2 for image datasets
         self.train.num_data_workers = 0  
 
