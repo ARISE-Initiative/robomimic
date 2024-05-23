@@ -1071,7 +1071,7 @@ def action_stats_to_normalization_stats(action_stats, action_config):
     action_normalization_stats = OrderedDict()
     for action_key in action_stats.keys():
         # get how this action should be normalized from config, default to None
-        norm_method = action_config[action_key].get("normalization", None)
+        norm_method = action_config.get(action_key, dict()).get("normalization", None)
         if norm_method is None:
             # no normalization, unit scale, zero offset
             action_normalization_stats[action_key] = {
