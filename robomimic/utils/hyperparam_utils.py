@@ -68,7 +68,6 @@ class ConfigGenerator(object):
             group=group, 
             values=values, 
             value_names=value_names,
-            hidename=hidename,
         )
 
     def generate(self):
@@ -100,7 +99,7 @@ class ConfigGenerator(object):
         name = base_name
         for k in parameter_values:
             # append parameter name and value to end of base name
-            if len(self.parameters[k].name) == 0 or self.parameters[k].hidename:
+            if len(self.parameters[k].name) == 0:
                 # empty string indicates that naming should be skipped
                 continue
             if len(self.parameters[k].name) == 0:
