@@ -1,7 +1,7 @@
 {
     "algo_name": "bc",
     "experiment": {
-        "name": "bcrnn-exp3-targetNew1Pull3PlaceSpat10",
+        "name": "bcrnn-exp3-targetNewTableTex10wt0.5-smallBaseConfig1000wt0.5",
         "validate": false,
         "logging": {
             "terminal_output_to_txt": true,
@@ -37,9 +37,24 @@
     },
     "train": {
         "data": [
-            {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0503/demos_1000/demo_src_robomimic_v2_exp1_motion_varyTask_n_10_targ_robomimicV2exp3TargetNew1Pull3PlaceSpat_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "target-new1Pull3PlaceSpat", "demo_limit": 10}
+            {
+                "path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0503/demos_1000/demo_src_robomimic_v2_exp1_motion_varyTask_n_10_targ_robomimicV2exp3TargetNewTableTex_per_stage_f_nn_10/demo.hdf5",
+                "eval": true,
+                "lang": "open the top drawer of the cabinet and put the bowl in it",
+                "key": "target-newTableTex",
+                "demo_limit": 10,
+                "weight": 0.5
+            },
+            {
+                "path": "/nethome/vsaxena33/flash7/work/robomimicV2/datasets/libero_mg_data_0503/demos_1000/demo_src_robomimic_v2_exp1_motion_varyTask_n_10_targ_robomimicV2exp3SmallBaseConfig_per_stage_f_nn_10/demo.hdf5",
+                "eval": false,
+                "lang": "open the top drawer of the cabinet and put the bowl in it",
+                "key": "cotrain-smallBaseConfig",
+                "demo_limit": 1000,
+                "weight": 0.5
+            }
         ],
-        "output_dir": "/srv/rl2-lab/flash7/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10-cotrain1000-weightTarget0.5Cotrain0.5Norm",
         "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
@@ -90,7 +105,8 @@
         "batch_size": 32,
         "num_epochs": 1000,
         "seed": 1,
-        "data_format": "robomimic"
+        "data_format": "robomimic",
+        "normalize_weights_by_ds_size": true
     },
     "algo": {
         "optim_params": {

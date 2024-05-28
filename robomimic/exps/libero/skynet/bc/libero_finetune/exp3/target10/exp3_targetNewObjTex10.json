@@ -16,7 +16,7 @@
             "on_best_rollout_return": false,
             "on_best_rollout_success_rate": true
         },
-        "epoch_every_n_steps": 100,
+        "epoch_every_n_steps": 500,
         "validation_epoch_every_n_steps": 10,
         "env": null,
         "additional_envs": null,
@@ -31,7 +31,7 @@
             "rate": 50,
             "warmstart": 0,
             "terminate_on_success": true,
-            "batched": true,
+            "batched": false,
             "num_batch_envs": 5
         }
     },
@@ -39,7 +39,7 @@
         "data": [
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0503/demos_1000/demo_src_robomimic_v2_exp1_motion_varyTask_n_10_targ_robomimicV2exp3TargetNewObjTex_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "target-newObjTex", "demo_limit": 10}
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
+        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
         "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
@@ -88,7 +88,7 @@
         "goal_mode": null,
         "cuda": true,
         "batch_size": 32,
-        "num_epochs": 3000,
+        "num_epochs": 1000,
         "seed": 1,
         "data_format": "robomimic"
     },
