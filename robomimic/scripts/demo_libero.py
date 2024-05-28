@@ -15,6 +15,18 @@ Example usage:
     python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyLighting.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyObjTex.bddl
     python scripts/demo_libero.py --reset --bddl_file_name exp1_visual_varyTableTex.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp2_target_newTask.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp2_target_newCamPose.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp2_big_visualCamPose.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp2_big_visualCamPose5Normal.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp3_big_visualCamPose5Normal.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp3_target_newScene.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp4_small_microwavePullPickPlace.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp4_small_microwavePickPlacePush.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp3_big_motionPickPlaceTopDrawer.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp3_big_motionPullTopDrawer.bddl
+    python scripts/demo_libero.py --reset --bddl_file_name exp3_big_motionPushTopDrawer.bddl
+    
 
 """
 import os
