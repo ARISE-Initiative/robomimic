@@ -45,7 +45,7 @@
                 "demo_limit": 10
             }
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
+        "output_dir": "/srv/rl2-lab/flash7/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
         "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,

@@ -39,7 +39,7 @@
         "data": [
             {"path": "/srv/rl2-lab/flash7/vsaxena33/work/robomimicV2/datasets/libero_mg_data_0503/demos_1000/demo_src_robomimic_v2_exp1_motion_varyTask_n_10_targ_robomimicV2exp3TargetNewCamPose_per_stage_f_nn_10/demo.hdf5", "eval": true, "lang": "open the top drawer of the cabinet and put the bowl in it", "key": "target-newCamPose", "demo_limit": 10}
         ],
-        "output_dir": "/srv/rl2-lab/flash7/vsaxena33/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
+        "output_dir": "/srv/rl2-lab/flash7/robomimicV2/robomimic/trained_models_bc/libero/libero_finetune/exp3/target10/",
         "num_data_workers": 5,
         "hdf5_cache_mode": "low_dim",
         "hdf5_use_swmr": true,
