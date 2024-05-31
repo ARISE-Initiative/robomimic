@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 from torchvision.transforms import Lambda, Compose, RandomResizedCrop
 import torchvision.transforms.functional as TVF
+import torchvision.transforms as TT
 
 import robomimic.models.base_nets as BaseNets
 import robomimic.utils.tensor_utils as TensorUtils
@@ -23,6 +24,9 @@ from robomimic.utils.python_utils import extract_class_init_kwargs_from_dict
 from robomimic.models.base_nets import *
 from robomimic.utils.vis_utils import visualize_image_randomizer
 from robomimic.macros import VISUALIZE_RANDOMIZER
+import datetime
+import matplotlib.pyplot as plt
+
 
 
 """
@@ -618,16 +622,40 @@ class CropResizeRandomizer(Randomizer):
         self.resize_crop = RandomResizedCrop(size=size, scale=scale, ratio=ratio, interpolation=TVF.InterpolationMode.BILINEAR)
 
     def output_shape_in(self, input_shape=None):
-        out_c = self.input_shape[0] + 2 if self.pos_enc else self.input_shape[0]
-        return [out_c, self.size[0], self.size[1]]
+        shape = [self.input_shape[0], self.size[0], self.size[1]]
+        return shape
 
     def output_shape_out(self, input_shape=None):
         return list(input_shape)
 
+    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+        """
+        pre_random_input: (B, C, H, W)
+        randomized_input: (B, C, H, W)
+        num_samples_to_visualize: 
+        Use plt.imsave to save a plot with the original input and the randomized input side by side.  Save it to debug/augIms/ with a unique name.
+        """
+        fig, axes = plt.subplots(num_samples_to_visualize, 2, figsize=(10, 5*num_samples_to_visualize))
+        for i in range(num_samples_to_visualize):
+            axes[i, 0].imshow(pre_random_input[i].permute(1, 2, 0).cpu().numpy())
+            axes[i, 0].set_title("Original Input")
+            axes[i, 1].imshow(randomized_input[i].permute(1, 2, 0).cpu().numpy())
+            axes[i, 1].set_title("Randomized Input")
+        plt.tight_layout()
+        plt.savefig(f"debug/augIms/sample_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.png")
+        plt.close(fig)
+        # plt.close(fig)
+        #     fig, axes = plt.subplots(1, 2)
+        #     axes[0].imshow(pre_random_input[i].permute(1, 2, 0).cpu().numpy())
+        #     axes[0].set_title("Original Input")
+        #     axes[1].imshow(randomized_input[i].permute(1, 2, 0).cpu().numpy())
+        #     axes[1].set_title("Randomized Input")
+        #     plt.savefig(f"debug/augIms/sample_{i}.png")
+        #     plt.close(fig)
+
     def _forward_in(self, inputs):
         """
-        Samples N random crops for each input in the batch, and then reshapes
-        inputs to [B * N, ...].
+        Samples single random crop for each input
         """
         # assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
         # out, _ = ObsUtils.sample_random_image_crops(
@@ -640,6 +668,7 @@ class CropResizeRandomizer(Randomizer):
         # # [B, N, ...] -> [B * N, ...]
         # out = TensorUtils.join_dimensions(out, 0, 1)
         out = self.resize_crop(inputs)
+        # self._visualize(inputs, out)
 
         return out
 
@@ -662,13 +691,48 @@ class CropResizeRandomizer(Randomizer):
         Splits the outputs from shape [B * N, ...] -> [B, N, ...] and then average across N
         to result in shape [B, ...] to make sure the network output is consistent with
         what would have happened if there were no randomization.
-        """
-        batch_size = (inputs.shape[0] // self.num_crops)
-        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
-                                             target_dims=(batch_size, self.num_crops))
-        return out.mean(dim=1)
-        
 
+        In this class I assume N = 1 so I just return input
+        """
+
+        return inputs
+        
+class CropResizeColorRandomizer(CropResizeRandomizer):
+    """
+    Does the same thing as CropResizeRandomizer, but additionally performs color jitter
+    """
+    def __init__(
+        self,
+        input_shape,
+        size,
+        scale,
+        ratio,
+        num_crops=1,
+        pos_enc=False,
+        brightness=0.5,
+        contrast=0.2,
+        saturation=0.2,
+        hue=0.05,
+    ):
+        super(CropResizeColorRandomizer, self).__init__(
+            input_shape=input_shape,
+            size=size,
+            scale=scale,
+            ratio=ratio,
+            num_crops=num_crops,
+            pos_enc=pos_enc,
+        )
+        self.color_jitter = TT.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
+    
+    def _forward_in(self, inputs):
+        out = super(CropResizeColorRandomizer, self)._forward_in(inputs)
+        out = self.color_jitter(out)
+        # self._visualize(inputs, out)
+        return out
+    
+    def _forward_in_eval(self, inputs):
+        out = super(CropResizeColorRandomizer, self)._forward_in_eval(inputs)
+        return out
     
 
 
