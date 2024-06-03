@@ -134,6 +134,15 @@ def convert_dataset(path, args):
         data = f["observation/camera_extrinsics"][raw_key]
         extrinsics_grp.create_dataset(extr_name, data=data, compression="gzip")
 
+    eef_pos = f["observation/robot_state"]["cartesian_position"][:,0:3].astype(np.float64)
+    eef_euler = f["observation/robot_state"]["cartesian_position"][:,3:6].astype(np.float64)
+    eef_euler = torch.from_numpy(eef_euler)
+    eef_quat = TorchUtils.euler_angles_to_quat(eef_euler)
+    eef_quat = eef_quat.numpy().astype(np.float64)
+    
+    f["observation/robot_state"].create_dataset("eef_pos", data=eef_pos)
+    f["observation/robot_state"].create_dataset("eef_quat", data=eef_quat)
+
     # extract action key data
     action_dict_group = f["action"]
     for in_ac_key in ["cartesian_position", "cartesian_velocity"]:
@@ -234,4 +243,8 @@ if __name__ == "__main__":
     print("converting datasets...")
     for d in tqdm(datasets):
         d = os.path.expanduser(d)
-        convert_dataset(d, args)
+        try:
+            convert_dataset(d, args)
+        except Exception as e:
+            print("Exception for dataset path:", d)
+            print(e)

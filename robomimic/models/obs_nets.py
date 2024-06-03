@@ -23,9 +23,9 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.models.base_nets import Module, Sequential, MLP, RNN_Base, ResNet18Conv, SpatialSoftmax, \
     FeatureAggregator
-from robomimic.models.obs_core import VisualCore, Randomizer
+from robomimic.models.obs_core import VisualCore, Randomizer, VisualCoreLanguageConditioned
 from robomimic.models.transformers import PositionalEncoding, GPT_Backbone
-
+from robomimic.macros import LANG_EMB_KEY
 
 def obs_encoder_factory(
         obs_shapes,
@@ -251,7 +251,12 @@ class ObservationEncoder(Module):
                     x = rand.forward_in(x)
             # maybe process with obs net
             if self.obs_nets[k] is not None:
-                x = self.obs_nets[k](x)
+                # special case: ResNet18ConvFiLM also expects lang embedding
+                if isinstance(self.obs_nets[k], VisualCoreLanguageConditioned):
+                    x = self.obs_nets[k](x, lang_emb=obs_dict[LANG_EMB_KEY])
+                else:
+                    x = self.obs_nets[k](x)
+                
                 if self.activation is not None:
                     x = self.activation(x)
             # maybe process encoder output with randomizer
@@ -259,8 +264,9 @@ class ObservationEncoder(Module):
                 if rand is not None:
                     x = rand.forward_out(x)
             # flatten to [B, D]
-            x = TensorUtils.flatten(x, begin_axis=1)
-            feats.append(x)
+            if k != LANG_EMB_KEY or not isinstance(self.obs_nets[k], VisualCoreLanguageConditioned):
+                x = TensorUtils.flatten(x, begin_axis=1)
+                feats.append(x)
 
         # concatenate all features together
         return torch.cat(feats, dim=-1)
@@ -280,7 +286,9 @@ class ObservationEncoder(Module):
             for rand in self.obs_randomizers[k]:
                 if rand is not None:
                     feat_shape = rand.output_shape_out(feat_shape)
-            feat_dim += int(np.prod(feat_shape))
+            
+            if k != LANG_EMB_KEY or not isinstance(self.obs_nets[k], VisualCoreLanguageConditioned):
+                feat_dim += int(np.prod(feat_shape))
         return [feat_dim]
 
     def __repr__(self):
@@ -946,7 +954,6 @@ class MIMO_Transformer(Module):
 
         # flat encoder output dimension
         transformer_input_dim = self.nets["encoder"].output_shape()[0]
-
         self.nets["embed_encoder"] = nn.Linear(
             transformer_input_dim, transformer_embed_dim
         )
@@ -1119,3 +1126,4 @@ class MIMO_Transformer(Module):
         msg += textwrap.indent("\n\ndecoder={}".format(self.nets["decoder"]), indent)
         msg = header + '(' + msg + '\n)'
         return msg
+        

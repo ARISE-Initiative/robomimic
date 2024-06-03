@@ -3,6 +3,8 @@ from robomimic.scripts.config_gen.helper import *
 def make_generator_helper(args):
     algo_name_short = "diffusion_policy"
 
+    args.abs_actions = True
+
     generator = get_generator(
         algo_name="diffusion_policy",
         config_file=os.path.join(base_path, 'robomimic/exps/templates/diffusion_policy.json'),
@@ -49,122 +51,28 @@ def make_generator_helper(args):
         hidename=True,
     )
 
-    if args.env == "r2d2":
+    if args.env == "robocasa":
         generator.add_param(
             key="train.data",
             name="ds",
             group=2,
-            values=[
-                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
-            ],
-            value_names=[
-                "pen-in-cup",
-            ],
-        )
-        generator.add_param(
-            key="train.action_keys",
-            name="ac_keys",
-            group=-1,
-            values=[
-                [
-                    "action/abs_pos",
-                    "action/abs_rot_6d",
-                    "action/gripper_position",
-                ],
-            ],
-            value_names=[
-                "abs",
-            ],
-            hidename=True,
-        )
-        generator.add_param(
-            key="observation.modalities.obs.rgb",
-            name="cams",
-            group=130,
-            values=[
-                # ["camera/image/hand_camera_left_image"],
-                # ["camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image"],
-                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
-                # [
-                #     "camera/image/hand_camera_left_image", "camera/image/hand_camera_right_image",
-                #     "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_1_right_image",
-                #     "camera/image/varied_camera_2_left_image", "camera/image/varied_camera_2_right_image",
-                # ],
-            ],
-            value_names=[
-                # "wrist",
-                # "wrist-stereo",
-                "3cams",
-                # "3cams-stereo",
+            values_and_names=[
+                ([{
+                    "horizon": 500,
+                    "do_eval": True,
+                    "filter_key": "1000_demos",
+                    "path": "/data1/aaronl/spark/bare/mg/2024-03-25-05-52-19/demo3_gentex_im128_randcams.hdf5"
+                }], "test"),
+                # (get_ds_cfg(["PnPCounterToSink"], src="mg", eval=None), "mg"),
+                # (get_ds_cfg("all", ds_repo="human"), "pnp-doors-human"),
+                # (get_ds_cfg("pnp_cab_to_counter", ds_repo="human", filter_key="100_demos"), "pnp-cab-to-counter-human-100"),
+                # (get_ds_cfg("pnp_cab_to_counter", ds_repo="mg", filter_key="100_demos"), "pnp-cab-to-counter-mg-100"),
+                # (get_ds_cfg("pnp_cab_to_counter", ds_repo="mg", filter_key="1000_demos"), "pnp-cab-to-counter-mg-1000"),
+                # (get_ds_cfg("pnp_cab_to_counter", ds_repo="mg", filter_key="5000_demos"), "pnp-cab-to-counter-mg-5000"),
+
+                # (get_ds_cfg("all", ds_repo="mg", filter_key="1000_demos"), "4-pnp-tasks-mg-1000"),
+                # (get_ds_cfg("all", ds_repo="mg", filter_key="5000_demos"), "4-pnp-tasks-mg-5000"),
             ]
-        )
-
-        generator.add_param(
-            key="observation.modalities.obs.low_dim",
-            name="ldkeys",
-            group=2498,
-            values=[
-                ["robot_state/cartesian_position", "robot_state/gripper_position"],
-                # [
-                #     "robot_state/cartesian_position", "robot_state/gripper_position",
-                #     "camera/extrinsics/hand_camera_left", "camera/extrinsics/hand_camera_left_gripper_offset",
-                #     "camera/extrinsics/hand_camera_right", "camera/extrinsics/hand_camera_right_gripper_offset",
-                #     "camera/extrinsics/varied_camera_1_left", "camera/extrinsics/varied_camera_1_right",
-                #     "camera/extrinsics/varied_camera_2_left", "camera/extrinsics/varied_camera_2_right",
-                # ]
-            ],
-            value_names=[
-                "proprio",
-                # "proprio-extrinsics",
-            ]
-        )
-
-        generator.add_param(
-            key="observation.encoder.rgb.core_kwargs.backbone_class",
-            name="backbone",
-            group=1234,
-            values=[
-                "ResNet18Conv",
-                # "ResNet50Conv",
-            ],
-        )
-        generator.add_param(
-            key="observation.encoder.rgb.core_kwargs.feature_dimension",
-            name="visdim",
-            group=1234,
-            values=[
-                64,
-                # 512,
-            ],
-        )
-
-    elif args.env == "kitchen":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
-                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
-            ],
-            value_names=[
-                # "bowls-human-100",
-                "human-100",
-                # "mg-100",
-                # "mg-1000",
-            ],
-        )
-        
-        # update env config to use absolute action control
-        generator.add_param(
-            key="experiment.env_meta_update_dict",
-            name="",
-            group=-1,
-            values=[
-                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
-            ],
         )
 
         generator.add_param(
@@ -185,49 +93,6 @@ def make_generator_helper(args):
             ],
             hidename=True,
         )
-    elif args.env == "square":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [
-                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
-                ],
-            ],
-            value_names=[
-                "square",
-            ],
-        )
-
-        # update env config to use absolute action control
-        generator.add_param(
-            key="experiment.env_meta_update_dict",
-            name="",
-            group=-1,
-            values=[
-                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
-            ],
-        )
-        
-        generator.add_param(
-            key="train.action_keys",
-            name="ac_keys",
-            group=-1,
-            values=[
-                [
-                    "action_dict/abs_pos",
-                    "action_dict/abs_rot_6d",
-                    "action_dict/gripper",
-                    # "actions",
-                ],
-            ],
-            value_names=[
-                "abs",
-            ],
-        )
-
-
     else:
         raise ValueError
     

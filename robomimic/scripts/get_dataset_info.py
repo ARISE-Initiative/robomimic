@@ -42,6 +42,11 @@ if __name__ == "__main__":
             in the file that correspond to this filter key",
     )
     parser.add_argument(
+        "--get_ep_meta_stats",
+        action='store_true',
+        help="verbose output",
+    )
+    parser.add_argument(
         "--verbose",
         action='store_true',
         help="verbose output",
@@ -125,6 +130,41 @@ if __name__ == "__main__":
 
         if not args.verbose:
             break
+
+    if args.get_ep_meta_stats:
+        obj_cat_counts = {}
+        layout_counts = {}
+        style_counts = {}
+        langs = []
+        for ep in demos:
+            ep_meta = json.loads(f["data/{}".format(ep)].attrs["ep_meta"])
+            langs.append(ep_meta["lang"])
+            obj_cfgs = ep_meta["object_cfgs"]
+            cat = None
+            for cfg in obj_cfgs:
+                if cfg["name"] == "obj":
+                    cat = cfg["info"]["cat"]
+                    break
+            if cat not in obj_cat_counts:
+                obj_cat_counts[cat] = 0
+            obj_cat_counts[cat] += 1
+
+            layout_id = ep_meta["layout_id"]
+            style_id = ep_meta["style_id"]
+            if layout_id not in layout_counts:
+                layout_counts[layout_id] = 0
+            if style_id not in style_counts:
+                style_counts[style_id] = 0
+            layout_counts[layout_id] += 1
+            style_counts[style_id] += 1
+
+        # for k, v in obj_cat_counts.items():
+        #     print(k, v)
+        print("obj cat counts:", obj_cat_counts)
+        print("layout_counts:", layout_counts)
+        print("style_counts:", style_counts)
+        print("num unique lang instructions:", len(set(langs)))
+        
 
     f.close()
 

@@ -529,6 +529,382 @@ class ResNet18Conv(ConvBase):
         header = '{}'.format(str(self.__class__.__name__))
         return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
 
+class FiLMLayer(ConvBase):
+    """
+    Uses Feature-wIse Linear Modulation to language condition a conv net
+    """
+    def __init__(
+        self,
+        lang_emb_dim,
+        channels,
+    ):
+        super(FiLMLayer, self).__init__()
+        # Linear layer with half outputs for beta and half for gamma
+        # Consider initializing to 0?
+        self.lang_proj = nn.Linear(lang_emb_dim, channels * 2)
+        self.relu = nn.ReLU()
+    
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        return input_shape
+
+    def forward(self, x, lang_emb):
+        B, C, H, W = x.shape
+        beta, gamma = torch.split(
+            self.lang_proj(lang_emb).reshape(B, C * 2, 1, 1), [C, C], 1
+        )
+        # The FiLM paper suggests modulating by 1 + dGamma instead of just gamma to avoid zeroing activations
+        x = (1 + gamma) * x + beta
+        return self.relu(x)
+
+class ResNet18ConvFiLM(ConvBase):
+    """
+    A ResNet18 block that can be used to process input images and uses FiLM for language conditioning.
+    """
+    def __init__(
+        self,
+        lang_emb_dim=768, # assume the CLIP embedding dimension by default
+        input_channel=3,
+        pretrained=False,
+        input_coord_conv=False,
+    ):
+        """
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer in ResNet to handle the number
+                of input channels.
+            pretrained (bool): if True, load pretrained weights for all ResNet layers.
+            input_coord_conv (bool): if True, use a coordinate convolution for the first layer
+                (a convolution where input channels are modified to encode spatial pixel location)
+        """
+        super(ResNet18ConvFiLM, self).__init__()
+        net = vision_models.resnet18(pretrained=pretrained)
+
+        if input_coord_conv:
+            net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif input_channel != 3:
+            net.conv1 = nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # cut the last fc layer
+        self._input_coord_conv = input_coord_conv
+        self._input_channel = input_channel
+        # self.nets = torch.nn.Sequential(*(list(net.children())[:-2]))
+
+        # Split up resnet into parts
+        layers = nn.ModuleList(net.children())
+        base_block = []
+        conv_blocks = []
+        for layer in layers:
+            if isinstance(layer, nn.Sequential):
+                for sub_layer in layer:
+                    conv_blocks.append(sub_layer)
+            elif len(conv_blocks) == 0:
+                base_block.append(layer)
+
+        self._base_block = nn.Sequential(*base_block)
+        self._conv_blocks = nn.ModuleList(conv_blocks)
+
+        film_layers = []
+        current_channels = self._base_block(torch.rand((1, input_channel, 3, 3))).shape[1]
+        for conv in conv_blocks:
+            current_channels = conv(torch.rand((1, current_channels, 3, 3))).shape[1]
+            film_layers.append(FiLMLayer(lang_emb_dim, current_channels))
+
+        self._film_layers = nn.ModuleList(film_layers)
+        self._output_channels = current_channels
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+        out_h = int(math.ceil(input_shape[1] / 32.))
+        out_w = int(math.ceil(input_shape[2] / 32.))
+        return [self._output_channels, out_h, out_w]
+
+    def forward(self, inputs, lang_emb):
+        x = self._base_block(inputs)
+        for conv, film in zip(self._conv_blocks, self._film_layers):
+            x = conv(x)
+            x = film(x, lang_emb)
+        
+        return x
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+
+
+class ResNet34ConvFiLM(ConvBase):
+    """
+    A ResNet18 block that can be used to process input images and uses FiLM for language conditioning.
+    """
+    def __init__(
+        self,
+        lang_emb_dim=768, # assume the CLIP embedding dimension by default
+        input_channel=3,
+        pretrained=False,
+        input_coord_conv=False,
+    ):
+        """
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer in ResNet to handle the number
+                of input channels.
+            pretrained (bool): if True, load pretrained weights for all ResNet layers.
+            input_coord_conv (bool): if True, use a coordinate convolution for the first layer
+                (a convolution where input channels are modified to encode spatial pixel location)
+        """
+        super(ResNet34ConvFiLM, self).__init__()
+        net = vision_models.resnet34(pretrained=pretrained)
+        
+        if input_coord_conv:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif input_channel != 3:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # cut the last fc layer
+        self._input_coord_conv = input_coord_conv
+        self._input_channel = input_channel
+        # self.nets = torch.nn.Sequential(*(list(net.children())[:-2]))
+
+        # Split up resnet into parts
+        layers = nn.ModuleList(net.children())
+        base_block = []
+        conv_blocks = []
+        for layer in layers:
+            if isinstance(layer, nn.Sequential):
+                for sub_layer in layer:
+                    conv_blocks.append(sub_layer)
+            elif len(conv_blocks) == 0:
+                base_block.append(layer)
+
+        self._base_block = nn.Sequential(*base_block)
+        self._conv_blocks = nn.ModuleList(conv_blocks)
+
+        film_layers = []
+        current_channels = self._base_block(torch.rand((1, input_channel, 3, 3))).shape[1]
+        for conv in conv_blocks:
+            current_channels = conv(torch.rand((1, current_channels, 3, 3))).shape[1]
+            film_layers.append(FiLMLayer(lang_emb_dim, current_channels))
+
+        self._film_layers = nn.ModuleList(film_layers)
+        self._output_channels = current_channels
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+        out_h = int(math.ceil(input_shape[1] / 32.))
+        out_w = int(math.ceil(input_shape[2] / 32.))
+        return [self._output_channels, out_h, out_w]
+
+    def forward(self, inputs, lang_emb):
+        x = self._base_block(inputs)
+        for conv, film in zip(self._conv_blocks, self._film_layers):
+            x = conv(x)
+            x = film(x, lang_emb)
+        
+        return x
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+
+
+class ResNet50ConvFiLM(ConvBase):
+    """
+    A ResNet18 block that can be used to process input images and uses FiLM for language conditioning.
+    """
+    def __init__(
+        self,
+        lang_emb_dim=768, # assume the CLIP embedding dimension by default
+        input_channel=3,
+        pretrained=False,
+        input_coord_conv=False,
+    ):
+        """
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer in ResNet to handle the number
+                of input channels.
+            pretrained (bool): if True, load pretrained weights for all ResNet layers.
+            input_coord_conv (bool): if True, use a coordinate convolution for the first layer
+                (a convolution where input channels are modified to encode spatial pixel location)
+        """
+        super(ResNet50ConvFiLM, self).__init__()
+        net = vision_models.resnet50(pretrained=pretrained)
+        
+        if input_coord_conv:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif input_channel != 3:
+            # copied from ResNet18Conv. TODO: check if sizes need to be changed
+            net.conv1 = nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # cut the last fc layer
+        self._input_coord_conv = input_coord_conv
+        self._input_channel = input_channel
+        # self.nets = torch.nn.Sequential(*(list(net.children())[:-2]))
+
+        # Split up resnet into parts
+        layers = nn.ModuleList(net.children())
+        base_block = []
+        conv_blocks = []
+        for layer in layers:
+            if isinstance(layer, nn.Sequential):
+                for sub_layer in layer:
+                    conv_blocks.append(sub_layer)
+            elif len(conv_blocks) == 0:
+                base_block.append(layer)
+
+        self._base_block = nn.Sequential(*base_block)
+        self._conv_blocks = nn.ModuleList(conv_blocks)
+
+        film_layers = []
+        current_channels = self._base_block(torch.rand((1, input_channel, 3, 3))).shape[1]
+        for conv in conv_blocks:
+            current_channels = conv(torch.rand((1, current_channels, 3, 3))).shape[1]
+            film_layers.append(FiLMLayer(lang_emb_dim, current_channels))
+
+        self._film_layers = nn.ModuleList(film_layers)
+        self._output_channels = current_channels
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+        out_h = int(math.ceil(input_shape[1] / 32.))
+        out_w = int(math.ceil(input_shape[2] / 32.))
+        return [self._output_channels, out_h, out_w]
+
+    def forward(self, inputs, lang_emb):
+        x = self._base_block(inputs)
+        for conv, film in zip(self._conv_blocks, self._film_layers):
+            x = conv(x)
+            x = film(x, lang_emb)
+        
+        return x
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+
+
+class ResNet18ConvCrossAttention(ConvBase):
+    """
+    A ResNet18 block that can be used to process input images and uses FiLM for language conditioning.
+    """
+    def __init__(
+        self,
+        lang_emb_dim,
+        input_channel=3,
+        pretrained=False,
+        input_coord_conv=False,
+    ):
+        """
+        Args:
+            input_channel (int): number of input channels for input images to the network.
+                If not equal to 3, modifies first conv layer in ResNet to handle the number
+                of input channels.
+            pretrained (bool): if True, load pretrained weights for all ResNet layers.
+            input_coord_conv (bool): if True, use a coordinate convolution for the first layer
+                (a convolution where input channels are modified to encode spatial pixel location)
+        """
+        super(ResNet18ConvCrossAttention, self).__init__()
+        net = vision_models.resnet18(pretrained=pretrained)
+
+        if input_coord_conv:
+            net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        elif input_channel != 3:
+            net.conv1 = nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # cut the last fc layer
+        self._input_coord_conv = input_coord_conv
+        self._input_channel = input_channel
+        self.nets = torch.nn.Sequential(*(list(net.children())[:-2]))
+
+        self.cross_attention = nn.MultiheadAttention(embed_dim=512, num_heads=8, kdim=768, vdim=768, batch_first=True)
+
+    def output_shape(self, input_shape):
+        """
+        Function to compute output shape from inputs to this module. 
+
+        Args:
+            input_shape (iterable of int): shape of input. Does not include batch dimension.
+                Some modules may not need this argument, if their output does not depend 
+                on the size of the input, or if they assume fixed size input.
+
+        Returns:
+            out_shape ([int]): list of integers corresponding to output shape
+        """
+        assert(len(input_shape) == 3)
+        out_h = int(math.ceil(input_shape[1] / 32.))
+        out_w = int(math.ceil(input_shape[2] / 32.))
+        return [512, out_h, out_w]
+
+    def forward(self, inputs, lang_emb):
+        x = super(ResNet18ConvCrossAttention, self).forward(inputs)
+
+        # Transform from N x 512 x 4 x 4 to N x 16 x 512
+        x = torch.flatten(x, start_dim=2)
+        x = torch.permute(x, (0, 2, 1))
+
+        lang_emb_3d = lang_emb[:, None, :]
+        x, y = self.cross_attention(x, lang_emb_3d, lang_emb_3d, need_weights=False)
+
+        # Transform from N x 16 x 512 to N x 512 x 4 x 4
+        x = torch.unflatten(x, dim=1, sizes=(4, 4))
+        x = torch.permute(x, (0, 3, 1, 2))
+
+        return x
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        return header + '(input_channel={}, input_coord_conv={})'.format(self._input_channel, self._input_coord_conv)
+
 
 class ResNet50Conv(ConvBase):
     """

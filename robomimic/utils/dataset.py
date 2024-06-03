@@ -6,16 +6,22 @@ import os
 import h5py
 import numpy as np
 import random
+import json
+import math
 from copy import deepcopy
 from contextlib import contextmanager
 from collections import OrderedDict
 
 import torch.utils.data
+import torch
 
 import robomimic.utils.tensor_utils as TensorUtils
+import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.action_utils as AcUtils
 import robomimic.utils.log_utils as LogUtils
+import robomimic.utils.lang_utils as LangUtils
+from robomimic.macros import LANG_EMB_KEY
 
 
 class SequenceDataset(torch.utils.data.Dataset):
@@ -38,6 +44,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         filter_by_attribute=None,
         load_next_obs=True,
         shuffled_obs_key_groups=None,
+        lang_encoder=None,
+        dataset_lang=None,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -89,6 +97,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             load_next_obs (bool): whether to load next_obs from the dataset
 
             shuffled_obs_key_groups (list): TODO
+
+            lang: TODO documentation
         """
         super(SequenceDataset, self).__init__()
 
@@ -112,6 +122,9 @@ class SequenceDataset(torch.utils.data.Dataset):
             self.dataset_keys = tuple(set(self.dataset_keys).union(set(self.action_keys)))
 
         self.action_config = action_config
+
+        # set up lang and language embedding
+        self.dataset_lang = dataset_lang # language for entire dataset
 
         self.n_frame_stack = frame_stack
         assert self.n_frame_stack >= 1
@@ -205,13 +218,28 @@ class SequenceDataset(torch.utils.data.Dataset):
         self._index_to_demo_id = dict()  # maps every index to a demo id
         self._demo_id_to_start_indices = dict()  # gives start index per demo id
         self._demo_id_to_demo_length = dict()
+        self._demo_id_to_demo_lang_str = dict() # language annotation per demo id
+        self._demo_id_to_demo_lang_emb = dict() # language embedding per demo id
 
         # determine index mapping
         self.total_num_sequences = 0
+        from tqdm import tqdm
         for ep in self.demos:
             demo_length = self.hdf5_file["data/{}".format(ep)].attrs["num_samples"]
             self._demo_id_to_start_indices[ep] = self.total_num_sequences
             self._demo_id_to_demo_length[ep] = demo_length
+
+            # get language string
+            if self.dataset_lang is not None:
+                self._demo_id_to_demo_lang_str[ep] = self.dataset_lang
+            else:
+                ep_meta = self.hdf5_file["data/{}".format(ep)].attrs.get("ep_meta", None)
+                if ep_meta is not None:
+                    ep_meta = json.loads(ep_meta)
+                    lang = ep_meta.get("lang", "dummy")
+                    if lang is not None:
+                        self._demo_id_to_demo_lang_str[ep] = lang
+            # print(self._demo_id_to_demo_lang_str[ep])
 
             num_sequences = demo_length
             # determine actual number of sequences taking into account whether to pad for frame_stack and seq_length
@@ -229,6 +257,23 @@ class SequenceDataset(torch.utils.data.Dataset):
             for _ in range(num_sequences):
                 self._index_to_demo_id[self.total_num_sequences] = ep
                 self.total_num_sequences += 1
+
+        device = TorchUtils.get_torch_device(try_to_use_cuda=True)
+        lang_encoder = LangUtils.LangEncoder(
+            device=device,
+        )
+        
+        if len(self._demo_id_to_demo_lang_str) > 0:
+            print("getting language embeddings...")
+            for ep_batch in tqdm(np.array_split(self.demos, int(math.ceil(len(self.demos) / 64)))):
+                # get language embedding
+                lang_batch = [self._demo_id_to_demo_lang_str[ep] for ep in ep_batch]
+                emb_batch = lang_encoder.get_lang_emb(lang_batch)
+                emb_batch = TensorUtils.to_numpy(emb_batch)
+                for batch_idx, ep in enumerate(ep_batch):
+                    self._demo_id_to_demo_lang_emb[ep] = emb_batch[batch_idx]
+
+        del lang_encoder
 
     @property
     def hdf5_file(self):
@@ -530,6 +575,14 @@ class SequenceDataset(torch.utils.data.Dataset):
         # also return the sampled index
         meta["index"] = index
 
+        if demo_id in self._demo_id_to_demo_lang_emb:
+            # language embedding
+            T = meta["actions"].shape[0]
+            meta["obs"][LANG_EMB_KEY] = np.tile(
+                self._demo_id_to_demo_lang_emb[demo_id],
+                (T, 1)
+            )
+
         return meta
 
     def get_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
@@ -704,6 +757,8 @@ class R2D2Dataset(SequenceDataset):
         self._index_to_demo_id = dict()  # maps every index to a demo id
         self._demo_id_to_start_indices = dict()  # gives start index per demo id
         self._demo_id_to_demo_length = dict()
+        self._demo_id_to_demo_lang_str = dict() # language annotation per demo id
+        self._demo_id_to_demo_lang_emb = dict() # language embedding per demo id
 
         # segment time stamps
         self._demo_id_to_segments = dict()
@@ -715,6 +770,18 @@ class R2D2Dataset(SequenceDataset):
         demo_length = self.hdf5_file["action/cartesian_velocity"].shape[0]
         self._demo_id_to_start_indices[ep] = self.total_num_sequences
         self._demo_id_to_demo_length[ep] = demo_length
+
+        # get language string
+        if self.dataset_lang is not None:
+            self._demo_id_to_demo_lang_str[ep] = self.dataset_lang
+        else:
+            ep_meta = self.hdf5_file["data/{}".format(ep)].attrs.get("ep_meta", None)
+            if ep_meta is not None:
+                ep_meta = json.loads(ep_meta)
+                lang = ep_meta.get("lang", "dummy")
+                if lang is not None:
+                    self._demo_id_to_demo_lang_str[ep] = lang
+        # print(self._demo_id_to_demo_lang_str[ep])
 
         # seperate demo into segments for better alignment
         gripper_actions = list(self.hdf5_file["action/gripper_position"])
@@ -746,6 +813,22 @@ class R2D2Dataset(SequenceDataset):
         for _ in range(num_sequences):
             self._index_to_demo_id[self.total_num_sequences] = ep
             self.total_num_sequences += 1
+
+        device = TorchUtils.get_torch_device(try_to_use_cuda=True)
+        lang_encoder = LangUtils.LangEncoder(
+            device=device,
+        )
+        
+        print("getting language embeddings...")
+        for ep_batch in np.array_split(self.demos, int(math.ceil(len(self.demos) / 64))):
+            # get language embedding
+            lang_batch = [self._demo_id_to_demo_lang_str[ep] for ep in ep_batch]
+            emb_batch = lang_encoder.get_lang_emb(lang_batch)
+            emb_batch = TensorUtils.to_numpy(emb_batch)
+            for batch_idx, ep in enumerate(ep_batch):
+                self._demo_id_to_demo_lang_emb[ep] = emb_batch[batch_idx]
+
+        del lang_encoder
 
     def load_dataset_in_memory(self, demo_list, hdf5_file, obs_keys, dataset_keys, load_next_obs):
         """
@@ -950,7 +1033,31 @@ class R2D2Dataset(SequenceDataset):
         # also return the sampled index
         meta["index"] = index
 
+        # language embedding
+        T = meta["actions"].shape[0]
+        if "demo_id" in self._demo_id_to_demo_lang_emb.keys():
+            meta["obs"][LANG_EMB_KEY] = np.tile(
+                self._demo_id_to_demo_lang_emb[demo_id],
+                (T, 1)
+            )
+
         return meta
+
+class CustomWeightedRandomSampler(torch.utils.data.WeightedRandomSampler):
+    """
+    WeightedRandomSampler except allows for more than 2^24 samples to be sampled
+    copied from https://github.com/pytorch/pytorch/issues/2576#issuecomment-831780307
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __iter__(self):
+        rand_tensor = np.random.choice(range(0, len(self.weights)),
+                                       size=self.num_samples,
+                                       p=self.weights.numpy() / torch.sum(self.weights).numpy(),
+                                       replace=self.replacement)
+        rand_tensor = torch.from_numpy(rand_tensor)
+        return iter(rand_tensor.tolist())
 
 
 class MetaDataset(torch.utils.data.Dataset):
@@ -959,7 +1066,6 @@ class MetaDataset(torch.utils.data.Dataset):
         datasets,
         ds_weights,
         normalize_weights_by_ds_size=False,
-        ds_labels=None,
     ):
         super(MetaDataset, self).__init__()
         self.datasets = datasets
@@ -974,20 +1080,6 @@ class MetaDataset(torch.utils.data.Dataset):
         # dataset will change after the datasets are already initialized
         for ds in self.datasets:
             assert ds.hdf5_cache_mode != "all"
-        
-        # compute ds_labels to one hot ids
-        if ds_labels is None:
-            self.ds_labels = ["dummy"]
-        else:
-            self.ds_labels = ds_labels
-
-        unique_labels = sorted(set(self.ds_labels))
-
-        self.ds_labels_to_ids = {}
-        for i, label in enumerate(sorted(unique_labels)):
-            one_hot_id = np.zeros(len(unique_labels))
-            one_hot_id[i] = 1.0
-            self.ds_labels_to_ids[label] = one_hot_id
 
         # TODO: comment
         action_stats = self.get_action_stats()
@@ -1003,8 +1095,6 @@ class MetaDataset(torch.utils.data.Dataset):
         ind_in_ds = idx - self._ds_ind_bins[ds_ind]
         meta = self.datasets[ds_ind].__getitem__(ind_in_ds)
         meta["index"] = idx
-        ds_label = self.ds_labels[ds_ind]
-        T = meta["actions"].shape[0]
         return meta
 
     def get_ds_label(self, idx):
@@ -1022,11 +1112,18 @@ class MetaDataset(torch.utils.data.Dataset):
         return str_output
 
     def get_dataset_sampler(self):
+        if np.all(np.array(self.ds_weights) == 1):
+            """
+            if all weights are 1, then no need to use weighted sampler
+            """
+            return None
+        
         weights = np.ones(len(self))
         for i, (start, end) in enumerate(zip(self._ds_ind_bins[:-1], self._ds_ind_bins[1:])):
             weights[start:end] = self.ds_weights[i]
 
-        sampler = torch.utils.data.WeightedRandomSampler(
+        # sampler = torch.utils.data.WeightedRandomSampler(
+        sampler = CustomWeightedRandomSampler(
             weights=weights,
             num_samples=len(self),
             replacement=True,

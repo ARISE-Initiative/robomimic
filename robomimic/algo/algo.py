@@ -22,6 +22,8 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.action_utils as AcUtils
 import robomimic.utils.vis_utils as VisUtils
+import robomimic.utils.lang_utils as LangUtils
+from robomimic.macros import LANG_EMB_KEY
 
 from torch.utils.data import DataLoader
 
@@ -160,6 +162,9 @@ class Algo(object):
             if "subgoal" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.subgoal.values() for obs_key in modality]:
                 self.subgoal_shapes[k] = obs_key_shapes[k]
 
+        if self.algo_config.language_conditioned:
+            self.obs_shapes[LANG_EMB_KEY] = [768] # clip is 768-dim embedding
+
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -174,24 +179,40 @@ class Algo(object):
         self.optimizers = dict()
         self.lr_schedulers = dict()
 
+        num_training_steps = self.global_config.train.num_epochs * self.global_config.experiment.epoch_every_n_steps
+
         for k in self.optim_params:
             # only make optimizers for networks that have been created - @optim_params may have more
             # settings for unused networks
             if k in self.nets:
                 if isinstance(self.nets[k], nn.ModuleList):
                     self.optimizers[k] = [
-                        TorchUtils.optimizer_from_optim_params(net_optim_params=self.optim_params[k], net=self.nets[k][i])
+                        TorchUtils.optimizer_from_optim_params(
+                            net_optim_params=self.optim_params[k],
+                            net=self.nets[k][i]
+                        )
                         for i in range(len(self.nets[k]))
                     ]
                     self.lr_schedulers[k] = [
-                        TorchUtils.lr_scheduler_from_optim_params(net_optim_params=self.optim_params[k], net=self.nets[k][i], optimizer=self.optimizers[k][i])
+                        TorchUtils.lr_scheduler_from_optim_params(
+                            net_optim_params=self.optim_params[k],
+                            net=self.nets[k][i],
+                            optimizer=self.optimizers[k][i],
+                            num_training_steps=num_training_steps,
+                        )
                         for i in range(len(self.nets[k]))
                     ]
                 else:
                     self.optimizers[k] = TorchUtils.optimizer_from_optim_params(
-                        net_optim_params=self.optim_params[k], net=self.nets[k])
+                        net_optim_params=self.optim_params[k],
+                        net=self.nets[k]
+                    )
                     self.lr_schedulers[k] = TorchUtils.lr_scheduler_from_optim_params(
-                        net_optim_params=self.optim_params[k], net=self.nets[k], optimizer=self.optimizers[k])
+                        net_optim_params=self.optim_params[k],
+                        net=self.nets[k],
+                        optimizer=self.optimizers[k],
+                        num_training_steps=num_training_steps,
+                    )
 
     def process_batch_for_training(self, batch):
         """
@@ -279,11 +300,13 @@ class Algo(object):
         """
         Called at the end of each epoch.
         """
-
-        # LR scheduling updates
-        for k in self.lr_schedulers:
-            if self.lr_schedulers[k] is not None:
-                self.lr_schedulers[k].step()
+        """
+        step through optimizers with every step of gradient descent instead
+        """
+        # # LR scheduling updates
+        # for k in self.lr_schedulers:
+        #     if self.lr_schedulers[k] is not None:
+        #         self.lr_schedulers[k].step()
 
     def set_eval(self):
         """
@@ -591,7 +614,7 @@ class RolloutPolicy(object):
     """
     Wraps @Algo object to make it easy to run policies in a rollout loop.
     """
-    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None):
+    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None, lang_encoder=None):
         """
         Args:
             policy (Algo instance): @Algo object to wrap to prepare for rollouts
@@ -604,26 +627,39 @@ class RolloutPolicy(object):
         self.policy = policy
         self.obs_normalization_stats = obs_normalization_stats
         self.action_normalization_stats = action_normalization_stats
+        self._ep_lang_emb = None
+        self.lang_encoder = lang_encoder
 
-    def start_episode(self):
+    def start_episode(self, lang=None):
         """
         Prepare the policy to start a new rollout.
         """
+        if self.lang_encoder is not None:
+            self._ep_lang_emb = TensorUtils.to_numpy(self.lang_encoder.get_lang_emb(lang))
         self.policy.set_eval()
         self.policy.reset()
 
-    def _prepare_observation(self, ob):
+    def _prepare_observation(self, ob, batched=False):
         """
         Prepare raw observation dict from environment for policy.
 
         Args:
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
+
+            batched (bool): whether the input is already batched
         """
         if self.obs_normalization_stats is not None:
             ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
+        assert batched is False
+        if self._ep_lang_emb is not None:
+            if len(ob["robot0_eef_pos"].shape) == 1:
+                ob["lang_emb"] = self._ep_lang_emb
+            else:
+                ob["lang_emb"] = np.repeat(self._ep_lang_emb[np.newaxis], len(ob["robot0_eef_pos"]), axis=0)
         ob = TensorUtils.to_tensor(ob)
-        ob = TensorUtils.to_batch(ob)
+        if not batched:
+            ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
         return ob
@@ -632,7 +668,7 @@ class RolloutPolicy(object):
         """Pretty print network description"""
         return self.policy.__repr__()
 
-    def __call__(self, ob, goal=None):
+    def __call__(self, ob, goal=None, batched=False):
         """
         Produce action from raw observation dict (and maybe goal dict) from environment.
 
@@ -640,12 +676,15 @@ class RolloutPolicy(object):
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
             goal (dict): goal observation
+            batched (bool): whether the input is already batched
         """
-        ob = self._prepare_observation(ob)
+        ob = self._prepare_observation(ob, batched=batched)
         if goal is not None:
-            goal = self._prepare_observation(goal)
+            goal = self._prepare_observation(goal, batched=batched)
         ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        ac = TensorUtils.to_numpy(ac[0])
+        if not batched:
+            ac = ac[0]
+        ac = TensorUtils.to_numpy(ac)
         if self.action_normalization_stats is not None:
             action_keys = self.policy.global_config.train.action_keys
             action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}

@@ -113,7 +113,10 @@ def playback_trajectory_with_env(
     assert not (render and write_video)
 
     # load the initial state
-    env.reset()
+    ## this reset call doesn't seem necessary.
+    ## seems ok to remove but haven't fully tested it.
+    ## removing for now
+    # env.reset()
     env.reset_to(initial_state)
 
     traj_len = states.shape[0]
@@ -173,11 +176,11 @@ def playback_trajectory_with_obs(
     assert image_names is not None, "error: must specify at least one image observation to use in @image_names"
     video_count = 0
 
-    traj_len = traj_grp["actions"].shape[0]
+    traj_len = traj_grp["obs/{}".format(image_names[0] + "_image")].shape[0]
     for i in range(traj_len):
         if video_count % video_skip == 0:
             # concatenate image obs together
-            im = [traj_grp["obs/{}".format(k)][i] for k in image_names]
+            im = [traj_grp["obs/{}".format(k + "_image")][i] for k in image_names]
             frame = np.concatenate(im, axis=1)
             video_writer.append_data(frame)
         video_count += 1
@@ -188,7 +191,11 @@ def playback_trajectory_with_obs(
 
 def playback_dataset(args):
     # some arg checking
-    write_video = (args.video_path is not None)
+    write_video = True #(args.video_path is not None)
+    if args.video_path is None:
+        args.video_path = args.dataset.split(".hdf5")[0] + ".mp4"
+        if args.use_actions:
+            args.video_path = args.dataset.split(".mp4")[0] + "_use_actions.mp4"
     assert not (args.render and write_video) # either on-screen or video but not both
 
     # Auto-fill camera rendering info if not specified
@@ -219,6 +226,7 @@ def playback_dataset(args):
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs=dummy_spec)
 
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=args.dataset)
+        # env_meta["env_kwargs"]["controller_configs"]["control_delta"] = False # absolute action space
         env = EnvUtils.create_env_from_metadata(env_meta=env_meta, render=args.render, render_offscreen=write_video)
 
         # some operations for playback are robosuite-specific, so determine if this environment is a robosuite env
@@ -230,10 +238,31 @@ def playback_dataset(args):
     if args.filter_key is not None:
         print("using filter key: {}".format(args.filter_key))
         demos = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(args.filter_key)])]
-    else:
+    elif "data" in f.keys():
         demos = list(f["data"].keys())
-    inds = np.argsort([int(elem[5:]) for elem in demos])
-    demos = [demos[i] for i in inds]
+    else:
+        demos = None
+
+    if demos is not None:
+        inds = np.argsort([int(elem[5:]) for elem in demos])
+        demos = [demos[i] for i in inds]
+    else:
+        """rendering for r2d2"""
+        assert args.use_obs
+        video_writer = None
+        if write_video:
+            video_writer = imageio.get_writer(args.video_path, fps=20)
+        playback_trajectory_with_obs(
+            traj_grp=f, 
+            video_writer=video_writer, 
+            video_skip=args.video_skip,
+            image_names=args.render_image_names,
+            first=args.first,
+        )
+        f.close()
+        if write_video:
+            video_writer.close()
+        return
     
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
@@ -266,11 +295,13 @@ def playback_dataset(args):
         initial_state = dict(states=states[0])
         if is_robosuite_env:
             initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
+            initial_state["ep_meta"] = f["data/{}".format(ep)].attrs.get("ep_meta", None)
 
         # supply actions if using open-loop action playback
         actions = None
         if args.use_actions:
             actions = f["data/{}/actions".format(ep)][()]
+            # actions = f["data/{}/actions_abs".format(ep)][()] # absolute actions
 
         playback_trajectory_with_env(
             env=env, 
@@ -352,7 +383,7 @@ if __name__ == "__main__":
         "--render_image_names",
         type=str,
         nargs='+',
-        default=None,
+        default=["robot0_agentview_left", "robot0_agentview_right", "robot0_eye_in_hand"],
         help="(optional) camera name(s) / image observation(s) to use for rendering on-screen or to video. Default is"
              "None, which corresponds to a predefined camera for each env type",
     )

@@ -37,6 +37,7 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.lang_utils as LangUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
@@ -68,54 +69,83 @@ def train(config, device):
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
 
-    # make sure the dataset exists
-    eval_dataset_cfg = config.train.data[0]
-    dataset_path = os.path.expanduser(eval_dataset_cfg["path"])
-    ds_format = config.train.data_format
-    if not os.path.exists(dataset_path):
-        raise Exception("Dataset at provided path {} not found!".format(dataset_path))
+    # extract the metadata and shape metadata across all datasets
+    env_meta_list = []
+    shape_meta_list = []
+    for dataset_cfg in config.train.data:
+        dataset_path = os.path.expanduser(dataset_cfg["path"])
+        ds_format = config.train.data_format
+        if not os.path.exists(dataset_path):
+            raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
-    # load basic metadata from training file
-    print("\n============= Loaded Environment Metadata =============")
-    env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+        # load basic metadata from training file
+        print("\n============= Loaded Environment Metadata =============")
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
 
-    # update env meta if applicable
-    from robomimic.utils.script_utils import deep_update
-    deep_update(env_meta, config.experiment.env_meta_update_dict)
+        # populate language instruction for env in env_meta
+        env_meta["env_lang"] = dataset_cfg.get("lang", None)
 
-    shape_meta = FileUtils.get_shape_metadata_from_dataset(
-        dataset_path=dataset_path,
-        action_keys=config.train.action_keys,
-        all_obs_keys=config.all_obs_keys,
-        ds_format=ds_format,
-        verbose=True
-    )
+        # update env meta if applicable
+        from robomimic.utils.script_utils import deep_update
+        deep_update(env_meta, dataset_cfg.get("env_meta_update_dict", {}))
+        deep_update(env_meta, config.experiment.env_meta_update_dict)
+        env_meta_list.append(env_meta)
+
+        shape_meta = FileUtils.get_shape_metadata_from_dataset(
+            dataset_path=dataset_path,
+            action_keys=config.train.action_keys,
+            all_obs_keys=config.all_obs_keys,
+            ds_format=ds_format,
+            verbose=True
+        )
+        shape_meta_list.append(shape_meta)
 
     if config.experiment.env is not None:
         env_meta["env_name"] = config.experiment.env
         print("=" * 30 + "\n" + "Replacing Env to {}\n".format(env_meta["env_name"]) + "=" * 30)
 
-    # create environment
-    envs = OrderedDict()
-    if config.experiment.rollout.enabled:
-        # create environments for validation runs
-        env_names = [env_meta["env_name"]]
+    eval_env_meta_list = []
+    eval_shape_meta_list = []
+    eval_env_name_list = []
+    eval_env_horizon_list = []
+    for (dataset_i, dataset_cfg) in enumerate(config.train.data):
+        do_eval = dataset_cfg.get("do_eval", True)
+        if do_eval is not True:
+            continue
+        eval_env_meta_list.append(env_meta_list[dataset_i])
+        eval_shape_meta_list.append(shape_meta_list[dataset_i])
+        eval_env_name_list.append(env_meta_list[dataset_i]["env_name"])
+        horizon = dataset_cfg.get("horizon", config.experiment.rollout.horizon)
+        eval_env_horizon_list.append(horizon)
+    
+    # create environments
+    def env_iterator():
+        for (env_meta, shape_meta, env_name) in zip(eval_env_meta_list, eval_shape_meta_list, eval_env_name_list):
+            def create_env_helper(env_i=0):
+                env_kwargs = dict(
+                    env_meta=env_meta,
+                    env_name=env_name,
+                    render=False,
+                    render_offscreen=config.experiment.render_video,
+                    use_image_obs=shape_meta["use_images"],
+                    seed=config.train.seed * 1000 + env_i,
+                )
+                env = EnvUtils.create_env_from_metadata(**env_kwargs)
+                # handle environment wrappers
+                env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
 
-        if config.experiment.additional_envs is not None:
-            for name in config.experiment.additional_envs:
-                env_names.append(name)
+                return env
 
-        for env_name in env_names:
-            env = EnvUtils.create_env_from_metadata(
-                env_meta=env_meta,
-                env_name=env_name, 
-                render=False, 
-                render_offscreen=config.experiment.render_video,
-                use_image_obs=shape_meta["use_images"], 
-            )
-            env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
-            envs[env.name] = env
-            print(envs[env.name])
+            if config.experiment.rollout.batched:
+                from tianshou.env import SubprocVectorEnv
+                env_fns = [lambda env_i=i: create_env_helper(env_i) for i in range(config.experiment.rollout.num_batch_envs)]
+                env = SubprocVectorEnv(env_fns)
+                # env_name = env.get_env_attr(key="name", id=0)[0]
+            else:
+                env = create_env_helper()
+                # env_name = env.name
+            print(env)
+            yield env
 
     print("")
 
@@ -129,8 +159,8 @@ def train(config, device):
     model = algo_factory(
         algo_name=config.algo_name,
         config=config,
-        obs_key_shapes=shape_meta["all_shapes"],
-        ac_dim=shape_meta["ac_dim"],
+        obs_key_shapes=shape_meta_list[0]["all_shapes"],
+        ac_dim=shape_meta_list[0]["ac_dim"],
         device=device,
     )
     
@@ -151,8 +181,11 @@ def train(config, device):
     print("")
 
     # load training data
+    lang_encoder = LangUtils.LangEncoder(
+        device=device,
+    )
     trainset, validset = TrainUtils.load_data_for_training(
-        config, obs_keys=shape_meta["all_obs_keys"])
+        config, obs_keys=shape_meta["all_obs_keys"], lang_encoder=lang_encoder)
     train_sampler = trainset.get_dataset_sampler()
     print("\n============= Training Dataset =============")
     print(trainset)
@@ -204,90 +237,95 @@ def train(config, device):
 
     # main training loop
     best_valid_loss = None
-    best_return = {k: -np.inf for k in envs} if config.experiment.rollout.enabled else None
-    best_success_rate = {k: -1. for k in envs} if config.experiment.rollout.enabled else None
+    best_return = {k: -np.inf for k in eval_env_name_list} if config.experiment.rollout.enabled else None
+    best_success_rate = {k: -1. for k in eval_env_name_list} if config.experiment.rollout.enabled else None
     last_ckpt_time = time.time()
 
     # number of learning steps per epoch (defaults to a full dataset pass)
     train_num_steps = config.experiment.epoch_every_n_steps
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
 
-    for epoch in range(1, config.train.num_epochs + 1): # epoch numbers start at 1
-        step_log = TrainUtils.run_epoch(
-            model=model,
-            data_loader=train_loader,
-            epoch=epoch,
-            num_steps=train_num_steps,
-            obs_normalization_stats=obs_normalization_stats,
-        )
-        model.on_epoch_end(epoch)
+    for epoch in range(0, config.train.num_epochs + 1): # epoch numbers start at 1
+        if epoch > 0:
+            step_log = TrainUtils.run_epoch(
+                model=model,
+                data_loader=train_loader,
+                epoch=epoch,
+                num_steps=train_num_steps,
+                obs_normalization_stats=obs_normalization_stats,
+            )
+            model.on_epoch_end(epoch)
 
-        # setup checkpoint path
-        epoch_ckpt_name = "model_epoch_{}".format(epoch)
+            # setup checkpoint path
+            epoch_ckpt_name = "model_epoch_{}".format(epoch)
 
-        # check for recurring checkpoint saving conditions
-        should_save_ckpt = False
-        if config.experiment.save.enabled:
-            time_check = (config.experiment.save.every_n_seconds is not None) and \
-                (time.time() - last_ckpt_time > config.experiment.save.every_n_seconds)
-            epoch_check = (config.experiment.save.every_n_epochs is not None) and \
-                (epoch > 0) and (epoch % config.experiment.save.every_n_epochs == 0)
-            epoch_list_check = (epoch in config.experiment.save.epochs)
-            should_save_ckpt = (time_check or epoch_check or epoch_list_check)
-        ckpt_reason = None
-        if should_save_ckpt:
-            last_ckpt_time = time.time()
-            ckpt_reason = "time"
+            # check for recurring checkpoint saving conditions
+            should_save_ckpt = False
+            if config.experiment.save.enabled:
+                time_check = (config.experiment.save.every_n_seconds is not None) and \
+                    (time.time() - last_ckpt_time > config.experiment.save.every_n_seconds)
+                epoch_check = (config.experiment.save.every_n_epochs is not None) and \
+                    (epoch > 0) and (epoch % config.experiment.save.every_n_epochs == 0)
+                epoch_list_check = (epoch in config.experiment.save.epochs)
+                should_save_ckpt = (time_check or epoch_check or epoch_list_check)
+            ckpt_reason = None
+            if should_save_ckpt:
+                last_ckpt_time = time.time()
+                ckpt_reason = "time"
 
-        print("Train Epoch {}".format(epoch))
-        print(json.dumps(step_log, sort_keys=True, indent=4))
-        for k, v in step_log.items():
-            if k.startswith("Time_"):
-                data_logger.record("Timing_Stats/Train_{}".format(k[5:]), v, epoch)
-            else:
-                data_logger.record("Train/{}".format(k), v, epoch)
-
-        # Evaluate the model on validation set
-        if config.experiment.validate:
-            with torch.no_grad():
-                step_log = TrainUtils.run_epoch(model=model, data_loader=valid_loader, epoch=epoch, validate=True, num_steps=valid_num_steps)
+            print("Train Epoch {}".format(epoch))
+            print(json.dumps(step_log, sort_keys=True, indent=4))
             for k, v in step_log.items():
                 if k.startswith("Time_"):
-                    data_logger.record("Timing_Stats/Valid_{}".format(k[5:]), v, epoch)
+                    data_logger.record("Timing_Stats/Train_{}".format(k[5:]), v, epoch)
                 else:
-                    data_logger.record("Valid/{}".format(k), v, epoch)
+                    data_logger.record("Train/{}".format(k), v, epoch)
 
-            print("Validation Epoch {}".format(epoch))
-            print(json.dumps(step_log, sort_keys=True, indent=4))
+            # Evaluate the model on validation set
+            if config.experiment.validate:
+                with torch.no_grad():
+                    step_log = TrainUtils.run_epoch(model=model, data_loader=valid_loader, epoch=epoch, validate=True, num_steps=valid_num_steps)
+                for k, v in step_log.items():
+                    if k.startswith("Time_"):
+                        data_logger.record("Timing_Stats/Valid_{}".format(k[5:]), v, epoch)
+                    else:
+                        data_logger.record("Valid/{}".format(k), v, epoch)
 
-            # save checkpoint if achieve new best validation loss
-            valid_check = "Loss" in step_log
-            if valid_check and (best_valid_loss is None or (step_log["Loss"] <= best_valid_loss)):
-                best_valid_loss = step_log["Loss"]
-                if config.experiment.save.enabled and config.experiment.save.on_best_validation:
-                    epoch_ckpt_name += "_best_validation_{}".format(best_valid_loss)
-                    should_save_ckpt = True
-                    ckpt_reason = "valid" if ckpt_reason is None else ckpt_reason
+                print("Validation Epoch {}".format(epoch))
+                print(json.dumps(step_log, sort_keys=True, indent=4))
+
+                # save checkpoint if achieve new best validation loss
+                valid_check = "Loss" in step_log
+                if valid_check and (best_valid_loss is None or (step_log["Loss"] <= best_valid_loss)):
+                    best_valid_loss = step_log["Loss"]
+                    if config.experiment.save.enabled and config.experiment.save.on_best_validation:
+                        epoch_ckpt_name += "_best_validation_{}".format(best_valid_loss)
+                        should_save_ckpt = True
+                        ckpt_reason = "valid" if ckpt_reason is None else ckpt_reason
+        else:
+            should_save_ckpt = False
+            epoch_ckpt_name = "model_epoch_{}".format(epoch)
+            ckpt_reason = None
 
         # Evaluate the model by by running rollouts
 
         # do rollouts at fixed rate or if it's time to save a new ckpt
         video_paths = None
-        rollout_check = (epoch % config.experiment.rollout.rate == 0) or (should_save_ckpt and ckpt_reason == "time")
+        rollout_check = (epoch % config.experiment.rollout.rate == 0) #or (should_save_ckpt and ckpt_reason == "time") # remove this section condition, not desired when rollouts are expensive and saving frequent checkpoints
         if config.experiment.rollout.enabled and (epoch > config.experiment.rollout.warmstart) and rollout_check:
-
             # wrap model as a RolloutPolicy to prepare for rollouts
             rollout_model = RolloutPolicy(
                 model,
                 obs_normalization_stats=obs_normalization_stats,
                 action_normalization_stats=action_normalization_stats,
+                lang_encoder=lang_encoder,
             )
 
             num_episodes = config.experiment.rollout.n
             all_rollout_logs, video_paths = TrainUtils.rollout_with_stats(
                 policy=rollout_model,
-                envs=envs,
-                horizon=config.experiment.rollout.horizon,
+                envs=env_iterator(),
+                horizon=eval_env_horizon_list,
                 use_goals=config.use_goals,
                 num_episodes=num_episodes,
                 render=False,
@@ -295,20 +333,23 @@ def train(config, device):
                 epoch=epoch,
                 video_skip=config.experiment.get("video_skip", 5),
                 terminate_on_success=config.experiment.rollout.terminate_on_success,
+                del_envs_after_rollouts=True,
+                data_logger=data_logger,
             )
 
-            # summarize results from rollouts to tensorboard and terminal
-            for env_name in all_rollout_logs:
-                rollout_logs = all_rollout_logs[env_name]
-                for k, v in rollout_logs.items():
-                    if k.startswith("Time_"):
-                        data_logger.record("Timing_Stats/Rollout_{}_{}".format(env_name, k[5:]), v, epoch)
-                    else:
-                        data_logger.record("Rollout/{}/{}".format(k, env_name), v, epoch, log_stats=True)
+            #### move this code to rollout_with_stats function to log results one by one ####
+            # # summarize results from rollouts to tensorboard and terminal
+            # for env_name in all_rollout_logs:
+            #     rollout_logs = all_rollout_logs[env_name]
+            #     for k, v in rollout_logs.items():
+            #         if k.startswith("Time_"):
+            #             data_logger.record("Timing_Stats/Rollout_{}_{}".format(env_name, k[5:]), v, epoch)
+            #         else:
+            #             data_logger.record("Rollout/{}/{}".format(k, env_name), v, epoch, log_stats=True)
 
-                print("\nEpoch {} Rollouts took {}s (avg) with results:".format(epoch, rollout_logs["time"]))
-                print('Env: {}'.format(env_name))
-                print(json.dumps(rollout_logs, sort_keys=True, indent=4))
+            #     print("\nEpoch {} Rollouts took {}s (avg) with results:".format(epoch, rollout_logs["time"]))
+            #     print('Env: {}'.format(env_name))
+            #     print(json.dumps(rollout_logs, sort_keys=True, indent=4))
 
             # checkpoint and video saving logic
             updated_stats = TrainUtils.should_save_from_rollout_logs(
@@ -355,11 +396,11 @@ def train(config, device):
             print("MSE Log Epoch {}".format(epoch))
             print(json.dumps(mse_log, sort_keys=True, indent=4))
         
-        # Only keep saved videos if the ckpt should be saved (but not because of validation score)
-        should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
-        if video_paths is not None and not should_save_video:
-            for env_name in video_paths:
-                os.remove(video_paths[env_name])
+        # # Only keep saved videos if the ckpt should be saved (but not because of validation score)
+        # should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
+        # if video_paths is not None and not should_save_video:
+        #     for env_name in video_paths:
+        #         os.remove(video_paths[env_name])
 
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    

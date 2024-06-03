@@ -41,7 +41,17 @@ class ConfigGenerator(object):
         assert isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
-    def add_param(self, key, name, group, values, value_names=None, hidename=False, prepend=False):
+    def add_param(
+            self,
+            key,
+            name,
+            group,
+            values=None,
+            value_names=None,
+            values_and_names=None,
+            hidename=False,
+            prepend=False
+        ):
         """
         Add parameter to the hyperparameter sweep.
 
@@ -60,8 +70,15 @@ class ConfigGenerator(object):
                 each value, instead of the parameter value. This is helpful for parameters
                 that may have long or large values (for example, dataset path).
         """
+        if values is None:
+            assert (values_and_names is not None) and (value_names is None)
+        else:
+            assert values_and_names is None
         if value_names is not None:
             assert len(values) == len(value_names)
+        if values_and_names is not None:
+            values = [v for (v, n) in values_and_names]
+            value_names = [n for (v, n) in values_and_names]
         self.parameters[key] = argparse.Namespace(
             key=key, 
             name=name, 

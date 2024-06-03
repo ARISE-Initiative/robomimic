@@ -11,6 +11,7 @@ import json
 import h5py
 import imageio
 import numpy as np
+import traceback
 from copy import deepcopy
 from collections import OrderedDict
 
@@ -25,6 +26,7 @@ from robomimic.utils.dataset import SequenceDataset, R2D2Dataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
+from tianshou.env import SubprocVectorEnv
 
 
 def get_exp_dir(config, auto_remove_exp_dir=False):
@@ -85,7 +87,7 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     return log_dir, output_dir, video_dir, vis_dir
 
 
-def load_data_for_training(config, obs_keys):
+def load_data_for_training(config, obs_keys, lang_encoder=None):
     """
     Data loading at the start of an algorithm.
 
@@ -121,16 +123,28 @@ def load_data_for_training(config, obs_keys):
         )
         assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
             "validation demonstrations!"
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
-        valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
+        train_dataset = dataset_factory(
+            config, obs_keys,
+            filter_by_attribute=train_filter_by_attribute,
+            lang_encoder=lang_encoder,
+        )
+        valid_dataset = dataset_factory(
+            config, obs_keys,
+            filter_by_attribute=valid_filter_by_attribute,
+            lang_encoder=lang_encoder,
+        )
     else:
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
+        train_dataset = dataset_factory(
+            config, obs_keys,
+            filter_by_attribute=train_filter_by_attribute,
+            lang_encoder=lang_encoder,
+        )
         valid_dataset = None
 
     return train_dataset, valid_dataset
 
 
-def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=None):
+def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=None, lang_encoder=None):
     """
     Create a SequenceDataset instance to pass to a torch DataLoader.
 
@@ -170,12 +184,13 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
         filter_by_attribute=filter_by_attribute,
         shuffled_obs_key_groups=config.train.shuffled_obs_key_groups,
+        lang_encoder=lang_encoder,
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
-    ds_kwargs["filter_by_attribute"] = [filter_by_attribute for ds_cfg in config.train.data]
+    ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
-    ds_labels = [ds_cfg.get("label", "dummy") for ds_cfg in config.train.data]
+    ds_langs = [ds_cfg.get("lang", None) for ds_cfg in config.train.data]
 
     meta_ds_kwargs = dict()
 
@@ -183,7 +198,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         ds_class=R2D2Dataset if config.train.data_format == "r2d2" else SequenceDataset,
         ds_kwargs=ds_kwargs,
         ds_weights=ds_weights,
-        ds_labels=ds_labels,
+        ds_langs=ds_langs,
         normalize_weights_by_ds_size=False,
         meta_ds_class=MetaDataset,
         meta_ds_kwargs=meta_ds_kwargs,
@@ -196,7 +211,7 @@ def get_dataset(
     ds_class,
     ds_kwargs,
     ds_weights,
-    ds_labels,
+    ds_langs,
     normalize_weights_by_ds_size,
     meta_ds_class=MetaDataset,
     meta_ds_kwargs=None,
@@ -210,6 +225,8 @@ def get_dataset(
 
         for k in keys:
             ds_kwargs_copy[k] = ds_kwargs[k][i]
+
+        ds_kwargs_copy["dataset_lang"] = ds_langs[i]
         
         ds_list.append(ds_class(**ds_kwargs_copy))
     
@@ -221,12 +238,23 @@ def get_dataset(
         ds = meta_ds_class(
             datasets=ds_list,
             ds_weights=ds_weights,
-            ds_labels=ds_labels,
             normalize_weights_by_ds_size=normalize_weights_by_ds_size,
             **meta_ds_kwargs
         )
 
     return ds
+
+
+def batchify_obs(obs_list):
+    """
+    TODO: add comments
+    """
+    keys = list(obs_list[0].keys())
+    obs = {
+        k: np.stack([obs_list[i][k] for i in range(len(obs_list))]) for k in keys
+    }
+    
+    return obs
 
 
 def run_rollout(
@@ -264,11 +292,13 @@ def run_rollout(
         results (dict): dictionary containing return, success rate, etc.
     """
     assert isinstance(policy, RolloutPolicy)
-    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper)
+    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper) or isinstance(env, SubprocVectorEnv)
 
-    policy.start_episode()
+    batched = isinstance(env, SubprocVectorEnv)
 
     ob_dict = env.reset()
+    policy.start_episode(lang=env._ep_lang_str)
+
     goal_dict = None
     if use_goals:
         # retrieve goal from the environment
@@ -277,52 +307,151 @@ def run_rollout(
     results = {}
     video_count = 0  # video frame counter
 
-    total_reward = 0.
-    success = { k: False for k in env.is_success() } # success metrics
+    rews = []
+    success = None #{ k: False for k in env.is_success() } # success metrics
 
-    try:
-        for step_i in range(horizon):
+    if batched:
+        end_step = [None for _ in range(len(env))]
+    else:
+        end_step = None
 
-            # get action from policy
-            ac = policy(ob=ob_dict, goal=goal_dict)
+    if batched:
+        video_frames = [[] for _ in range(len(env))]
+    else:
+        video_frames = []
+    
+    for step_i in range(horizon): #LogUtils.tqdm(range(horizon)):
+        # get action from policy
+        if batched:
+            policy_ob = batchify_obs(ob_dict)
+            ac = policy(ob=policy_ob, goal=goal_dict, batched=True) #, return_ob=True)
+        else:
+            policy_ob = ob_dict
+            ac = policy(ob=policy_ob, goal=goal_dict) #, return_ob=True)
 
-            # play action
-            ob_dict, r, done, _ = env.step(ac)
+        # play action
+        ob_dict, r, done, info = env.step(ac)
 
-            # render to screen
-            if render:
-                env.render(mode="human")
+        # render to screen
+        if render:
+            env.render(mode="human")
 
-            # compute reward
-            total_reward += r
+        # compute reward
+        rews.append(r)
 
-            cur_success_metrics = env.is_success()
+        # cur_success_metrics = env.is_success()
+        if batched:
+            cur_success_metrics = TensorUtils.list_of_flat_dict_to_dict_of_list([info[i]["is_success"] for i in range(len(info))])
+            cur_success_metrics = {k: np.array(v) for (k, v) in cur_success_metrics.items()}
+        else:
+            cur_success_metrics = info["is_success"]
+
+        if success is None:
+            success = deepcopy(cur_success_metrics)
+        else:
             for k in success:
-                success[k] = success[k] or cur_success_metrics[k]
+                success[k] = success[k] | cur_success_metrics[k]
 
-            # visualization
-            if video_writer is not None:
-                if video_count % video_skip == 0:
-                    video_img = env.render(mode="rgb_array", height=512, width=512)
-                    video_writer.append_data(video_img)
+        # visualization
+        if video_writer is not None:
+            if video_count % video_skip == 0:
+                if batched:
+                    # frames = env.render(mode="rgb_array", height=video_height, width=video_width)
+                    
+                    frames = []
+                    policy_ob = deepcopy(policy_ob)
+                    for env_i in range(len(env)):
+                        cam_imgs = []
+                        for im_name in ["robot0_agentview_left_image", "robot0_agentview_right_image", "robot0_eye_in_hand_image"]:
+                            im = TensorUtils.to_numpy(
+                                policy_ob[im_name][env_i, -1]
+                            )
+                            im = np.transpose(im, (1, 2, 0))
+                            if policy_ob.get("ret", None) is not None:
+                                im_ret = TensorUtils.to_numpy(
+                                    policy_ob["ret"]["obs"][im_name][env_i,:,-1]
+                                )
+                                im_ret = np.transpose(im_ret, (0, 2, 3, 1))
+                                im = np.concatenate((im, *im_ret), axis=0)
+                            cam_imgs.append(im)
+                        frame = np.concatenate(cam_imgs, axis=1)
+                        frame = (frame * 255.0).astype(np.uint8)
+                        frames.append(frame)
+                    
+                    for env_i in range(len(env)):
+                        frame = frames[env_i]
+                        video_frames[env_i].append(frame)
+                else:
+                    frame = env.render(mode="rgb_array", height=512, width=512)
+                    
+                    # cam_imgs = []
+                    # for im_name in ["robot0_eye_in_hand_image", "robot0_agentview_right_image", "robot0_agentview_left_image"]:
+                    #     im_input = TensorUtils.to_numpy(
+                    #         policy_ob_dict[im_name][0,-1]
+                    #     )
+                    #     im_ret = TensorUtils.to_numpy(
+                    #         policy_ob_dict["ret"]["obs"][im_name][0,:,-1]
+                    #     )
+                    #     im_input = np.transpose(im_input, (1, 2, 0))
+                    #     im_input = add_border_to_frame(im_input, border_size=3, color="black")
+                    #     im_ret = np.transpose(im_ret, (0, 2, 3, 1))
+                    #     im = np.concatenate((im_input, *im_ret), axis=1)
+                    #     cam_imgs.append(im)
 
-                video_count += 1
+                    # frame = np.concatenate(cam_imgs, axis=0)
+                    video_frames.append(frame)
 
-            # break if done
+            video_count += 1
+
+        # break if done
+        if batched:
+            for env_i in range(len(env)):
+                if end_step[env_i] is not None:
+                    continue
+                
+                if done[env_i] or (terminate_on_success and success["task"][env_i]):
+                    end_step[env_i] = step_i
+        else:
             if done or (terminate_on_success and success["task"]):
+                end_step = step_i
                 break
 
-    except env.rollout_exceptions as e:
-        print("WARNING: got rollout exception {}".format(e))
 
-    results["Return"] = total_reward
-    results["Horizon"] = step_i + 1
-    results["Success_Rate"] = float(success["task"])
+    if video_writer is not None:
+        if batched:
+            for env_i in range(len(video_frames)):
+                for frame in video_frames[env_i]:
+                    video_writer.append_data(frame)
+        else:
+            for frame in video_frames:
+                video_writer.append_data(frame)
+
+    if batched:
+        total_reward = np.zeros(len(env))
+        rews = np.array(rews)
+        for env_i in range(len(env)):
+            end_step_env_i = end_step[env_i] or step_i
+            total_reward[env_i] = np.sum(rews[:end_step_env_i+1, env_i])
+            end_step[env_i] = end_step_env_i
+        
+        results["Return"] = total_reward
+        results["Horizon"] = np.array(end_step) + 1
+        results["Success_Rate"] = success["task"].astype(float)
+    else:
+        end_step = end_step or step_i
+        total_reward = np.sum(rews[:end_step + 1])
+        
+        results["Return"] = total_reward
+        results["Horizon"] = end_step + 1
+        results["Success_Rate"] = float(success["task"])
 
     # log additional success metrics
     for k in success:
         if k != "task":
-            results["{}_Success_Rate".format(k)] = float(success[k])
+            if batched:
+                results["{}_Success_Rate".format(k)] = success[k].astype(float)
+            else:
+                results["{}_Success_Rate".format(k)] = float(success[k])
 
     return results
 
@@ -340,6 +469,8 @@ def rollout_with_stats(
         video_skip=5,
         terminate_on_success=False,
         verbose=False,
+        del_envs_after_rollouts=False,
+        data_logger=None,
     ):
     """
     A helper function used in the train loop to conduct evaluation rollouts per environment
@@ -387,50 +518,76 @@ def rollout_with_stats(
     # handle paths and create writers for video writing
     assert (video_path is None) or (video_dir is None), "rollout_with_stats: can't specify both video path and dir"
     write_video = (video_path is not None) or (video_dir is not None)
-    video_paths = OrderedDict()
-    video_writers = OrderedDict()
-    if video_path is not None:
-        # a single video is written for all envs
-        video_paths = { k : video_path for k in envs }
-        video_writer = imageio.get_writer(video_path, fps=20)
-        video_writers = { k : video_writer for k in envs }
-    if video_dir is not None:
-        # video is written per env
-        video_str = "_epoch_{}.mp4".format(epoch) if epoch is not None else ".mp4" 
-        video_paths = { k : os.path.join(video_dir, "{}{}".format(k, video_str)) for k in envs }
-        video_writers = { k : imageio.get_writer(video_paths[k], fps=20) for k in envs }
 
-    for env_name, env in envs.items():
+    if isinstance(horizon, list):
+        horizon_list = horizon
+    else:
+        horizon_list = [horizon]
+
+    for env, horizon in zip(envs, horizon_list):
+        batched = isinstance(env, SubprocVectorEnv)
+
+        if batched:
+            env_name = env.get_env_attr(key="name", id=0)[0]
+        else:
+            env_name = env.name
+
+        if video_dir is not None:
+            # video is written per env
+            video_str = "_epoch_{}.mp4".format(epoch) if epoch is not None else ".mp4" 
+            video_path = os.path.join(video_dir, "{}{}".format(env_name, video_str))
+            video_writer = imageio.get_writer(video_path, fps=20)
+            
         env_video_writer = None
         if write_video:
-            print("video writes to " + video_paths[env_name])
-            env_video_writer = video_writers[env_name]
+            print("video writes to " + video_path)
+            env_video_writer = imageio.get_writer(video_path, fps=20)
 
         print("rollout: env={}, horizon={}, use_goals={}, num_episodes={}".format(
-            env.name, horizon, use_goals, num_episodes,
+            env_name, horizon, use_goals, num_episodes,
         ))
         rollout_logs = []
-        iterator = range(num_episodes)
+        if batched:
+            iterator = range(0, num_episodes, len(env))
+        else:
+            iterator = range(num_episodes)
         if not verbose:
             iterator = LogUtils.custom_tqdm(iterator, total=num_episodes)
 
         num_success = 0
         for ep_i in iterator:
             rollout_timestamp = time.time()
-            rollout_info = run_rollout(
-                policy=policy,
-                env=env,
-                horizon=horizon,
-                render=render,
-                use_goals=use_goals,
-                video_writer=env_video_writer,
-                video_skip=video_skip,
-                terminate_on_success=terminate_on_success,
-            )
-            rollout_info["time"] = time.time() - rollout_timestamp
-            rollout_logs.append(rollout_info)
-            num_success += rollout_info["Success_Rate"]
+            try:
+                rollout_info = run_rollout(
+                    policy=policy,
+                    env=env,
+                    horizon=horizon,
+                    render=render,
+                    use_goals=use_goals,
+                    video_writer=env_video_writer,
+                    video_skip=video_skip,
+                    terminate_on_success=terminate_on_success,
+                )
+            except Exception as e:
+                print("Rollout exception at episode number {}!".format(ep_i))
+                print(traceback.format_exc())
+                break
+            
+            if batched:
+                rollout_info["time"] = [(time.time() - rollout_timestamp) / len(env)] * len(env)
+
+                for env_i in range(len(env)):
+                    rollout_logs.append({k: rollout_info[k][env_i] for k in rollout_info})
+                num_success += np.sum(rollout_info["Success_Rate"])
+            else:
+                rollout_info["time"] = time.time() - rollout_timestamp
+
+                rollout_logs.append(rollout_info)
+                num_success += rollout_info["Success_Rate"]
+            
             if verbose:
+                if batched:
+                    raise NotImplementedError
                 print("Episode {}, horizon={}, num_success={}".format(ep_i + 1, horizon, num_success))
                 print(json.dumps(rollout_info, sort_keys=True, indent=4))
 
@@ -439,16 +596,36 @@ def rollout_with_stats(
             env_video_writer.close()
 
         # average metric across all episodes
-        rollout_logs = dict((k, [rollout_logs[i][k] for i in range(len(rollout_logs))]) for k in rollout_logs[0])
-        rollout_logs_mean = dict((k, np.mean(v)) for k, v in rollout_logs.items())
-        rollout_logs_mean["Time_Episode"] = np.sum(rollout_logs["time"]) / 60. # total time taken for rollouts in minutes
-        all_rollout_logs[env_name] = rollout_logs_mean
+        if len(rollout_logs) > 0:
+            rollout_logs = dict((k, [rollout_logs[i][k] for i in range(len(rollout_logs))]) for k in rollout_logs[0])
+            rollout_logs_mean = dict((k, np.mean(v)) for k, v in rollout_logs.items())
+            rollout_logs_mean["Time_Episode"] = np.sum(rollout_logs["time"]) / 60. # total time taken for rollouts in minutes
+            all_rollout_logs[env_name] = rollout_logs_mean
+        else:
+            all_rollout_logs[env_name] = {"Time_Episode": -1, "Return": -1, "Success_Rate": -1, "time": -1}
+
+        if del_envs_after_rollouts:
+            # delete the environment after use
+            del env
+
+        if data_logger is not None:
+            # summarize results from rollouts to tensorboard and terminal
+            rollout_logs = all_rollout_logs[env_name]
+            for k, v in rollout_logs.items():
+                if k.startswith("Time_"):
+                    data_logger.record("Timing_Stats/Rollout_{}_{}".format(env_name, k[5:]), v, epoch)
+                else:
+                    data_logger.record("Rollout/{}/{}".format(k, env_name), v, epoch, log_stats=True)
+
+            print("\nEpoch {} Rollouts took {}s (avg) with results:".format(epoch, rollout_logs["time"]))
+            print('Env: {}'.format(env_name))
+            print(json.dumps(rollout_logs, sort_keys=True, indent=4))
 
     if video_path is not None:
         # close video writer that was used for all envs
         video_writer.close()
 
-    return all_rollout_logs, video_paths
+    return all_rollout_logs, None
 
 
 def should_save_from_rollout_logs(

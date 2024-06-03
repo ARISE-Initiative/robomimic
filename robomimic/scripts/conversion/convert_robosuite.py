@@ -38,6 +38,7 @@ if __name__ == "__main__":
         "--filter_num_demos",
         type=int,
         nargs='+',
+        default=[10, 20, 30, 40, 50, 60, 70, 75, 80, 90, 100, 125, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 10000],
         help="Num demos to filter by (can be list)",
     )
     args = parser.parse_args()
@@ -48,6 +49,10 @@ if __name__ == "__main__":
     env_name = f["data"].attrs.get("env", None)
     if "env_info" in f["data"].attrs:
         env_info = json.loads(f["data"].attrs["env_info"])
+
+    # switch to using solid robot
+    env_info["translucent_robot"] = False
+    
     if env_name is not None and env_info is not None:
         env_meta = dict(
             type=EB.EnvType.ROBOSUITE_TYPE,
@@ -88,12 +93,13 @@ if __name__ == "__main__":
     # create 90-10 train-validation split in the dataset
     split_train_val_from_hdf5(hdf5_path=args.dataset, val_ratio=0.1)
 
-    # add absolute actions to dataset
-    add_absolute_actions_to_dataset(
-        dataset=args.dataset,
-        eval_dir=None,
-        num_workers=10,
-    )
+    ### note: don't need this anymore! absolute actions are already extracted ###
+    # # add absolute actions to dataset
+    # add_absolute_actions_to_dataset(
+    #     dataset=args.dataset,
+    #     eval_dir=None,
+    #     num_workers=1,
+    # )
 
     # extract corresponding action keys into action_dict
     extract_action_dict(dataset=args.dataset)

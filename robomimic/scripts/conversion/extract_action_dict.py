@@ -35,6 +35,8 @@ def extract_action_dict(dataset):
             prefix = "rel_"
 
         for demo in f["data"].values():
+            if str(input_action_key) not in demo.keys():
+                continue
             in_action = demo[str(input_action_key)][:]
             in_pos = in_action[:,:3].astype(np.float32)
             in_rot = in_action[:,3:6].astype(np.float32)

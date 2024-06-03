@@ -13,126 +13,80 @@ def make_generator_helper(args):
     if args.ckpt_mode is None:
         args.ckpt_mode = "off"
 
-    if args.env == "r2d2":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
-            ],
-            value_names=[
-                "pen-in-cup",
-            ],
-        )
-        generator.add_param(
-            key="observation.modalities.obs.rgb",
-            name="cams",
-            group=130,
-            values=[
-                # ["camera/image/hand_camera_left_image"],
-                ["camera/image/hand_camera_left_image", "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image"],
-            ],
-            value_names=[
-                # "wrist",
-                "3cams",
-            ]
-        )
-    elif args.env == "kitchen":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/bowls/20230816_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/human_demos/pnp_table_to_cab/all/20230806_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "100_demos"}],
-                # [{"path": "~/datasets/kitchen/prior/mimicgen/pnp_table_to_cab/viraj_mg_2023-08-10-20-31-14/demo_im84.hdf5", "filter_key": "1000_demos"}],
-            ],
-            value_names=[
-                "bowls-human-100",
-                # "human-100",
-                # "mg-100",
-                # "mg-1000",
-            ],
-        )
-    elif args.env == "square":
-        generator.add_param(
-            key="train.data",
-            name="ds",
-            group=2,
-            values=[
-                [
-                    {"path": "~/datasets/square/ph/square_ph_abs_tmp.hdf5"}, # replace with your own path
-                ],
-            ],
-            value_names=[
-                "square",
-            ],
-        )
-    else:
-        raise ValueError
+    ### Multi-task training on atomic tasks ###
+    EVAL_TASKS = ["PnPCounterToSink", "PnPCounterToCab"] # or evaluate all tasks by setting EVAL_TASKS = None
+    generator.add_param(
+        key="train.data",
+        name="ds",
+        group=123456,
+        values_and_names=[
+            (get_ds_cfg("single_stage", src="human", eval=EVAL_TASKS, filter_key="50_demos"), "human-50"),
+        ]
+    )
 
-    # change default settings: predict 10 steps into future
+    """
+    ### Uncomment this code to train composite task policies ###
     generator.add_param(
-        key="algo.transformer.pred_future_acs",
-        name="predfuture",
-        group=1,
-        values=[
-            True,
-            # False,
-        ],
-        # hidename=True,
+        key="train.data",
+        name="ds",
+        group=123456,
+        values_and_names=[
+            (get_ds_cfg("ArrangeVegetables", gen_tex=False, rand_cams=False, filter_key="50_demos"), "ArrangeVegetables"),
+            (get_ds_cfg("MicrowaveThawing", gen_tex=False, rand_cams=False, filter_key="50_demos"), "MicrowaveThawing"),
+            (get_ds_cfg("RestockPantry", gen_tex=False, rand_cams=False, filter_key="50_demos"), "RestockPantry"),
+            (get_ds_cfg("PreSoakPan", gen_tex=False, rand_cams=False, filter_key="50_demos"), "PreSoakPan"),
+            (get_ds_cfg("PrepareCoffee", gen_tex=False, rand_cams=False, filter_key="50_demos"), "PrepareCoffee"),
+        ]
     )
     generator.add_param(
-        key="algo.transformer.supervise_all_steps",
-        name="supallsteps",
-        group=1,
-        values=[
-            True,
-            # False,
+        key="experiment.ckpt_path",
+        name="ckpt",
+        group=1389,
+        values_and_names=[
+            (None, "none"),
+            # ("set checkpoint pth path here", "trained-ckpt"),
         ],
-        hidename=True,
+    )
+    """
+    
+    """
+    ### Uncomment this code to evaluate checkpoints ###
+    generator.add_param(
+        key="train.data,
+        name="ds",
+        group=1389,
+        values_and_names=[
+            ("set same training data as checkpoint here", "ds-name"),
+        ],
     )
     generator.add_param(
-        key="algo.transformer.causal",
-        name="causal",
-        group=1,
-        values=[
-            False,
-            # True,
+        key="experiment.ckpt_path",
+        name="ckpt",
+        group=1389,
+        values_and_names=[
+            ("Add checkpoint pth path here", "trained-ckpt"),
         ],
-        hidename=True,
     )
     generator.add_param(
-        key="train.seq_length",
+        key="experiment.rollout.warmstart",
         name="",
         group=-1,
-        values=[10],
-        hidename=True,
+        values=[-1],
     )
+    generator.add_param(
+        key="train.num_epochs",
+        name="",
+        group=-1,
+        values=[0],
+    )
+    generator.add_param(
+        key="train.num_data_workers",
+        name="",
+        group=-1,
+        values=[0],
+    )
+    """
 
-    generator.add_param(
-        key="algo.gmm.min_std",
-        name="mindstd",
-        group=271314,
-        values=[
-            0.03,
-            #0.0001,
-        ],
-        hidename=True,
-    )
-    generator.add_param(
-        key="train.max_grad_norm",
-        name="maxgradnorm",
-        group=18371,
-        values=[
-            # None,
-            100.0,
-        ],
-        hidename=True,
-    )
-    
     generator.add_param(
         key="train.output_dir",
         name="",

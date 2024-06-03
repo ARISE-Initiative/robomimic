@@ -16,6 +16,7 @@ import robomimic.utils.loss_utils as LossUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
+from robomimic.macros import LANG_EMB_KEY
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
@@ -210,6 +211,11 @@ class BC(PolicyAlgo):
             max_grad_norm=self.global_config.train.max_grad_norm,
         )
         info["policy_grad_norms"] = policy_grad_norms
+
+        # step through optimizers
+        for k in self.lr_schedulers:
+            if self.lr_schedulers[k] is not None:
+                self.lr_schedulers[k].step()
         return info
 
     def log_info(self, info):

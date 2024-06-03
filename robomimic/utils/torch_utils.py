@@ -119,7 +119,7 @@ def optimizer_from_optim_params(net_optim_params, net):
         )
 
 
-def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
+def lr_scheduler_from_optim_params(net_optim_params, net, optimizer, num_training_steps):
     """
     Helper function to return a LRScheduler from the optim_params 
     section of the config for a particular network. Returns None
@@ -137,31 +137,60 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
     Returns:
         lr_scheduler (torch.optim.lr_scheduler or None): learning rate scheduler
     """
-    lr_scheduler_type = net_optim_params["learning_rate"].get("scheduler_type", "multistep")
-    epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+    lr_scheduler_type = net_optim_params["learning_rate"]["scheduler_type"]
 
-    lr_scheduler = None
-    if len(epoch_schedule) > 0:
-        if lr_scheduler_type == "linear":
-            assert len(epoch_schedule) == 1
-            end_epoch = epoch_schedule[0]
-            
-            return optim.lr_scheduler.LinearLR(
-                optimizer,
-                start_factor=1.0,
-                end_factor=net_optim_params["learning_rate"]["decay_factor"],
-                total_iters=end_epoch,
-            )
-        elif lr_scheduler_type == "multistep":
-            return optim.lr_scheduler.MultiStepLR(
-                optimizer=optimizer,
-                milestones=epoch_schedule,
-                gamma=net_optim_params["learning_rate"]["decay_factor"],
-            )
-        else:
-            raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
+    from diffusers.optimization import (
+        Union, SchedulerType, Optional,
+        Optimizer, TYPE_TO_SCHEDULER_FUNCTION
+    )
+
+    num_warmup_steps = net_optim_params["learning_rate"].get("num_warmup_steps", 10000)
+    
+    if lr_scheduler_type == "linear":
+        decay_factor = net_optim_params["learning_rate"]["decay_factor"]
         
-    return lr_scheduler
+        return torch.optim.lr_scheduler.LinearLR(
+            optimizer,
+            start_factor=1.0,
+            end_factor=decay_factor,
+            total_iters=num_warmup_steps,
+        )
+    elif lr_scheduler_type == "multistep":
+        epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+        decay_factor = net_optim_params["learning_rate"]["decay_factor"]
+
+        assert len(epoch_schedule) > 0
+        
+        return optim.lr_scheduler.MultiStepLR(
+            optimizer=optimizer,
+            milestones=epoch_schedule,
+            gamma=decay_factor,
+        )
+    elif lr_scheduler_type == "constant":
+        name = SchedulerType(lr_scheduler_type)
+        schedule_func = TYPE_TO_SCHEDULER_FUNCTION[name]
+        return schedule_func(
+            optimizer,
+        )
+    elif lr_scheduler_type == "constant_with_warmup":
+        name = SchedulerType(lr_scheduler_type)
+        schedule_func = TYPE_TO_SCHEDULER_FUNCTION[name]
+        return schedule_func(
+            optimizer,
+            num_warmup_steps=num_warmup_steps,
+        )
+    elif lr_scheduler_type == "cosine":
+        name = SchedulerType(lr_scheduler_type)
+        schedule_func = TYPE_TO_SCHEDULER_FUNCTION[name]
+        return schedule_func(
+            optimizer,
+            num_warmup_steps=num_warmup_steps,
+            num_training_steps=num_training_steps,
+        )
+    elif lr_scheduler_type is None:
+        return None
+    else:
+        raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
 
 
 def backprop_for_loss(net, optim, loss, max_grad_norm=None, retain_graph=False):
@@ -239,6 +268,14 @@ def euler_angles_to_rot_6d(euler_angles, convention="XYZ"):
     rot_mat = euler_angles_to_matrix(euler_angles, convention="XYZ")
     rot_6d = matrix_to_rotation_6d(rot_mat)
     return rot_6d
+
+def euler_angles_to_quat(euler_angles, convention="XYZ"):
+    """
+    Converts tensor with rot_6d representation to euler representation.
+    """
+    rot_mat = euler_angles_to_matrix(euler_angles, convention="XYZ")
+    quat = matrix_to_quaternion(rot_mat)
+    return quat
 
 
 class dummy_context_mgr():
@@ -561,6 +598,83 @@ def euler_angles_to_matrix(euler_angles: torch.Tensor, convention: str) -> torch
     ]
     # return functools.reduce(torch.matmul, matrices)
     return torch.matmul(torch.matmul(matrices[0], matrices[1]), matrices[2])
+
+
+def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
+    """
+    Convert a unit quaternion to a standard form: one in which the real
+    part is non negative.
+
+    Args:
+        quaternions: Quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Standardized quaternions as tensor of shape (..., 4).
+    """
+    return torch.where(quaternions[..., 0:1] < 0, -quaternions, quaternions)
+
+
+def matrix_to_quaternion(matrix: torch.Tensor) -> torch.Tensor:
+    """
+    Convert rotations given as rotation matrices to quaternions.
+
+    Args:
+        matrix: Rotation matrices as tensor of shape (..., 3, 3).
+
+    Returns:
+        quaternions with real part first, as tensor of shape (..., 4).
+    """
+    if matrix.size(-1) != 3 or matrix.size(-2) != 3:
+        raise ValueError(f"Invalid rotation matrix shape {matrix.shape}.")
+
+    batch_dim = matrix.shape[:-2]
+    m00, m01, m02, m10, m11, m12, m20, m21, m22 = torch.unbind(
+        matrix.reshape(batch_dim + (9,)), dim=-1
+    )
+
+    q_abs = _sqrt_positive_part(
+        torch.stack(
+            [
+                1.0 + m00 + m11 + m22,
+                1.0 + m00 - m11 - m22,
+                1.0 - m00 + m11 - m22,
+                1.0 - m00 - m11 + m22,
+            ],
+            dim=-1,
+        )
+    )
+
+    # we produce the desired quaternion multiplied by each of r, i, j, k
+    quat_by_rijk = torch.stack(
+        [
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([q_abs[..., 0] ** 2, m21 - m12, m02 - m20, m10 - m01], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m21 - m12, q_abs[..., 1] ** 2, m10 + m01, m02 + m20], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m02 - m20, m10 + m01, q_abs[..., 2] ** 2, m12 + m21], dim=-1),
+            # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and
+            #  `int`.
+            torch.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3] ** 2], dim=-1),
+        ],
+        dim=-2,
+    )
+
+    # We floor here at 0.1 but the exact level is not important; if q_abs is small,
+    # the candidate won't be picked.
+    flr = torch.tensor(0.1).to(dtype=q_abs.dtype, device=q_abs.device)
+    quat_candidates = quat_by_rijk / (2.0 * q_abs[..., None].max(flr))
+
+    # if not for numerical problems, quat_candidates[i] should be same (up to a sign),
+    # forall i; we pick the best-conditioned one (with the largest denominator)
+    out = quat_candidates[
+        F.one_hot(q_abs.argmax(dim=-1), num_classes=4) > 0.5, :
+    ].reshape(batch_dim + (4,))
+    return standardize_quaternion(out)
 
 
 def _index_from_letter(letter: str) -> int:

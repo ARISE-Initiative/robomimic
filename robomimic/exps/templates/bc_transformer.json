@@ -45,7 +45,7 @@
         "hdf5_load_next_obs": false,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
-        "seq_length": 1,
+        "seq_length": 10,
         "pad_seq_length": true,
         "frame_stack": 10,
         "pad_frame_stack": true,
@@ -56,6 +56,7 @@
         "cuda": true,
         "batch_size": 100,
         "num_epochs": 2000,
+        "max_grad_norm": 100.0,
         "seed": 1
     },
     "algo": {
@@ -64,9 +65,9 @@
                 "optimizer_type": "adamw",
                 "learning_rate": {
                     "initial": 0.0001,
-                    "decay_factor": 0.1,
+                    "decay_factor": 1.0,
                     "epoch_schedule": [100],
-                    "scheduler_type": "linear"
+                    "scheduler_type": "constant_with_warmup"
                 },
                 "regularization": {
                     "L2": 0.01
@@ -85,7 +86,7 @@
         "gmm": {
             "enabled": true,
             "num_modes": 5,
-            "min_std": 0.0001,
+            "min_std": 0.005,
             "std_activation": "softplus",
             "low_noise_eval": true
         },
@@ -97,11 +98,14 @@
         },
         "transformer": {
             "enabled": true,
-            "supervise_all_steps": false,
+            "supervise_all_steps": true,
+            "pred_future_acs": true,
+            "causal": false,
             "num_layers": 6,
             "embed_dim": 512,
             "num_heads": 8
-        }
+        },
+        "language_conditioned": false
     },
     "observation": {
         "modalities": {
