@@ -14,6 +14,8 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.log_utils as LogUtils
 import time
+import scipy
+import matplotlib.pyplot as plt
 
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(
@@ -467,6 +469,28 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return meta
 
+    def interpolate_keys(self, obs, keys, seq_length, seq_length_to_load):
+        if seq_length == seq_length_to_load:
+            return
+
+        for k in keys:
+            v = obs[k]
+            if k == "pad_mask":
+                # interpolate it by simply copying each index (seq_length / seq_length_to_load) times
+                obs[k] = np.repeat(v, seq_length // seq_length_to_load, axis=0)
+            elif k != 'pad_mask':
+                assert v.shape[0] == seq_length_to_load, "low_dim obs should have shape (seq_length, ...)"
+                assert len(v.shape) == 2, "low_dim obs should have shape (seq_length, ...)"
+                # plot v[:, 3]
+                # plt.plot(v[:, 2])
+                # plt.savefig('v_3.png')
+                # plt.close()
+                interp = scipy.interpolate.interp1d(np.linspace(0, 1, seq_length_to_load), v, axis=0)
+                obs[k] = interp(np.linspace(0, 1, seq_length))
+                # plt.plot(obs[k][:, 2])
+                # plt.savefig('v_3_after.png')
+                # plt.close()
+
     def get_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, dont_load_fut=None):
         """
         Extract a (sub)sequence of data items from a demo given the @keys of the items.
@@ -520,7 +544,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return seq, pad_mask
 
-    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs", dont_load_fut=False):
+    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs", dont_load_fut=False, seq_length_to_load=None):
         """
         Extract a (sub)sequence of observation items from a demo given the @keys of the items.
 
@@ -535,21 +559,30 @@ class SequenceDataset(torch.utils.data.Dataset):
         Returns:
             a dictionary of extracted items.
         """
+        if seq_length_to_load is None:
+            seq_length_to_load = seq_length
+
         obs, pad_mask = self.get_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
             keys=tuple('{}/{}'.format(prefix, k) for k in keys),
             num_frames_to_stack=num_frames_to_stack,
-            seq_length=seq_length,
+            seq_length=seq_length_to_load,
             dont_load_fut=dont_load_fut
         )
         obs = {k.split('/')[1]: obs[k] for k in obs}  # strip the prefix
         if self.get_pad_mask:
             obs["pad_mask"] = pad_mask
+        
+        # Interpolate obs
+        to_interp = [k for k in obs if ObsUtils.key_is_obs_modality(k, "low_dim")]
+        # t = time.time()
+        self.interpolate_keys(obs, to_interp, seq_length, seq_length_to_load)
+        # print("Interpolation time: ", time.time() - t)
 
         return obs
 
-    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
+    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, seq_length_to_load=None):
         """
         Extract a (sub)sequence of dataset items from a demo given the @keys of the items (e.g., states, actions).
         
@@ -563,15 +596,24 @@ class SequenceDataset(torch.utils.data.Dataset):
         Returns:
             a dictionary of extracted items.
         """
+        if seq_length_to_load is None:
+            seq_length_to_load = seq_length
+
         data, pad_mask = self.get_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
             keys=keys,
             num_frames_to_stack=num_frames_to_stack,
-            seq_length=seq_length,
+            seq_length=seq_length_to_load,
         )
         if self.get_pad_mask:
             data["pad_mask"] = pad_mask
+        
+        # interpolate actions
+        to_interp = [k for k in data]
+        # t = time.time()
+        self.interpolate_keys(data, to_interp, seq_length, seq_length_to_load)
+        # print("Interpolation time: ", time.time() - t)
         return data
 
     def get_trajectory_at_index(self, index):

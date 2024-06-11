@@ -534,7 +534,7 @@ def get_gpu_usage_mb(index):
 
     return info.used / 1024 / 1024
 
-def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
+def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
     """
     Run an epoch of training or validation.
 
@@ -590,7 +590,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
 
         # process batch for training
         t = time.time()
-        input_batch = model.process_batch_for_training(batch)
+        input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
         input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
         timing_stats["Process_Batch"].append(time.time() - t)
 
@@ -622,7 +622,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
 
     return step_log_all
 
-def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=False, num_steps=None, obs_normalization_stats=None):
+def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
     """
     Run an epoch of training or validation.
 
@@ -684,8 +684,8 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
         # process batch for training
         t = time.time()
         # breakpoint()
-        input_batch = model.process_batch_for_training(batch)
-        input_batch_2 = None if batch_2 is None else model.process_batch_for_training(batch_2)
+        input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
+        input_batch_2 = None if batch_2 is None else model.process_batch_for_training(batch_2, ac_key=ac_key)
 
         # breakpoint()
         input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
