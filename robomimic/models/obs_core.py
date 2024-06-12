@@ -709,10 +709,14 @@ class CropResizeColorRandomizer(CropResizeRandomizer):
         ratio,
         num_crops=1,
         pos_enc=False,
-        brightness=0.5,
-        contrast=0.2,
-        saturation=0.2,
-        hue=0.05,
+        brightness_min=1.0,
+        brightness_max=1.0,
+        contrast_min=1.0,
+        contrast_max=1.0,
+        saturation_min=1.0,
+        saturation_max=1.0,
+        hue_min=0.0,
+        hue_max=0.0
     ):
         super(CropResizeColorRandomizer, self).__init__(
             input_shape=input_shape,
@@ -722,7 +726,7 @@ class CropResizeColorRandomizer(CropResizeRandomizer):
             num_crops=num_crops,
             pos_enc=pos_enc,
         )
-        self.color_jitter = TT.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
+        self.color_jitter = TT.ColorJitter(brightness=(brightness_min, brightness_max), contrast=(contrast_min, contrast_max), saturation=(saturation_min, saturation_max), hue=(hue_min, hue_max))
     
     def _forward_in(self, inputs):
         out = super(CropResizeColorRandomizer, self)._forward_in(inputs)
