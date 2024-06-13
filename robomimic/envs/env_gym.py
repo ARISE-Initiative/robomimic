@@ -3,11 +3,13 @@ This file contains the gym environment wrapper that is used
 to provide a standardized environment API for training policies and interacting
 with metadata present in datasets.
 """
+
 import json
 import numpy as np
 from copy import deepcopy
 
 import gym
+
 try:
     import d4rl
 except:
@@ -19,14 +21,15 @@ import robomimic.utils.obs_utils as ObsUtils
 
 class EnvGym(EB.EnvBase):
     """Wrapper class for gym"""
+
     def __init__(
         self,
-        env_name, 
-        render=False, 
-        render_offscreen=False, 
-        use_image_obs=False, 
-        use_depth_obs=False, 
-        postprocess_visual_obs=True, 
+        env_name,
+        render=False,
+        render_offscreen=False,
+        use_image_obs=False,
+        use_depth_obs=False,
+        postprocess_visual_obs=True,
         **kwargs,
     ):
         """
@@ -88,14 +91,14 @@ class EnvGym(EB.EnvBase):
         Args:
             state (dict): current simulator state that contains:
                 - states (np.ndarray): initial state of the mujoco environment
-        
+
         Returns:
             observation (dict): observation dictionary after setting the simulator state
         """
         if hasattr(self.env.unwrapped.sim, "set_state_from_flattened"):
             self.env.unwrapped.sim.set_state_from_flattened(state["states"])
             self.env.unwrapped.sim.forward()
-            return { "flat" : self.env.unwrapped._get_obs() }
+            return {"flat": self.env.unwrapped._get_obs()}
         else:
             raise NotImplementedError
 
@@ -108,7 +111,7 @@ class EnvGym(EB.EnvBase):
             height (int): height of image to render - only used if mode is "rgb_array"
             width (int): width of image to render - only used if mode is "rgb_array"
         """
-        if mode =="human":
+        if mode == "human":
             return self.env.render(mode=mode, **kwargs)
         if mode == "rgb_array":
             return self.env.render(mode="rgb_array", height=height, width=width)
@@ -126,15 +129,15 @@ class EnvGym(EB.EnvBase):
         if obs is None:
             assert self._current_obs is not None
             obs = self._current_obs
-        return { "flat" : np.copy(obs) }
+        return {"flat": np.copy(obs)}
 
     def get_state(self):
         """
         Get current environment simulator state as a dictionary. Should be compatible with @reset_to.
         """
         # NOTE: assumes MuJoCo gym task!
-        xml = self.env.sim.model.get_xml() # model xml file
-        state = np.array(self.env.sim.get_state().flatten()) # simulator state
+        xml = self.env.sim.model.get_xml()  # model xml file
+        state = np.array(self.env.sim.get_state().flatten())  # simulator state
         return dict(model=xml, states=state)
 
     def get_reward(self):
@@ -173,7 +176,7 @@ class EnvGym(EB.EnvBase):
             return self.env.unwrapped._check_success()
 
         # gym envs generally don't check task success - we only compare returns
-        return { "task" : False }
+        return {"task": False}
 
     @property
     def action_dimension(self):
@@ -203,20 +206,22 @@ class EnvGym(EB.EnvBase):
         This is the same as @env_meta - environment metadata stored in hdf5 datasets,
         and used in utils/env_utils.py.
         """
-        return dict(env_name=self.name, type=self.type, env_kwargs=deepcopy(self._init_kwargs))
+        return dict(
+            env_name=self.name, type=self.type, env_kwargs=deepcopy(self._init_kwargs)
+        )
 
     @classmethod
     def create_for_data_processing(
-        cls, 
-        env_name, 
-        camera_names, 
-        camera_height, 
-        camera_width, 
-        reward_shaping, 
-        render=None, 
-        render_offscreen=None, 
-        use_image_obs=None, 
-        use_depth_obs=None, 
+        cls,
+        env_name,
+        camera_names,
+        camera_height,
+        camera_width,
+        reward_shaping,
+        render=None,
+        render_offscreen=None,
+        use_image_obs=None,
+        use_depth_obs=None,
         **kwargs,
     ):
         """
@@ -264,4 +269,6 @@ class EnvGym(EB.EnvBase):
         """
         Pretty-print env description.
         """
-        return self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4)
+        return (
+            self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4)
+        )

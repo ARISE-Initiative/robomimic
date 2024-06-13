@@ -1,6 +1,7 @@
 """
 A collection of utility functions and classes for generating config jsons for hyperparameter sweeps.
 """
+
 import argparse
 import os
 import json
@@ -16,7 +17,14 @@ class ConfigGenerator(object):
     Useful class to keep track of hyperparameters to sweep, and to generate
     the json configs for each experiment run.
     """
-    def __init__(self, base_config_file, wandb_proj_name="debug", script_file=None, generated_config_dir=None):
+
+    def __init__(
+        self,
+        base_config_file,
+        wandb_proj_name="debug",
+        script_file=None,
+        generated_config_dir=None,
+    ):
         """
         Args:
             base_config_file (str): path to a base json config to use as a starting point
@@ -32,7 +40,7 @@ class ConfigGenerator(object):
         self.generated_config_dir = generated_config_dir
         assert script_file is None or isinstance(script_file, str)
         if script_file is None:
-            self.script_file = os.path.join('~', 'tmp/tmpp.sh')
+            self.script_file = os.path.join("~", "tmp/tmpp.sh")
         else:
             self.script_file = script_file
         self.script_file = os.path.expanduser(self.script_file)
@@ -63,10 +71,10 @@ class ConfigGenerator(object):
         if value_names is not None:
             assert len(values) == len(value_names)
         self.parameters[key] = argparse.Namespace(
-            key=key, 
-            name=name, 
-            group=group, 
-            values=values, 
+            key=key,
+            name=name,
+            group=group,
+            values=values,
             value_names=value_names,
         )
 
@@ -107,13 +115,15 @@ class ConfigGenerator(object):
                 val_str = parameter_value_names[k]
             else:
                 val_str = parameter_values[k]
-                if isinstance(parameter_values[k], list) or isinstance(parameter_values[k], tuple):
+                if isinstance(parameter_values[k], list) or isinstance(
+                    parameter_values[k], tuple
+                ):
                     # convert list to string to avoid weird spaces and naming problems
                     val_str = "_".join([str(x) for x in parameter_values[k]])
             val_str = str(val_str)
-            name += '_{}'.format(self.parameters[k].name)
+            name += "_{}".format(self.parameters[k].name)
             if len(val_str) > 0:
-                name += '_{}'.format(val_str)
+                name += "_{}".format(val_str)
         return name
 
     def _get_parameter_ranges(self):
@@ -123,17 +133,17 @@ class ConfigGenerator(object):
 
         Returns:
             parameter_ranges (dict): dictionary that maps the parameter to a list
-                of all values it should take for each generated config. The length 
+                of all values it should take for each generated config. The length
                 of the list will be the total number of configs that will be
                 generated from this scan.
 
             parameter_names (dict): dictionary that maps the parameter to a list
                 of all name strings that should contribute to each invididual
-                experiment's name. The length of the list will be the total 
+                experiment's name. The length of the list will be the total
                 number of configs that will be generated from this scan.
         """
 
-        # mapping from group id to list of indices to grab from each parameter's list 
+        # mapping from group id to list of indices to grab from each parameter's list
         # of values in the parameter group
         parameter_group_indices = OrderedDict()
         for k in self.parameters:
@@ -143,21 +153,22 @@ class ConfigGenerator(object):
             if group_id not in parameter_group_indices:
                 parameter_group_indices[group_id] = list(range(num_param_values))
             else:
-                assert len(parameter_group_indices[group_id]) == num_param_values, \
-                    "error: inconsistent number of parameter values in group with id {}".format(group_id)
+                assert (
+                    len(parameter_group_indices[group_id]) == num_param_values
+                ), "error: inconsistent number of parameter values in group with id {}".format(
+                    group_id
+                )
 
         keys = list(parameter_group_indices.keys())
         inds = list(parameter_group_indices.values())
-        new_parameter_group_indices = OrderedDict(
-            { k : [] for k in keys }
-        )
+        new_parameter_group_indices = OrderedDict({k: [] for k in keys})
         # get all combinations of the different parameter group indices
         # and then use these indices to determine the new parameter ranges
         # per member of each parameter group.
         #
         # e.g. with two parameter groups, one with two values, and another with three values
         # we have [0, 1] x [0, 1, 2] = [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]
-        # so the corresponding parameter group indices are [0, 0, 0, 1, 1, 1] and 
+        # so the corresponding parameter group indices are [0, 0, 0, 1, 1, 1] and
         # [0, 1, 2, 0, 1, 2], and all parameters in each parameter group are indexed
         # together using these indices, to get each parameter range.
         for comb in itertools.product(*inds):
@@ -186,7 +197,9 @@ class ConfigGenerator(object):
         first_key = list(parameter_ranges.keys())[0]
         num_settings = len(parameter_ranges[first_key])
         for k in parameter_ranges:
-            assert len(parameter_ranges[k]) == num_settings, "inconsistent number of values"
+            assert (
+                len(parameter_ranges[k]) == num_settings
+            ), "inconsistent number of values"
 
         return parameter_ranges, parameter_names
 
@@ -211,7 +224,7 @@ class ConfigGenerator(object):
         base_config = load_json(self.base_config_file, verbose=False)
 
         # base exp name from this base config
-        base_exp_name = base_config['experiment']['name']
+        base_exp_name = base_config["experiment"]["name"]
 
         # use base json to determine the parameter ranges
         parameter_ranges, parameter_names = self._get_parameter_ranges()
@@ -225,7 +238,7 @@ class ConfigGenerator(object):
 
         for i in range(num_settings):
             # the specific parameter setting for this experiment
-            setting = { k : parameter_ranges[k][i] for k in parameter_ranges }
+            setting = {k: parameter_ranges[k][i] for k in parameter_ranges}
             maybe_parameter_names = OrderedDict()
             for k in parameter_names:
                 maybe_parameter_names[k] = None
@@ -234,14 +247,14 @@ class ConfigGenerator(object):
 
             # experiment name from setting
             exp_name = self._name_for_experiment(
-                base_name=base_exp_name, 
-                parameter_values=setting, 
+                base_name=base_exp_name,
+                parameter_values=setting,
                 parameter_value_names=maybe_parameter_names,
             )
 
             # copy old json, but override name, and parameter values
             json_dict = deepcopy(base_config)
-            json_dict['experiment']['name'] = exp_name
+            json_dict["experiment"]["name"] = exp_name
             for k in parameter_ranges:
                 set_value_for_key(json_dict, k, v=parameter_ranges[k][i])
 
@@ -263,7 +276,7 @@ class ConfigGenerator(object):
                         value_name = maybe_parameter_names[k]
                     else:
                         value_name = setting[k]
-            
+
                     json_dict["meta"]["hp_keys"].append(key_name)
                     json_dict["meta"]["hp_values"].append(value_name)
 
@@ -281,12 +294,12 @@ class ConfigGenerator(object):
         Generates a bash script to run the experiments that correspond to
         the input jsons.
         """
-        with open(self.script_file, 'w') as f:
+        with open(self.script_file, "w") as f:
             f.write("#!/bin/bash\n\n")
             for path in json_paths:
                 # write python command to file
                 cmd = "python train.py --config {}\n".format(path)
-                
+
                 print()
                 print(cmd)
                 f.write(cmd)
@@ -303,12 +316,12 @@ def load_json(json_file, verbose=True):
     Returns:
         config (dict): json dictionary
     """
-    with open(json_file, 'r') as f:
+    with open(json_file, "r") as f:
         config = json.load(f)
     if verbose:
-        print('loading external config: =================')
+        print("loading external config: =================")
         print(json.dumps(config, indent=4))
-        print('==========================================')
+        print("==========================================")
     return config
 
 
@@ -320,7 +333,7 @@ def save_json(config, json_file):
         config (dict): dictionary to save
         json_file (str): path to json file to write
     """
-    with open(json_file, 'w') as f:
+    with open(json_file, "w") as f:
         # preserve original key ordering
         json.dump(config, f, sort_keys=False, indent=4)
 
@@ -340,7 +353,7 @@ def get_value_for_key(dic, k):
         val: the nested dictionary value for the provided key
     """
     val = dic
-    subkeys = re.split('/|\.', k)
+    subkeys = re.split("/|\.", k)
     for s in subkeys[:-1]:
         val = val[s]
     return val[subkeys[-1]]
@@ -358,7 +371,7 @@ def set_value_for_key(dic, k, v):
         v: the value to set at the provided key
     """
     val = dic
-    subkeys = re.split('/|\.', k) #k.split('/')
+    subkeys = re.split("/|\.", k)  # k.split('/')
     for s in subkeys[:-1]:
         val = val[s]
     val[subkeys[-1]] = v

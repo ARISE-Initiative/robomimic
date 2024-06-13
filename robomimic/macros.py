@@ -1,6 +1,7 @@
 """
 Set of global variables shared across robomimic
 """
+
 # Sets debugging mode. Should be set at top-level script so that internal
 # debugging functionalities are made active
 DEBUG = False
@@ -20,8 +21,11 @@ try:
 except ImportError:
     from robomimic.utils.log_utils import log_warning
     import robomimic
+
     log_warning(
-        "No private macro file found!"\
-        "\nIt is recommended to use a private macro file"\
-        "\nTo setup, run: python {}/scripts/setup_macros.py".format(robomimic.__path__[0])
+        "No private macro file found!"
+        "\nIt is recommended to use a private macro file"
+        "\nTo setup, run: python {}/scripts/setup_macros.py".format(
+            robomimic.__path__[0]
+        )
     )

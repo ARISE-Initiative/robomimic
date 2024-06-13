@@ -1,6 +1,7 @@
 """
 Implementation of IRIS (https://arxiv.org/abs/1911.05321).
 """
+
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
@@ -10,7 +11,14 @@ import torch
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.config.config import Config
-from robomimic.algo import register_algo_factory_func, algo_name_to_factory_func, HBC, ValuePlanner, ValueAlgo, GL_VAE
+from robomimic.algo import (
+    register_algo_factory_func,
+    algo_name_to_factory_func,
+    HBC,
+    ValuePlanner,
+    ValueAlgo,
+    GL_VAE,
+)
 
 
 @register_algo_factory_func("iris")
@@ -28,13 +36,18 @@ def algo_config_to_class(algo_config):
     pol_cls, _ = algo_name_to_factory_func("bc")(algo_config.actor)
     plan_cls, _ = algo_name_to_factory_func("gl")(algo_config.value_planner.planner)
     value_cls, _ = algo_name_to_factory_func("bcq")(algo_config.value_planner.value)
-    return IRIS, dict(policy_algo_class=pol_cls, planner_algo_class=plan_cls, value_algo_class=value_cls)
+    return IRIS, dict(
+        policy_algo_class=pol_cls,
+        planner_algo_class=plan_cls,
+        value_algo_class=value_cls,
+    )
 
 
 class IRIS(HBC, ValueAlgo):
     """
     Implementation of IRIS (https://arxiv.org/abs/1911.05321).
     """
+
     def __init__(
         self,
         planner_algo_class,
@@ -74,9 +87,13 @@ class IRIS(HBC, ValueAlgo):
         self.ac_dim = ac_dim
         self.device = device
 
-        self._subgoal_step_count = 0  # current step count for deciding when to update subgoal
+        self._subgoal_step_count = (
+            0  # current step count for deciding when to update subgoal
+        )
         self._current_subgoal = None  # latest subgoal
-        self._subgoal_update_interval = self.algo_config.subgoal_update_interval  # subgoal update frequency
+        self._subgoal_update_interval = (
+            self.algo_config.subgoal_update_interval
+        )  # subgoal update frequency
         self._subgoal_horizon = self.algo_config.value_planner.planner.subgoal_horizon
         self._actor_horizon = self.algo_config.actor.rnn.horizon
 
@@ -91,11 +108,13 @@ class IRIS(HBC, ValueAlgo):
             global_config=global_config,
             obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
-            device=device
+            device=device,
         )
 
         self.actor_goal_shapes = self.planner.subgoal_shapes
-        assert not algo_config.latent_subgoal.enabled, "IRIS does not support latent subgoals"
+        assert (
+            not algo_config.latent_subgoal.enabled
+        ), "IRIS does not support latent subgoals"
 
         # only for the actor: override goal modalities and shapes to match the subgoal set by the planner
         actor_obs_key_shapes = deepcopy(obs_key_shapes)
@@ -105,7 +124,9 @@ class IRIS(HBC, ValueAlgo):
                 assert actor_obs_key_shapes[k] == self.actor_goal_shapes[k]
         actor_obs_key_shapes.update(self.actor_goal_shapes)
 
-        goal_modalities = {obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()}
+        goal_modalities = {
+            obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()
+        }
         for k in self.actor_goal_shapes.keys():
             goal_modalities[ObsUtils.OBS_KEYS_TO_MODALITIES[k]].append(k)
 
@@ -119,7 +140,7 @@ class IRIS(HBC, ValueAlgo):
             global_config=global_config,
             obs_key_shapes=actor_obs_key_shapes,
             ac_dim=ac_dim,
-            device=device
+            device=device,
         )
 
     def process_batch_for_training(self, batch):
@@ -133,7 +154,7 @@ class IRIS(HBC, ValueAlgo):
 
         Returns:
             input_batch (dict): processed and filtered batch that
-                will be used for training 
+                will be used for training
         """
         input_batch = dict()
 
@@ -143,13 +164,22 @@ class IRIS(HBC, ValueAlgo):
         if self.algo_config.actor_use_random_subgoals:
             # optionally use randomly sampled step between [1, seq_length] as policy goal
             policy_subgoal_indices = torch.randint(
-                low=0, high=self.global_config.train.seq_length, size=(batch["actions"].shape[0],))
-            goal_obs = TensorUtils.gather_sequence(batch["next_obs"], policy_subgoal_indices)
-            goal_obs = TensorUtils.to_float(TensorUtils.to_device(goal_obs, self.device))
+                low=0,
+                high=self.global_config.train.seq_length,
+                size=(batch["actions"].shape[0],),
+            )
+            goal_obs = TensorUtils.gather_sequence(
+                batch["next_obs"], policy_subgoal_indices
+            )
+            goal_obs = TensorUtils.to_float(
+                TensorUtils.to_device(goal_obs, self.device)
+            )
             input_batch["actor"]["goal_obs"] = goal_obs
         else:
             # otherwise, use planner subgoal target as goal for the policy
-            input_batch["actor"]["goal_obs"] = input_batch["planner"]["planner"]["target_subgoals"]
+            input_batch["actor"]["goal_obs"] = input_batch["planner"]["planner"][
+                "target_subgoals"
+            ]
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
@@ -180,4 +210,6 @@ class IRIS(HBC, ValueAlgo):
         Returns:
             value (torch.Tensor): value tensor
         """
-        return self.planner.get_state_action_value(obs_dict=obs_dict, actions=actions, goal_dict=goal_dict)
+        return self.planner.get_state_action_value(
+            obs_dict=obs_dict, actions=actions, goal_dict=goal_dict
+        )

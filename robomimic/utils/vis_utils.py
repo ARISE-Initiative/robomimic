@@ -2,6 +2,7 @@
 This file contains utility functions for visualizing image observations in the training pipeline.
 These functions can be a useful debugging tool.
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -21,9 +22,7 @@ def image_tensor_to_numpy(image):
     Returns:
         image (np.array): converted images of shape [..., H, W, C] and type uint8
     """
-    return TensorUtils.to_numpy(
-            ObsUtils.unprocess_image(image)
-        ).astype(np.uint8)
+    return TensorUtils.to_numpy(ObsUtils.unprocess_image(image)).astype(np.uint8)
 
 
 def image_to_disk(image, fname):
@@ -107,5 +106,5 @@ def depth_to_rgb(depth_map, depth_min=None, depth_max=None):
     if len(depth_map.shape) == 3:
         assert depth_map.shape[-1] == 1
         depth_map = depth_map[..., 0]
-    assert len(depth_map.shape) == 2 # [H, W]
-    return (255. * cm.hot(depth_map, 3)).astype(np.uint8)[..., :3]
+    assert len(depth_map.shape) == 2  # [H, W]
+    return (255.0 * cm.hot(depth_map, 3)).astype(np.uint8)[..., :3]

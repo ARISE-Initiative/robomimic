@@ -51,6 +51,7 @@ Example usage:
         --n_rollouts 50 --horizon 400 --seed 0 \
         --dataset_path /path/to/output.hdf5
 """
+
 import argparse
 import json
 import h5py
@@ -69,9 +70,18 @@ from robomimic.envs.env_base import EnvBase
 from robomimic.algo import RolloutPolicy
 
 
-def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5, return_obs=False, camera_names=None):
+def rollout(
+    policy,
+    env,
+    horizon,
+    render=False,
+    video_writer=None,
+    video_skip=5,
+    return_obs=False,
+    camera_names=None,
+):
     """
-    Helper function to carry out rollouts. Supports on-screen rendering, off-screen rendering to a video, 
+    Helper function to carry out rollouts. Supports on-screen rendering, off-screen rendering to a video,
     and returns the rollout trajectory.
 
     Args:
@@ -81,9 +91,9 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         render (bool): whether to render rollout on-screen
         video_writer (imageio writer): if provided, use to write rollout to video
         video_skip (int): how often to write video frames
-        return_obs (bool): if True, return possibly high-dimensional observations along the trajectoryu. 
-            They are excluded by default because the low-dimensional simulation states should be a minimal 
-            representation of the environment. 
+        return_obs (bool): if True, return possibly high-dimensional observations along the trajectoryu.
+            They are excluded by default because the low-dimensional simulation states should be a minimal
+            representation of the environment.
         camera_names (list): determines which camera(s) are used for rendering. Pass more than
             one to output a video with multiple camera views concatenated horizontally.
 
@@ -104,8 +114,10 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
 
     results = {}
     video_count = 0  # video frame counter
-    total_reward = 0.
-    traj = dict(actions=[], rewards=[], dones=[], states=[], initial_state_dict=state_dict)
+    total_reward = 0.0
+    traj = dict(
+        actions=[], rewards=[], dones=[], states=[], initial_state_dict=state_dict
+    )
     if return_obs:
         # store observations too
         traj.update(dict(obs=[], next_obs=[]))
@@ -129,8 +141,17 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
                 if video_count % video_skip == 0:
                     video_img = []
                     for cam_name in camera_names:
-                        video_img.append(env.render(mode="rgb_array", height=512, width=512, camera_name=cam_name))
-                    video_img = np.concatenate(video_img, axis=1) # concatenate horizontally
+                        video_img.append(
+                            env.render(
+                                mode="rgb_array",
+                                height=512,
+                                width=512,
+                                camera_name=cam_name,
+                            )
+                        )
+                    video_img = np.concatenate(
+                        video_img, axis=1
+                    )  # concatenate horizontally
                     video_writer.append_data(video_img)
                 video_count += 1
 
@@ -162,7 +183,9 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
     if return_obs:
         # convert list of dict to dict of list for obs dictionaries (for convenient writes to hdf5 dataset)
         traj["obs"] = TensorUtils.list_of_flat_dict_to_dict_of_list(traj["obs"])
-        traj["next_obs"] = TensorUtils.list_of_flat_dict_to_dict_of_list(traj["next_obs"])
+        traj["next_obs"] = TensorUtils.list_of_flat_dict_to_dict_of_list(
+            traj["next_obs"]
+        )
 
     # list to numpy array
     for k in traj:
@@ -179,8 +202,8 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
 
 def run_trained_agent(args):
     # some arg checking
-    write_video = (args.video_path is not None)
-    assert not (args.render and write_video) # either on-screen or video but not both
+    write_video = args.video_path is not None
+    assert not (args.render and write_video)  # either on-screen or video but not both
     if args.render:
         # on-screen rendering can only support one camera
         assert len(args.camera_names) == 1
@@ -192,7 +215,9 @@ def run_trained_agent(args):
     device = TorchUtils.get_torch_device(try_to_use_cuda=True)
 
     # restore policy
-    policy, ckpt_dict = FileUtils.policy_from_checkpoint(ckpt_path=ckpt_path, device=device, verbose=True)
+    policy, ckpt_dict = FileUtils.policy_from_checkpoint(
+        ckpt_path=ckpt_path, device=device, verbose=True
+    )
 
     # read rollout settings
     rollout_num_episodes = args.n_rollouts
@@ -204,10 +229,10 @@ def run_trained_agent(args):
 
     # create environment from saved checkpoint
     env, _ = FileUtils.env_from_checkpoint(
-        ckpt_dict=ckpt_dict, 
-        env_name=args.env, 
-        render=args.render, 
-        render_offscreen=(args.video_path is not None), 
+        ckpt_dict=ckpt_dict,
+        env_name=args.env,
+        render=args.render,
+        render_offscreen=(args.video_path is not None),
         verbose=True,
     )
 
@@ -222,7 +247,7 @@ def run_trained_agent(args):
         video_writer = imageio.get_writer(args.video_path, fps=20)
 
     # maybe open hdf5 to write rollouts
-    write_dataset = (args.dataset_path is not None)
+    write_dataset = args.dataset_path is not None
     if write_dataset:
         data_writer = h5py.File(args.dataset_path, "w")
         data_grp = data_writer.create_group("data")
@@ -231,12 +256,12 @@ def run_trained_agent(args):
     rollout_stats = []
     for i in range(rollout_num_episodes):
         stats, traj = rollout(
-            policy=policy, 
-            env=env, 
-            horizon=rollout_horizon, 
-            render=args.render, 
-            video_writer=video_writer, 
-            video_skip=args.video_skip, 
+            policy=policy,
+            env=env,
+            horizon=rollout_horizon,
+            render=args.render,
+            video_writer=video_writer,
+            video_skip=args.video_skip,
             return_obs=(write_dataset and args.dataset_obs),
             camera_names=args.camera_names,
         )
@@ -251,17 +276,25 @@ def run_trained_agent(args):
             ep_data_grp.create_dataset("dones", data=np.array(traj["dones"]))
             if args.dataset_obs:
                 for k in traj["obs"]:
-                    ep_data_grp.create_dataset("obs/{}".format(k), data=np.array(traj["obs"][k]))
-                    ep_data_grp.create_dataset("next_obs/{}".format(k), data=np.array(traj["next_obs"][k]))
+                    ep_data_grp.create_dataset(
+                        "obs/{}".format(k), data=np.array(traj["obs"][k])
+                    )
+                    ep_data_grp.create_dataset(
+                        "next_obs/{}".format(k), data=np.array(traj["next_obs"][k])
+                    )
 
             # episode metadata
             if "model" in traj["initial_state_dict"]:
-                ep_data_grp.attrs["model_file"] = traj["initial_state_dict"]["model"] # model xml for this episode
-            ep_data_grp.attrs["num_samples"] = traj["actions"].shape[0] # number of transitions in this episode
+                ep_data_grp.attrs["model_file"] = traj["initial_state_dict"][
+                    "model"
+                ]  # model xml for this episode
+            ep_data_grp.attrs["num_samples"] = traj["actions"].shape[
+                0
+            ]  # number of transitions in this episode
             total_samples += traj["actions"].shape[0]
 
     rollout_stats = TensorUtils.list_of_flat_dict_to_dict_of_list(rollout_stats)
-    avg_rollout_stats = { k : np.mean(rollout_stats[k]) for k in rollout_stats }
+    avg_rollout_stats = {k: np.mean(rollout_stats[k]) for k in rollout_stats}
     avg_rollout_stats["Num_Success"] = np.sum(rollout_stats["Success_Rate"])
     print("Average Rollout Stats")
     print(json.dumps(avg_rollout_stats, indent=4))
@@ -272,7 +305,9 @@ def run_trained_agent(args):
     if write_dataset:
         # global metadata
         data_grp.attrs["total"] = total_samples
-        data_grp.attrs["env_args"] = json.dumps(env.serialize(), indent=4) # environment info
+        data_grp.attrs["env_args"] = json.dumps(
+            env.serialize(), indent=4
+        )  # environment info
         data_writer.close()
         print("Wrote dataset trajectories to {}".format(args.dataset_path))
 
@@ -316,7 +351,7 @@ if __name__ == "__main__":
     # Whether to render rollouts to screen
     parser.add_argument(
         "--render",
-        action='store_true',
+        action="store_true",
         help="on-screen rendering",
     )
 
@@ -340,7 +375,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--camera_names",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["agentview"],
         help="(optional) camera name(s) to use for rendering on-screen or to video",
     )
@@ -356,7 +391,7 @@ if __name__ == "__main__":
     # If True and @dataset_path is supplied, will write possibly high-dimensional observations to dataset.
     parser.add_argument(
         "--dataset_obs",
-        action='store_true',
+        action="store_true",
         help="include possibly high-dimensional observations in output dataset hdf5 file (by default,\
             observations are excluded and only simulator states are saved)",
     )
@@ -371,4 +406,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     run_trained_agent(args)
-

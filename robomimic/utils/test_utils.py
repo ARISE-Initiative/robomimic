@@ -1,6 +1,7 @@
 """
 Utilities for testing algorithm implementations - used mainly by scripts in tests directory.
 """
+
 import os
 import json
 import shutil
@@ -42,7 +43,7 @@ def maybe_remove_file(file_to_remove):
 def example_dataset_path():
     """
     Path to dataset to use for testing and example purposes. It should
-    exist under the tests/assets directory, and will be downloaded 
+    exist under the tests/assets directory, and will be downloaded
     from a server if it does not exist.
     """
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
@@ -51,7 +52,7 @@ def example_dataset_path():
         print("\nWARNING: test hdf5 does not exist! Downloading from server...")
         os.makedirs(dataset_folder, exist_ok=True)
         FileUtils.download_url(
-            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test_v141.hdf5", 
+            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test_v141.hdf5",
             download_dir=dataset_folder,
         )
     return dataset_path
@@ -66,9 +67,14 @@ def example_momart_dataset_path():
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
     dataset_path = os.path.join(dataset_folder, "test_momart.hdf5")
     if not os.path.exists(dataset_path):
-        user_response = input("\nWARNING: momart test hdf5 does not exist! We will download sample dataset. "
-                              "This will take 0.6GB space. Proceed? y/n\n")
-        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
+        user_response = input(
+            "\nWARNING: momart test hdf5 does not exist! We will download sample dataset. "
+            "This will take 0.6GB space. Proceed? y/n\n"
+        )
+        assert user_response.lower() in {
+            "yes",
+            "y",
+        }, f"Did not receive confirmation. Aborting download."
 
         print("\nDownloading from server...")
 
@@ -111,8 +117,10 @@ def get_base_config(algo_name):
     """
 
     # we will load and override defaults from template config
-    base_config_path = os.path.join(robomimic.__path__[0], "exps/templates/{}.json".format(algo_name))
-    with open(base_config_path, 'r') as f:
+    base_config_path = os.path.join(
+        robomimic.__path__[0], "exps/templates/{}.json".format(algo_name)
+    )
+    with open(base_config_path, "r") as f:
         config = Config(json.load(f))
 
     # small dataset with a handful of trajectories
@@ -189,13 +197,15 @@ def checkpoint_path_from_test_run():
     time_dir_names = [f.name for f in os.scandir(exp_dir) if f.is_dir()]
     assert len(time_dir_names) == 1
     path_to_models = os.path.join(exp_dir, time_dir_names[0], "models")
-    epoch_name = [f.name for f in os.scandir(path_to_models) if f.name.startswith("model")][0]
+    epoch_name = [
+        f.name for f in os.scandir(path_to_models) if f.name.startswith("model")
+    ][0]
     return os.path.join(path_to_models, epoch_name)
 
 
 def test_eval_agent_from_checkpoint(ckpt_path, device):
     """
-    Test loading a model from checkpoint and running a rollout with the 
+    Test loading a model from checkpoint and running a rollout with the
     trained agent for a small number of steps.
 
     Args:
@@ -205,7 +215,9 @@ def test_eval_agent_from_checkpoint(ckpt_path, device):
     """
 
     # get policy and env from checkpoint
-    policy, ckpt_dict = FileUtils.policy_from_checkpoint(ckpt_path=ckpt_path, device=device, verbose=True)
+    policy, ckpt_dict = FileUtils.policy_from_checkpoint(
+        ckpt_path=ckpt_path, device=device, verbose=True
+    )
     env, _ = FileUtils.env_from_checkpoint(ckpt_dict=ckpt_dict, verbose=True)
 
     # run a test rollout
@@ -239,7 +251,9 @@ def test_run(base_config, config_modifier):
     """
     try:
         # get config
-        config = config_from_modifier(base_config=base_config, config_modifier=config_modifier)
+        config = config_from_modifier(
+            base_config=base_config, config_modifier=config_modifier
+        )
 
         # set torch device
         device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)
@@ -256,7 +270,9 @@ def test_run(base_config, config_modifier):
 
     except Exception as e:
         # indicate failure by returning error string
-        ret = colored("failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red")
+        ret = colored(
+            "failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red"
+        )
 
     # make sure model directory is cleaned up before returning from this function
     maybe_remove_dir(temp_model_dir_path())

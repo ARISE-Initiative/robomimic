@@ -56,53 +56,135 @@ def register_all_links():
     """
 
     # all proficient human datasets
-    ph_tasks = ["lift", "can", "square", "transport", "tool_hang", "lift_real", "can_real", "tool_hang_real"]
+    ph_tasks = [
+        "lift",
+        "can",
+        "square",
+        "transport",
+        "tool_hang",
+        "lift_real",
+        "can_real",
+        "tool_hang_real",
+    ]
     ph_horizons = [400, 400, 400, 700, 700, 1000, 1000, 1000]
     for task, horizon in zip(ph_tasks, ph_horizons):
-        register_dataset_link(task=task, dataset_type="ph", hdf5_type="raw", horizon=horizon,
+        register_dataset_link(
+            task=task,
+            dataset_type="ph",
+            hdf5_type="raw",
+            horizon=horizon,
             link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/ph/demo{}.hdf5".format(
                 task, "" if "real" in task else "_v141"
-            )
+            ),
         )
         # real world datasets only have demo.hdf5 files which already contain all observation modalities
         # while sim datasets store raw low-dim mujoco states in the demo.hdf5
         if "real" not in task:
-            register_dataset_link(task=task, dataset_type="ph", hdf5_type="low_dim", horizon=horizon,
-                link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/ph/low_dim_v141.hdf5".format(task))
-            register_dataset_link(task=task, dataset_type="ph", hdf5_type="image", horizon=horizon,
-                link=None)
+            register_dataset_link(
+                task=task,
+                dataset_type="ph",
+                hdf5_type="low_dim",
+                horizon=horizon,
+                link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/ph/low_dim_v141.hdf5".format(
+                    task
+                ),
+            )
+            register_dataset_link(
+                task=task,
+                dataset_type="ph",
+                hdf5_type="image",
+                horizon=horizon,
+                link=None,
+            )
 
     # all multi human datasets
     mh_tasks = ["lift", "can", "square", "transport"]
     mh_horizons = [500, 500, 500, 1100]
     for task, horizon in zip(mh_tasks, mh_horizons):
-        register_dataset_link(task=task, dataset_type="mh", hdf5_type="raw", horizon=horizon,
-            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/demo_v141.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mh", hdf5_type="low_dim", horizon=horizon,
-            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/low_dim_v141.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mh", hdf5_type="image", horizon=horizon,
-            link=None)
+        register_dataset_link(
+            task=task,
+            dataset_type="mh",
+            hdf5_type="raw",
+            horizon=horizon,
+            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/demo_v141.hdf5".format(
+                task
+            ),
+        )
+        register_dataset_link(
+            task=task,
+            dataset_type="mh",
+            hdf5_type="low_dim",
+            horizon=horizon,
+            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mh/low_dim_v141.hdf5".format(
+                task
+            ),
+        )
+        register_dataset_link(
+            task=task, dataset_type="mh", hdf5_type="image", horizon=horizon, link=None
+        )
 
     # all machine generated datasets
     for task, horizon in zip(["lift", "can"], [400, 400]):
-        register_dataset_link(task=task, dataset_type="mg", hdf5_type="raw", horizon=horizon,
-            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/demo_v141.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mg", hdf5_type="low_dim_sparse", horizon=horizon,
-            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/low_dim_sparse_v141.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mg", hdf5_type="image_sparse", horizon=horizon,
-            link=None)
-        register_dataset_link(task=task, dataset_type="mg", hdf5_type="low_dim_dense", horizon=horizon,
-            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/low_dim_dense_v141.hdf5".format(task))
-        register_dataset_link(task=task, dataset_type="mg", hdf5_type="image_dense", horizon=horizon,
-            link=None)
+        register_dataset_link(
+            task=task,
+            dataset_type="mg",
+            hdf5_type="raw",
+            horizon=horizon,
+            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/demo_v141.hdf5".format(
+                task
+            ),
+        )
+        register_dataset_link(
+            task=task,
+            dataset_type="mg",
+            hdf5_type="low_dim_sparse",
+            horizon=horizon,
+            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/low_dim_sparse_v141.hdf5".format(
+                task
+            ),
+        )
+        register_dataset_link(
+            task=task,
+            dataset_type="mg",
+            hdf5_type="image_sparse",
+            horizon=horizon,
+            link=None,
+        )
+        register_dataset_link(
+            task=task,
+            dataset_type="mg",
+            hdf5_type="low_dim_dense",
+            horizon=horizon,
+            link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/{}/mg/low_dim_dense_v141.hdf5".format(
+                task
+            ),
+        )
+        register_dataset_link(
+            task=task,
+            dataset_type="mg",
+            hdf5_type="image_dense",
+            horizon=horizon,
+            link=None,
+        )
 
     # can-paired dataset
-    register_dataset_link(task="can", dataset_type="paired", hdf5_type="raw", horizon=400,
-        link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo_v141.hdf5")
-    register_dataset_link(task="can", dataset_type="paired", hdf5_type="low_dim", horizon=400,
-        link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim_v141.hdf5")
-    register_dataset_link(task="can", dataset_type="paired", hdf5_type="image", horizon=400,
-        link=None)
+    register_dataset_link(
+        task="can",
+        dataset_type="paired",
+        hdf5_type="raw",
+        horizon=400,
+        link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo_v141.hdf5",
+    )
+    register_dataset_link(
+        task="can",
+        dataset_type="paired",
+        hdf5_type="low_dim",
+        horizon=400,
+        link="http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim_v141.hdf5",
+    )
+    register_dataset_link(
+        task="can", dataset_type="paired", hdf5_type="image", horizon=400, link=None
+    )
 
 
 def register_momart_dataset_link(task, dataset_type, link, dataset_size):

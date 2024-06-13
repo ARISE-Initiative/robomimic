@@ -2,6 +2,7 @@
 Tests for a handful of scripts. Excludes stdout output by 
 default (pass --verbose to see stdout output).
 """
+
 import argparse
 import traceback
 import h5py
@@ -39,19 +40,33 @@ def get_checkpoint_to_test():
         conf.train.batch_size = 16
 
         # replace object with rgb modality
-        conf.observation.modalities.obs.low_dim = ["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+        conf.observation.modalities.obs.low_dim = [
+            "robot0_eef_pos",
+            "robot0_eef_quat",
+            "robot0_gripper_qpos",
+        ]
         conf.observation.modalities.obs.rgb = ["agentview_image"]
 
         # set up visual encoders
         conf.observation.encoder.rgb.core_class = "VisualCore"
         conf.observation.encoder.rgb.core_kwargs.feature_dimension = 64
-        conf.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'                         # ResNet backbone for image observations (unused if no image observations)
-        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False                # kwargs for visual core
-        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
-        conf.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
+        conf.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"  # ResNet backbone for image observations (unused if no image observations)
+        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = (
+            False  # kwargs for visual core
+        )
+        conf.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = (
+            False
+        )
+        conf.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"  # Alternate options are "SpatialMeanPool" or None (no pooling)
+        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = (
+            32  # Default arguments for "SpatialSoftmax"
+        )
+        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = (
+            False  # Default arguments for "SpatialSoftmax"
+        )
+        conf.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = (
+            1.0  # Default arguments for "SpatialSoftmax"
+        )
         conf.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0
 
         # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
@@ -59,7 +74,9 @@ def get_checkpoint_to_test():
 
         return conf
 
-    config = TestUtils.config_from_modifier(base_config=config, config_modifier=image_modifier)
+    config = TestUtils.config_from_modifier(
+        base_config=config, config_modifier=image_modifier
+    )
 
     # run training
     device = TorchUtils.get_torch_device(try_to_use_cuda=True)
@@ -79,15 +96,18 @@ def test_playback_script(silence=True, use_actions=False, use_obs=False):
             args = argparse.Namespace()
             args.dataset = TestUtils.example_dataset_path()
             args.filter_key = None
-            args.n = 3 # playback 3 demonstrations
+            args.n = 3  # playback 3 demonstrations
             args.use_actions = use_actions
             args.use_obs = use_obs
             args.render = False
-            args.video_path = TestUtils.temp_video_path() # dump video
+            args.video_path = TestUtils.temp_video_path()  # dump video
             args.video_skip = 5
             if use_obs:
                 # camera observation names
-                args.render_image_names = ["agentview_image", "robot0_eye_in_hand_image"]
+                args.render_image_names = [
+                    "agentview_image",
+                    "robot0_eye_in_hand_image",
+                ]
             else:
                 # camera names
                 args.render_image_names = ["agentview", "robot0_eye_in_hand"]
@@ -99,7 +119,9 @@ def test_playback_script(silence=True, use_actions=False, use_obs=False):
 
         except Exception as e:
             # indicate failure by returning error string
-            ret = colored("failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red")
+            ret = colored(
+                "failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red"
+            )
 
         # delete output video
         TestUtils.maybe_remove_file(TestUtils.temp_video_path())
@@ -121,14 +143,14 @@ def test_run_agent_script(silence=True):
             # setup args and run script
             args = argparse.Namespace()
             args.agent = ckpt_path
-            args.n_rollouts = 3 # 3 rollouts
-            args.horizon = 10 # short rollouts - 10 steps
+            args.n_rollouts = 3  # 3 rollouts
+            args.horizon = 10  # short rollouts - 10 steps
             args.env = None
             args.render = False
-            args.video_path = TestUtils.temp_video_path() # dump video
+            args.video_path = TestUtils.temp_video_path()  # dump video
             args.video_skip = 5
             args.camera_names = ["agentview", "robot0_eye_in_hand"]
-            args.dataset_path = TestUtils.temp_dataset_path() # dump dataset
+            args.dataset_path = TestUtils.temp_dataset_path()  # dump dataset
             args.dataset_obs = True
             args.seed = 0
             run_trained_agent(args)
@@ -144,7 +166,9 @@ def test_run_agent_script(silence=True):
 
         except Exception as e:
             # indicate failure by returning error string
-            ret = colored("failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red")
+            ret = colored(
+                "failed with error:\n{}\n\n{}".format(e, traceback.format_exc()), "red"
+            )
 
         # delete trained model directory, output video, and output dataset
         TestUtils.maybe_remove_dir(TestUtils.temp_model_dir_path())
@@ -159,7 +183,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--verbose",
-        action='store_true',
+        action="store_true",
         help="don't suppress stdout during tests",
     )
     args = parser.parse_args()

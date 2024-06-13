@@ -25,7 +25,7 @@ def cosine_loss(preds, labels):
 
 def KLD_0_1_loss(mu, logvar):
     """
-    KL divergence loss. Computes D_KL( N(mu, sigma) || N(0, 1) ). Note that 
+    KL divergence loss. Computes D_KL( N(mu, sigma) || N(0, 1) ). Note that
     this function averages across the batch dimension, but sums across dimension.
 
     Args:
@@ -36,12 +36,12 @@ def KLD_0_1_loss(mu, logvar):
         loss (torch.Tensor): KL divergence loss between the input gaussian distribution
             and N(0, 1)
     """
-    return -0.5 * (1. + logvar - mu.pow(2) - logvar.exp()).sum(dim=1).mean()
+    return -0.5 * (1.0 + logvar - mu.pow(2) - logvar.exp()).sum(dim=1).mean()
 
 
 def KLD_gaussian_loss(mu_1, logvar_1, mu_2, logvar_2):
     """
-    KL divergence loss between two Gaussian distributions. This function 
+    KL divergence loss between two Gaussian distributions. This function
     computes the average loss across the batch.
 
     Args:
@@ -53,11 +53,18 @@ def KLD_gaussian_loss(mu_1, logvar_1, mu_2, logvar_2):
     Returns:
         loss (torch.Tensor): KL divergence loss between the two gaussian distributions
     """
-    return -0.5 * (1. + \
-        logvar_1 - logvar_2 \
-        - ((mu_2 - mu_1).pow(2) / logvar_2.exp()) \
-        - (logvar_1.exp() / logvar_2.exp()) \
-        ).sum(dim=1).mean()
+    return (
+        -0.5
+        * (
+            1.0
+            + logvar_1
+            - logvar_2
+            - ((mu_2 - mu_1).pow(2) / logvar_2.exp())
+            - (logvar_1.exp() / logvar_2.exp())
+        )
+        .sum(dim=1)
+        .mean()
+    )
 
 
 def log_normal(x, m, v):
@@ -82,18 +89,18 @@ def log_normal(x, m, v):
 
 def log_normal_mixture(x, m, v, w=None, log_w=None):
     """
-    Log probability of tensor x under a uniform mixture of Gaussians. 
+    Log probability of tensor x under a uniform mixture of Gaussians.
     Adapted from CS 236 at Stanford.
 
     Args:
         x (torch.Tensor): tensor with shape (B, D)
-        m (torch.Tensor): means tensor with shape (B, M, D) or (1, M, D), where 
+        m (torch.Tensor): means tensor with shape (B, M, D) or (1, M, D), where
             M is number of mixture components
-        v (torch.Tensor): variances tensor with shape (B, M, D) or (1, M, D) where 
+        v (torch.Tensor): variances tensor with shape (B, M, D) or (1, M, D) where
             M is number of mixture components
-        w (torch.Tensor): weights tensor - if provided, should be 
+        w (torch.Tensor): weights tensor - if provided, should be
             shape (B, M) or (1, M)
-        log_w (torch.Tensor): log-weights tensor - if provided, should be 
+        log_w (torch.Tensor): log-weights tensor - if provided, should be
             shape (B, M) or (1, M)
 
     Returns:
@@ -112,10 +119,10 @@ def log_normal_mixture(x, m, v, w=None, log_w=None):
         log_prob += log_w
         # then compute log sum_i exp [log(w_i * N(x | m_i, v_i))]
         # (B, M) -> (B,)
-        log_prob = log_sum_exp(log_prob , dim=1)
+        log_prob = log_sum_exp(log_prob, dim=1)
     else:
         # (B, M) -> (B,)
-        log_prob = log_mean_exp(log_prob , dim=1) # mean accounts for uniform weights
+        log_prob = log_mean_exp(log_prob, dim=1)  # mean accounts for uniform weights
     return log_prob
 
 
@@ -125,7 +132,7 @@ def log_mean_exp(x, dim):
     Adapted from CS 236 at Stanford.
 
     Args:
-        x (torch.Tensor): a tensor 
+        x (torch.Tensor): a tensor
         dim (int): dimension along which mean is computed
 
     Returns:
@@ -140,7 +147,7 @@ def log_sum_exp(x, dim=0):
     Adapted from CS 236 at Stanford.
 
     Args:
-        x (torch.Tensor): a tensor 
+        x (torch.Tensor): a tensor
         dim (int): dimension along which sum is computed
 
     Returns:
@@ -157,16 +164,16 @@ def project_values_onto_atoms(values, probabilities, atoms):
     grid of values given by @values onto a grid of values given by @atoms.
     This is useful when computing a bellman backup where the backed up
     values from the original grid will not be in the original support,
-    requiring L2 projection. 
+    requiring L2 projection.
 
     Each value in @values has a corresponding probability in @probabilities -
     this probability mass is shifted to the closest neighboring grid points in
     @atoms in proportion. For example, if the value in question is 0.2, and the
-    neighboring atoms are 0 and 1, then 0.8 of the probability weight goes to 
+    neighboring atoms are 0 and 1, then 0.8 of the probability weight goes to
     atom 0 and 0.2 of the probability weight will go to 1.
 
     Adapted from https://github.com/deepmind/acme/blob/master/acme/tf/losses/distributional.py#L42
-    
+
     Args:
         values: value grid to project, of shape (batch_size, n_atoms)
         probabilities: probabilities for categorical distribution on @values, shape (batch_size, n_atoms)
@@ -187,22 +194,28 @@ def project_values_onto_atoms(values, probabilities, atoms):
     d_neg = torch.cat([vmax[None], atoms], dim=0)[:-1]
 
     # ensure that @values grid is within the support of @atoms
-    clipped_values = values.clamp(min=vmin, max=vmax)[:, None, :] # (batch_size, 1, n_atoms)
-    clipped_atoms = atoms[None, :, None] # (1, n_atoms, 1)
+    clipped_values = values.clamp(min=vmin, max=vmax)[
+        :, None, :
+    ]  # (batch_size, 1, n_atoms)
+    clipped_atoms = atoms[None, :, None]  # (1, n_atoms, 1)
 
     # distance between atom values in support
-    d_pos = (d_pos - atoms)[None, :, None] # atoms[i + 1] - atoms[i], shape (1, n_atoms, 1)
-    d_neg = (atoms - d_neg)[None, :, None] # atoms[i] - atoms[i - 1], shape (1, n_atoms, 1)
+    d_pos = (d_pos - atoms)[
+        None, :, None
+    ]  # atoms[i + 1] - atoms[i], shape (1, n_atoms, 1)
+    d_neg = (atoms - d_neg)[
+        None, :, None
+    ]  # atoms[i] - atoms[i - 1], shape (1, n_atoms, 1)
 
     # distances between all pairs of grid values
-    deltas = clipped_values - clipped_atoms # (batch_size, n_atoms, n_atoms)
+    deltas = clipped_values - clipped_atoms  # (batch_size, n_atoms, n_atoms)
 
     # computes eqn (7) in distributional RL paper by doing the following - for each
     # output atom in @atoms, consider values that are close enough, and weight their
-    # probability mass contribution by the normalized distance in [0, 1] given 
+    # probability mass contribution by the normalized distance in [0, 1] given
     # by (1. - (z_j - z_i) / (delta_z)).
-    d_sign = (deltas >= 0.).float()
-    delta_hat = (d_sign * deltas / d_pos) - ((1. - d_sign) * deltas / d_neg)
-    delta_hat = (1. - delta_hat).clamp(min=0., max=1.)
+    d_sign = (deltas >= 0.0).float()
+    delta_hat = (d_sign * deltas / d_pos) - ((1.0 - d_sign) * deltas / d_neg)
+    delta_hat = (1.0 - delta_hat).clamp(min=0.0, max=1.0)
     probabilities = probabilities[:, None, :]
     return (delta_hat * probabilities).sum(dim=2)

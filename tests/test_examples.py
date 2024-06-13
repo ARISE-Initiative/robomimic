@@ -2,6 +2,7 @@
 Tests for the provided examples in the repository. Excludes stdout output 
 by default (pass --verbose to see stdout output).
 """
+
 import argparse
 import traceback
 import os
@@ -29,16 +30,24 @@ def test_example_script(script_name, args_string, test_name, silence=True):
 
     # run example script
     stdout = subprocess.DEVNULL if silence else None
-    path_to_script = os.path.join(robomimic.__path__[0], "../examples/{}".format(script_name))
-    example_job = subprocess.Popen("python {} {}".format(path_to_script, args_string), 
-        shell=True, stdout=stdout, stderr=subprocess.PIPE)
+    path_to_script = os.path.join(
+        robomimic.__path__[0], "../examples/{}".format(script_name)
+    )
+    example_job = subprocess.Popen(
+        "python {} {}".format(path_to_script, args_string),
+        shell=True,
+        stdout=stdout,
+        stderr=subprocess.PIPE,
+    )
     example_job.wait()
 
     # get stderr output
     out, err = example_job.communicate()
     err = err.decode("utf-8")
     if len(err) > 0:
-        ret = "maybe failed - stderr output below (if it's only from tqdm, the test passed)\n{}".format(err)
+        ret = "maybe failed - stderr output below (if it's only from tqdm, the test passed)\n{}".format(
+            err
+        )
         ret = colored(ret, "red")
     else:
         ret = colored("passed", "green")
@@ -49,35 +58,35 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--verbose",
-        action='store_true',
+        action="store_true",
         help="don't suppress stdout during tests",
     )
     args = parser.parse_args()
 
     test_example_script(
-        script_name="simple_config.py", 
+        script_name="simple_config.py",
         args_string="",
-        test_name="simple-config-example", 
+        test_name="simple-config-example",
         silence=(not args.verbose),
     )
     test_example_script(
-        script_name="simple_obs_nets.py", 
+        script_name="simple_obs_nets.py",
         args_string="",
-        test_name="simple-obs-nets-example", 
+        test_name="simple-obs-nets-example",
         silence=(not args.verbose),
     )
     test_example_script(
-        script_name="simple_train_loop.py", 
+        script_name="simple_train_loop.py",
         args_string="",
-        test_name="simple-train-loop-example", 
+        test_name="simple-train-loop-example",
         silence=(not args.verbose),
     )
     # clear tmp model dir before running script
     TestUtils.maybe_remove_dir(TestUtils.temp_model_dir_path())
     test_example_script(
-        script_name="train_bc_rnn.py", 
+        script_name="train_bc_rnn.py",
         args_string="--debug",
-        test_name="train-bc-rnn-example", 
+        test_name="train-bc-rnn-example",
         silence=(not args.verbose),
     )
     # cleanup

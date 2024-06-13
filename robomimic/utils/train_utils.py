@@ -3,6 +3,7 @@ This file contains several utility functions used to define the main training lo
 mainly consists of functions to assist with logging, rollouts, and the @run_epoch function,
 which is the core training logic for models in this repository.
 """
+
 import os
 import time
 import datetime
@@ -30,14 +31,14 @@ from robomimic.algo import RolloutPolicy
 def get_exp_dir(config, auto_remove_exp_dir=False):
     """
     Create experiment directory from config. If an identical experiment directory
-    exists and @auto_remove_exp_dir is False (default), the function will prompt 
+    exists and @auto_remove_exp_dir is False (default), the function will prompt
     the user on whether to remove and replace it, or keep the existing one and
     add a new subdirectory with the new timestamp for the current run.
 
     Args:
         auto_remove_exp_dir (bool): if True, automatically remove the existing experiment
             folder if it exists at the same path.
-    
+
     Returns:
         log_dir (str): path to created log directory (sub-folder in experiment directory)
         output_dir (str): path to created models directory (sub-folder in experiment directory)
@@ -47,7 +48,7 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     """
     # timestamp for directory names
     t_now = time.time()
-    time_str = datetime.datetime.fromtimestamp(t_now).strftime('%Y%m%d%H%M%S')
+    time_str = datetime.datetime.fromtimestamp(t_now).strftime("%Y%m%d%H%M%S")
 
     # create directory for where to dump model parameters, tensorboard logs, and videos
     base_output_dir = os.path.expanduser(config.train.output_dir)
@@ -57,7 +58,11 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     base_output_dir = os.path.join(base_output_dir, config.experiment.name)
     if os.path.exists(base_output_dir):
         if not auto_remove_exp_dir:
-            ans = input("WARNING: model directory ({}) already exists! \noverwrite? (y/n)\n".format(base_output_dir))
+            ans = input(
+                "WARNING: model directory ({}) already exists! \noverwrite? (y/n)\n".format(
+                    base_output_dir
+                )
+            )
         else:
             ans = "y"
         if ans == "y":
@@ -98,14 +103,23 @@ def load_data_for_training(config, obs_keys):
     train_filter_by_attribute = config.train.hdf5_filter_key
     valid_filter_by_attribute = config.train.hdf5_validation_filter_key
     if valid_filter_by_attribute is not None:
-        assert config.experiment.validate, "specified validation filter key {}, but config.experiment.validate is not set".format(valid_filter_by_attribute)
+        assert (
+            config.experiment.validate
+        ), "specified validation filter key {}, but config.experiment.validate is not set".format(
+            valid_filter_by_attribute
+        )
 
     # load the dataset into memory
     if config.experiment.validate:
-        assert not config.train.hdf5_normalize_obs, "no support for observation normalization with validation data yet"
-        assert (train_filter_by_attribute is not None) and (valid_filter_by_attribute is not None), \
-            "did not specify filter keys corresponding to train and valid split in dataset" \
+        assert (
+            not config.train.hdf5_normalize_obs
+        ), "no support for observation normalization with validation data yet"
+        assert (train_filter_by_attribute is not None) and (
+            valid_filter_by_attribute is not None
+        ), (
+            "did not specify filter keys corresponding to train and valid split in dataset"
             " - please fill config.train.hdf5_filter_key and config.train.hdf5_validation_filter_key"
+        )
         train_demo_keys = FileUtils.get_demos_for_filter_key(
             hdf5_path=os.path.expanduser(config.train.data),
             filter_key=train_filter_by_attribute,
@@ -114,12 +128,19 @@ def load_data_for_training(config, obs_keys):
             hdf5_path=os.path.expanduser(config.train.data),
             filter_key=valid_filter_by_attribute,
         )
-        assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
-            "validation demonstrations!"
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
-        valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
+        assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), (
+            "training demonstrations overlap with " "validation demonstrations!"
+        )
+        train_dataset = dataset_factory(
+            config, obs_keys, filter_by_attribute=train_filter_by_attribute
+        )
+        valid_dataset = dataset_factory(
+            config, obs_keys, filter_by_attribute=valid_filter_by_attribute
+        )
     else:
-        train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
+        train_dataset = dataset_factory(
+            config, obs_keys, filter_by_attribute=train_filter_by_attribute
+        )
         valid_dataset = None
 
     return train_dataset, valid_dataset
@@ -151,7 +172,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
         dataset_keys=config.train.dataset_keys,
-        load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
+        load_next_obs=config.train.hdf5_load_next_obs,  # whether to load next observations (s') from dataset
         frame_stack=config.train.frame_stack,
         seq_length=config.train.seq_length,
         pad_frame_stack=config.train.pad_frame_stack,
@@ -161,7 +182,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_cache_mode=config.train.hdf5_cache_mode,
         hdf5_use_swmr=config.train.hdf5_use_swmr,
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
-        filter_by_attribute=filter_by_attribute
+        filter_by_attribute=filter_by_attribute,
     )
     dataset = SequenceDataset(**ds_kwargs)
 
@@ -169,15 +190,15 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
 
 
 def run_rollout(
-        policy, 
-        env, 
-        horizon,
-        use_goals=False,
-        render=False,
-        video_writer=None,
-        video_skip=5,
-        terminate_on_success=False,
-    ):
+    policy,
+    env,
+    horizon,
+    use_goals=False,
+    render=False,
+    video_writer=None,
+    video_skip=5,
+    terminate_on_success=False,
+):
     """
     Runs a rollout in an environment with the current network parameters.
 
@@ -192,7 +213,7 @@ def run_rollout(
 
         render (bool): if True, render the rollout to the screen
 
-        video_writer (imageio Writer instance): if not None, use video writer object to append frames at 
+        video_writer (imageio Writer instance): if not None, use video writer object to append frames at
             rate given by @video_skip
 
         video_skip (int): how often to write video frame
@@ -216,8 +237,8 @@ def run_rollout(
     results = {}
     video_count = 0  # video frame counter
 
-    total_reward = 0.
-    success = { k: False for k in env.is_success() } # success metrics
+    total_reward = 0.0
+    success = {k: False for k in env.is_success()}  # success metrics
 
     try:
         for step_i in range(horizon):
@@ -267,19 +288,19 @@ def run_rollout(
 
 
 def rollout_with_stats(
-        policy,
-        envs,
-        horizon,
-        use_goals=False,
-        num_episodes=None,
-        render=False,
-        video_dir=None,
-        video_path=None,
-        epoch=None,
-        video_skip=5,
-        terminate_on_success=False,
-        verbose=False,
-    ):
+    policy,
+    envs,
+    horizon,
+    use_goals=False,
+    num_episodes=None,
+    render=False,
+    video_dir=None,
+    video_path=None,
+    epoch=None,
+    video_skip=5,
+    terminate_on_success=False,
+    verbose=False,
+):
     """
     A helper function used in the train loop to conduct evaluation rollouts per environment
     and summarize the results.
@@ -312,10 +333,10 @@ def rollout_with_stats(
         terminate_on_success (bool): if True, terminate episode early as soon as a success is encountered
 
         verbose (bool): if True, print results of each rollout
-    
+
     Returns:
-        all_rollout_logs (dict): dictionary of rollout statistics (e.g. return, success rate, ...) 
-            averaged across all rollouts 
+        all_rollout_logs (dict): dictionary of rollout statistics (e.g. return, success rate, ...)
+            averaged across all rollouts
 
         video_paths (dict): path to rollout videos for each environment
     """
@@ -324,20 +345,24 @@ def rollout_with_stats(
     all_rollout_logs = OrderedDict()
 
     # handle paths and create writers for video writing
-    assert (video_path is None) or (video_dir is None), "rollout_with_stats: can't specify both video path and dir"
+    assert (video_path is None) or (
+        video_dir is None
+    ), "rollout_with_stats: can't specify both video path and dir"
     write_video = (video_path is not None) or (video_dir is not None)
     video_paths = OrderedDict()
     video_writers = OrderedDict()
     if video_path is not None:
         # a single video is written for all envs
-        video_paths = { k : video_path for k in envs }
+        video_paths = {k: video_path for k in envs}
         video_writer = imageio.get_writer(video_path, fps=20)
-        video_writers = { k : video_writer for k in envs }
+        video_writers = {k: video_writer for k in envs}
     if video_dir is not None:
         # video is written per env
-        video_str = "_epoch_{}.mp4".format(epoch) if epoch is not None else ".mp4" 
-        video_paths = { k : os.path.join(video_dir, "{}{}".format(k, video_str)) for k in envs }
-        video_writers = { k : imageio.get_writer(video_paths[k], fps=20) for k in envs }
+        video_str = "_epoch_{}.mp4".format(epoch) if epoch is not None else ".mp4"
+        video_paths = {
+            k: os.path.join(video_dir, "{}{}".format(k, video_str)) for k in envs
+        }
+        video_writers = {k: imageio.get_writer(video_paths[k], fps=20) for k in envs}
 
     for env_name, env in envs.items():
         env_video_writer = None
@@ -345,9 +370,14 @@ def rollout_with_stats(
             print("video writes to " + video_paths[env_name])
             env_video_writer = video_writers[env_name]
 
-        print("rollout: env={}, horizon={}, use_goals={}, num_episodes={}".format(
-            env.name, horizon, use_goals, num_episodes,
-        ))
+        print(
+            "rollout: env={}, horizon={}, use_goals={}, num_episodes={}".format(
+                env.name,
+                horizon,
+                use_goals,
+                num_episodes,
+            )
+        )
         rollout_logs = []
         iterator = range(num_episodes)
         if not verbose:
@@ -370,7 +400,11 @@ def rollout_with_stats(
             rollout_logs.append(rollout_info)
             num_success += rollout_info["Success_Rate"]
             if verbose:
-                print("Episode {}, horizon={}, num_success={}".format(ep_i + 1, horizon, num_success))
+                print(
+                    "Episode {}, horizon={}, num_success={}".format(
+                        ep_i + 1, horizon, num_success
+                    )
+                )
                 print(json.dumps(rollout_info, sort_keys=True, indent=4))
 
         if video_dir is not None:
@@ -378,9 +412,14 @@ def rollout_with_stats(
             env_video_writer.close()
 
         # average metric across all episodes
-        rollout_logs = dict((k, [rollout_logs[i][k] for i in range(len(rollout_logs))]) for k in rollout_logs[0])
+        rollout_logs = dict(
+            (k, [rollout_logs[i][k] for i in range(len(rollout_logs))])
+            for k in rollout_logs[0]
+        )
         rollout_logs_mean = dict((k, np.mean(v)) for k, v in rollout_logs.items())
-        rollout_logs_mean["Time_Episode"] = np.sum(rollout_logs["time"]) / 60. # total time taken for rollouts in minutes
+        rollout_logs_mean["Time_Episode"] = (
+            np.sum(rollout_logs["time"]) / 60.0
+        )  # total time taken for rollouts in minutes
         all_rollout_logs[env_name] = rollout_logs_mean
 
     if video_path is not None:
@@ -391,13 +430,13 @@ def rollout_with_stats(
 
 
 def should_save_from_rollout_logs(
-        all_rollout_logs,
-        best_return,
-        best_success_rate,
-        epoch_ckpt_name,
-        save_on_best_rollout_return,
-        save_on_best_rollout_success_rate,
-    ):
+    all_rollout_logs,
+    best_return,
+    best_success_rate,
+    epoch_ckpt_name,
+    save_on_best_rollout_return,
+    save_on_best_rollout_success_rate,
+):
     """
     Helper function used during training to determine whether checkpoints and videos
     should be saved. It will modify input attributes appropriately (such as updating
@@ -417,10 +456,10 @@ def should_save_from_rollout_logs(
         epoch_ckpt_name (str): what to name the checkpoint file - this name might be modified
             by this function
 
-        save_on_best_rollout_return (bool): if True, should save checkpoints that achieve a 
+        save_on_best_rollout_return (bool): if True, should save checkpoints that achieve a
             new best rollout return
 
-        save_on_best_rollout_success_rate (bool): if True, should save checkpoints that achieve a 
+        save_on_best_rollout_success_rate (bool): if True, should save checkpoints that achieve a
             new best rollout success rate
 
     Returns:
@@ -438,7 +477,9 @@ def should_save_from_rollout_logs(
             best_return[env_name] = rollout_logs["Return"]
             if save_on_best_rollout_return:
                 # save checkpoint if achieve new best return
-                epoch_ckpt_name += "_{}_return_{}".format(env_name, best_return[env_name])
+                epoch_ckpt_name += "_{}_return_{}".format(
+                    env_name, best_return[env_name]
+                )
                 should_save_ckpt = True
                 ckpt_reason = "return"
 
@@ -446,7 +487,9 @@ def should_save_from_rollout_logs(
             best_success_rate[env_name] = rollout_logs["Success_Rate"]
             if save_on_best_rollout_success_rate:
                 # save checkpoint if achieve new best success rate
-                epoch_ckpt_name += "_{}_success_{}".format(env_name, best_success_rate[env_name])
+                epoch_ckpt_name += "_{}_success_{}".format(
+                    env_name, best_success_rate[env_name]
+                )
                 should_save_ckpt = True
                 ckpt_reason = "success"
 
@@ -460,7 +503,9 @@ def should_save_from_rollout_logs(
     )
 
 
-def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None):
+def save_model(
+    model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None
+):
     """
     Save model to a torch pth file.
 
@@ -496,6 +541,7 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
+
 def delete_checkpoints(ckpt_dir, top_n=3, smallest=True):
     """
     Delete checkpoints in a directory, keeping top @top_n checkpoints based on lowest validation loss.  Where checkpoints are saved in the form "model_epoch_{n}_best_validation_{validation loss}.pth
@@ -524,17 +570,27 @@ def delete_checkpoints(ckpt_dir, top_n=3, smallest=True):
         for ckpt in all_checkpoints[:-top_n]:
             os.remove(os.path.join(ckpt_dir, ckpt))
 
+
 def get_gpu_usage_mb(index):
     """Returns the GPU usage in B."""
     h = nvmlDeviceGetHandleByIndex(index)
     info = nvmlDeviceGetMemoryInfo(h)
-    print(f'total    : {info.total}')
-    print(f'free     : {info.free}')
-    print(f'used     : {info.used}')
+    print(f"total    : {info.total}")
+    print(f"free     : {info.free}")
+    print(f"used     : {info.used}")
 
     return info.used / 1024 / 1024
 
-def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
+
+def run_epoch(
+    model,
+    data_loader,
+    epoch,
+    validate=False,
+    num_steps=None,
+    obs_normalization_stats=None,
+    ac_key=None,
+):
     """
     Run an epoch of training or validation.
 
@@ -560,8 +616,8 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         step_log_all (dict): dictionary of logged training metrics averaged across all batches
     """
 
-    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
-    
+    # print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
+
     epoch_timestamp = time.time()
     if validate:
         model.set_eval()
@@ -591,7 +647,9 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         # process batch for training
         t = time.time()
         input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
-        input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
+        input_batch = model.postprocess_batch_for_training(
+            input_batch, obs_normalization_stats=obs_normalization_stats
+        )
         timing_stats["Process_Batch"].append(time.time() - t)
 
         # forward and backward pass
@@ -617,12 +675,22 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
     # add in timing stats
     for k in timing_stats:
         # sum across all training steps, and convert from seconds to minutes
-        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.
-    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
+        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.0
+    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.0
 
     return step_log_all
 
-def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
+
+def run_epoch_2_dataloaders(
+    model,
+    data_loader,
+    epoch,
+    data_loader_2,
+    validate=False,
+    num_steps=None,
+    obs_normalization_stats=None,
+    ac_key=None,
+):
     """
     Run an epoch of training or validation.
 
@@ -648,7 +716,7 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
         step_log_all (dict): dictionary of logged training metrics averaged across all batches
     """
 
-    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
+    # print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
     # breakpoint()
     epoch_timestamp = time.time()
     if validate:
@@ -685,11 +753,23 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
         t = time.time()
         # breakpoint()
         input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
-        input_batch_2 = None if batch_2 is None else model.process_batch_for_training(batch_2, ac_key=ac_key)
+        input_batch_2 = (
+            None
+            if batch_2 is None
+            else model.process_batch_for_training(batch_2, ac_key=ac_key)
+        )
 
         # breakpoint()
-        input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
-        input_batch_2 = None if input_batch_2 is None else model.postprocess_batch_for_training(input_batch_2, obs_normalization_stats=obs_normalization_stats)
+        input_batch = model.postprocess_batch_for_training(
+            input_batch, obs_normalization_stats=obs_normalization_stats
+        )
+        input_batch_2 = (
+            None
+            if input_batch_2 is None
+            else model.postprocess_batch_for_training(
+                input_batch_2, obs_normalization_stats=obs_normalization_stats
+            )
+        )
 
         timing_stats["Process_Batch"].append(time.time() - t)
 
@@ -697,7 +777,9 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
         t = time.time()
         # breakpoint()
         if input_batch_2 is not None:
-            info = model.train_on_batch([input_batch, input_batch_2], epoch, validate=validate)
+            info = model.train_on_batch(
+                [input_batch, input_batch_2], epoch, validate=validate
+            )
         else:
             info = model.train_on_batch(input_batch, epoch, validate=validate)
         timing_stats["Train_Batch"].append(time.time() - t)
@@ -720,16 +802,17 @@ def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=F
     # add in timing stats
     for k in timing_stats:
         # sum across all training steps, and convert from seconds to minutes
-        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.
-    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
+        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.0
+    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.0
 
     return step_log_all
 
+
 def is_every_n_steps(interval, current_step, skip_zero=False):
     """
-    Convenient function to check whether current_step is at the interval. 
+    Convenient function to check whether current_step is at the interval.
     Returns True if current_step % interval == 0 and asserts a few corner cases (e.g., interval <= 0)
-    
+
     Args:
         interval (int): target interval
         current_step (int): current step

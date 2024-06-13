@@ -21,7 +21,9 @@ if __name__ == "__main__":
         print("{} does not exist! Aborting...".format(macros_path))
 
     if os.path.exists(macros_private_path):
-        ans = input("{} already exists! \noverwrite? (y/n)\n".format(macros_private_path))
+        ans = input(
+            "{} already exists! \noverwrite? (y/n)\n".format(macros_private_path)
+        )
 
         if ans == "y":
             print("REMOVING")

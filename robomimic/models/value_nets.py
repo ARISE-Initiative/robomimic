@@ -4,6 +4,7 @@ observation dictionary as input (and possibly additional conditioning,
 such as subgoal or goal dictionaries) and produce value or 
 action-value estimates or distributions.
 """
+
 import numpy as np
 from collections import OrderedDict
 
@@ -22,6 +23,7 @@ class ValueNetwork(MIMO_MLP):
     A basic value network that predicts values from observations.
     Can optionally be goal conditioned on future observations.
     """
+
     def __init__(
         self,
         obs_shapes,
@@ -35,7 +37,7 @@ class ValueNetwork(MIMO_MLP):
             obs_shapes (OrderedDict): a dictionary that maps observation keys to
                 expected shapes for observations.
 
-            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes. 
+            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes.
 
             value_bounds (tuple): a 2-tuple corresponding to the lowest and highest possible return
                 that the network should be possible of generating. The network will rescale outputs
@@ -64,8 +66,12 @@ class ValueNetwork(MIMO_MLP):
         self.value_bounds = value_bounds
         if self.value_bounds is not None:
             # convert [lb, ub] to a scale and offset for the tanh output, which is in [-1, 1]
-            self._value_scale = (float(self.value_bounds[1]) - float(self.value_bounds[0])) / 2.
-            self._value_offset = (float(self.value_bounds[1]) + float(self.value_bounds[0])) / 2.
+            self._value_scale = (
+                float(self.value_bounds[1]) - float(self.value_bounds[0])
+            ) / 2.0
+            self._value_offset = (
+                float(self.value_bounds[1]) + float(self.value_bounds[0])
+            ) / 2.0
 
         assert isinstance(obs_shapes, OrderedDict)
         self.obs_shapes = obs_shapes
@@ -101,11 +107,11 @@ class ValueNetwork(MIMO_MLP):
 
     def output_shape(self, input_shape=None):
         """
-        Function to compute output shape from inputs to this module. 
+        Function to compute output shape from inputs to this module.
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
@@ -117,7 +123,9 @@ class ValueNetwork(MIMO_MLP):
         """
         Forward through value network, and then optionally use tanh scaling.
         """
-        values = super(ValueNetwork, self).forward(obs=obs_dict, goal=goal_dict)["value"]
+        values = super(ValueNetwork, self).forward(obs=obs_dict, goal=goal_dict)[
+            "value"
+        ]
         if self.value_bounds is not None:
             values = self._value_offset + self._value_scale * torch.tanh(values)
         return values
@@ -131,6 +139,7 @@ class ActionValueNetwork(ValueNetwork):
     A basic Q (action-value) network that predicts values from observations
     and actions. Can optionally be goal conditioned on future observations.
     """
+
     def __init__(
         self,
         obs_shapes,
@@ -147,7 +156,7 @@ class ActionValueNetwork(ValueNetwork):
 
             ac_dim (int): dimension of action space.
 
-            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes. 
+            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes.
 
             value_bounds (tuple): a 2-tuple corresponding to the lowest and highest possible return
                 that the network should be possible of generating. The network will rescale outputs
@@ -203,9 +212,10 @@ class ActionValueNetwork(ValueNetwork):
 class DistributionalActionValueNetwork(ActionValueNetwork):
     """
     Distributional Q (action-value) network that outputs a categorical distribution over
-    a discrete grid of value atoms. See https://arxiv.org/pdf/1707.06887.pdf for 
+    a discrete grid of value atoms. See https://arxiv.org/pdf/1707.06887.pdf for
     more details.
     """
+
     def __init__(
         self,
         obs_shapes,
@@ -223,7 +233,7 @@ class DistributionalActionValueNetwork(ActionValueNetwork):
 
             ac_dim (int): dimension of action space.
 
-            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes. 
+            mlp_layer_dims ([int]): sequence of integers for the MLP hidden layers sizes.
 
             value_bounds (tuple): a 2-tuple corresponding to the lowest and highest possible return
                 that the network should be possible of generating. This defines the support
@@ -315,4 +325,6 @@ class DistributionalActionValueNetwork(ActionValueNetwork):
         return vd.mean()
 
     def _to_string(self):
-        return "action_dim={}\nvalue_bounds={}\nnum_atoms={}".format(self.ac_dim, self.value_bounds, self.num_atoms)
+        return "action_dim={}\nvalue_bounds={}\nnum_atoms={}".format(
+            self.ac_dim, self.value_bounds, self.num_atoms
+        )

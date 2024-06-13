@@ -5,6 +5,7 @@ an actor model is conditioned on the subgoals to try and
 reach them. Largely based on the Generalization Through Imitation (GTI)
 paper (see https://arxiv.org/abs/2003.06085).
 """
+
 import textwrap
 import numpy as np
 from collections import OrderedDict
@@ -15,7 +16,12 @@ import torch
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 from robomimic.config.config import Config
-from robomimic.algo import register_algo_factory_func, algo_name_to_factory_func, HierarchicalAlgo, GL_VAE
+from robomimic.algo import (
+    register_algo_factory_func,
+    algo_name_to_factory_func,
+    HierarchicalAlgo,
+    GL_VAE,
+)
 
 
 @register_algo_factory_func("hbc")
@@ -39,6 +45,7 @@ class HBC(HierarchicalAlgo):
     """
     Default HBC training, largely based on https://arxiv.org/abs/2003.06085
     """
+
     def __init__(
         self,
         planner_algo_class,
@@ -77,9 +84,13 @@ class HBC(HierarchicalAlgo):
         self.ac_dim = ac_dim
         self.device = device
 
-        self._subgoal_step_count = 0  # current step count for deciding when to update subgoal
+        self._subgoal_step_count = (
+            0  # current step count for deciding when to update subgoal
+        )
         self._current_subgoal = None  # latest subgoal
-        self._subgoal_update_interval = self.algo_config.subgoal_update_interval  # subgoal update frequency
+        self._subgoal_update_interval = (
+            self.algo_config.subgoal_update_interval
+        )  # subgoal update frequency
         self._subgoal_horizon = self.algo_config.planner.subgoal_horizon
         self._actor_horizon = self.algo_config.actor.rnn.horizon
 
@@ -92,14 +103,16 @@ class HBC(HierarchicalAlgo):
             global_config=global_config,
             obs_key_shapes=obs_key_shapes,
             ac_dim=ac_dim,
-            device=device
+            device=device,
         )
 
         # goal-conditional actor follows goals set by the planner
         self.actor_goal_shapes = self.planner.subgoal_shapes
         if self.algo_config.latent_subgoal.enabled:
             assert planner_algo_class == GL_VAE  # only VAE supported for now
-            self.actor_goal_shapes = OrderedDict(latent_subgoal=(self.planner.algo_config.vae.latent_dim,))
+            self.actor_goal_shapes = OrderedDict(
+                latent_subgoal=(self.planner.algo_config.vae.latent_dim,)
+            )
 
         # only for the actor: override goal modalities and shapes to match the subgoal set by the planner
         actor_obs_key_shapes = deepcopy(obs_key_shapes)
@@ -109,7 +122,9 @@ class HBC(HierarchicalAlgo):
                 assert actor_obs_key_shapes[k] == self.actor_goal_shapes[k]
         actor_obs_key_shapes.update(self.actor_goal_shapes)
 
-        goal_obs_keys = {obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()}
+        goal_obs_keys = {
+            obs_modality: [] for obs_modality in ObsUtils.OBS_MODALITY_CLASSES.keys()
+        }
         for k in self.actor_goal_shapes.keys():
             goal_obs_keys[ObsUtils.OBS_KEYS_TO_MODALITIES[k]].append(k)
 
@@ -137,7 +152,7 @@ class HBC(HierarchicalAlgo):
 
         Returns:
             input_batch (dict): processed and filtered batch that
-                will be used for training 
+                will be used for training
         """
         input_batch = dict()
 
@@ -147,25 +162,34 @@ class HBC(HierarchicalAlgo):
         if self.algo_config.actor_use_random_subgoals:
             # optionally use randomly sampled step between [1, seq_length] as policy goal
             policy_subgoal_indices = torch.randint(
-                low=0, high=self.global_config.train.seq_length, size=(batch["actions"].shape[0],))
-            goal_obs = TensorUtils.gather_sequence(batch["next_obs"], policy_subgoal_indices)
-            goal_obs = TensorUtils.to_float(TensorUtils.to_device(goal_obs, self.device))
-            input_batch["actor"]["goal_obs"] = \
+                low=0,
+                high=self.global_config.train.seq_length,
+                size=(batch["actions"].shape[0],),
+            )
+            goal_obs = TensorUtils.gather_sequence(
+                batch["next_obs"], policy_subgoal_indices
+            )
+            goal_obs = TensorUtils.to_float(
+                TensorUtils.to_device(goal_obs, self.device)
+            )
+            input_batch["actor"]["goal_obs"] = (
                 self.planner.get_actor_goal_for_training_from_processed_batch(
                     goal_obs,
                     use_latent_subgoals=self.algo_config.latent_subgoal.enabled,
                     use_prior_correction=self.algo_config.latent_subgoal.prior_correction.enabled,
                     num_prior_samples=self.algo_config.latent_subgoal.prior_correction.num_samples,
                 )
+            )
         else:
             # otherwise, use planner subgoal target as goal for the policy
-            input_batch["actor"]["goal_obs"] = \
+            input_batch["actor"]["goal_obs"] = (
                 self.planner.get_actor_goal_for_training_from_processed_batch(
                     input_batch["planner"],
                     use_latent_subgoals=self.algo_config.latent_subgoal.enabled,
                     use_prior_correction=self.algo_config.latent_subgoal.prior_correction.enabled,
                     num_prior_samples=self.algo_config.latent_subgoal.prior_correction.num_samples,
                 )
+            )
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
@@ -190,24 +214,34 @@ class HBC(HierarchicalAlgo):
         """
         info = dict(planner=dict(), actor=dict())
         # train planner
-        info["planner"].update(self.planner.train_on_batch(batch["planner"], epoch, validate=validate))
+        info["planner"].update(
+            self.planner.train_on_batch(batch["planner"], epoch, validate=validate)
+        )
 
         # train actor
         if self._algo_mode == "separate":
             # train low-level actor by getting subgoals from the dataset
-            info["actor"].update(self.actor.train_on_batch(batch["actor"], epoch, validate=validate))
+            info["actor"].update(
+                self.actor.train_on_batch(batch["actor"], epoch, validate=validate)
+            )
 
         elif self._algo_mode == "cascade":
             # get predictions from the planner
             with torch.no_grad():
                 batch["actor"]["goal_obs"] = self.planner.get_subgoal_predictions(
-                    obs_dict=batch["planner"]["obs"], goal_dict=batch["planner"]["goal_obs"])
+                    obs_dict=batch["planner"]["obs"],
+                    goal_dict=batch["planner"]["goal_obs"],
+                )
 
             # train actor with the predicted goal
-            info["actor"].update(self.actor.train_on_batch(batch["actor"], epoch, validate=validate))
+            info["actor"].update(
+                self.actor.train_on_batch(batch["actor"], epoch, validate=validate)
+            )
 
         else:
-            raise NotImplementedError("algo mode {} is not implemented".format(self._algo_mode))
+            raise NotImplementedError(
+                "algo mode {} is not implemented".format(self._algo_mode)
+            )
 
         return info
 
@@ -224,7 +258,7 @@ class HBC(HierarchicalAlgo):
         """
         planner_log = dict()
         actor_log = dict()
-        loss = 0.
+        loss = 0.0
 
         planner_log = self.planner.log_info(info["planner"])
         planner_log = dict(("Planner/" + k, v) for k, v in planner_log.items())
@@ -284,7 +318,7 @@ class HBC(HierarchicalAlgo):
         """
         Return the current subgoal (at rollout time) with shape (batch, ...)
         """
-        return { k : self._current_subgoal[k].clone() for k in self._current_subgoal }
+        return {k: self._current_subgoal[k].clone() for k in self._current_subgoal}
 
     @current_subgoal.setter
     def current_subgoal(self, sg):
@@ -297,7 +331,7 @@ class HBC(HierarchicalAlgo):
                 assert list(v.shape[1:]) == list(self.planner.subgoal_shapes[k])
             # subgoal shapes should always match actor goal shapes
             assert list(v.shape[1:]) == list(self.actor_goal_shapes[k])
-        self._current_subgoal = { k : sg[k].clone() for k in sg }
+        self._current_subgoal = {k: sg[k].clone() for k in sg}
 
     def get_action(self, obs_dict, goal_dict=None):
         """
@@ -310,11 +344,18 @@ class HBC(HierarchicalAlgo):
         Returns:
             action (torch.Tensor): action tensor
         """
-        if self._current_subgoal is None or self._subgoal_step_count % self._subgoal_update_interval == 0:
+        if (
+            self._current_subgoal is None
+            or self._subgoal_step_count % self._subgoal_update_interval == 0
+        ):
             # update current subgoal
-            self.current_subgoal = self.planner.get_subgoal_predictions(obs_dict=obs_dict, goal_dict=goal_dict)
+            self.current_subgoal = self.planner.get_subgoal_predictions(
+                obs_dict=obs_dict, goal_dict=goal_dict
+            )
 
-        action = self.actor.get_action(obs_dict=obs_dict, goal_dict=self.current_subgoal)
+        action = self.actor.get_action(
+            obs_dict=obs_dict, goal_dict=self.current_subgoal
+        )
         self._subgoal_step_count += 1
         return action
 
@@ -332,13 +373,20 @@ class HBC(HierarchicalAlgo):
         Pretty print algorithm and network description.
         """
         msg = str(self.__class__.__name__)
-        msg += "(subgoal_horizon={}, actor_horizon={}, subgoal_update_interval={}, mode={}, " \
-               "actor_use_random_subgoals={})\n".format(
-            self._subgoal_horizon,
-            self._actor_horizon,
-            self._subgoal_update_interval,
-            self._algo_mode,
-            self.algo_config.actor_use_random_subgoals
+        msg += (
+            "(subgoal_horizon={}, actor_horizon={}, subgoal_update_interval={}, mode={}, "
+            "actor_use_random_subgoals={})\n".format(
+                self._subgoal_horizon,
+                self._actor_horizon,
+                self._subgoal_update_interval,
+                self._algo_mode,
+                self.algo_config.actor_use_random_subgoals,
+            )
         )
-        return msg + "Planner:\n" + textwrap.indent(self.planner.__repr__(), '  ') + \
-               "\n\nPolicy:\n" + textwrap.indent(self.actor.__repr__(), '  ')
+        return (
+            msg
+            + "Planner:\n"
+            + textwrap.indent(self.planner.__repr__(), "  ")
+            + "\n\nPolicy:\n"
+            + textwrap.indent(self.actor.__repr__(), "  ")
+        )

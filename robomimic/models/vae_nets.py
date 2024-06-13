@@ -2,6 +2,7 @@
 Contains an implementation of Variational Autoencoder (VAE) and other
 variants, including other priors, and RNN-VAEs.
 """
+
 import textwrap
 import numpy as np
 from copy import deepcopy
@@ -47,10 +48,11 @@ def vae_args_from_config(vae_config):
 class Prior(Module):
     """
     Base class for VAE priors. It's basically the same as a @MIMO_MLP network (it
-    instantiates one) but it supports additional methods such as KL loss computation 
-    and sampling, and also may learn prior parameters as observation-independent 
+    instantiates one) but it supports additional methods such as KL loss computation
+    and sampling, and also may learn prior parameters as observation-independent
     torch Parameters instead of observation-dependent mappings.
     """
+
     def __init__(
         self,
         param_shapes,
@@ -68,7 +70,7 @@ class Prior(Module):
 
             param_obs_dependent (OrderedDict): a dictionary with boolean
                 values consistent with @param_shapes which determines whether
-                to learn parameters as part of the (obs-dependent) network or 
+                to learn parameters as part of the (obs-dependent) network or
                 directly as learnable parameters.
 
             obs_shapes (OrderedDict): a dictionary that maps modality to
@@ -98,7 +100,9 @@ class Prior(Module):
         """
         super(Prior, self).__init__()
 
-        assert isinstance(param_shapes, OrderedDict) and isinstance(param_obs_dependent, OrderedDict)
+        assert isinstance(param_shapes, OrderedDict) and isinstance(
+            param_obs_dependent, OrderedDict
+        )
         assert set(param_shapes.keys()) == set(param_obs_dependent.keys())
         self.param_shapes = param_shapes
         self.param_obs_dependent = param_obs_dependent
@@ -125,7 +129,9 @@ class Prior(Module):
                 mlp_output_shapes[pp] = self.param_shapes[pp]
             else:
                 # learnable prior parameters independent of observation
-                param_init = torch.randn(*self.param_shapes[pp]) / np.sqrt(np.prod(self.param_shapes[pp]))
+                param_init = torch.randn(*self.param_shapes[pp]) / np.sqrt(
+                    np.prod(self.param_shapes[pp])
+                )
                 self.prior_params[pp] = torch.nn.Parameter(param_init)
 
         # only make networks if we have obs-dependent prior parameters
@@ -170,7 +176,7 @@ class Prior(Module):
     def kl_loss(self, posterior_params, z=None, obs_dict=None, goal_dict=None):
         """
         Computes sample-based KL divergence loss between the Gaussian distribution
-        given by @mu, @logvar and the prior distribution. 
+        given by @mu, @logvar and the prior distribution.
 
         Args:
             posterior_params (dict): dictionary with keys "mu" and "logvar" corresponding
@@ -197,7 +203,7 @@ class Prior(Module):
         """
         if self.prior_module is not None:
             return self.prior_module.output_shape(input_shape)
-        return { k : list(self.param_shapes[k]) for k in self.param_shapes }
+        return {k: list(self.param_shapes[k]) for k in self.param_shapes}
 
     def forward(self, batch_size, obs_dict=None, goal_dict=None):
         """
@@ -225,11 +231,17 @@ class Prior(Module):
         for pp in self.param_shapes:
             if not self.param_obs_dependent[pp]:
                 # ensure leading dimension will be consistent with other params
-                prior_params[pp] = TensorUtils.expand_at(self.prior_params[pp], size=batch_size, dim=0)
+                prior_params[pp] = TensorUtils.expand_at(
+                    self.prior_params[pp], size=batch_size, dim=0
+                )
 
         # ensure leading dimensions are all consistent
-        TensorUtils.assert_size_at_dim(prior_params, size=batch_size, dim=0, 
-                msg="prior params dim 0 mismatch in forward")
+        TensorUtils.assert_size_at_dim(
+            prior_params,
+            size=batch_size,
+            dim=0,
+            msg="prior params dim 0 mismatch in forward",
+        )
 
         return prior_params
 
@@ -239,6 +251,7 @@ class GaussianPrior(Prior):
     A class that holds functionality for learning both unimodal Gaussian priors and
     multimodal Gaussian Mixture Model priors for use in VAEs.
     """
+
     def __init__(
         self,
         latent_dim,
@@ -278,7 +291,7 @@ class GaussianPrior(Prior):
 
             obs_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for observations. If provided, assumes that
-                the prior should depend on observation inputs, and networks 
+                the prior should depend on observation inputs, and networks
                 will be created to output prior parameters.
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layer sizes
@@ -324,8 +337,14 @@ class GaussianPrior(Prior):
 
             # network will generate mean and logvar
             param_shapes = OrderedDict(
-                mean=(self.num_modes, self.latent_dim,),
-                logvar=(self.num_modes, self.latent_dim,),
+                mean=(
+                    self.num_modes,
+                    self.latent_dim,
+                ),
+                logvar=(
+                    self.num_modes,
+                    self.latent_dim,
+                ),
             )
             param_obs_dependent = OrderedDict(mean=True, logvar=True)
 
@@ -383,14 +402,19 @@ class GaussianPrior(Prior):
 
         # check consistency between n and obs_dict
         if self._input_dependent:
-            TensorUtils.assert_size_at_dim(obs_dict, size=n, dim=0, 
-                msg="obs dict and n mismatch in @sample")
+            TensorUtils.assert_size_at_dim(
+                obs_dict, size=n, dim=0, msg="obs dict and n mismatch in @sample"
+            )
 
         if self.learnable:
 
             # forward to get parameters
             out = self.forward(batch_size=n, obs_dict=obs_dict, goal_dict=goal_dict)
-            prior_means, prior_logvars, prior_logweights = out["means"], out["logvars"], out["logweights"]
+            prior_means, prior_logvars, prior_logweights = (
+                out["means"],
+                out["logvars"],
+                out["logweights"],
+            )
 
             if prior_logweights is not None:
                 prior_weights = torch.exp(prior_logweights)
@@ -400,19 +424,28 @@ class GaussianPrior(Prior):
 
                 # make uniform weights (in the case that weights were not learned)
                 if not self.gmm_learn_weights:
-                    prior_weights = torch.ones(n, self.num_modes).to(prior_means.device) / self.num_modes
+                    prior_weights = (
+                        torch.ones(n, self.num_modes).to(prior_means.device)
+                        / self.num_modes
+                    )
 
                 # sample modes
                 gmm_mode_indices = D.Categorical(prior_weights).sample()
-                
+
                 # get GMM centers and sample using reparametrization trick
-                selected_means = TensorUtils.gather_sequence(prior_means, indices=gmm_mode_indices)
-                selected_logvars = TensorUtils.gather_sequence(prior_logvars, indices=gmm_mode_indices)
+                selected_means = TensorUtils.gather_sequence(
+                    prior_means, indices=gmm_mode_indices
+                )
+                selected_logvars = TensorUtils.gather_sequence(
+                    prior_logvars, indices=gmm_mode_indices
+                )
                 z = TorchUtils.reparameterize(selected_means, selected_logvars)
 
             else:
                 # learned unimodal Gaussian - remove mode dim and sample from Gaussian using reparametrization trick
-                z = TorchUtils.reparameterize(prior_means[:, 0, :], prior_logvars[:, 0, :])
+                z = TorchUtils.reparameterize(
+                    prior_means[:, 0, :], prior_logvars[:, 0, :]
+                )
 
         else:
             # sample from N(0, 1)
@@ -426,7 +459,7 @@ class GaussianPrior(Prior):
     def kl_loss(self, posterior_params, z=None, obs_dict=None, goal_dict=None):
         """
         Computes sample-based KL divergence loss between the Gaussian distribution
-        given by @mu, @logvar and the prior distribution. 
+        given by @mu, @logvar and the prior distribution.
 
         Args:
             posterior_params (dict): dictionary with keys "mu" and "logvar" corresponding
@@ -452,25 +485,32 @@ class GaussianPrior(Prior):
             return LossUtils.KLD_0_1_loss(mu=mu, logvar=logvar)
 
         # forward to get parameters
-        out = self.forward(batch_size=mu.shape[0], obs_dict=obs_dict, goal_dict=goal_dict)
-        prior_means, prior_logvars, prior_logweights = out["means"], out["logvars"], out["logweights"]
+        out = self.forward(
+            batch_size=mu.shape[0], obs_dict=obs_dict, goal_dict=goal_dict
+        )
+        prior_means, prior_logvars, prior_logweights = (
+            out["means"],
+            out["logvars"],
+            out["logweights"],
+        )
 
         if not self.use_gmm:
             # collapse mode dimension and compute Gaussian KL in closed-form
             prior_means = prior_means[:, 0, :]
             prior_logvars = prior_logvars[:, 0, :]
             return LossUtils.KLD_gaussian_loss(
-                mu_1=mu, 
-                logvar_1=logvar, 
-                mu_2=prior_means, 
+                mu_1=mu,
+                logvar_1=logvar,
+                mu_2=prior_means,
                 logvar_2=prior_logvars,
             )
 
         # GMM KL loss computation
-        var = torch.exp(logvar.clamp(-8, 30)) # clamp for numerical stability
+        var = torch.exp(logvar.clamp(-8, 30))  # clamp for numerical stability
         prior_vars = torch.exp(prior_logvars.clamp(-8, 30))
-        kl_loss = LossUtils.log_normal(x=z, m=mu, v=var) \
-            - LossUtils.log_normal_mixture(x=z, m=prior_means, v=prior_vars, log_w=prior_logweights)
+        kl_loss = LossUtils.log_normal(x=z, m=mu, v=var) - LossUtils.log_normal_mixture(
+            x=z, m=prior_means, v=prior_vars, log_w=prior_logweights
+        )
         return kl_loss.mean()
 
     def forward(self, batch_size, obs_dict=None, goal_dict=None):
@@ -492,7 +532,8 @@ class GaussianPrior(Prior):
         """
         assert self.learnable
         prior_params = super(GaussianPrior, self).forward(
-            batch_size=batch_size, obs_dict=obs_dict, goal_dict=goal_dict)
+            batch_size=batch_size, obs_dict=obs_dict, goal_dict=goal_dict
+        )
 
         if self.use_gmm and self.gmm_learn_weights:
             # normalize learned weight outputs to sum to 1
@@ -501,27 +542,39 @@ class GaussianPrior(Prior):
             logweights = None
             assert "weight" not in prior_params
 
-        out = dict(means=prior_params["mean"], logvars=prior_params["logvar"], logweights=logweights)
+        out = dict(
+            means=prior_params["mean"],
+            logvars=prior_params["logvar"],
+            logweights=logweights,
+        )
         return out
 
     def __repr__(self):
         """Pretty print network"""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = ''
-        indent = ' ' * 4
+        header = "{}".format(str(self.__class__.__name__))
+        msg = ""
+        indent = " " * 4
         msg += textwrap.indent("latent_dim={}\n".format(self.latent_dim), indent)
         msg += textwrap.indent("latent_clip={}\n".format(self.latent_clip), indent)
         msg += textwrap.indent("learnable={}\n".format(self.learnable), indent)
-        msg += textwrap.indent("input_dependent={}\n".format(self._input_dependent), indent)
+        msg += textwrap.indent(
+            "input_dependent={}\n".format(self._input_dependent), indent
+        )
         msg += textwrap.indent("use_gmm={}\n".format(self.use_gmm), indent)
         if self.use_gmm:
             msg += textwrap.indent("gmm_num_nodes={}\n".format(self.num_modes), indent)
-            msg += textwrap.indent("gmm_learn_weights={}\n".format(self.gmm_learn_weights), indent)
+            msg += textwrap.indent(
+                "gmm_learn_weights={}\n".format(self.gmm_learn_weights), indent
+            )
         if self.learnable:
             if self.prior_module is not None:
-                msg += textwrap.indent("\nprior_module={}\n".format(self.prior_module), indent)
-            msg += textwrap.indent("prior_params={}\n".format(self.prior_params), indent)
-        msg = header + '(\n' + msg + ')'
+                msg += textwrap.indent(
+                    "\nprior_module={}\n".format(self.prior_module), indent
+                )
+            msg += textwrap.indent(
+                "prior_params={}\n".format(self.prior_params), indent
+            )
+        msg = header + "(\n" + msg + ")"
         return msg
 
 
@@ -530,6 +583,7 @@ class CategoricalPrior(Prior):
     A class that holds functionality for learning categorical priors for use
     in VAEs.
     """
+
     def __init__(
         self,
         latent_dim,
@@ -540,7 +594,6 @@ class CategoricalPrior(Prior):
         mlp_layer_dims=(),
         goal_shapes=None,
         encoder_kwargs=None,
-
     ):
         """
         Args:
@@ -556,7 +609,7 @@ class CategoricalPrior(Prior):
 
             obs_shapes (OrderedDict): a dictionary that maps modality to
                 expected shapes for observations. If provided, assumes that
-                the prior should depend on observation inputs, and networks 
+                the prior should depend on observation inputs, and networks
                 will be created to output prior parameters.
 
             mlp_layer_dims ([int]): sequence of integers for the MLP hidden layer sizes
@@ -594,7 +647,10 @@ class CategoricalPrior(Prior):
 
             # network will generate logits for categorical distributions
             param_shapes = OrderedDict(
-                logit=(self.latent_dim, self.categorical_dim,)
+                logit=(
+                    self.latent_dim,
+                    self.categorical_dim,
+                )
             )
             param_obs_dependent = OrderedDict(logit=True)
         else:
@@ -641,8 +697,9 @@ class CategoricalPrior(Prior):
 
         # check consistency between n and obs_dict
         if self._input_dependent:
-            TensorUtils.assert_size_at_dim(obs_dict, size=n, dim=0, 
-                msg="obs dict and n mismatch in @sample")
+            TensorUtils.assert_size_at_dim(
+                obs_dict, size=n, dim=0, msg="obs dict and n mismatch in @sample"
+            )
 
         if self.learnable:
 
@@ -658,10 +715,19 @@ class CategoricalPrior(Prior):
             # try to include a categorical sample for each class if possible (ensuring rough uniformity)
             if (self.latent_dim == 1) and (self.categorical_dim <= n):
                 # include samples [0, 1, ..., C - 1] and then repeat until batch is filled
-                dist_samples = torch.arange(n).remainder(self.categorical_dim).unsqueeze(-1).to(self.device)
+                dist_samples = (
+                    torch.arange(n)
+                    .remainder(self.categorical_dim)
+                    .unsqueeze(-1)
+                    .to(self.device)
+                )
             else:
                 # sample one-hot latents from uniform categorical distribution for each latent dimension
-                probs = torch.ones(n, self.latent_dim, self.categorical_dim).float().to(self.device)
+                probs = (
+                    torch.ones(n, self.latent_dim, self.categorical_dim)
+                    .float()
+                    .to(self.device)
+                )
                 dist_samples = D.Categorical(probs=probs).sample()
             z = TensorUtils.to_one_hot(dist_samples, num_class=self.categorical_dim)
 
@@ -672,11 +738,11 @@ class CategoricalPrior(Prior):
     def kl_loss(self, posterior_params, z=None, obs_dict=None, goal_dict=None):
         """
         Computes KL divergence loss between the Categorical distribution
-        given by the unnormalized logits @logits and the prior distribution. 
+        given by the unnormalized logits @logits and the prior distribution.
 
         Args:
             posterior_params (dict): dictionary with key "logits" corresponding
-                to torch.Tensor batch of unnormalized logits of shape [B, D * C] 
+                to torch.Tensor batch of unnormalized logits of shape [B, D * C]
                 that corresponds to the posterior categorical distribution
 
             z (torch.Tensor): samples from encoder - unused for this prior
@@ -689,13 +755,19 @@ class CategoricalPrior(Prior):
         Returns:
             kl_loss (torch.Tensor): KL divergence loss
         """
-        logits = posterior_params["logit"].reshape(-1, self.latent_dim, self.categorical_dim)
+        logits = posterior_params["logit"].reshape(
+            -1, self.latent_dim, self.categorical_dim
+        )
         if not self.learnable:
             # prior logits correspond to uniform categorical distribution
             prior_logits = torch.zeros_like(logits)
         else:
             # forward to get parameters
-            out = self.forward(batch_size=posterior_params["logit"].shape[0], obs_dict=obs_dict, goal_dict=goal_dict)
+            out = self.forward(
+                batch_size=posterior_params["logit"].shape[0],
+                obs_dict=obs_dict,
+                goal_dict=goal_dict,
+            )
             prior_logits = out["logit"]
 
         prior_dist = D.Categorical(logits=prior_logits)
@@ -725,22 +797,31 @@ class CategoricalPrior(Prior):
         """
         assert self.learnable
         return super(CategoricalPrior, self).forward(
-            batch_size=batch_size, obs_dict=obs_dict, goal_dict=goal_dict)
+            batch_size=batch_size, obs_dict=obs_dict, goal_dict=goal_dict
+        )
 
     def __repr__(self):
         """Pretty print network"""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = ''
-        indent = ' ' * 4
+        header = "{}".format(str(self.__class__.__name__))
+        msg = ""
+        indent = " " * 4
         msg += textwrap.indent("latent_dim={}\n".format(self.latent_dim), indent)
-        msg += textwrap.indent("categorical_dim={}\n".format(self.categorical_dim), indent)
+        msg += textwrap.indent(
+            "categorical_dim={}\n".format(self.categorical_dim), indent
+        )
         msg += textwrap.indent("learnable={}\n".format(self.learnable), indent)
-        msg += textwrap.indent("input_dependent={}\n".format(self._input_dependent), indent)
+        msg += textwrap.indent(
+            "input_dependent={}\n".format(self._input_dependent), indent
+        )
         if self.learnable:
             if self.prior_module is not None:
-                msg += textwrap.indent("\nprior_module={}\n".format(self.prior_module), indent)
-            msg += textwrap.indent("prior_params={}\n".format(self.prior_params), indent)
-        msg = header + '(\n' + msg + ')'
+                msg += textwrap.indent(
+                    "\nprior_module={}\n".format(self.prior_module), indent
+                )
+            msg += textwrap.indent(
+                "prior_params={}\n".format(self.prior_params), indent
+            )
+        msg = header + "(\n" + msg + ")"
         return msg
 
 
@@ -757,20 +838,21 @@ class VAE(torch.nn.Module):
     expected reconstructions - this allows for asymmetric reconstruction (for example,
     reconstructing low-resolution images).
 
-    This implementation supports learning conditional distributions as well (cVAE). 
+    This implementation supports learning conditional distributions as well (cVAE).
     The conditioning variable Y is specified through the @condition_shapes argument,
     which is also a map between modalities (strings) and expected shapes. In this way,
-    variables with multiple kinds of data (e.g. image and flat-dimensional) can 
-    jointly be conditioned on. By default, the decoder takes the conditioning 
+    variables with multiple kinds of data (e.g. image and flat-dimensional) can
+    jointly be conditioned on. By default, the decoder takes the conditioning
     variable Y as input. To force the decoder to reconstruct from just the latent,
     set @decoder_is_conditioned to False (in this case, the prior must be conditioned).
 
     The implementation also supports learning expressive priors instead of using
     the usual N(0, 1) prior. There are three kinds of priors supported - Gaussian,
-    Gaussian Mixture Model (GMM), and Categorical. For each prior, the parameters can 
+    Gaussian Mixture Model (GMM), and Categorical. For each prior, the parameters can
     be learned as independent parameters, or be learned as functions of the conditioning
     variable Y (by setting @prior_is_conditioned).
     """
+
     def __init__(
         self,
         input_shapes,
@@ -804,13 +886,13 @@ class VAE(torch.nn.Module):
                 expected shapes for all encoder-specific inputs. This corresponds
                 to the variable X whose distribution we are learning.
 
-            output_shapes (OrderedDict): a dictionary that maps modality to 
+            output_shapes (OrderedDict): a dictionary that maps modality to
                 expected shape for outputs to reconstruct. Usually, this is
                 the same as @input_shapes but this argument allows
                 for asymmetries, such as reconstructing low-resolution
                 images.
 
-            encoder_layer_dims ([int]): sequence of integers for the encoder hidden 
+            encoder_layer_dims ([int]): sequence of integers for the encoder hidden
                 layer sizes.
 
             decoder_layer_dims ([int]): sequence of integers for the decoder hidden
@@ -837,7 +919,7 @@ class VAE(torch.nn.Module):
             latent_clip (float): if provided, clip all latents sampled at
                 test-time in each dimension to (-@latent_clip, @latent_clip)
 
-            output_squash ([str]): an iterable of modalities that should be 
+            output_squash ([str]): an iterable of modalities that should be
                 a subset of @output_shapes. The decoder outputs for these
                 modalities will be squashed into a symmetric range [-a, a]
                 by using a tanh layer and then scaling the output with the
@@ -850,20 +932,20 @@ class VAE(torch.nn.Module):
                 when output_ranges is specified (not None), output_scales should be None
 
             prior_learn (bool): if True, the prior distribution parameters
-                are also learned through the KL-divergence loss (instead 
+                are also learned through the KL-divergence loss (instead
                 of being constrained to a N(0, 1) Gaussian distribution).
                 If @prior_is_conditioned is True, a global set of parameters
-                are learned, otherwise, a prior network that maps between 
-                modalities in @condition_shapes and prior parameters is 
-                learned. By default, a Gaussian prior is learned, unless 
-                @prior_use_gmm is True, in which case a Gaussian Mixture 
+                are learned, otherwise, a prior network that maps between
+                modalities in @condition_shapes and prior parameters is
+                learned. By default, a Gaussian prior is learned, unless
+                @prior_use_gmm is True, in which case a Gaussian Mixture
                 Model (GMM) prior is learned.
 
             prior_is_conditioned (bool): whether to condition the prior
                 on the conditioning variables. False by default. Only used if
                 @condition_shapes is not empty. If this is set to True,
                 @prior_learn must be True.
-            
+
             prior_layer_dims ([int]): sequence of integers for the prior hidden layer
                 sizes. Only used for learned priors that take condition variables as
                 input (i.e. when @prior_learn and @prior_is_conditioned are set to True,
@@ -887,7 +969,7 @@ class VAE(torch.nn.Module):
 
             prior_categorical_dim (int): categorical dimension - each latent sampled
                 from the prior will be of shape (@latent_dim, @prior_categorical_dim)
-                and will be "one-hot" in the latter dimension. Only used if 
+                and will be "one-hot" in the latter dimension. Only used if
                 @prior_use_categorical is True.
 
             prior_categorical_gumbel_softmax_hard (bool): if True, use the "hard" version of
@@ -930,21 +1012,30 @@ class VAE(torch.nn.Module):
 
         # check for conditioning (cVAE)
         self._is_cvae = False
-        self.condition_shapes = deepcopy(condition_shapes) if condition_shapes is not None else OrderedDict()
+        self.condition_shapes = (
+            deepcopy(condition_shapes)
+            if condition_shapes is not None
+            else OrderedDict()
+        )
         if len(self.condition_shapes) > 0:
             # this is a cVAE - we learn a conditional distribution p(X | Y)
             assert isinstance(self.condition_shapes, OrderedDict)
             self._is_cvae = True
             self.decoder_is_conditioned = decoder_is_conditioned
             self.prior_is_conditioned = prior_is_conditioned
-            assert self.decoder_is_conditioned or self.prior_is_conditioned, \
-                "cVAE must be conditioned in decoder and/or prior"
+            assert (
+                self.decoder_is_conditioned or self.prior_is_conditioned
+            ), "cVAE must be conditioned in decoder and/or prior"
             if self.prior_is_conditioned:
-                assert prior_learn, "to pass conditioning inputs to prior, prior must be learned"
+                assert (
+                    prior_learn
+                ), "to pass conditioning inputs to prior, prior must be learned"
 
         # check for goal conditioning
         self._is_goal_conditioned = False
-        self.goal_shapes = deepcopy(goal_shapes) if goal_shapes is not None else OrderedDict()
+        self.goal_shapes = (
+            deepcopy(goal_shapes) if goal_shapes is not None else OrderedDict()
+        )
         if len(self.goal_shapes) > 0:
             assert self._is_cvae, "to condition VAE on goals, it must be a cVAE"
             assert isinstance(self.goal_shapes, OrderedDict)
@@ -956,14 +1047,20 @@ class VAE(torch.nn.Module):
         # determines whether outputs are squashed with tanh and if so, to what scaling
         assert not (output_scales is not None and output_ranges is not None)
         self.output_squash = output_squash
-        self.output_scales = output_scales if output_scales is not None else OrderedDict()
-        self.output_ranges = output_ranges if output_ranges is not None else OrderedDict()
+        self.output_scales = (
+            output_scales if output_scales is not None else OrderedDict()
+        )
+        self.output_ranges = (
+            output_ranges if output_ranges is not None else OrderedDict()
+        )
 
         assert set(self.output_squash) == set(self.output_scales.keys())
         assert set(self.output_squash).issubset(set(self.output_shapes))
 
         # decoder settings
-        self.decoder_reconstruction_sum_across_elements = decoder_reconstruction_sum_across_elements
+        self.decoder_reconstruction_sum_across_elements = (
+            decoder_reconstruction_sum_across_elements
+        )
 
         # prior parameters
         self.prior_learn = prior_learn
@@ -973,7 +1070,9 @@ class VAE(torch.nn.Module):
         self.prior_gmm_learn_weights = prior_gmm_learn_weights
         self.prior_use_categorical = prior_use_categorical
         self.prior_categorical_dim = prior_categorical_dim
-        self.prior_categorical_gumbel_softmax_hard = prior_categorical_gumbel_softmax_hard
+        self.prior_categorical_gumbel_softmax_hard = (
+            prior_categorical_gumbel_softmax_hard
+        )
         assert np.sum([self.prior_use_gmm, self.prior_use_categorical]) <= 1
 
         # for obs core
@@ -1016,7 +1115,7 @@ class VAE(torch.nn.Module):
             encoder_obs_group_shapes["condition"] = OrderedDict(self.condition_shapes)
             if self._is_goal_conditioned:
                 encoder_obs_group_shapes["goal"] = OrderedDict(self.goal_shapes)
-        
+
         # encoder outputs posterior distribution parameters
         if self.prior_use_categorical:
             encoder_output_shapes = OrderedDict(
@@ -1024,13 +1123,13 @@ class VAE(torch.nn.Module):
             )
         else:
             encoder_output_shapes = OrderedDict(
-                mean=(self.latent_dim,), 
+                mean=(self.latent_dim,),
                 logvar=(self.latent_dim,),
             )
 
         self.nets["encoder"] = MIMO_MLP(
             input_obs_group_shapes=encoder_obs_group_shapes,
-            output_shapes=encoder_output_shapes, 
+            output_shapes=encoder_output_shapes,
             layer_dims=self.encoder_layer_dims,
             encoder_kwargs=self._encoder_kwargs,
         )
@@ -1053,7 +1152,7 @@ class VAE(torch.nn.Module):
 
         self.nets["decoder"] = MIMO_MLP(
             input_obs_group_shapes=decoder_obs_group_shapes,
-            output_shapes=self.output_shapes, 
+            output_shapes=self.output_shapes,
             layer_dims=self.decoder_layer_dims,
             encoder_kwargs=self._encoder_kwargs,
         )
@@ -1130,7 +1229,9 @@ class VAE(torch.nn.Module):
         """
         if self.prior_use_categorical:
             # reshape to [B, D, C] to take softmax across categorical classes
-            logits = posterior_params["logit"].reshape(-1, self.latent_dim, self.prior_categorical_dim)
+            logits = posterior_params["logit"].reshape(
+                -1, self.latent_dim, self.prior_categorical_dim
+            )
             z = F.gumbel_softmax(
                 logits=logits,
                 tau=self._gumbel_temperature,
@@ -1141,7 +1242,7 @@ class VAE(torch.nn.Module):
             return TensorUtils.flatten(z)
 
         return TorchUtils.reparameterize(
-            mu=posterior_params["mean"], 
+            mu=posterior_params["mean"],
             logvar=posterior_params["logvar"],
         )
 
@@ -1163,7 +1264,7 @@ class VAE(torch.nn.Module):
             z (torch.Tensor): if provided, these latents are used to generate
                 reconstructions from the VAE, and the prior is not sampled.
 
-            n (int): this argument is used to specify the number of samples to 
+            n (int): this argument is used to specify the number of samples to
                 generate from the prior. Only required if @z is None - i.e.
                 sampling takes place
 
@@ -1176,11 +1277,11 @@ class VAE(torch.nn.Module):
             assert n is not None
             z = self.sample_prior(n=n, conditions=conditions, goals=goals)
 
-        # decoder takes latents as input, and maybe condition variables 
+        # decoder takes latents as input, and maybe condition variables
         # and goal variables
         inputs = dict(
-            input=dict(latent=z), 
-            condition=conditions, 
+            input=dict(latent=z),
+            condition=conditions,
             goal=goals,
         )
 
@@ -1193,7 +1294,9 @@ class VAE(torch.nn.Module):
 
         for k, v_range in self.output_ranges.items():
             assert v_range[1] > v_range[0]
-            recons[k] = torch.sigmoid(recons[k]) * (v_range[1] - v_range[0]) + v_range[0]
+            recons[k] = (
+                torch.sigmoid(recons[k]) * (v_range[1] - v_range[0]) + v_range[0]
+            )
         return recons
 
     def sample_prior(self, n, conditions=None, goals=None):
@@ -1240,7 +1343,7 @@ class VAE(torch.nn.Module):
         return self.nets["prior"].kl_loss(
             posterior_params=posterior_params,
             z=encoder_z,
-            obs_dict=conditions, 
+            obs_dict=conditions,
             goal_dict=goals,
         )
 
@@ -1251,7 +1354,7 @@ class VAE(torch.nn.Module):
 
         The beta term for weighting between reconstruction and kl losses will
         need to be tuned in practice for each situation (see
-        https://twitter.com/memotv/status/973323454350090240 for more 
+        https://twitter.com/memotv/status/973323454350090240 for more
         discussion).
 
         Args:
@@ -1284,7 +1387,9 @@ class VAE(torch.nn.Module):
             loss /= num_mods
         return loss
 
-    def forward(self, inputs, outputs, conditions=None, goals=None, freeze_encoder=False):
+    def forward(
+        self, inputs, outputs, conditions=None, goals=None, freeze_encoder=False
+    ):
         """
         A full pass through the VAE network to construct KL and reconstruction
         losses.
@@ -1329,7 +1434,7 @@ class VAE(torch.nn.Module):
 
         # mu, logvar <- Enc(X, Y)
         posterior_params = self.encode(
-            inputs=inputs, 
+            inputs=inputs,
             conditions=conditions,
             goals=goals,
         )
@@ -1342,11 +1447,11 @@ class VAE(torch.nn.Module):
 
         # hat(X) = Dec(z, Y)
         reconstructions = self.decode(
-            conditions=conditions, 
+            conditions=conditions,
             goals=goals,
             z=encoder_z,
         )
-        
+
         # this will also train prior network z ~ Prior(z | Y)
         kl_loss = self.kl_loss(
             posterior_params=posterior_params,
@@ -1356,16 +1461,16 @@ class VAE(torch.nn.Module):
         )
 
         reconstruction_loss = self.reconstruction_loss(
-            reconstructions=reconstructions, 
+            reconstructions=reconstructions,
             targets=outputs,
         )
 
         return {
-            "encoder_params" : posterior_params,
-            "encoder_z" : encoder_z,
-            "decoder_outputs" : reconstructions,
-            "kl_loss" : kl_loss,
-            "reconstruction_loss" : reconstruction_loss,
+            "encoder_params": posterior_params,
+            "encoder_z": encoder_z,
+            "decoder_outputs": reconstructions,
+            "kl_loss": kl_loss,
+            "reconstruction_loss": reconstruction_loss,
         }
 
     def set_gumbel_temperature(self, temperature):

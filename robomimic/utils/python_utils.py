@@ -1,6 +1,7 @@
 """
 Set of general purpose utility functions for easier interfacing with Python API
 """
+
 import inspect
 from copy import deepcopy
 import robomimic.macros as Macros
@@ -66,8 +67,12 @@ def extract_class_init_kwargs_from_dict(cls, dic, copy=False, verbose=False):
         keys_not_in_cls = [k for k in dic if k not in cls_keys]
         keys_not_in_dic = [k for k in cls_keys if k not in list(dic.keys())]
         if len(keys_not_in_cls) > 0:
-            print(f"Warning: For class {cls.__name__}, got unknown keys: {keys_not_in_cls} ")
+            print(
+                f"Warning: For class {cls.__name__}, got unknown keys: {keys_not_in_cls} "
+            )
         if len(keys_not_in_dic) > 0:
-            print(f"Warning: For class {cls.__name__}, got missing keys: {keys_not_in_dic} ")
+            print(
+                f"Warning: For class {cls.__name__}, got missing keys: {keys_not_in_dic} "
+            )
 
     return subdic

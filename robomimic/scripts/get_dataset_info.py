@@ -22,6 +22,7 @@ Example usage:
     # run script only on validation data
     python get_dataset_info.py --dataset ../../tests/assets/test.hdf5 --filter_key valid
 """
+
 import h5py
 import json
 import argparse
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--verbose",
-        action='store_true',
+        action="store_true",
         help="verbose output",
     )
     args = parser.parse_args()
@@ -55,7 +56,9 @@ if __name__ == "__main__":
     if filter_key is not None:
         # use the demonstrations from the filter key instead
         print("NOTE: using filter key {}".format(filter_key))
-        demos = sorted([elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)])])
+        demos = sorted(
+            [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)])]
+        )
     else:
         # use all demonstrations
         demos = sorted(list(f["data"].keys()))
@@ -64,7 +67,9 @@ if __name__ == "__main__":
         if "mask" in f:
             all_filter_keys = {}
             for fk in f["mask"]:
-                fk_demos = sorted([elem.decode("utf-8") for elem in np.array(f["mask/{}".format(fk)])])
+                fk_demos = sorted(
+                    [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(fk)])]
+                )
                 all_filter_keys[fk] = fk_demos
 
     # put demonstration list in increasing episode order
@@ -103,7 +108,11 @@ if __name__ == "__main__":
         if all_filter_keys is not None:
             print("==== Filter Key Contents ====")
             for fk in all_filter_keys:
-                print("filter_key {} with {} demos: {}".format(fk, len(all_filter_keys[fk]), all_filter_keys[fk]))
+                print(
+                    "filter_key {} with {} demos: {}".format(
+                        fk, len(all_filter_keys[fk]), all_filter_keys[fk]
+                    )
+                )
         print("")
     env_meta = json.loads(f["data"].attrs["env_args"])
     print("==== Env Meta ====")
@@ -112,13 +121,19 @@ if __name__ == "__main__":
 
     print("==== Dataset Structure ====")
     for ep in demos:
-        print("episode {} with {} transitions".format(ep, f["data/{}".format(ep)].attrs["num_samples"]))
+        print(
+            "episode {} with {} transitions".format(
+                ep, f["data/{}".format(ep)].attrs["num_samples"]
+            )
+        )
         for k in f["data/{}".format(ep)]:
             if k in ["obs", "next_obs"]:
                 print("    key: {}".format(k))
                 for obs_k in f["data/{}/{}".format(ep, k)]:
                     shape = f["data/{}/{}/{}".format(ep, k, obs_k)].shape
-                    print("        observation key {} with shape {}".format(obs_k, shape))
+                    print(
+                        "        observation key {} with shape {}".format(obs_k, shape)
+                    )
             elif isinstance(f["data/{}/{}".format(ep, k)], h5py.Dataset):
                 key_shape = f["data/{}/{}".format(ep, k)].shape
                 print("    key: {} with shape {}".format(k, key_shape))
@@ -130,5 +145,9 @@ if __name__ == "__main__":
 
     # maybe display error message
     print("")
-    if (action_min < -1.) or (action_max > 1.):
-        raise Exception("Dataset should have actions in [-1., 1.] but got bounds [{}, {}]".format(action_min, action_max))
+    if (action_min < -1.0) or (action_max > 1.0):
+        raise Exception(
+            "Dataset should have actions in [-1., 1.] but got bounds [{}, {}]".format(
+                action_min, action_max
+            )
+        )

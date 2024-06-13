@@ -1,17 +1,17 @@
 from robomimic.scripts.config_gen.helper import *
 
+
 def make_generator_helper(args):
     algo_name_short = "act"
     generator = get_generator(
         algo_name="act",
-        config_file=os.path.join(base_path, 'robomimic/exps/templates/act.json'),
+        config_file=os.path.join(base_path, "robomimic/exps/templates/act.json"),
         args=args,
         algo_name_short=algo_name_short,
         pt=True,
     )
     if args.ckpt_mode is None:
         args.ckpt_mode = "off"
-
 
     generator.add_param(
         key="train.num_epochs",
@@ -40,7 +40,12 @@ def make_generator_helper(args):
             name="ds",
             group=2,
             values=[
-                [{"path": p} for p in scan_datasets("~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5")],
+                [
+                    {"path": p}
+                    for p in scan_datasets(
+                        "~/Downloads/example_pen_in_cup", postfix="trajectory_im128.h5"
+                    )
+                ],
             ],
             value_names=[
                 "pen-in-cup",
@@ -70,7 +75,7 @@ def make_generator_helper(args):
             group=2,
             values=[
                 [
-                    {"path": "TODO.hdf5"}, # replace with your own path
+                    {"path": "TODO.hdf5"},  # replace with your own path
                 ],
             ],
             value_names=[
@@ -83,11 +88,9 @@ def make_generator_helper(args):
             key="experiment.env_meta_update_dict",
             name="",
             group=-1,
-            values=[
-                {"env_kwargs": {"controller_configs": {"control_delta": False}}}
-            ],
+            values=[{"env_kwargs": {"controller_configs": {"control_delta": False}}}],
         )
-        
+
         generator.add_param(
             key="train.action_keys",
             name="ac_keys",
@@ -105,10 +108,9 @@ def make_generator_helper(args):
             ],
         )
 
-
     else:
         raise ValueError
-    
+
     generator.add_param(
         key="train.output_dir",
         name="",
@@ -123,6 +125,7 @@ def make_generator_helper(args):
     )
 
     return generator
+
 
 if __name__ == "__main__":
     parser = get_argparser()

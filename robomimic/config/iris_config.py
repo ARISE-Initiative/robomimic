@@ -13,9 +13,9 @@ class IRISConfig(HBCConfig):
 
     def algo_config(self):
         """
-        This function populates the `config.algo` attribute of the config, and is given to the 
-        `Algo` subclass (see `algo/algo.py`) for each algorithm through the `algo_config` 
-        argument to the constructor. Any parameter that an algorithm needs to determine its 
+        This function populates the `config.algo` attribute of the config, and is given to the
+        `Algo` subclass (see `algo/algo.py`) for each algorithm through the `algo_config`
+        argument to the constructor. Any parameter that an algorithm needs to determine its
         training and test-time behavior should be populated here.
         """
 
@@ -26,8 +26,10 @@ class IRISConfig(HBCConfig):
         # "planner_only" mode, only the planner is trained.
         self.algo.mode = "separate"
 
-        self.algo.actor_use_random_subgoals = False # whether to sample subgoal index from [1, subgoal_horizon]
-        self.algo.subgoal_update_interval = 10      # how frequently the subgoal should be updated at test-time (usually matches train.seq_length)
+        self.algo.actor_use_random_subgoals = (
+            False  # whether to sample subgoal index from [1, subgoal_horizon]
+        )
+        self.algo.subgoal_update_interval = 10  # how frequently the subgoal should be updated at test-time (usually matches train.seq_length)
 
         # ================== Latent Subgoal Config ==================
 
@@ -47,7 +49,7 @@ class IRISConfig(HBCConfig):
 
         # The ValuePlanner value component is a BCQ model
         self.algo.value_planner.value = BCQConfig().algo
-        self.algo.value_planner.value.actor.enabled = False # ensure no BCQ actor
+        self.algo.value_planner.value.actor.enabled = False  # ensure no BCQ actor
         # number of subgoal samples to use for value planner
         self.algo.value_planner.num_samples = 100
 
@@ -74,9 +76,13 @@ class IRISConfig(HBCConfig):
         """
         Update from superclass - value planner goal modalities determine goal-conditioning.
         """
-        return len(
-            self.observation.value_planner.planner.modalities.goal.low_dim +
-            self.observation.value_planner.planner.modalities.goal.rgb) > 0
+        return (
+            len(
+                self.observation.value_planner.planner.modalities.goal.low_dim
+                + self.observation.value_planner.planner.modalities.goal.rgb
+            )
+            > 0
+        )
 
     @property
     def all_obs_keys(self):
@@ -84,16 +90,23 @@ class IRISConfig(HBCConfig):
         Update from superclass to include modalities from value planner and actor.
         """
         # pool all modalities
-        return sorted(tuple(set([
-            obs_key for group in [
-                self.observation.value_planner.planner.modalities.obs.values(),
-                self.observation.value_planner.planner.modalities.goal.values(),
-                self.observation.value_planner.planner.modalities.subgoal.values(),
-                self.observation.value_planner.value.modalities.obs.values(),
-                self.observation.value_planner.value.modalities.goal.values(),
-                self.observation.actor.modalities.obs.values(),
-                self.observation.actor.modalities.goal.values(),
-            ]
-            for modality in group
-            for obs_key in modality
-        ])))
+        return sorted(
+            tuple(
+                set(
+                    [
+                        obs_key
+                        for group in [
+                            self.observation.value_planner.planner.modalities.obs.values(),
+                            self.observation.value_planner.planner.modalities.goal.values(),
+                            self.observation.value_planner.planner.modalities.subgoal.values(),
+                            self.observation.value_planner.value.modalities.obs.values(),
+                            self.observation.value_planner.value.modalities.goal.values(),
+                            self.observation.actor.modalities.obs.values(),
+                            self.observation.actor.modalities.goal.values(),
+                        ]
+                        for modality in group
+                        for obs_key in modality
+                    ]
+                )
+            )
+        )

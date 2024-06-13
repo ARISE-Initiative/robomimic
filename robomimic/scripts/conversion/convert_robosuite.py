@@ -33,7 +33,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    f = h5py.File(args.dataset, "a") # edit mode
+    f = h5py.File(args.dataset, "a")  # edit mode
 
     # store env meta
     env_name = f["data"].attrs["env"]

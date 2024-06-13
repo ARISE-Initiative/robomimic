@@ -33,7 +33,7 @@ def simple_obs_example():
         "backbone_class": "ResNet18Conv",  # use ResNet18 as the visualcore backbone
         "backbone_kwargs": {"pretrained": False, "input_coord_conv": False},
         "pool_class": "SpatialSoftmax",  # use spatial softmax to regularize the model output
-        "pool_kwargs": {"num_kp": 32}
+        "pool_kwargs": {"num_kp": 32},
     }
 
     # register the network for processing the observation key
@@ -50,7 +50,9 @@ def simple_obs_example():
     camera2_shape = [3, 160, 240]
 
     # We could also attach an observation randomizer to perturb the input observation key before sending to the network
-    image_randomizer = CropRandomizer(input_shape=camera2_shape, crop_height=140, crop_width=220)
+    image_randomizer = CropRandomizer(
+        input_shape=camera2_shape, crop_height=140, crop_width=220
+    )
 
     # the cropper will alter the input shape
     net_kwargs["input_shape"] = image_randomizer.output_shape_in(camera2_shape)
@@ -86,7 +88,9 @@ def simple_obs_example():
         "low_dim": ["proprio"],
         "rgb": ["camera1", "camera2", "camera3"],
     }
-    ObsUtils.initialize_obs_modality_mapping_from_dict(modality_mapping=obs_modality_mapping)
+    ObsUtils.initialize_obs_modality_mapping_from_dict(
+        modality_mapping=obs_modality_mapping
+    )
 
     # Finally, construct the observation encoder
     obs_encoder.make()
@@ -99,7 +103,7 @@ def simple_obs_example():
         "camera1": torch.randn(camera1_shape),
         "camera2": torch.randn(camera2_shape),
         "camera3": torch.randn(camera3_shape),
-        "proprio": torch.randn(proprio_shape)
+        "proprio": torch.randn(proprio_shape),
     }
 
     # Add a batch dimension
@@ -119,7 +123,7 @@ def simple_obs_example():
     # A convenient wrapper for decoding the feature vector to named output is ObservationDecoder
     obs_decoder = ObservationDecoder(
         input_feat_dim=obs_encoder.output_shape()[0],
-        decode_shapes=OrderedDict({"action": (7,)})
+        decode_shapes=OrderedDict({"action": (7,)}),
     )
 
     # Send to GPU if applicable

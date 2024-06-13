@@ -31,20 +31,21 @@ class EnvGibsonMOMART(EB.EnvBase):
     Wrapper class for gibson environments (https://github.com/StanfordVL/iGibson) specifically compatible with
     MoMaRT datasets
     """
+
     def __init__(
-            self,
-            env_name,
-            ig_config,
-            postprocess_visual_obs=True,
-            render=False,
-            render_offscreen=False,
-            use_image_obs=False,
-            use_depth_obs=False,
-            image_height=None,
-            image_width=None,
-            physics_timestep=1./240.,
-            action_timestep=1./20.,
-            **kwargs,
+        self,
+        env_name,
+        ig_config,
+        postprocess_visual_obs=True,
+        render=False,
+        render_offscreen=False,
+        use_image_obs=False,
+        use_depth_obs=False,
+        image_height=None,
+        image_width=None,
+        physics_timestep=1.0 / 240.0,
+        action_timestep=1.0 / 20.0,
+        **kwargs,
     ):
         """
         Args:
@@ -92,7 +93,9 @@ class EnvGibsonMOMART(EB.EnvBase):
 
         # Warn user that iG always uses a renderer
         if (not render) and (not render_offscreen):
-            print("WARNING: iGibson always uses a renderer -- using headless by default.")
+            print(
+                "WARNING: iGibson always uses a renderer -- using headless by default."
+            )
 
         # Update ig config
         for k, v in kwargs.items():
@@ -100,19 +103,30 @@ class EnvGibsonMOMART(EB.EnvBase):
             self.ig_config[k] = v
 
         # Set rendering values
-        self.obs_img_height = image_height if image_height is not None else self.ig_config.get("obs_image_height", 120)
-        self.obs_img_width = image_width if image_width is not None else self.ig_config.get("obs_image_width", 120)
+        self.obs_img_height = (
+            image_height
+            if image_height is not None
+            else self.ig_config.get("obs_image_height", 120)
+        )
+        self.obs_img_width = (
+            image_width
+            if image_width is not None
+            else self.ig_config.get("obs_image_width", 120)
+        )
 
         # Get class to create
         envClass = ENV_MAPPING.get(self._env_name, None)
 
         # Make sure we have a valid environment class
-        assert envClass is not None, "No valid environment for the requested task was found!"
+        assert (
+            envClass is not None
+        ), "No valid environment for the requested task was found!"
 
         # Set device idx for rendering
         # ensure that we select the correct GPU device for rendering by testing for EGL rendering
         # NOTE: this package should be installed from this link (https://github.com/StanfordVL/egl_probe)
         import egl_probe
+
         device_idx = 0
         valid_gpu_devices = egl_probe.get_available_devices()
         if len(valid_gpu_devices) > 0:
@@ -128,10 +142,14 @@ class EnvGibsonMOMART(EB.EnvBase):
         )
 
         # If we have a viewer, make sure to remove all bodies belonging to the visual markers
-        self.exclude_body_ids = []      # Bodies to exclude when saving state
+        self.exclude_body_ids = []  # Bodies to exclude when saving state
         if self.env.simulator.viewer is not None:
-            self.exclude_body_ids.append(self.env.simulator.viewer.constraint_marker.body_id)
-            self.exclude_body_ids.append(self.env.simulator.viewer.constraint_marker2.body_id)
+            self.exclude_body_ids.append(
+                self.env.simulator.viewer.constraint_marker.body_id
+            )
+            self.exclude_body_ids.append(
+                self.env.simulator.viewer.constraint_marker2.body_id
+            )
 
     def step(self, action):
         """
@@ -189,27 +207,37 @@ class EnvGibsonMOMART(EB.EnvBase):
             array or None: If rendering to frame, returns the rendered frame. Otherwise, returns None
         """
         # Only robotview camera is currently supported
-        assert camera_name in {"rgb", "rgb_wrist"}, \
-            f"Only rgb, rgb_wrist cameras currently supported, got {camera_name}."
+        assert camera_name in {
+            "rgb",
+            "rgb_wrist",
+        }, f"Only rgb, rgb_wrist cameras currently supported, got {camera_name}."
 
         if mode == "human":
             assert self.render_onscreen, "Rendering has not been enabled for onscreen!"
             self.env.simulator.sync()
         else:
-            assert self.env.simulator.renderer is not None, "No renderer enabled for this env!"
+            assert (
+                self.env.simulator.renderer is not None
+            ), "No renderer enabled for this env!"
 
             frame = self.env.sensors["vision"].get_obs(self.env)[camera_name]
 
             # Reshape all frames
             if height is not None and width is not None:
-                frame = cv2.resize(frame, dsize=(height, width), interpolation=cv2.INTER_CUBIC)
+                frame = cv2.resize(
+                    frame, dsize=(height, width), interpolation=cv2.INTER_CUBIC
+                )
                 return frame
 
     def resize_obs_frame(self, frame):
         """
         Resizes frame to be internal height and width values
         """
-        return cv2.resize(frame, dsize=(self.obs_img_width, self.obs_img_height), interpolation=cv2.INTER_CUBIC)
+        return cv2.resize(
+            frame,
+            dsize=(self.obs_img_width, self.obs_img_height),
+            interpolation=cv2.INTER_CUBIC,
+        )
 
     def get_observation(self, di=None):
         """Get environment observation"""
@@ -222,7 +250,9 @@ class EnvGibsonMOMART(EB.EnvBase):
                 ret[k] = di[k]
                 # ret[k] = np.transpose(di[k], (2, 0, 1))
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_key=k)
+                    ret[k] = ObsUtils.process_obs(
+                        obs=self.resize_obs_frame(ret[k]), obs_key=k
+                    )
 
             # Depth images
             elif "depth" in k:
@@ -230,13 +260,17 @@ class EnvGibsonMOMART(EB.EnvBase):
                 # Values can be corrupted (negative or > 1.0, so we clip values)
                 ret[k] = np.clip(di[k], 0.0, 1.0)
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k])[..., None], obs_key=k)
+                    ret[k] = ObsUtils.process_obs(
+                        obs=self.resize_obs_frame(ret[k])[..., None], obs_key=k
+                    )
 
             # Segmentation Images
             elif "seg" in k:
                 ret[k] = di[k][..., None]
                 if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=self.resize_obs_frame(ret[k]), obs_key=k)
+                    ret[k] = ObsUtils.process_obs(
+                        obs=self.resize_obs_frame(ret[k]), obs_key=k
+                    )
 
             # Scans
             elif "scan" in k:
@@ -249,30 +283,38 @@ class EnvGibsonMOMART(EB.EnvBase):
         lin_vel = np.linalg.norm(proprio_obs["base_lin_vel"][:2])
         ang_vel = proprio_obs["base_ang_vel"][2]
 
-        ret["proprio"] = np.concatenate([
-            proprio_obs["head_joint_pos"],
-            proprio_obs["grasped"],
-            proprio_obs["eef_pos"],
-            proprio_obs["eef_quat"],
-        ])
+        ret["proprio"] = np.concatenate(
+            [
+                proprio_obs["head_joint_pos"],
+                proprio_obs["grasped"],
+                proprio_obs["eef_pos"],
+                proprio_obs["eef_quat"],
+            ]
+        )
 
         # Proprio info that's only relevant for navigation
-        ret["proprio_nav"] = np.concatenate([
-            [lin_vel],
-            [ang_vel],
-        ])
+        ret["proprio_nav"] = np.concatenate(
+            [
+                [lin_vel],
+                [ang_vel],
+            ]
+        )
 
         # Compose task obs
-        ret["object"] = np.concatenate([
-            np.array(di["task_obs"]["object-state"]),
-        ])
+        ret["object"] = np.concatenate(
+            [
+                np.array(di["task_obs"]["object-state"]),
+            ]
+        )
 
         # Add ground truth navigational state
-        ret["gt_nav"] = np.concatenate([
-            proprio_obs["base_pos"][:2],
-            [np.sin(proprio_obs["base_rpy"][2])],
-            [np.cos(proprio_obs["base_rpy"][2])],
-        ])
+        ret["gt_nav"] = np.concatenate(
+            [
+                proprio_obs["base_pos"][:2],
+                [np.sin(proprio_obs["base_rpy"][2])],
+                [np.cos(proprio_obs["base_rpy"][2])],
+            ]
+        )
 
         return ret
 
@@ -296,7 +338,9 @@ class EnvGibsonMOMART(EB.EnvBase):
 
     def get_state(self):
         """Get iG flattened state"""
-        return {"states": PBU.WorldSaver(exclude_body_ids=self.exclude_body_ids).serialize()}
+        return {
+            "states": PBU.WorldSaver(exclude_body_ids=self.exclude_body_ids).serialize()
+        }
 
     def get_reward(self):
         return self.env.task.get_reward(self.env)[0]
@@ -326,21 +370,21 @@ class EnvGibsonMOMART(EB.EnvBase):
         if isinstance(succ, dict):
             assert "task" in succ
             return succ
-        return { "task" : succ }
+        return {"task": succ}
 
     @classmethod
     def create_for_data_processing(
-            cls,
-            env_name,
-            camera_names,
-            camera_height,
-            camera_width,
-            reward_shaping,
-            render=None, 
-            render_offscreen=None, 
-            use_image_obs=None, 
-            use_depth_obs=None, 
-            **kwargs,
+        cls,
+        env_name,
+        camera_names,
+        camera_height,
+        camera_width,
+        reward_shaping,
+        render=None,
+        render_offscreen=None,
+        use_image_obs=None,
+        use_depth_obs=None,
+        **kwargs,
     ):
         """
         Create environment for processing datasets, which includes extracting
@@ -357,14 +401,16 @@ class EnvGibsonMOMART(EB.EnvBase):
             render_offscreen (bool or None): optionally override rendering behavior
             use_image_obs (bool or None): optionally override rendering behavior
         """
-        has_camera = (len(camera_names) > 0)
+        has_camera = len(camera_names) > 0
 
         # note that @postprocess_visual_obs is False since this env's images will be written to a dataset
         return cls(
             env_name=env_name,
-            render=(False if render is None else render), 
-            render_offscreen=(has_camera if render_offscreen is None else render_offscreen), 
-            use_image_obs=(has_camera if use_image_obs is None else use_image_obs), 
+            render=(False if render is None else render),
+            render_offscreen=(
+                has_camera if render_offscreen is None else render_offscreen
+            ),
+            use_image_obs=(has_camera if use_image_obs is None else use_image_obs),
             postprocess_visual_obs=False,
             image_height=camera_height,
             image_width=camera_width,
@@ -388,19 +434,27 @@ class EnvGibsonMOMART(EB.EnvBase):
 
     def serialize(self):
         """Serialize to dictionary"""
-        return dict(env_name=self.name, type=self.type,
-                    ig_config=self.ig_config,
-                    env_kwargs=deepcopy(self._init_kwargs))
+        return dict(
+            env_name=self.name,
+            type=self.type,
+            ig_config=self.ig_config,
+            env_kwargs=deepcopy(self._init_kwargs),
+        )
 
     @classmethod
     def deserialize(cls, info, postprocess_visual_obs=True):
         """Create environment with external info"""
-        return cls(env_name=info["env_name"], ig_config=info["ig_config"], postprocess_visual_obs=postprocess_visual_obs, **info["env_kwargs"])
+        return cls(
+            env_name=info["env_name"],
+            ig_config=info["ig_config"],
+            postprocess_visual_obs=postprocess_visual_obs,
+            **info["env_kwargs"],
+        )
 
     @property
     def rollout_exceptions(self):
         """Return tuple of exceptions to except when doing rollouts"""
-        return (RuntimeError)
+        return RuntimeError
 
     @property
     def base_env(self):
@@ -410,5 +464,10 @@ class EnvGibsonMOMART(EB.EnvBase):
         return self.env
 
     def __repr__(self):
-        return self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4) + \
-               "\niGibson Config: \n" + json.dumps(self.ig_config, sort_keys=True, indent=4)
+        return (
+            self.name
+            + "\n"
+            + json.dumps(self._init_kwargs, sort_keys=True, indent=4)
+            + "\niGibson Config: \n"
+            + json.dumps(self.ig_config, sort_keys=True, indent=4)
+        )

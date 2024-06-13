@@ -15,6 +15,7 @@ from robomimic.models.base_nets import Module
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 
+
 class GEGLU(nn.Module):
     """
     References:
@@ -120,7 +121,9 @@ class CausalSelfAttention(Module):
 
         assert (
             embed_dim % num_heads == 0
-        ), "num_heads: {} does not divide embed_dim: {} exactly".format(num_heads, embed_dim)
+        ), "num_heads: {} does not divide embed_dim: {} exactly".format(
+            num_heads, embed_dim
+        )
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -277,7 +280,7 @@ class SelfAttentionBlock(Module):
             nn.Linear(embed_dim, 4 * embed_dim * mult),
             activation,
             nn.Linear(4 * embed_dim, embed_dim),
-            nn.Dropout(output_dropout)
+            nn.Dropout(output_dropout),
         )
 
         # layer normalization for inputs to self-attention module and MLP

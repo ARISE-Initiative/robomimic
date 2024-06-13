@@ -2,6 +2,7 @@
 Contains torch Modules for implementation of rein method 
 for domain adaptation of DINOv2
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,20 +11,19 @@ from functools import reduce
 from operator import mul
 from torch import Tensor
 
+
 class MLPhead(nn.Module):
-    def __init__(self,
-            in_dim: int,
-            out_dim: int,
-            **kwargs) -> None:
+    def __init__(self, in_dim: int, out_dim: int, **kwargs) -> None:
         super().__init__(**kwargs)
         self._in_dim = in_dim
         self._out_dim = out_dim
-    
+
         self._mlp = nn.Linear(self._in_dim, self._out_dim)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self._mlp.forward(x)
         return x
+
 
 class Reins(nn.Module):
     def __init__(
@@ -130,6 +130,7 @@ class Reins(nn.Module):
         )
         delta_f = self.mlp_delta_f(delta_f + feats)
         return delta_f
+
 
 class LoRAReins(Reins):
     def __init__(self, lora_dim=16, **kwargs):

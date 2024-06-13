@@ -9,6 +9,7 @@ such as @_create_critics, @process_batch_for_training, and
 from the BCQ algo class) to be explicit and have implementation details 
 self-contained in this file.
 """
+
 from collections import OrderedDict
 
 import torch
@@ -48,6 +49,7 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
     Default TD3_BC training, based on https://arxiv.org/abs/2106.06860 and
     https://github.com/sfujim/TD3_BC.
     """
+
     def __init__(self, **kwargs):
         PolicyAlgo.__init__(self, **kwargs)
 
@@ -70,12 +72,12 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
         with torch.no_grad():
             for critic_ind in range(len(self.nets["critic"])):
                 TorchUtils.hard_update(
-                    source=self.nets["critic"][critic_ind], 
+                    source=self.nets["critic"][critic_ind],
                     target=self.nets["critic_target"][critic_ind],
                 )
 
             TorchUtils.hard_update(
-                source=self.nets["actor"], 
+                source=self.nets["actor"],
                 target=self.nets["actor_target"],
             )
 
@@ -94,7 +96,9 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             mlp_layer_dims=self.algo_config.critic.layer_dims,
             value_bounds=self.algo_config.critic.value_bounds,
             goal_shapes=self.goal_shapes,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
+                self.obs_config.encoder
+            ),
         )
 
         # Q network ensemble and target ensemble
@@ -117,7 +121,9 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor.layer_dims,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
+                self.obs_config.encoder
+            ),
         )
 
         self.nets["actor"] = actor_class(**actor_args)
@@ -131,9 +137,13 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             net_name (str): name of network in @self.nets and @self.optim_params
             epoch (int): epoch number
         """
-        epoch_start_check = (self.optim_params[net_name]["start_epoch"] == -1) or (epoch >= self.optim_params[net_name]["start_epoch"])
-        epoch_end_check = (self.optim_params[net_name]["end_epoch"] == -1) or (epoch < self.optim_params[net_name]["end_epoch"])
-        return (epoch_start_check and epoch_end_check)
+        epoch_start_check = (self.optim_params[net_name]["start_epoch"] == -1) or (
+            epoch >= self.optim_params[net_name]["start_epoch"]
+        )
+        epoch_end_check = (self.optim_params[net_name]["end_epoch"] == -1) or (
+            epoch < self.optim_params[net_name]["end_epoch"]
+        )
+        return epoch_start_check and epoch_end_check
 
     def set_discount(self, discount):
         """
@@ -154,7 +164,7 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
 
         Returns:
             input_batch (dict): processed and filtered batch that
-                will be used for training 
+                will be used for training
         """
         input_batch = dict()
 
@@ -164,19 +174,25 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
 
         # remove temporal batches for all
         input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
-        input_batch["next_obs"] = {k: batch["next_obs"][k][:, n_step - 1, :] for k in batch["next_obs"]}
-        input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
+        input_batch["next_obs"] = {
+            k: batch["next_obs"][k][:, n_step - 1, :] for k in batch["next_obs"]
+        }
+        input_batch["goal_obs"] = batch.get(
+            "goal_obs", None
+        )  # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
 
         # note: ensure scalar signals (rewards, done) retain last dimension of 1 to be compatible with model outputs
 
         # single timestep reward is discounted sum of intermediate rewards in sequence
         reward_seq = batch["rewards"][:, :n_step]
-        discounts = torch.pow(self.algo_config.discount, torch.arange(n_step).float()).unsqueeze(0)
+        discounts = torch.pow(
+            self.algo_config.discount, torch.arange(n_step).float()
+        ).unsqueeze(0)
         input_batch["rewards"] = (reward_seq * discounts).sum(dim=1).unsqueeze(1)
 
         # discount rate will be gamma^N for computing n-step returns
-        new_discount = (self.algo_config.discount ** n_step)
+        new_discount = self.algo_config.discount**n_step
         self.set_discount(new_discount)
 
         # consider this n-step seqeunce done if any intermediate dones are present
@@ -185,9 +201,13 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
 
         if self.algo_config.infinite_horizon:
             # scale terminal rewards by 1 / (1 - gamma) for infinite horizon MDPs
-            done_inds = input_batch["dones"].round().long().nonzero(as_tuple=False)[:, 0]
+            done_inds = (
+                input_batch["dones"].round().long().nonzero(as_tuple=False)[:, 0]
+            )
             if done_inds.shape[0] > 0:
-                input_batch["rewards"][done_inds] = input_batch["rewards"][done_inds] * (1. / (1. - self.discount))
+                input_batch["rewards"][done_inds] = input_batch["rewards"][
+                    done_inds
+                ] * (1.0 / (1.0 - self.discount))
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
@@ -224,14 +244,14 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
         goal_s_batch = batch["goal_obs"]
 
         # 1 if not done, 0 otherwise
-        done_mask_batch = 1. - batch["dones"]
+        done_mask_batch = 1.0 - batch["dones"]
         info["done_masks"] = done_mask_batch
 
         # Bellman backup for Q-targets
         q_targets = self._get_target_values(
-            next_states=ns_batch, 
-            goal_states=goal_s_batch, 
-            rewards=r_batch, 
+            next_states=ns_batch,
+            goal_states=goal_s_batch,
+            rewards=r_batch,
             dones=done_mask_batch,
         )
         info["critic/q_targets"] = q_targets
@@ -239,10 +259,10 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
         # Train all critics using this set of targets for regression
         for critic_ind, critic in enumerate(self.nets["critic"]):
             critic_loss = self._compute_critic_loss(
-                critic=critic, 
-                states=s_batch, 
-                actions=a_batch, 
-                goal_states=goal_s_batch, 
+                critic=critic,
+                states=s_batch,
+                actions=a_batch,
+                goal_states=goal_s_batch,
                 q_targets=q_targets,
             )
             info["critic/critic{}_loss".format(critic_ind + 1)] = critic_loss
@@ -251,10 +271,12 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
                 critic_grad_norms = TorchUtils.backprop_for_loss(
                     net=self.nets["critic"][critic_ind],
                     optim=self.optimizers["critic"][critic_ind],
-                    loss=critic_loss, 
+                    loss=critic_loss,
                     max_grad_norm=self.algo_config.critic.max_gradient_norm,
                 )
-                info["critic/critic{}_grad_norms".format(critic_ind + 1)] = critic_grad_norms
+                info["critic/critic{}_grad_norms".format(critic_ind + 1)] = (
+                    critic_grad_norms
+                )
 
         return info
 
@@ -320,19 +342,27 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             next_target_actions = self.nets["actor_target"](next_states, goal_states)
             noise = (
                 torch.randn_like(next_target_actions) * self.algo_config.actor.noise_std
-            ).clamp(-self.algo_config.actor.noise_clip, self.algo_config.actor.noise_clip)
+            ).clamp(
+                -self.algo_config.actor.noise_clip, self.algo_config.actor.noise_clip
+            )
             next_actions = (next_target_actions + noise).clamp(-1.0, 1.0)
 
             # TD3 trick to combine max and min over all Q-ensemble estimates into single target estimates
-            all_value_targets = self.nets["critic_target"][0](next_states, next_actions, goal_states).reshape(-1, 1)
+            all_value_targets = self.nets["critic_target"][0](
+                next_states, next_actions, goal_states
+            ).reshape(-1, 1)
             max_value_targets = all_value_targets
             min_value_targets = all_value_targets
             for critic_target in self.nets["critic_target"][1:]:
-                all_value_targets = critic_target(next_states, next_actions, goal_states).reshape(-1, 1)
+                all_value_targets = critic_target(
+                    next_states, next_actions, goal_states
+                ).reshape(-1, 1)
                 max_value_targets = torch.max(max_value_targets, all_value_targets)
                 min_value_targets = torch.min(min_value_targets, all_value_targets)
-            value_targets = self.algo_config.critic.ensemble.weight * min_value_targets + \
-                                (1. - self.algo_config.critic.ensemble.weight) * max_value_targets
+            value_targets = (
+                self.algo_config.critic.ensemble.weight * min_value_targets
+                + (1.0 - self.algo_config.critic.ensemble.weight) * max_value_targets
+            )
             q_targets = rewards + dones * self.discount * value_targets
 
         return q_targets
@@ -381,11 +411,13 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             info = PolicyAlgo.train_on_batch(self, batch, epoch, validate=validate)
 
             # Critic training
-            no_critic_backprop = validate or (not self._check_epoch(net_name="critic", epoch=epoch))
+            no_critic_backprop = validate or (
+                not self._check_epoch(net_name="critic", epoch=epoch)
+            )
             with TorchUtils.maybe_no_grad(no_grad=no_critic_backprop):
                 critic_info = self._train_critic_on_batch(
-                    batch=batch, 
-                    epoch=epoch, 
+                    batch=batch,
+                    epoch=epoch,
                     no_backprop=no_critic_backprop,
                 )
             info.update(critic_info)
@@ -394,35 +426,39 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             if not no_critic_backprop:
                 # update counter only on critic training gradient steps
                 self.actor_update_counter += 1
-            do_actor_update = (self.actor_update_counter % self.algo_config.actor.update_freq == 0)
+            do_actor_update = (
+                self.actor_update_counter % self.algo_config.actor.update_freq == 0
+            )
 
             # Actor training
-            no_actor_backprop = validate or (not self._check_epoch(net_name="actor", epoch=epoch))
+            no_actor_backprop = validate or (
+                not self._check_epoch(net_name="actor", epoch=epoch)
+            )
             no_actor_backprop = no_actor_backprop or (not do_actor_update)
             with TorchUtils.maybe_no_grad(no_grad=no_actor_backprop):
                 actor_info = self._train_actor_on_batch(
-                    batch=batch, 
-                    epoch=epoch, 
+                    batch=batch,
+                    epoch=epoch,
                     no_backprop=no_actor_backprop,
                 )
             info.update(actor_info)
 
             if not no_actor_backprop:
-                # to match original implementation, only update target networks on 
+                # to match original implementation, only update target networks on
                 # actor gradient steps
                 with torch.no_grad():
                     # update the target critic networks
                     for critic_ind in range(len(self.nets["critic"])):
                         TorchUtils.soft_update(
-                            source=self.nets["critic"][critic_ind], 
-                            target=self.nets["critic_target"][critic_ind], 
+                            source=self.nets["critic"][critic_ind],
+                            target=self.nets["critic_target"][critic_ind],
                             tau=self.algo_config.target_tau,
                         )
 
                     # update target actor network
                     TorchUtils.soft_update(
-                        source=self.nets["actor"], 
-                        target=self.nets["actor_target"], 
+                        source=self.nets["actor"],
+                        target=self.nets["actor_target"],
                         tau=self.algo_config.target_tau,
                     )
 
@@ -447,14 +483,17 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
             optims = [self.optimizers[k]]
             if k == "critic":
                 # account for critic having one optimizer per ensemble member
-                keys = ["{}{}".format(k, critic_ind) for critic_ind in range(len(self.nets["critic"]))]
+                keys = [
+                    "{}{}".format(k, critic_ind)
+                    for critic_ind in range(len(self.nets["critic"]))
+                ]
                 optims = self.optimizers[k]
             for kp, optimizer in zip(keys, optims):
                 for i, param_group in enumerate(optimizer.param_groups):
                     loss_log["Optimizer/{}{}_lr".format(kp, i)] = param_group["lr"]
 
         # extract relevant logs for critic, and actor
-        loss_log["Loss"] = 0.
+        loss_log["Loss"] = 0.0
         for loss_logger in [self._log_critic_info, self._log_actor_info]:
             this_log = loss_logger(info)
             if "Loss" in this_log:
@@ -471,14 +510,20 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
         """
         loss_log = OrderedDict()
         if "done_masks" in info:
-            loss_log["Critic/Done_Mask_Percentage"] = 100. * torch.mean(info["done_masks"]).item()
+            loss_log["Critic/Done_Mask_Percentage"] = (
+                100.0 * torch.mean(info["done_masks"]).item()
+            )
         if "critic/q_targets" in info:
             loss_log["Critic/Q_Targets"] = info["critic/q_targets"].mean().item()
-        loss_log["Loss"] = 0.
+        loss_log["Loss"] = 0.0
         for critic_ind in range(len(self.nets["critic"])):
-            loss_log["Critic/Critic{}_Loss".format(critic_ind + 1)] = info["critic/critic{}_loss".format(critic_ind + 1)].item()
+            loss_log["Critic/Critic{}_Loss".format(critic_ind + 1)] = info[
+                "critic/critic{}_loss".format(critic_ind + 1)
+            ].item()
             if "critic/critic{}_grad_norms".format(critic_ind + 1) in info:
-                loss_log["Critic/Critic{}_Grad_Norms".format(critic_ind + 1)] = info["critic/critic{}_grad_norms".format(critic_ind + 1)]
+                loss_log["Critic/Critic{}_Grad_Norms".format(critic_ind + 1)] = info[
+                    "critic/critic{}_grad_norms".format(critic_ind + 1)
+                ]
             loss_log["Loss"] += loss_log["Critic/Critic{}_Loss".format(critic_ind + 1)]
         return loss_log
 

@@ -1,6 +1,7 @@
 """
 A collection of useful environment wrappers.
 """
+
 from copy import deepcopy
 import textwrap
 import numpy as np
@@ -13,6 +14,7 @@ class EnvWrapper(object):
     """
     Base class for all environment wrappers in robomimic.
     """
+
     def __init__(self, env):
         """
         Args:
@@ -59,20 +61,20 @@ class EnvWrapper(object):
 
     def _to_string(self):
         """
-        Subclasses should override this method to print out info about the 
+        Subclasses should override this method to print out info about the
         wrapper (such as arguments passed to it).
         """
-        return ''
+        return ""
 
     def __repr__(self):
         """Pretty print environment."""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = ''
-        indent = ' ' * 4
-        if self._to_string() != '':
+        header = "{}".format(str(self.__class__.__name__))
+        msg = ""
+        indent = " " * 4
+        if self._to_string() != "":
             msg += textwrap.indent("\n" + self._to_string(), indent)
         msg += textwrap.indent("\nenv={}".format(self.env), indent)
-        msg = header + '(' + msg + '\n)'
+        msg = header + "(" + msg + "\n)"
         return msg
 
     # this method is a fallback option on any methods the original env might support
@@ -100,6 +102,7 @@ class FrameStackWrapper(EnvWrapper):
     receives a sequence of past observations instead of a single observation
     when it calls @env.reset, @env.reset_to, or @env.step in the rollout loop.
     """
+
     def __init__(self, env, num_frames):
         """
         Args:
@@ -108,7 +111,11 @@ class FrameStackWrapper(EnvWrapper):
                 to stack together. Must be greater than 1 (otherwise this wrapper would
                 be a no-op).
         """
-        assert num_frames > 1, "error: FrameStackWrapper must have num_frames > 1 but got num_frames of {}".format(num_frames)
+        assert (
+            num_frames > 1
+        ), "error: FrameStackWrapper must have num_frames > 1 but got num_frames of {}".format(
+            num_frames
+        )
 
         super(FrameStackWrapper, self).__init__(env=env)
         self.num_frames = num_frames
@@ -128,19 +135,21 @@ class FrameStackWrapper(EnvWrapper):
         obs_history = {}
         for k in init_obs:
             obs_history[k] = deque(
-                [init_obs[k][None] for _ in range(self.num_frames)], 
+                [init_obs[k][None] for _ in range(self.num_frames)],
                 maxlen=self.num_frames,
             )
         return obs_history
 
     def _get_stacked_obs_from_history(self):
         """
-        Helper method to convert internal variable @self.obs_history to a 
+        Helper method to convert internal variable @self.obs_history to a
         stacked observation where each key is a numpy array with leading dimension
         @self.num_frames.
         """
         # concatenate all frames per key so we return a numpy array per key
-        return { k : np.concatenate(self.obs_history[k], axis=0) for k in self.obs_history }
+        return {
+            k: np.concatenate(self.obs_history[k], axis=0) for k in self.obs_history
+        }
 
     def cache_obs_history(self):
         self.obs_history_cache = deepcopy(self.obs_history)
@@ -151,7 +160,7 @@ class FrameStackWrapper(EnvWrapper):
 
     def reset(self):
         """
-        Modify to return frame stacked observation which is @self.num_frames copies of 
+        Modify to return frame stacked observation which is @self.num_frames copies of
         the initial observation.
 
         Returns:
@@ -167,7 +176,7 @@ class FrameStackWrapper(EnvWrapper):
 
     def reset_to(self, state):
         """
-        Modify to return frame stacked observation which is @self.num_frames copies of 
+        Modify to return frame stacked observation which is @self.num_frames copies of
         the initial observation.
 
         Returns:
@@ -208,7 +217,7 @@ class FrameStackWrapper(EnvWrapper):
 
     def update_obs(self, obs, action=None, reset=False):
         obs["timesteps"] = np.array([self.timestep])
-        
+
         if reset:
             obs["actions"] = np.zeros(self.env.action_dimension)
         else:

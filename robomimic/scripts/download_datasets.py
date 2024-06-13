@@ -43,6 +43,7 @@ Example usage:
     # download all real robot datasets
     python download_datasets.py --tasks real
 """
+
 import os
 import argparse
 
@@ -50,9 +51,26 @@ import robomimic
 import robomimic.utils.file_utils as FileUtils
 from robomimic import DATASET_REGISTRY
 
-ALL_TASKS = ["lift", "can", "square", "transport", "tool_hang", "lift_real", "can_real", "tool_hang_real"]
+ALL_TASKS = [
+    "lift",
+    "can",
+    "square",
+    "transport",
+    "tool_hang",
+    "lift_real",
+    "can_real",
+    "tool_hang_real",
+]
 ALL_DATASET_TYPES = ["ph", "mh", "mg", "paired"]
-ALL_HDF5_TYPES = ["raw", "low_dim", "image", "low_dim_sparse", "low_dim_dense", "image_sparse", "image_dense"]
+ALL_HDF5_TYPES = [
+    "raw",
+    "low_dim",
+    "image",
+    "low_dim_sparse",
+    "low_dim_dense",
+    "image_sparse",
+    "image_dense",
+]
 
 
 if __name__ == "__main__":
@@ -70,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["lift"],
         help="Tasks to download datasets for. Defaults to lift task. Pass 'all' to download all tasks (sim + real)\
             'sim' to download all sim tasks, 'real' to download all real tasks, or directly specify the list of\
@@ -81,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_types",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["ph"],
         help="Dataset types to download datasets for (e.g. ph, mh, mg). Defaults to ph. Pass 'all' to download \
             datasets for all available dataset types per task, or directly specify the list of dataset types.",
@@ -91,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--hdf5_types",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["low_dim"],
         help="hdf5 types to download datasets for (e.g. raw, low_dim, image). Defaults to raw. Pass 'all' \
             to download datasets for all available hdf5 types per task and dataset, or directly specify the list\
@@ -101,8 +119,8 @@ if __name__ == "__main__":
     # dry run - don't actually download datasets, but print which datasets would be downloaded
     parser.add_argument(
         "--dry_run",
-        action='store_true',
-        help="set this flag to do a dry run to only print which datasets would be downloaded"
+        action="store_true",
+        help="set this flag to do a dry run to only print which datasets would be downloaded",
     )
 
     args = parser.parse_args()
@@ -115,23 +133,35 @@ if __name__ == "__main__":
     # load args
     download_tasks = args.tasks
     if "all" in download_tasks:
-        assert len(download_tasks) == 1, "all should be only tasks argument but got: {}".format(args.tasks)
+        assert (
+            len(download_tasks) == 1
+        ), "all should be only tasks argument but got: {}".format(args.tasks)
         download_tasks = ALL_TASKS
     elif "sim" in download_tasks:
-        assert len(download_tasks) == 1, "sim should be only tasks argument but got: {}".format(args.tasks)
+        assert (
+            len(download_tasks) == 1
+        ), "sim should be only tasks argument but got: {}".format(args.tasks)
         download_tasks = [task for task in ALL_TASKS if "real" not in task]
     elif "real" in download_tasks:
-        assert len(download_tasks) == 1, "real should be only tasks argument but got: {}".format(args.tasks)
+        assert (
+            len(download_tasks) == 1
+        ), "real should be only tasks argument but got: {}".format(args.tasks)
         download_tasks = [task for task in ALL_TASKS if "real" in task]
 
     download_dataset_types = args.dataset_types
     if "all" in download_dataset_types:
-        assert len(download_dataset_types) == 1, "all should be only dataset_types argument but got: {}".format(args.dataset_types)
+        assert (
+            len(download_dataset_types) == 1
+        ), "all should be only dataset_types argument but got: {}".format(
+            args.dataset_types
+        )
         download_dataset_types = ALL_DATASET_TYPES
 
     download_hdf5_types = args.hdf5_types
     if "all" in download_hdf5_types:
-        assert len(download_hdf5_types) == 1, "all should be only hdf5_types argument but got: {}".format(args.hdf5_types)
+        assert (
+            len(download_hdf5_types) == 1
+        ), "all should be only hdf5_types argument but got: {}".format(args.hdf5_types)
         download_hdf5_types = ALL_HDF5_TYPES
 
     # download requested datasets
@@ -141,13 +171,20 @@ if __name__ == "__main__":
                 if dataset_type in download_dataset_types:
                     for hdf5_type in DATASET_REGISTRY[task][dataset_type]:
                         if hdf5_type in download_hdf5_types:
-                            download_dir = os.path.abspath(os.path.join(default_base_dir, task, dataset_type))
-                            print("\nDownloading dataset:\n    task: {}\n    dataset type: {}\n    hdf5 type: {}\n    download path: {}"
-                                .format(task, dataset_type, hdf5_type, download_dir))
+                            download_dir = os.path.abspath(
+                                os.path.join(default_base_dir, task, dataset_type)
+                            )
+                            print(
+                                "\nDownloading dataset:\n    task: {}\n    dataset type: {}\n    hdf5 type: {}\n    download path: {}".format(
+                                    task, dataset_type, hdf5_type, download_dir
+                                )
+                            )
                             url = DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"]
                             if url is None:
                                 print(
-                                    "Skipping {}-{}-{}, no url for dataset exists.".format(task, dataset_type, hdf5_type)
+                                    "Skipping {}-{}-{}, no url for dataset exists.".format(
+                                        task, dataset_type, hdf5_type
+                                    )
                                     + " Create this dataset locally by running the appropriate command from robomimic/scripts/extract_obs_from_raw_datasets.sh."
                                 )
                                 continue
@@ -157,7 +194,9 @@ if __name__ == "__main__":
                                 # Make sure path exists and create if it doesn't
                                 os.makedirs(download_dir, exist_ok=True)
                                 FileUtils.download_url(
-                                    url=DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"], 
+                                    url=DATASET_REGISTRY[task][dataset_type][hdf5_type][
+                                        "url"
+                                    ],
                                     download_dir=download_dir,
                                 )
                             print("")

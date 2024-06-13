@@ -2,6 +2,7 @@
 Helpful script to generate example config files for each algorithm. These should be re-generated
 when new config options are added, or when default settings in the config classes are modified.
 """
+
 import os
 import json
 
@@ -24,5 +25,5 @@ def main():
         c.dump(filename=json_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

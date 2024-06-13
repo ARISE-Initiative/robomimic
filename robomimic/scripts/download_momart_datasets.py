@@ -45,6 +45,7 @@ Example usage:
     # download all datasets
     python download_datasets.py --tasks all --dataset_types all
 """
+
 import os
 import argparse
 
@@ -82,28 +83,28 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["table_setup_from_dishwasher"],
         help="Tasks to download datasets for. Defaults to table_setup_from_dishwasher task. Pass 'all' to download all"
-             f"5 tasks, or directly specify the list of tasks. Options are any of: {ALL_TASKS}",
+        f"5 tasks, or directly specify the list of tasks. Options are any of: {ALL_TASKS}",
     )
 
     # dataset types to download datasets for
     parser.add_argument(
         "--dataset_types",
         type=str,
-        nargs='+',
+        nargs="+",
         default=["expert"],
         help="Dataset types to download datasets for (e.g. expert, suboptimal). Defaults to expert. Pass 'all' to "
-             "download datasets for all available dataset types per task, or directly specify the list of dataset "
-             f"types. Options are any of: {ALL_DATASET_TYPES}",
+        "download datasets for all available dataset types per task, or directly specify the list of dataset "
+        f"types. Options are any of: {ALL_DATASET_TYPES}",
     )
 
     # dry run - don't actually download datasets, but print which datasets would be downloaded
     parser.add_argument(
         "--dry_run",
-        action='store_true',
-        help="set this flag to do a dry run to only print which datasets would be downloaded"
+        action="store_true",
+        help="set this flag to do a dry run to only print which datasets would be downloaded",
     )
 
     args = parser.parse_args()
@@ -116,12 +117,18 @@ if __name__ == "__main__":
     # load args
     download_tasks = args.tasks
     if "all" in download_tasks:
-        assert len(download_tasks) == 1, "all should be only tasks argument but got: {}".format(args.tasks)
+        assert (
+            len(download_tasks) == 1
+        ), "all should be only tasks argument but got: {}".format(args.tasks)
         download_tasks = ALL_TASKS
 
     download_dataset_types = args.dataset_types
     if "all" in download_dataset_types:
-        assert len(download_dataset_types) == 1, "all should be only dataset_types argument but got: {}".format(args.dataset_types)
+        assert (
+            len(download_dataset_types) == 1
+        ), "all should be only dataset_types argument but got: {}".format(
+            args.dataset_types
+        )
         download_dataset_types = ALL_DATASET_TYPES
 
     # Run sanity check first to warn user if they're about to download a huge amount of data
@@ -134,8 +141,13 @@ if __name__ == "__main__":
 
     # Verify user acknowledgement if we're not doing a dry run
     if not args.dry_run:
-        user_response = input(f"Warning: requested datasets will take a total of {total_size}GB. Proceed? y/n\n")
-        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
+        user_response = input(
+            f"Warning: requested datasets will take a total of {total_size}GB. Proceed? y/n\n"
+        )
+        assert user_response.lower() in {
+            "yes",
+            "y",
+        }, f"Did not receive confirmation. Aborting download."
 
     # download requested datasets
     for task in MOMART_DATASET_REGISTRY:
@@ -143,12 +155,16 @@ if __name__ == "__main__":
             for dataset_type in MOMART_DATASET_REGISTRY[task]:
                 if dataset_type in download_dataset_types:
                     dataset_info = MOMART_DATASET_REGISTRY[task][dataset_type]
-                    download_dir = os.path.abspath(os.path.join(default_base_dir, task, dataset_type))
-                    print(f"\nDownloading dataset:\n"
-                          f"    task: {task}\n"
-                          f"    dataset type: {dataset_type}\n"
-                          f"    dataset size: {dataset_info['size']}GB\n"
-                          f"    download path: {download_dir}")
+                    download_dir = os.path.abspath(
+                        os.path.join(default_base_dir, task, dataset_type)
+                    )
+                    print(
+                        f"\nDownloading dataset:\n"
+                        f"    task: {task}\n"
+                        f"    dataset type: {dataset_type}\n"
+                        f"    dataset size: {dataset_info['size']}GB\n"
+                        f"    download path: {download_dir}"
+                    )
                     if args.dry_run:
                         print("\ndry run: skip download")
                     else:

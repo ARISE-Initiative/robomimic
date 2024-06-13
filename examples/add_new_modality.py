@@ -45,8 +45,11 @@ def custom_scan_processor(obs):
 def custom_scan_unprocessor(obs):
     # Re-add the padding
     # Note: need to check type
-    return np.concatenate([np.zeros(1), obs, np.zeros(1)]) if isinstance(obs, np.ndarray) else \
-        torch.concat([torch.zeros(1), obs, torch.zeros(1)])
+    return (
+        np.concatenate([np.zeros(1), obs, np.zeros(1)])
+        if isinstance(obs, np.ndarray)
+        else torch.concat([torch.zeros(1), obs, torch.zeros(1)])
+    )
 
 
 # Override the default functions for ScanModality
@@ -58,11 +61,10 @@ ScanModality.set_obs_unprocessor(unprocessor=custom_scan_unprocessor)
 class CustomImageEncoderCore(EncoderCore):
     # For simplicity, this will be a pass-through with some simple kwargs
     def __init__(
-            self,
-            input_shape,        # Required, will be inferred automatically at runtime
-
-            # Any args below here you can specify arbitrarily
-            welcome_str,
+        self,
+        input_shape,  # Required, will be inferred automatically at runtime
+        # Any args below here you can specify arbitrarily
+        welcome_str,
     ):
         # Always need to run super init first and pass in input_shape
         super().__init__(input_shape=input_shape)
@@ -90,6 +92,7 @@ class CustomImageRandomizer(Randomizer):
     through the network, resulting in outputs corresponding to each copy - we will pool
     these outputs across the copies with a simple average.
     """
+
     def __init__(
         self,
         input_shape,
@@ -104,7 +107,7 @@ class CustomImageRandomizer(Randomizer):
         """
         super(CustomImageRandomizer, self).__init__()
 
-        assert len(input_shape) == 3 # (C, H, W)
+        assert len(input_shape) == 3  # (C, H, W)
 
         self.input_shape = input_shape
         self.num_rand = num_rand
@@ -118,7 +121,7 @@ class CustomImageRandomizer(Randomizer):
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
@@ -138,13 +141,13 @@ class CustomImageRandomizer(Randomizer):
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
             out_shape ([int]): list of integers corresponding to output shape
         """
-        
+
         # since the @forward_out operation splits [B * N, ...] -> [B, N, ...]
         # and then pools to result in [B, ...], only the batch dimension changes,
         # and so the other dimensions retain their shape.
@@ -164,7 +167,7 @@ class CustomImageRandomizer(Randomizer):
             out = TensorUtils.unsqueeze_expand_at(inputs, size=self.num_rand, dim=1)
 
             # add random noise to each copy
-            out = out + self.noise_scale * (2. * torch.rand_like(out) - 1.)
+            out = out + self.noise_scale * (2.0 * torch.rand_like(out) - 1.0)
 
             # reshape [B, N, C, H, W] -> [B * N, C, H, W] to ensure network forward pass is unchanged
             return TensorUtils.join_dimensions(out, 0, 1)
@@ -180,26 +183,37 @@ class CustomImageRandomizer(Randomizer):
 
         # note the use of @self.training to ensure no randomization at test-time
         if self.training:
-            batch_size = (inputs.shape[0] // self.num_rand)
-            out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0, 
-                target_dims=(batch_size, self.num_rand))
+            batch_size = inputs.shape[0] // self.num_rand
+            out = TensorUtils.reshape_dimensions(
+                inputs,
+                begin_axis=0,
+                end_axis=0,
+                target_dims=(batch_size, self.num_rand),
+            )
             return out.mean(dim=1)
         return inputs
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
+        header = "{}".format(str(self.__class__.__name__))
         msg = header + "(input_shape={}, num_rand={}, noise_scale={})".format(
-            self.input_shape, self.num_rand, self.noise_scale)
+            self.input_shape, self.num_rand, self.noise_scale
+        )
         return msg
 
 
 if __name__ == "__main__":
     # Now, we can directly reference the classes in our config!
     config = BCConfig()
-    config.observation.encoder.custom_image.core_class = "CustomImageEncoderCore"       # Custom class, in string form
-    config.observation.encoder.custom_image.core_kwargs.welcome_str = "hi there!"       # Any custom arguments, of any primitive type that is json-able
-    config.observation.encoder.custom_image.obs_randomizer_class = "CustomImageRandomizer"
+    config.observation.encoder.custom_image.core_class = (
+        "CustomImageEncoderCore"  # Custom class, in string form
+    )
+    config.observation.encoder.custom_image.core_kwargs.welcome_str = (
+        "hi there!"  # Any custom arguments, of any primitive type that is json-able
+    )
+    config.observation.encoder.custom_image.obs_randomizer_class = (
+        "CustomImageRandomizer"
+    )
     config.observation.encoder.custom_image.obs_randomizer_kwargs.num_rand = 3
     config.observation.encoder.custom_image.obs_randomizer_kwargs.noise_scale = 0.05
 
