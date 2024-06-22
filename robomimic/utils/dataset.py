@@ -353,77 +353,27 @@ class SequenceDataset(torch.utils.data.Dataset):
         Computes a dataset-wide mean and standard deviation for the observations
         (per dimension and per obs key) and returns it.
         """
+        def _calc_helper(hdf5_key):
+            obs = []
+            demo_keys = [k for k in self.hdf5_file["data"].keys() if "demo" in k]
+            for ep in demo_keys:
+                obs_traj = self.hdf5_file[f"data/{ep}/{hdf5_key}"][()].astype('float32')
+                obs.append(obs_traj)
+            if len(obs) == 0:
+                breakpoint()
+            obs = np.concatenate(obs, axis=0)
+            mean = obs.mean(axis=0, keepdims=True)
+            std = obs.std(axis=0, keepdims=True) + 1e-3
+            return dict(mean=mean, std=std)
 
-        def _compute_traj_stats(traj_obs_dict):
-            """
-            Helper function to compute statistics over a single trajectory of observations.
-            """
-            traj_stats = {k: {} for k in traj_obs_dict}
-            for k in traj_obs_dict:
-                traj_stats[k]["n"] = traj_obs_dict[k].shape[0]
-                traj_stats[k]["mean"] = traj_obs_dict[k].mean(
-                    axis=0, keepdims=True
-                )  # [1, ...]
-                traj_stats[k]["sqdiff"] = (
-                    (traj_obs_dict[k] - traj_stats[k]["mean"]) ** 2
-                ).sum(
-                    axis=0, keepdims=True
-                )  # [1, ...]
-            return traj_stats
 
-        def _aggregate_traj_stats(traj_stats_a, traj_stats_b):
-            """
-            Helper function to aggregate trajectory statistics.
-            See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
-            for more information.
-            """
-            merged_stats = {}
-            for k in traj_stats_a:
-                n_a, avg_a, M2_a = (
-                    traj_stats_a[k]["n"],
-                    traj_stats_a[k]["mean"],
-                    traj_stats_a[k]["sqdiff"],
-                )
-                n_b, avg_b, M2_b = (
-                    traj_stats_b[k]["n"],
-                    traj_stats_b[k]["mean"],
-                    traj_stats_b[k]["sqdiff"],
-                )
-                n = n_a + n_b
-                mean = (n_a * avg_a + n_b * avg_b) / n
-                delta = avg_b - avg_a
-                M2 = M2_a + M2_b + (delta**2) * (n_a * n_b) / n
-                merged_stats[k] = dict(n=n, mean=mean, sqdiff=M2)
-            return merged_stats
+        obs_normalization_stats = {}
+        # keys_to_norm = [f"obs/{k}" for k in self.obs_keys if ObsUtils.key_is_obs_modality(k, "low_dim")] + ["actions"]
+        for key in self.obs_keys:
+            if ObsUtils.key_is_obs_modality(key, "low_dim"):
+                obs_normalization_stats[key] = _calc_helper(f"obs/{key}")
 
-        # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
-        # with the previous statistics.
-        ep = self.demos[0]
-        obs_traj = {
-            k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype("float32")
-            for k in self.obs_keys
-        }
-        obs_traj = ObsUtils.process_obs_dict(obs_traj)
-        merged_stats = _compute_traj_stats(obs_traj)
-        print("SequenceDataset: normalizing observations...")
-        for ep in LogUtils.custom_tqdm(self.demos[1:]):
-            obs_traj = {
-                k: self.hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype("float32")
-                for k in self.obs_keys
-            }
-            obs_traj = ObsUtils.process_obs_dict(obs_traj)
-            traj_stats = _compute_traj_stats(obs_traj)
-            merged_stats = _aggregate_traj_stats(merged_stats, traj_stats)
-
-        obs_normalization_stats = {k: {} for k in merged_stats}
-        for k in merged_stats:
-            # note we add a small tolerance of 1e-3 for std
-            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype(
-                np.float32
-            )
-            obs_normalization_stats[k]["std"] = (
-                np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3
-            ).astype(np.float32)
+        obs_normalization_stats["actions"] = _calc_helper("actions")
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):
@@ -437,7 +387,10 @@ class SequenceDataset(torch.utils.data.Dataset):
                 with a "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the observation.
         """
-        assert self.hdf5_normalize_obs, "not using observation normalization!"
+        # assert self.hdf5_normalize_obs, "not using observation normalization!"
+        if not self.hdf5_normalize_obs:
+            print("Warning: not using observation normalization!")
+            return None
         return deepcopy(self.obs_normalization_stats)
 
     def get_dataset_for_ep(self, ep, key):

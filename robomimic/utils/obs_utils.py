@@ -496,7 +496,7 @@ def get_processed_shape(obs_modality, input_shape):
     return list(process_obs(obs=np.zeros(input_shape), obs_modality=obs_modality).shape)
 
 
-def normalize_obs(obs_dict, obs_normalization_stats):
+def normalize_batch(batch, normalization_stats, normalize_actions=True):
     """
     Normalize observations using the provided "mean" and "std" entries
     for each observation key. The observation dictionary will be
@@ -515,19 +515,15 @@ def normalize_obs(obs_dict, obs_normalization_stats):
     """
 
     # ensure we have statistics for each modality key in the observation
-    assert set(obs_dict.keys()).issubset(obs_normalization_stats)
+    # assert set(obs_dict.keys()).issubset(obs_normalization_stats)
 
-    for m in obs_dict:
-        # get rid of extra dimension - we will pad for broadcasting later
-        mean = obs_normalization_stats[m]["mean"][0]
-        std = obs_normalization_stats[m]["std"][0]
-
+    def _norm_helper(obs, mean, std):
         # shape consistency checks
         m_num_dims = len(mean.shape)
-        shape_len_diff = len(obs_dict[m].shape) - m_num_dims
+        shape_len_diff = len(obs.shape) - m_num_dims
         assert shape_len_diff >= 0, "shape length mismatch in @normalize_obs"
         assert (
-            obs_dict[m].shape[-m_num_dims:] == mean.shape
+            obs.shape[-m_num_dims:] == mean.shape
         ), "shape mismatch in @normalize_obs"
 
         # Obs can have one or more leading batch dims - prepare for broadcasting.
@@ -538,9 +534,82 @@ def normalize_obs(obs_dict, obs_normalization_stats):
         mean = mean.reshape(reshape_padding + tuple(mean.shape))
         std = std.reshape(reshape_padding + tuple(std.shape))
 
-        obs_dict[m] = (obs_dict[m] - mean) / std
+        return (obs - mean) / std
 
-    return obs_dict
+    for m in batch["obs"]:
+        if m not in normalization_stats:
+            continue
+        # get rid of extra dimension - we will pad for broadcasting later
+        mean = normalization_stats[m]["mean"][0]
+        std = normalization_stats[m]["std"][0]        
+
+        batch["obs"][m] = _norm_helper(batch["obs"][m], mean, std)
+    
+    if normalize_actions:
+        ac_mean = normalization_stats["actions"]["mean"][0]
+        ac_std = normalization_stats["actions"]["std"][0]
+
+        batch["actions"] = _norm_helper(batch["actions"], ac_mean, ac_std)
+
+
+    return batch
+
+def unnormalize_batch(batch, normalization_stats):
+    """
+    Unnormalize observations using the provided "mean" and "std" entries
+    for each observation key. The observation dictionary will be
+    modified in-place.
+
+    Args:
+        obs_dict (dict): dictionary mapping observation key to np.array or
+            torch.Tensor. Can have any number of leading batch dimensions.
+
+        obs_normalization_stats (dict): this should map observation keys to dicts
+            with a "mean" and "std" of shape (1, ...) where ... is the default
+            shape for the observation.
+
+    Returns:
+        obs_dict (dict): obs dict with unnormalized observation arrays
+    """
+
+    # ensure we have statistics for each modality key in the observation
+    # assert set(obs_dict.keys()).issubset(obs_normalization_stats)
+
+    def _unnorm_helper(obs, mean, std):
+        # shape consistency checks
+        m_num_dims = len(mean.shape)
+        shape_len_diff = len(obs.shape) - m_num_dims
+        assert shape_len_diff >= 0, "shape length mismatch in @normalize_obs"
+        assert (
+            obs.shape[-m_num_dims:] == mean.shape
+        ), "shape mismatch in @normalize_obs"
+
+        # Obs can have one or more leading batch dims - prepare for broadcasting.
+        #
+        # As an example, if the obs has shape [B, T, D] and our mean / std stats are shape [D]
+        # then we should pad the stats to shape [1, 1, D].
+        reshape_padding = tuple([1] * shape_len_diff)
+        mean = torch.from_numpy(mean.reshape(reshape_padding + tuple(mean.shape))).to(obs.device)
+        std = torch.from_numpy(std.reshape(reshape_padding + tuple(std.shape))).to(obs.device)
+
+        return (obs * std) + mean
+    
+    if "obs" in batch: 
+        for m in batch["obs"]:
+            if m not in normalization_stats:
+                continue
+            # get rid of extra dimension - we will pad for broadcasting later
+            mean = normalization_stats[m]["mean"][0]
+            std = normalization_stats[m]["std"][0]        
+
+            batch["obs"][m] = _unnorm_helper(batch["obs"][m], mean, std)
+    
+    ac_mean = normalization_stats["actions"]["mean"][0]
+    ac_std = normalization_stats["actions"]["std"][0]
+
+    batch["actions"] = _unnorm_helper(batch["actions"], ac_mean, ac_std)
+
+    return batch
 
 
 def has_modality(modality, obs_keys):
