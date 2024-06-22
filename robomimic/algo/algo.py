@@ -222,7 +222,7 @@ class Algo(object):
         """
         return batch
 
-    def postprocess_batch_for_training(self, batch, obs_normalization_stats):
+    def postprocess_batch_for_training(self, batch, normalization_stats, normalize_actions=True):
         """
         Does some operations (like channel swap, uint8 to float conversion, normalization)
         after @process_batch_for_training is called, in order to ensure these operations
@@ -243,9 +243,9 @@ class Algo(object):
         """
 
         # ensure obs_normalization_stats are torch Tensors on proper device
-        obs_normalization_stats = TensorUtils.to_float(
+        normalization_stats = TensorUtils.to_float(
             TensorUtils.to_device(
-                TensorUtils.to_tensor(obs_normalization_stats), self.device
+                TensorUtils.to_tensor(normalization_stats), self.device
             )
         )
 
@@ -262,15 +262,15 @@ class Algo(object):
                     # found key - stop search and process observation
                     if d[k] is not None:
                         d[k] = ObsUtils.process_obs_dict(d[k])
-                        if obs_normalization_stats is not None:
-                            d[k] = ObsUtils.normalize_obs(
-                                d[k], obs_normalization_stats=obs_normalization_stats
-                            )
                 elif isinstance(d[k], dict):
                     # search down into dictionary
                     recurse_helper(d[k])
 
         recurse_helper(batch)
+        if normalization_stats is not None:
+            batch = ObsUtils.normalize_batch(
+                batch, normalization_stats=normalization_stats, normalize_actions=normalize_actions
+            )
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -543,7 +543,7 @@ class RolloutPolicy(object):
             )
             # limit normalization to obs keys being used, in case environment includes extra keys
             ob = {k: ob[k] for k in self.policy.global_config.all_obs_keys}
-            ob = ObsUtils.normalize_obs(
+            ob = ObsUtils.normalize_batch(
                 ob, obs_normalization_stats=obs_normalization_stats
             )
         return ob
