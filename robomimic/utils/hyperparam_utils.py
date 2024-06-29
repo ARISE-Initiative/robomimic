@@ -16,7 +16,7 @@ class ConfigGenerator(object):
     Useful class to keep track of hyperparameters to sweep, and to generate
     the json configs for each experiment run.
     """
-    def __init__(self, base_config_file, wandb_proj_name="debug", script_file=None, generated_config_dir=None):
+    def __init__(self, base_config_file, wandb_proj_name=None, script_file=None, generated_config_dir=None):
         """
         Args:
             base_config_file (str): path to a base json config to use as a starting point
@@ -38,7 +38,7 @@ class ConfigGenerator(object):
         self.script_file = os.path.expanduser(self.script_file)
         self.parameters = OrderedDict()
 
-        assert isinstance(wandb_proj_name, str)
+        assert (wandb_proj_name is None) or isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
     def add_param(self, key, name, group, values, value_names=None):
@@ -247,7 +247,8 @@ class ConfigGenerator(object):
 
             # populate list of identifying meta for logger;
             # see meta_config method in base_config.py for more info
-            json_dict["experiment"]["logging"]["wandb_proj_name"] = self.wandb_proj_name
+            if self.wandb_proj_name is not None:
+                json_dict["experiment"]["logging"]["wandb_proj_name"] = self.wandb_proj_name
             if "meta" not in json_dict:
                 json_dict["meta"] = dict()
             json_dict["meta"].update(
