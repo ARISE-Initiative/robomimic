@@ -25,6 +25,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_path,
         obs_keys,
         dataset_keys,
+        ac_key,
         frame_stack=1,
         seq_length=1,
         pad_frame_stack=True,
@@ -90,6 +91,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
         self._hdf5_file = None
+        self.ac_key = ac_key
 
         assert hdf5_cache_mode in ["all", "low_dim", None]
         self.hdf5_cache_mode = hdf5_cache_mode
@@ -373,7 +375,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             if ObsUtils.key_is_obs_modality(key, "low_dim"):
                 obs_normalization_stats[key] = _calc_helper(f"obs/{key}")
 
-        obs_normalization_stats["actions"] = _calc_helper("actions")
+        obs_normalization_stats["actions"] = _calc_helper(self.ac_key)
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):
