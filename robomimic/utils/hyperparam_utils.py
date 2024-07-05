@@ -16,11 +16,14 @@ class ConfigGenerator(object):
     Useful class to keep track of hyperparameters to sweep, and to generate
     the json configs for each experiment run.
     """
-    def __init__(self, base_config_file, wandb_proj_name="debug", script_file=None, generated_config_dir=None):
+    def __init__(self, base_config_file, base_exp_name=None, wandb_proj_name=None, script_file=None, generated_config_dir=None):
         """
         Args:
             base_config_file (str): path to a base json config to use as a starting point
                 for the parameter sweep.
+
+            base_exp_name (str or None): if provided, override the base experiment name from
+                the one in the base config
 
             script_file (str): script filename to write as output
         """
@@ -36,9 +39,10 @@ class ConfigGenerator(object):
         else:
             self.script_file = script_file
         self.script_file = os.path.expanduser(self.script_file)
+        self.base_exp_name = base_exp_name
         self.parameters = OrderedDict()
 
-        assert isinstance(wandb_proj_name, str)
+        assert (wandb_proj_name is None) or isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
     def add_param(self, key, name, group, values, value_names=None):
@@ -211,7 +215,10 @@ class ConfigGenerator(object):
         base_config = load_json(self.base_config_file, verbose=False)
 
         # base exp name from this base config
-        base_exp_name = base_config['experiment']['name']
+        if self.base_exp_name is not None:
+            base_exp_name = self.base_exp_name
+        else:
+            base_exp_name = base_config['experiment']['name']
 
         # use base json to determine the parameter ranges
         parameter_ranges, parameter_names = self._get_parameter_ranges()
@@ -247,7 +254,8 @@ class ConfigGenerator(object):
 
             # populate list of identifying meta for logger;
             # see meta_config method in base_config.py for more info
-            json_dict["experiment"]["logging"]["wandb_proj_name"] = self.wandb_proj_name
+            if self.wandb_proj_name is not None:
+                json_dict["experiment"]["logging"]["wandb_proj_name"] = self.wandb_proj_name
             if "meta" not in json_dict:
                 json_dict["meta"] = dict()
             json_dict["meta"].update(
