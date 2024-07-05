@@ -16,11 +16,14 @@ class ConfigGenerator(object):
     Useful class to keep track of hyperparameters to sweep, and to generate
     the json configs for each experiment run.
     """
-    def __init__(self, base_config_file, wandb_proj_name=None, script_file=None, generated_config_dir=None):
+    def __init__(self, base_config_file, base_exp_name=None, wandb_proj_name=None, script_file=None, generated_config_dir=None):
         """
         Args:
             base_config_file (str): path to a base json config to use as a starting point
                 for the parameter sweep.
+
+            base_exp_name (str or None): if provided, override the base experiment name from
+                the one in the base config
 
             script_file (str): script filename to write as output
         """
@@ -36,6 +39,7 @@ class ConfigGenerator(object):
         else:
             self.script_file = script_file
         self.script_file = os.path.expanduser(self.script_file)
+        self.base_exp_name = base_exp_name
         self.parameters = OrderedDict()
 
         assert (wandb_proj_name is None) or isinstance(wandb_proj_name, str)
@@ -211,7 +215,10 @@ class ConfigGenerator(object):
         base_config = load_json(self.base_config_file, verbose=False)
 
         # base exp name from this base config
-        base_exp_name = base_config['experiment']['name']
+        if self.base_exp_name is not None:
+            base_exp_name = self.base_exp_name
+        else:
+            base_exp_name = base_config['experiment']['name']
 
         # use base json to determine the parameter ranges
         parameter_ranges, parameter_names = self._get_parameter_ranges()
