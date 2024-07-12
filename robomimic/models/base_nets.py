@@ -17,6 +17,7 @@ from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
 from robomimic.models.vit_rein import Reins, LoRAReins, MLPhead
+from robomimic.utils.log_utils import bcolors
 
 CONV_ACTIVATIONS = {
     "relu": nn.ReLU,
@@ -608,7 +609,7 @@ class ViT_Rein(ConvBase):
             freeze (bool): if True, use a frozen ViT pretrained model.
         """
         super(ViT_Rein, self).__init__()
-
+        print(f"{bcolors.WARNING}BACKBONE FREEZE: {freeze}{bcolors.ENDC}")
         assert input_channel == 3
         assert vit_model_class in [
             "vit_b",

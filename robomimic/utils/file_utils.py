@@ -20,6 +20,7 @@ import robomimic.utils.torch_utils as TorchUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory
 from robomimic.algo import RolloutPolicy
+from robomimic.utils.log_utils import bcolors
 
 
 def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
@@ -146,7 +147,9 @@ def get_shape_metadata_from_dataset(
     demo = f["data/{}".format(demo_id)]
 
     # action dimension
-    shape_meta["ac_dim"] = f[f"data/{demo_id}/{ac_key}"].shape[1]
+    shape_meta["ac_dim"] = f[f"data/{demo_id}/{ac_key}"].shape[-1]
+    if len(f[f"data/{demo_id}/{ac_key}"].shape) > 2:
+        print(f"{bcolors.WARNING}Warning: action shape has more than 2 dims, if these aren't prepacked actions something may be wrong?{bcolors.ENDC}")
 
     # observation dimensions
     all_shapes = OrderedDict()

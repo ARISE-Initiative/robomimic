@@ -37,6 +37,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_normalize_obs=False,
         filter_by_attribute=None,
         load_next_obs=True,
+        prestacked_actions=False,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -86,6 +87,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             load_next_obs (bool): whether to load next_obs from the dataset
         """
         super(SequenceDataset, self).__init__()
+
+        self.prestacked_actions = prestacked_actions
 
         self.hdf5_path = os.path.expanduser(hdf5_path)
         self.hdf5_use_swmr = hdf5_use_swmr
@@ -498,30 +501,28 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return meta
 
-    def interpolate_keys(self, obs, keys, seq_length, seq_length_to_load):
-        if seq_length == seq_length_to_load:
-            return
-
+    def interpolate_keys(self, obs, keys, seq_length):
         for k in keys:
             v = obs[k]
+            L = v.shape[0]
+            if L == seq_length:
+                continue
+
             if k == "pad_mask":
                 # interpolate it by simply copying each index (seq_length / seq_length_to_load) times
-                obs[k] = np.repeat(v, seq_length // seq_length_to_load, axis=0)
+                obs[k] = np.repeat(v, (seq_length // L), axis=0)
             elif k != "pad_mask":
-                assert (
-                    v.shape[0] == seq_length_to_load
-                ), "low_dim obs should have shape (seq_length, ...)"
-                assert (
-                    len(v.shape) == 2
-                ), "low_dim obs should have shape (seq_length, ...)"
                 # plot v[:, 3]
                 # plt.plot(v[:, 2])
                 # plt.savefig('v_3.png')
                 # plt.close()
                 interp = scipy.interpolate.interp1d(
-                    np.linspace(0, 1, seq_length_to_load), v, axis=0
+                    np.linspace(0, 1, L), v, axis=0
                 )
-                obs[k] = interp(np.linspace(0, 1, seq_length))
+                try:
+                    obs[k] = interp(np.linspace(0, 1, seq_length))
+                except:
+                    breakpoint()
                 # plt.plot(obs[k][:, 2])
                 # plt.savefig('v_3_after.png')
                 # plt.close()
@@ -642,9 +643,10 @@ class SequenceDataset(torch.utils.data.Dataset):
             obs["pad_mask"] = pad_mask
 
         # Interpolate obs
-        to_interp = [k for k in obs if ObsUtils.key_is_obs_modality(k, "low_dim")]
+        # to_interp = [k for k in obs if ObsUtils.key_is_obs_modality(k, "low_dim")]
+        to_interp = ["pad_mask"]
         # t = time.time()
-        self.interpolate_keys(obs, to_interp, seq_length, seq_length_to_load)
+        self.interpolate_keys(obs, to_interp, seq_length)
         # print("Interpolation time: ", time.time() - t)
 
         return obs
@@ -687,7 +689,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         # interpolate actions
         to_interp = [k for k in data]
         # t = time.time()
-        self.interpolate_keys(data, to_interp, seq_length, seq_length_to_load)
+        if data["actions"].shape[0] == 1 and len(data["actions"].shape) == 3:
+            data["actions"] = data["actions"][0]
+        self.interpolate_keys(data, to_interp, seq_length)
         # print("Interpolation time: ", time.time() - t)
         return data
 
