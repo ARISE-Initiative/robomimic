@@ -596,6 +596,7 @@ class ViT_Rein(ConvBase):
         lora_dim=16,
         patch_size=16,
         freeze=True,
+        return_key="x_norm_patchtokens"
     ):
         """
         Using pretrained observation encoder network proposed in Vision Transformers
@@ -627,6 +628,9 @@ class ViT_Rein(ConvBase):
         self._lora_dim = lora_dim
         self._patch_size = patch_size
         self._out_indices = ([7, 11, 15, 23],)
+        self.return_key = return_key
+        if self.return_key not in ["x_norm_patchtokens", "x_norm_clstoken"]:
+            raise ValueError(f"return_key {self.return_key} not supported")
 
         self.preprocess = nn.Sequential(
             transforms.Resize((294, 294)),
@@ -635,20 +639,20 @@ class ViT_Rein(ConvBase):
 
         try:
             if self._vit_model_class == "vit_s":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vits14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vits14"
                 )
             if self._vit_model_class == "vit_l":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitl14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitl14"
                 )
             if self._vit_model_class == "vit_g":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitg14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitg14"
                 )
             if self._vit_model_class == "vit_b":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitb14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitb14"
                 )
         except ImportError:
             print("WARNING: could not load Vit")
@@ -656,13 +660,13 @@ class ViT_Rein(ConvBase):
         try:
             self._rein_layers = LoRAReins(
                 lora_dim=self._lora_dim,
-                num_layers=len(self.nets.backbone.blocks),
-                embed_dims=self.nets.backbone.patch_embed.proj.out_channels,
+                num_layers=len(self.nets.blocks),
+                embed_dims=self.nets.patch_embed.proj.out_channels,
                 patch_size=self._patch_size,
             )
             self._mlp_lora_head = MLPhead(
-                in_dim=3 * self.nets.backbone.patch_embed.proj.out_channels,
-                out_dim=5 * self.nets.backbone.patch_embed.proj.out_channels,
+                in_dim=3 * self.nets.patch_embed.proj.out_channels,
+                out_dim=5 * self.nets.patch_embed.proj.out_channels,
             )
         except ImportError:
             print("WARNING: could not load rein layer")
@@ -674,8 +678,8 @@ class ViT_Rein(ConvBase):
 
     def forward(self, inputs):
         x = self.preprocess(inputs)
-        x = self.nets.backbone.patch_embed(x)
-        for idx, blk in enumerate(self.nets.backbone.blocks):
+        x = self.nets.patch_embed(x)
+        for idx, blk in enumerate(self.nets.blocks):
             x = blk(x)
             x = self._rein_layers.forward(
                 x,
@@ -683,18 +687,20 @@ class ViT_Rein(ConvBase):
                 batch_first=True,
                 has_cls_token=True,
             )
-
+        if self.return_key == "x_norm_patchtokens":
+            return x
         q_avg = x.mean(dim=1).unsqueeze(1)
         q_max = torch.max(x, 1)[0].unsqueeze(1)
         q_N = x[:, x.shape[1] - 1, :].unsqueeze(1)
 
         _q = torch.cat((q_avg, q_max, q_N), dim=1)
 
-        x = self.nets.backbone.norm(_q)
+        x = self.nets.norm(_q)
         x = x.flatten(-2, -1)
         x = self._mlp_lora_head(x)
-        x = self.nets.linear_head(x)
-        return x
+        if self.return_key == "x_norm_clstoken":
+            return x
+
 
     def output_shape(self, input_shape):
         """
@@ -708,19 +714,25 @@ class ViT_Rein(ConvBase):
         """
         assert len(input_shape) == 3
 
-        out_dim = 1000
+        C, H, W = input_shape
+        out_dim = self._mlp_lora_head._out_dim
 
-        return [out_dim, 1, 1]
+        if self.return_key == "x_norm_patchtokens":
+            return [441, out_dim]
+        elif self.return_key == "x_norm_clstoken":
+            return [out_dim]
+        else:
+            raise NotImplementedError
 
     def __repr__(self):
         """Pretty print network."""
-        print(
-            "**Number of learnable params:",
-            sum(p.numel() for p in self.nets.parameters() if p.requires_grad),
-            " Freeze:",
-            self._freeze,
-        )
-        print("**Number of params:", sum(p.numel() for p in self.nets.parameters()))
+        # print(
+        #     "**Number of learnable params:",
+        #     sum(p.numel() for p in self.nets.parameters() if p.requires_grad),
+        #     " Freeze:",
+        #     self._freeze,
+        # )
+        # print("**Number of params:", sum(p.numel() for p in self.nets.parameters()))
 
         header = "{}".format(str(self.__class__.__name__))
         return (
@@ -739,7 +751,7 @@ class Vit(ConvBase):
     Vision transformer
     """
 
-    def __init__(self, input_channel=3, vit_model_class="vit_b", freeze=True):
+    def __init__(self, input_channel=3, vit_model_class="vit_b", freeze=True, return_key="x_norm_patchtokens"):
         """
         Using pretrained observation encoder network proposed in Vision Transformers
         git clone https://github.com/facebookresearch/dinov2
@@ -767,6 +779,9 @@ class Vit(ConvBase):
         self._freeze = freeze
         self._input_coord_conv = False
         self._pretrained = False
+        self.return_key = return_key
+        if self.return_key not in ["x_norm_patchtokens", "x_norm_clstoken"]:
+            raise ValueError(f"return_key {self.return_key} not supported")
 
         self.preprocess = nn.Sequential(
             transforms.Resize((294, 294)),
@@ -775,20 +790,20 @@ class Vit(ConvBase):
 
         try:
             if self._vit_model_class == "vit_s":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vits14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vits14"
                 )
             if self._vit_model_class == "vit_l":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitl14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitl14"
                 )
             if self._vit_model_class == "vit_g":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitg14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitg14"
                 )
             if self._vit_model_class == "vit_b":
-                self.nets = dinov2_vits14_lc = torch.hub.load(
-                    "facebookresearch/dinov2", "dinov2_vitb14_lc"
+                self.nets = dinov2_vits14 = torch.hub.load(
+                    "facebookresearch/dinov2", "dinov2_vitb14"
                 )
         except ImportError:
             print("WARNING: could not load Vit")
@@ -802,7 +817,8 @@ class Vit(ConvBase):
 
     def forward(self, inputs):
         x = self.preprocess(inputs)
-        x = self.nets(x)
+        # x = self.nets(x)
+        x = self.nets.forward_features(x)[self.return_key]
         return x
 
     def output_shape(self, input_shape):
@@ -817,9 +833,13 @@ class Vit(ConvBase):
         """
         assert len(input_shape) == 3
 
-        out_dim = 1000
+        C, H, W = input_shape
+        out_dim = self.nets.patch_embed.proj.out_channels
 
-        return [out_dim, 1, 1]
+        if self.return_key == "x_norm_patchtokens":
+            return [441, out_dim]
+        elif self.return_key == "x_norm_clstoken":
+            return [out_dim]
 
     def __repr__(self):
         """Pretty print network."""
