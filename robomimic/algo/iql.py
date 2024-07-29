@@ -219,7 +219,7 @@ class IQL(PolicyAlgo, ValueAlgo):
                         for critic in self.nets["critic_target"]]
         q_pred, _ = torch.cat(pred_qs, dim=1).min(dim=1, keepdim=True)
         q_pred = q_pred.detach()
-        vf_pred = self.nets["vf"](obs)
+        vf_pred = self.nets["vf"](obs_dict=obs, goal_dict=goal_obs)
         
         # V losses: expectile regression. see section 4.1 in https://arxiv.org/pdf/2110.06169.pdf
         vf_err = vf_pred - q_pred
