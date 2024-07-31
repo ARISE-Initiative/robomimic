@@ -30,20 +30,20 @@ def interpolate_arr(v, seq_length):
     interpolated = []
     for i in range(v.shape[0]):
         index = v[i]
-        if i == 20:
-            plt.plot(index[:, 2])
-            plt.savefig('index.png')
-            plt.close()
+        # if i == 20:
+        #     plt.plot(index[:, 2])
+        #     plt.savefig('index.png')
+        #     plt.close()
 
         interp = scipy.interpolate.interp1d(
             np.linspace(0, 1, index.shape[0]), index, axis=0
         )
         interpolated.append(interp(np.linspace(0, 1, seq_length)))
 
-        if i == 20:
-            plt.plot(interpolated[-1][:, 2])
-            plt.savefig('interpolated.png')
-            plt.close()
+        # if i == 20:
+        #     plt.plot(interpolated[-1][:, 2])
+        #     plt.savefig('interpolated.png')
+        #     plt.close()
         
 
     # L = v.shape[0]
