@@ -3,6 +3,7 @@ This file contains the robosuite environment wrapper that is used
 to provide a standardized environment API for training policies and interacting
 with metadata present in datasets.
 """
+import os
 import json
 import numpy as np
 from copy import deepcopy
