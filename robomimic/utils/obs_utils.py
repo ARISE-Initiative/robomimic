@@ -533,6 +533,9 @@ def normalize_batch(batch, normalization_stats, normalize_actions=True):
         reshape_padding = tuple([1] * shape_len_diff)
         mean = mean.reshape(reshape_padding + tuple(mean.shape))
         std = std.reshape(reshape_padding + tuple(std.shape))
+        if isinstance(obs, torch.Tensor) and isinstance(mean, np.ndarray):
+            mean = torch.from_numpy(mean).to(obs.device)
+            std = torch.from_numpy(std).to(obs.device)
 
         return (obs - mean) / std
 
