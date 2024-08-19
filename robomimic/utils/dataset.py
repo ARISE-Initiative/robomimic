@@ -58,6 +58,11 @@ def interpolate_arr(v, seq_length):
     return np.array(interpolated)
 
 def interpolate_keys(obs, keys, seq_length):
+    """
+    obs: dict with values of shape (T, D)
+    keys: list of keys to interpolate
+    seq_length: int changes shape (T, D) to (seq_length, D)
+    """
     for k in keys:
         v = obs[k]
         L = v.shape[0]
@@ -78,7 +83,7 @@ def interpolate_keys(obs, keys, seq_length):
             try:
                 obs[k] = interp(np.linspace(0, 1, seq_length))
             except:
-                breakpoint()
+                raise ValueError(f"Interpolation failed for key: {k} with shape{k.shape}")
             # plt.plot(obs[k][:, 2])
             # plt.savefig('v_3_after.png')
             # plt.close()
@@ -102,6 +107,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         filter_by_attribute=None,
         load_next_obs=True,
         prestacked_actions=False,
+        hdf5_normalize_actions=False
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -157,6 +163,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.hdf5_path = os.path.expanduser(hdf5_path)
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
+        self.hdf5_normalize_actions = hdf5_normalize_actions
         self._hdf5_file = None
         self.ac_key = ac_key
 
@@ -442,7 +449,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             if ObsUtils.key_is_obs_modality(key, "low_dim"):
                 obs_normalization_stats[key] = _calc_helper(f"obs/{key}")
 
-        obs_normalization_stats["actions"] = _calc_helper(self.ac_key)
+        if self.hdf5_normalize_actions:
+            obs_normalization_stats["actions"] = _calc_helper(self.ac_key)
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):
@@ -727,8 +735,14 @@ class SequenceDataset(torch.utils.data.Dataset):
         # interpolate actions
         to_interp = [k for k in data]
         # t = time.time()
-        if data[self.ac_key].shape[0] == 1 and len(data[self.ac_key].shape) == 3:
-            data[self.ac_key] = data[self.ac_key][0]
+        for k in data:
+            if k == "pad_mask":
+                continue
+            if data[k].shape[0] == 1 and len(data[k].shape) == 3:
+                data[k] = data[k][0]
+                if not "actions" in k:
+                    raise ValueError("Interpolating actions, but key is not an action, key: ", k)
+
         interpolate_keys(data, to_interp, seq_length)
         # print("Interpolation time: ", time.time() - t)
         return data
