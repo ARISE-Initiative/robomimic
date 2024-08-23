@@ -449,8 +449,10 @@ class SequenceDataset(torch.utils.data.Dataset):
             if ObsUtils.key_is_obs_modality(key, "low_dim"):
                 obs_normalization_stats[key] = _calc_helper(f"obs/{key}")
 
-        if self.hdf5_normalize_actions:
-            obs_normalization_stats["actions"] = _calc_helper(self.ac_key)
+        for key in self.dataset_keys:
+            if "actions" in key:
+                obs_normalization_stats[key] = _calc_helper(key)
+
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):

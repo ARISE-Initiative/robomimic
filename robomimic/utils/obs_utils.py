@@ -549,10 +549,12 @@ def normalize_batch(batch, normalization_stats, normalize_actions=True):
         batch["obs"][m] = _norm_helper(batch["obs"][m], mean, std)
     
     if normalize_actions:
-        ac_mean = normalization_stats["actions"]["mean"][0]
-        ac_std = normalization_stats["actions"]["std"][0]
+        for k in batch:
+            if "actions" in k:
+                ac_mean = normalization_stats[k]["mean"][0]
+                ac_std = normalization_stats[k]["std"][0]
 
-        batch["actions"] = _norm_helper(batch["actions"], ac_mean, ac_std)
+                batch[k] = _norm_helper(batch[k], ac_mean, ac_std)
 
 
     return batch
@@ -607,10 +609,12 @@ def unnormalize_batch(batch, normalization_stats):
 
             batch["obs"][m] = _unnorm_helper(batch["obs"][m], mean, std)
     
-    ac_mean = normalization_stats["actions"]["mean"][0]
-    ac_std = normalization_stats["actions"]["std"][0]
+    for k in batch:
+        if "actions" in k:
+            ac_mean = normalization_stats[k]["mean"][0]
+            ac_std = normalization_stats[k]["std"][0]
 
-    batch["actions"] = _unnorm_helper(batch["actions"], ac_mean, ac_std)
+            batch[k] = _unnorm_helper(batch[k], ac_mean, ac_std)
 
     return batch
 
