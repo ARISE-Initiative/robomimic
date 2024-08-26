@@ -2,25 +2,15 @@ import argparse
 import os
 import time
 import datetime
-from copy import deepcopy
 
 import robomimic
+import robomimic.macros as macros
 import robomimic.utils.hyperparam_utils as HyperparamUtils
-
-# from robomimic.scripts.config_gen.dataset_registry import get_ds_cfg
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(robomimic.__file__), os.pardir))
 
-def scan_datasets(folder, postfix=".hdf5"):
-    dataset_paths = []
-    for root, dirs, files in os.walk(os.path.expanduser(folder)):
-        for f in files:
-            if f.endswith(postfix):
-                dataset_paths.append(os.path.join(root, f))
-    return dataset_paths
 
-
-def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
+def get_generator(algo_name, config_file, args, algo_name_short=None):
     if args.wandb_proj_name is None:
         strings = [
             algo_name_short if (algo_name_short is not None) else algo_name,
@@ -46,7 +36,6 @@ def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
     )
 
     args.algo_name = algo_name
-    args.pt = pt
 
     return generator
 
@@ -291,13 +280,6 @@ def set_debug_mode(generator, args):
     for ds_cfg in ds_cfg_list:
         for d in ds_cfg:
             d["horizon"] = 30
-    # generator.add_param(
-    #     key="experiment.rollout.horizon",
-    #     name="",
-    #     group=-1,
-    #     values=[30],
-    #     value_names=[""],
-    # )
     
     generator.add_param(
         key="experiment.rollout.rate",
@@ -365,6 +347,14 @@ def set_debug_mode(generator, args):
     )
 
 
+def get_output_dir(args, algo_dir):
+    return "{expdata_base_path}/{env}/{algo_dir}".format(
+        expdata_base_path=get_expdata_base_path(),
+        env=args.env,
+        algo_dir=algo_dir,
+    )
+
+
 def set_output_dir(generator, args):
     assert args.name is not None
 
@@ -412,6 +402,69 @@ def set_num_seeds(generator, args):
             )
 
 
+def get_expdata_base_path():
+    expdata_base_path = macros.EXPDATA_BASE_PATH
+    if expdata_base_path is None:
+        expdata_base_path = os.path.join(base_path, "expdata")
+    return expdata_base_path
+
+
+def get_robocasa_ds(
+        ds_names,
+        exclude_ds_names=None,
+        src="human",
+        filter_key=None,
+        eval=None
+    ):
+    from robocasa.utils.dataset_registry import get_ds_path, SINGLE_STAGE_TASK_DATASETS, MULTI_STAGE_TASK_DATASETS
+
+    assert src in ["human", "mg"]
+
+    all_datasets = {}
+    all_datasets.update(SINGLE_STAGE_TASK_DATASETS)
+    all_datasets.update(MULTI_STAGE_TASK_DATASETS)
+
+    if ds_names == "all":
+        ds_names = list(all_datasets.keys())
+    elif ds_names == "single_stage":
+        ds_names = list(SINGLE_STAGE_TASK_DATASETS.keys())
+    elif ds_names == "multi_stage":
+        ds_names = list(MULTI_STAGE_TASK_DATASETS.keys())
+    elif isinstance(ds_names, str):
+        ds_names = [ds_names]
+
+    if exclude_ds_names is not None:
+        ds_names = [name for name in ds_names if name not in exclude_ds_names]
+
+    ret = []
+    for name in ds_names:
+        cfg = dict()
+        ds_path = get_ds_path(name, ds_type=f"{src}_im")
+
+        # set path and horizon
+        cfg["path"] = ds_path
+        cfg["horizon"] = all_datasets[name]["horizon"]
+        
+        # determine whether we are performing eval on dataset
+        if eval is None or name in eval:
+            cfg["do_eval"] = True
+        else:
+            cfg["do_eval"] = False
+
+        # determine dataset filter key
+        if filter_key is not None:
+            cfg["filter_key"] = filter_key
+        else:
+            if src == "human":
+                cfg["filter_key"] = "50_demos"
+            elif src == "mg":
+                cfg["filter_key"] = "3000_demos"
+
+        ret.append(cfg)
+
+    return ret
+
+
 def get_argparser():
     parser = argparse.ArgumentParser()
 
@@ -431,13 +484,6 @@ def get_argparser():
         type=str,
         choices=['ld', 'im'],
         default='im',
-    )
-
-    parser.add_argument(
-        "--ckpt_mode",
-        type=str,
-        choices=["off", "all", "best_only"],
-        default=None,
     )
 
     parser.add_argument(
@@ -503,7 +549,7 @@ def get_argparser():
     return parser
 
 
-def make_generator(args, make_generator_helper):
+def make_generator(args, make_generator_helper, skip_helpers=None):
     if args.tmplog or args.debug and args.name is None:
         args.name = "debug"
     else:
@@ -528,14 +574,13 @@ def make_generator(args, make_generator_helper):
     # make config generator
     generator = make_generator_helper(args)
 
-    if args.ckpt_mode is None:
-        if args.pt:
-            args.ckpt_mode = "all"
-        else:
-            args.ckpt_mode = "best_only"
+    if skip_helpers is None:
+        skip_helpers = []
 
-    set_env_settings(generator, args)
-    set_mod_settings(generator, args)
+    if "env" not in skip_helpers:
+        set_env_settings(generator, args)
+    if "mod" not in skip_helpers:
+        set_mod_settings(generator, args)
     set_output_dir(generator, args)
     set_num_seeds(generator, args)
     set_wandb_mode(generator, args)
@@ -566,76 +611,3 @@ def make_generator(args, make_generator_helper):
 
     # generate jsons and script
     generator.generate(override_base_name=True)
-
-
-def get_ds_cfg(
-        ds_names,
-        exclude_ds_names=None,
-        src="human",
-        filter_key=None,
-        eval=None,
-        gen_tex=True,
-        rand_cams=True,
-    ):
-    from robocasa.utils.dataset_registry import get_ds_path, SINGLE_STAGE_TASK_DATASETS, MULTI_STAGE_TASK_DATASETS
-    
-    assert src in ["human", "mg"]
-    all_datasets = {}
-    all_datasets.update(SINGLE_STAGE_TASK_DATASETS)
-    all_datasets.update(MULTI_STAGE_TASK_DATASETS)
-
-    if ds_names == "all":
-        ds_names = list(all_datasets.keys())
-    elif ds_names == "single_stage":
-        ds_names = list(SINGLE_STAGE_TASK_DATASETS.keys())
-    elif ds_names == "multi_stage":
-        ds_names = list(MULTI_STAGE_TASK_DATASETS.keys())
-    elif isinstance(ds_names, str):
-        ds_names = [ds_names]
-
-    if exclude_ds_names is not None:
-        ds_names = [name for name in ds_names if name not in exclude_ds_names]
-
-    ret = []
-    for name in ds_names:
-        ds_meta = all_datasets[name]
-
-        cfg = dict(
-            horizon=ds_meta["horizon"]
-        )
-        
-        # determine whether we are performing eval on dataset
-        if eval is None or name in eval:
-            cfg["do_eval"] = True
-        else:
-            cfg["do_eval"] = False
-        
-        # determine dataset path
-        path_list = get_ds_path(name, ds_type=f"{src}_im")
-        # skip if entry does not exist for this dataset src
-        if path_list is None:
-            continue
-        
-        if isinstance(path_list, str):
-            path_list = [path_list]
-
-        for path_i, path in enumerate(path_list):
-            cfg_for_path = deepcopy(cfg)
-
-            # determine dataset filter key
-            if filter_key is not None:
-                cfg_for_path["filter_key"] = filter_key
-            else:
-                cfg_for_path["filter_key"] = ds_meta[f"{src}_filter_key"]
-
-            if "env_meta_update_dict" in ds_meta:
-                cfg_for_path["env_meta_update_dict"] = ds_meta["env_meta_update_dict"]
-            
-            cfg_for_path["path"] = path
-
-            if path_i > 0:
-                cfg_for_path["do_eval"] = False
-
-            ret.append(cfg_for_path)
-
-    return ret

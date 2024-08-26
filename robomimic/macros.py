@@ -18,6 +18,9 @@ WANDB_API_KEY = None
 # Key in obs dict used for CLIP language embeddings
 LANG_EMB_KEY = "lang_emb"
 
+# base path where experiment logs and paths stored
+EXPDATA_BASE_PATH = None
+
 try:
     from robomimic.macros_private import *
 except ImportError:

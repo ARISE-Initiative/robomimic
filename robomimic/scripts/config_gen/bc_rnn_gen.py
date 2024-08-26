@@ -1,17 +1,14 @@
-from robomimic.scripts.config_gen.helper import *
+from robomimic.scripts.config_gen.config_gen_utils import *
+
 
 def make_generator_helper(args):
     algo_name_short = "bc_rnn"
-
     generator = get_generator(
         algo_name="bc",
         config_file=os.path.join(base_path, 'robomimic/exps/templates/bc.json'),
         args=args,
         algo_name_short=algo_name_short,
-        pt=True,
     )
-    if args.ckpt_mode is None:
-        args.ckpt_mode = "off"
 
     if args.env == "robocasa":
         raise NotImplementedError
@@ -80,13 +77,7 @@ def make_generator_helper(args):
         key="train.output_dir",
         name="",
         group=-1,
-        values=[
-            "~/expdata/{env}/{mod}/{algo_name_short}".format(
-                env=args.env,
-                mod=args.mod,
-                algo_name_short=algo_name_short,
-            )
-        ],
+        values=[get_output_dir(args, algo_dir=algo_name_short)]
     )
 
     return generator

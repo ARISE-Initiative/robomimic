@@ -88,7 +88,7 @@
             "power": 0.75
         },
         "ddpm": {
-            "enabled": true,
+            "enabled": false,
             "num_train_timesteps": 100,
             "num_inference_timesteps": 100,
             "beta_schedule": "squaredcos_cap_v2",
@@ -96,7 +96,7 @@
             "prediction_type": "epsilon"
         },
         "ddim": {
-            "enabled": false,
+            "enabled": true,
             "num_train_timesteps": 100,
             "num_inference_timesteps": 10,
             "beta_schedule": "squaredcos_cap_v2",
