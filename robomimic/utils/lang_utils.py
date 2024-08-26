@@ -5,7 +5,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true" # needed to suppress warning about
 tokenizer = "openai/clip-vit-large-patch14" #"openai/clip-vit-base-patch32"
 lang_emb_model = CLIPTextModelWithProjection.from_pretrained(
     tokenizer,
-    cache_dir=os.path.expanduser("~/tmp/clip")
+    cache_dir=os.path.expanduser(os.path.join(os.environ.get("HF_HOME", "~/tmp"), "clip"))
 ).eval()
 tz = AutoTokenizer.from_pretrained(tokenizer, TOKENIZERS_PARALLELISM=True)
 
