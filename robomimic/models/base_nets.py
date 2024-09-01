@@ -84,7 +84,6 @@ class Module(torch.nn.Module):
         raise NotImplementedError
 
 
-
 class Sequential(torch.nn.Sequential, Module):
     """
     Compose multiple Modules together (defined above).
