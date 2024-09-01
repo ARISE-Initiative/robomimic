@@ -68,21 +68,6 @@ class Module(torch.nn.Module):
     Base class for networks. The only difference from torch.nn.Module is that it
     requires implementing @output_shape.
     """
-    MODULE_REGISTRY = {}
-    def __init_subclass__(cls, **kwargs):
-        """
-        Register all subclasses of Module in the MODULE_REGISTRY 
-        to allow for custom module backbones.
-        """
-        super().__init_subclass__(**kwargs)
-        Module.MODULE_REGISTRY[cls.__name__] = cls
-
-    def get_registered_module(self, name):
-        """
-        Get a registered module by name.
-        """
-        return Module.MODULE_REGISTRY[name]
-
     @abc.abstractmethod
     def output_shape(self, input_shape=None):
         """

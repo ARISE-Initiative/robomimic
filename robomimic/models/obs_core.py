@@ -34,6 +34,8 @@ class EncoderCore(BaseNets.Module):
     """
     Abstract class used to categorize all cores used to encode observations
     """
+    MODULE_REGISTRY = {}
+
     def __init__(self, input_shape):
         self.input_shape = input_shape
         super(EncoderCore, self).__init__()
@@ -97,9 +99,8 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
         backbone_kwargs["input_channel"] = input_shape[0]
 
         # extract only relevant kwargs for this specific backbone
-        # backbone_kwargs = extract_class_init_kwargs_from_dict(cls=eval(backbone_class), dic=backbone_kwargs, copy=True)
         backbone_kwargs = extract_class_init_kwargs_from_dict(
-                cls=self.get_registered_module(backbone_class), 
+                cls = ObsUtils.OBS_ENCODER_CORES[backbone_class],
                 dic=backbone_kwargs, copy=True)
 
         # visual backbone
