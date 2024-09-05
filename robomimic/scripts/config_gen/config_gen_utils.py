@@ -51,6 +51,9 @@ def set_env_settings(generator, args):
                     "actions":{
                         "normalization": None,
                     },
+                    "actions_abs":{
+                        "normalization": "min_max",
+                    },
                     "action_dict/abs_pos": {
                         "normalization": "min_max"
                     },
@@ -112,6 +115,20 @@ def set_env_settings(generator, args):
         }
         if args.abs_actions:
             env_kwargs["controller_configs"] = {"control_delta": False}
+            generator.add_param(
+                key="train.action_keys",
+                name="ac_keys",
+                group=-1,
+                values=[
+                    [
+                        "actions_abs",
+                    ],
+                ],
+                value_names=[
+                    "abs_acs",
+                ],
+                hidename=True,
+            )
 
         # don't use generative textures for evaluation
         generator.add_param(

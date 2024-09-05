@@ -11,7 +11,7 @@ def make_generator_helper(args):
         algo_name_short=algo_name_short,
     )
 
-    ### Multi-task training on atomic tasks ###
+    ### Define dataset variants to train on ###
     generator.add_param(
         key="train.data",
         name="ds",

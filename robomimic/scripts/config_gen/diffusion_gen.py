@@ -13,10 +13,23 @@ def make_generator_helper(args):
         algo_name_short=algo_name_short,
     )
 
-    if args.env == "robocasa":
-        raise NotImplementedError
-    else:
-        raise ValueError
+    ### Define dataset variants to train on ###
+    generator.add_param(
+        key="train.data",
+        name="ds",
+        group=123456,
+        values_and_names=[
+            (get_robocasa_ds("single_stage", src="human", eval=["PnPCounterToSink", "PnPCounterToCab"], filter_key="50_demos"), "human-50"), # training on human datasets
+            (get_robocasa_ds("single_stage", src="mg", eval=["PnPCounterToSink", "PnPCounterToCab"], filter_key="3000_demos"), "mg-3000"), # training on MimicGen datasets
+
+            # composite tasks
+            (get_robocasa_ds("ArrangeVegetables", filter_key="50_demos"), "ArrangeVegetables"),
+            (get_robocasa_ds("MicrowaveThawing", filter_key="50_demos"), "MicrowaveThawing"),
+            (get_robocasa_ds("RestockPantry", filter_key="50_demos"), "RestockPantry"),
+            (get_robocasa_ds("PreSoakPan", filter_key="50_demos"), "PreSoakPan"),
+            (get_robocasa_ds("PrepareCoffee", filter_key="50_demos"), "PrepareCoffee"),
+        ]
+    )
     
     generator.add_param(
         key="train.output_dir",
