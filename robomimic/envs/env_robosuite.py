@@ -119,13 +119,20 @@ class EnvRobosuite(EB.EnvBase):
         info["is_success"] = self.is_success()
         return obs, r, self.is_done(), info
 
-    def reset(self):
+    def reset(self, unset_ep_meta=True):
         """
         Reset environment.
+
+        Args:
+            unset_ep_meta (np.array): whether to unset any episode meta data
 
         Returns:
             observation (dict): initial observation dictionary.
         """
+        if unset_ep_meta and hasattr(self.env, "unset_ep_meta"):
+            # unset the ep meta to clear out any ep meta that was previously set
+            self.env.unset_ep_meta()
+
         di = self.env.reset()
         
         # keep track of episode language and embedding
@@ -166,6 +173,7 @@ class EnvRobosuite(EB.EnvBase):
                 ep_meta = json.loads(state["ep_meta"])
             else:
                 ep_meta = {}
+
             if hasattr(self.env, "set_attrs_from_ep_meta"): # older versions had this function
                 self.env.set_attrs_from_ep_meta(ep_meta)
             elif hasattr(self.env, "set_ep_meta"): # newer versions
@@ -173,7 +181,7 @@ class EnvRobosuite(EB.EnvBase):
             # this reset is necessary.
             # while the call to env.reset_from_xml_string does call reset,
             # that is only a "soft" reset that doesn't actually reload the model.
-            self.reset()
+            self.reset(unset_ep_meta=False)
             robosuite_version_id = int(robosuite.__version__.split(".")[1])
             if robosuite_version_id <= 3:
                 from robosuite.utils.mjcf_utils import postprocess_model_xml
@@ -188,8 +196,6 @@ class EnvRobosuite(EB.EnvBase):
                 # hide teleop visualization after restoring from model
                 self.env.sim.model.site_rgba[self.env.eef_site_id] = np.array([0., 0., 0., 0.])
                 self.env.sim.model.site_rgba[self.env.eef_cylinder_id] = np.array([0., 0., 0., 0.])
-            if hasattr(self.env, "unset_ep_meta"): # unset the ep meta after reset complete
-                self.env.unset_ep_meta()
         if "states" in state:
             self.env.sim.set_state_from_flattened(state["states"])
             self.env.sim.forward()
