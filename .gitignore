@@ -122,7 +122,7 @@ venv.bak/
 *.pth
 
 # default experiment folder
-/expdata
+expdata
 
 # private macros
 macros_private.py
