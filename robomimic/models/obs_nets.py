@@ -905,6 +905,7 @@ class MIMO_Transformer(Module):
         transformer_num_layers,
         transformer_num_heads,
         transformer_context_length,
+        transformer_causal=True,
         transformer_emb_dropout=0.1,
         transformer_attn_dropout=0.1,
         transformer_block_output_dropout=0.1,
@@ -926,6 +927,7 @@ class MIMO_Transformer(Module):
             transformer_num_heads (int): number of attention heads for each
                 transformer block - must divide @transformer_embed_dim evenly. Self-attention is 
                 computed over this many partitions of the embedding dimension separately.
+            transformer_causal (bool): whether to use causal transformer layers
             transformer_context_length (int): expected length of input sequences
             transformer_activation: non-linearity for input and output layers used in transformer
             transformer_emb_dropout (float): dropout probability for embedding inputs in transformer
@@ -984,6 +986,7 @@ class MIMO_Transformer(Module):
             num_layers=transformer_num_layers,
             num_heads=transformer_num_heads,
             context_length=transformer_context_length,
+            causal=transformer_causal,
             attn_dropout=transformer_attn_dropout,
             block_output_dropout=transformer_block_output_dropout,
             activation=transformer_activation,

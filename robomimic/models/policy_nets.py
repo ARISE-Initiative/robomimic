@@ -988,6 +988,7 @@ class TransformerActorNetwork(MIMO_Transformer):
         transformer_num_layers,
         transformer_num_heads,
         transformer_context_length,
+        transformer_causal=True,
         transformer_emb_dropout=0.1,
         transformer_attn_dropout=0.1,
         transformer_block_output_dropout=0.1,
@@ -1014,6 +1015,8 @@ class TransformerActorNetwork(MIMO_Transformer):
                 computed over this many partitions of the embedding dimension separately.
             
             transformer_context_length (int): expected length of input sequences
+
+            transformer_causal (bool): whether to use causal transformer layers
 
             transformer_embedding_dropout (float): dropout probability for embedding inputs in transformer
 
@@ -1069,6 +1072,7 @@ class TransformerActorNetwork(MIMO_Transformer):
             transformer_num_layers=transformer_num_layers,
             transformer_num_heads=transformer_num_heads,
             transformer_context_length=transformer_context_length,
+            transformer_causal=transformer_causal,
             transformer_emb_dropout=transformer_emb_dropout,
             transformer_attn_dropout=transformer_attn_dropout,
             transformer_block_output_dropout=transformer_block_output_dropout,
@@ -1141,6 +1145,7 @@ class TransformerGMMActorNetwork(TransformerActorNetwork):
         transformer_num_layers,
         transformer_num_heads,
         transformer_context_length,
+        transformer_causal=True,
         transformer_emb_dropout=0.1,
         transformer_attn_dropout=0.1,
         transformer_block_output_dropout=0.1,
@@ -1172,6 +1177,8 @@ class TransformerGMMActorNetwork(TransformerActorNetwork):
                 computed over this many partitions of the embedding dimension separately.
             
             transformer_context_length (int): expected length of input sequences
+
+            transformer_causal (bool): whether to use causal transformer layers
 
             transformer_embedding_dropout (float): dropout probability for embedding inputs in transformer
 
@@ -1234,6 +1241,7 @@ class TransformerGMMActorNetwork(TransformerActorNetwork):
             transformer_num_layers=transformer_num_layers,
             transformer_num_heads=transformer_num_heads,
             transformer_context_length=transformer_context_length,
+            transformer_causal=transformer_causal,
             transformer_emb_dropout=transformer_emb_dropout,
             transformer_attn_dropout=transformer_attn_dropout,
             transformer_block_output_dropout=transformer_block_output_dropout,

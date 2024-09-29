@@ -77,12 +77,13 @@ class PositionalEncoding(nn.Module):
         return pe.detach()
 
 
-class CausalSelfAttention(Module):
+class SelfAttention(Module):
     def __init__(
         self,
         embed_dim,
         num_heads,
         context_length,
+        causal=True,
         attn_dropout=0.1,
         output_dropout=0.1,
     ):
@@ -112,11 +113,13 @@ class CausalSelfAttention(Module):
 
             context_length (int): expected length of input sequences
 
+            causal (bool): whether to use causal self attention
+
             attn_dropout (float): dropout probability for attention outputs
 
             output_dropout (float): dropout probability for final outputs
         """
-        super(CausalSelfAttention, self).__init__()
+        super(SelfAttention, self).__init__()
 
         assert (
             embed_dim % num_heads == 0
@@ -143,6 +146,8 @@ class CausalSelfAttention(Module):
         mask = torch.tril(torch.ones(context_length, context_length)).view(
             1, 1, context_length, context_length
         )
+        if causal is False:
+            mask[:] = 1
         self.register_buffer("mask", mask)
 
     def forward(self, x):
@@ -220,7 +225,7 @@ class CausalSelfAttention(Module):
 class SelfAttentionBlock(Module):
     """
     A single Transformer Block, that can be chained together repeatedly.
-    It consists of a @CausalSelfAttention module and a small MLP, along with
+    It consists of a @SelfAttention module and a small MLP, along with
     layer normalization and residual connections on each input.
     """
 
@@ -229,6 +234,7 @@ class SelfAttentionBlock(Module):
         embed_dim,
         num_heads,
         context_length,
+        causal=True,
         attn_dropout=0.1,
         output_dropout=0.1,
         activation=nn.GELU(),
@@ -242,6 +248,8 @@ class SelfAttentionBlock(Module):
                 computed over this many partitions of the embedding dimension separately.
 
             context_length (int): expected length of input sequences
+
+            causal (bool): whether to use causal self attention
 
             attn_dropout (float): dropout probability for attention outputs
 
@@ -259,10 +267,11 @@ class SelfAttentionBlock(Module):
         self.nets = nn.ModuleDict()
 
         # self-attention block
-        self.nets["attention"] = CausalSelfAttention(
+        self.nets["attention"] = SelfAttention(
             embed_dim=embed_dim,
             num_heads=num_heads,
             context_length=context_length,
+            causal=causal,
             attn_dropout=attn_dropout,
             output_dropout=output_dropout,
         )
@@ -316,6 +325,7 @@ class GPT_Backbone(Module):
         self,
         embed_dim,
         context_length,
+        causal=True,
         attn_dropout=0.1,
         block_output_dropout=0.1,
         num_layers=6,
@@ -328,6 +338,8 @@ class GPT_Backbone(Module):
                 used in self-attention
 
             context_length (int): expected length of input sequences
+
+            causal (bool): whether to use causal transformer layers
 
             attn_dropout (float): dropout probability for attention outputs for each transformer block
 
@@ -347,6 +359,7 @@ class GPT_Backbone(Module):
         self.num_layers = num_layers
         self.num_heads = num_heads
         self.context_length = context_length
+        self.causal = causal
         self.attn_dropout = attn_dropout
         self.block_output_dropout = block_output_dropout
 
@@ -380,6 +393,7 @@ class GPT_Backbone(Module):
                     embed_dim=self.embed_dim,
                     num_heads=self.num_heads,
                     context_length=self.context_length,
+                    causal=self.causal,
                     attn_dropout=self.attn_dropout,
                     output_dropout=self.block_output_dropout,
                     activation=self.activation,

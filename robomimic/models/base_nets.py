@@ -59,6 +59,9 @@ def transformer_args_from_config(transformer_config):
     if "num_layers" in transformer_config:
         transformer_args["transformer_num_layers"] = transformer_config.num_layers
 
+    if "causal" in transformer_config:
+        transformer_args["transformer_causal"] = transformer_config.causal
+
     return transformer_args
 
 
