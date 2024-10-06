@@ -43,7 +43,7 @@ from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
 
 
-def train(config, device):
+def train(config, device, eval_only=False):
     """
     Train a model using the algorithm.
     """
@@ -168,9 +168,8 @@ def train(config, device):
     with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
         json.dump(config, outfile, indent=4)
 
-    # if checkpoint is specified, load in model weights
     ckpt_path = config.experiment.ckpt_path
-    if ckpt_path is not None:
+    if ckpt_path is not None and os.path.isfile(os.path.expanduser(ckpt_path)):
         print("LOADING MODEL WEIGHTS FROM " + ckpt_path)
         from robomimic.utils.file_utils import maybe_dict_from_checkpoint
         ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
@@ -244,9 +243,19 @@ def train(config, device):
     # number of learning steps per epoch (defaults to a full dataset pass)
     train_num_steps = config.experiment.epoch_every_n_steps
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
-
-    for epoch in range(0, config.train.num_epochs + 1): # epoch numbers start at 1
-        if epoch > 0:
+    
+    for epoch in range(0, config.train.num_epochs + 1): # epoch numbers start at 1        
+        # if checkpoint directory is specified, load in new ckpt if exists
+        ckpt_path = config.experiment.ckpt_path
+        if ckpt_path is not None and os.path.isdir(os.path.expanduser(ckpt_path)):
+            ckpt_path = os.path.join(ckpt_path, "models", f"model_epoch_{epoch}.pth")
+            if os.path.exists(ckpt_path):
+                print("LOADING MODEL WEIGHTS FROM " + ckpt_path)
+                from robomimic.utils.file_utils import maybe_dict_from_checkpoint
+                ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
+                model.deserialize(ckpt_dict["model"])
+        
+        if epoch > 0 and not eval_only:
             step_log = TrainUtils.run_epoch(
                 model=model,
                 data_loader=train_loader,
@@ -470,7 +479,7 @@ def main(args):
     # catch error during training and print it
     res_str = "finished run successfully!"
     try:
-        train(config, device=device)
+        train(config, device=device, eval_only=args.eval_only)
     except Exception as e:
         res_str = "run failed with error:\n{}\n\n{}".format(e, traceback.format_exc())
     print(res_str)
@@ -516,6 +525,13 @@ if __name__ == "__main__":
         "--debug",
         action='store_true',
         help="set this flag to run a quick training run for debugging purposes"
+    )
+
+    # debug mode
+    parser.add_argument(
+        "--eval_only",
+        action='store_true',
+        help="disables training and only runs policy evaluation. config must include ckpt_path"
     )
 
     args = parser.parse_args()

@@ -566,7 +566,7 @@ def get_argparser():
     return parser
 
 
-def make_generator(args, make_generator_helper, skip_helpers=None):
+def make_generator(args, make_generator_helper, skip_helpers=None, extra_flags=None):
     if args.tmplog or args.debug and args.name is None:
         args.name = "debug"
     else:
@@ -627,4 +627,4 @@ def make_generator(args, make_generator_helper, skip_helpers=None):
         )
 
     # generate jsons and script
-    generator.generate(override_base_name=True)
+    generator.generate(override_base_name=True, extra_flags=extra_flags)

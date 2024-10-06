@@ -90,7 +90,7 @@ class ConfigGenerator(object):
         if prepend:
             self.parameters.move_to_end(key, last=False)
 
-    def generate(self, override_base_name=False):
+    def generate(self, override_base_name=False, extra_flags=None):
         """
         Generates json configs for the hyperparameter sweep using attributes
         @self.parameters, @self.base_config_file, and @self.script_file,
@@ -99,7 +99,7 @@ class ConfigGenerator(object):
         """
         assert len(self.parameters) > 0, "must add parameters using add_param first!"
         generated_json_paths = self._generate_jsons(override_base_name=override_base_name)
-        self._script_from_jsons(generated_json_paths)
+        self._script_from_jsons(generated_json_paths, extra_flags=extra_flags)
 
     def _name_for_experiment(self, base_name, parameter_values, parameter_value_names):
         """
@@ -301,7 +301,7 @@ class ConfigGenerator(object):
 
         return json_paths
 
-    def _script_from_jsons(self, json_paths):
+    def _script_from_jsons(self, json_paths, extra_flags=None):
         """
         Generates a bash script to run the experiments that correspond to
         the input jsons.
@@ -311,7 +311,10 @@ class ConfigGenerator(object):
             for path in json_paths:
                 # write python command to file
                 import robomimic
-                cmd = "python {}/scripts/train.py --config {}\n".format(robomimic.__path__[0], path)
+                cmd = "python {}/scripts/train.py --config {}{}\n".format(
+                    robomimic.__path__[0], path,
+                    " " + extra_flags if isinstance(extra_flags, str) else ""
+                )
                 
                 print()
                 print(cmd)

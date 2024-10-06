@@ -606,6 +606,7 @@ def rollout_with_stats(
 
         if del_envs_after_rollouts:
             # delete the environment after use
+            env.env.env.close()
             del env
 
         if data_logger is not None:

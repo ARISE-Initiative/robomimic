@@ -6,7 +6,13 @@ def make_generator_helper(args):
     ckpt_path = args.ckpt
 
     # get ckpt config file, infer algo name from path
-    ckpt_config_path = os.path.join(os.path.dirname(ckpt_path), "../config.json")
+    ckpt_is_dir = os.path.isdir(os.path.expanduser(ckpt_path))
+    
+    if ckpt_is_dir:
+        ckpt_config_path = os.path.join(ckpt_path, "config.json")
+    else:
+        ckpt_config_path = os.path.join(os.path.dirname(ckpt_path), "../config.json")
+    
     with open(ckpt_config_path) as f:
         ckpt_config = json.load(f)
     algo_name_short = ckpt_path.split("/")[-6]
@@ -28,11 +34,11 @@ def make_generator_helper(args):
         group=12345,
         values_and_names=[
             (ckpt_datasets, "ckpt_datasets"),
-            (get_robocasa_ds("single_stage", src="human", eval=["PnPCounterToSink", "PnPCounterToCab"], filter_key="50_demos"), "human-50"), # training on human datasets
+            # (get_robocasa_ds("single_stage", src="human", eval=["PnPCounterToSink", "PnPCounterToCab"], filter_key="50_demos"), "human-50"), # training on human datasets
             # ("set-your-datasets-here"), "name"),
         ],
     )
-
+    
     # set up configs for running evals (do not need to change these lines)
     generator.add_param(
         key="experiment.ckpt_path",
@@ -42,17 +48,33 @@ def make_generator_helper(args):
         hidename=True,
     )
     generator.add_param(
-        key="experiment.rollout.warmstart",
+        key="experiment.rollout.enabled",
         name="",
         group=-1,
-        values=[-1],
+        values=[True],
     )
-    generator.add_param(
-        key="train.num_epochs",
-        name="",
-        group=-1,
-        values=[0],
-    )
+
+    if ckpt_is_dir:
+        generator.add_param(
+            key="experiment.rollout.rate",
+            name="",
+            group=-1,
+            values=[200],
+        )
+    else:
+        generator.add_param(
+            key="experiment.rollout.warmstart",
+            name="",
+            group=-1,
+            values=[-1],
+        )
+        generator.add_param(
+            key="train.num_epochs",
+            name="",
+            group=-1,
+            values=[0],
+        )
+    
     generator.add_param(
         key="train.num_data_workers",
         name="",
@@ -79,4 +101,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    make_generator(args, make_generator_helper, skip_helpers=("env", "mod"))
+    make_generator(args, make_generator_helper, skip_helpers=("env", "mod"), extra_flags="--eval_only")
