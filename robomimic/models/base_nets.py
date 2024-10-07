@@ -476,7 +476,7 @@ class ConvBase(Module):
         This also future-proofs us for any additional encoder classes we would
         like to add ourselves.
         """
-        ObsUtils.register_encoder_core(cls)
+        ObsUtils.register_encoder_backbone(cls)
 
     # dirty hack - re-implement to pass the buck onto subclasses from ABC parent
     def output_shape(self, input_shape):

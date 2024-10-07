@@ -99,7 +99,7 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
 
         # extract only relevant kwargs for this specific backbone
         backbone_kwargs = extract_class_init_kwargs_from_dict(
-                cls = ObsUtils.OBS_ENCODER_CORES[backbone_class],
+                cls = ObsUtils.OBS_ENCODER_BACKBONES[backbone_class],
                 dic=backbone_kwargs, copy=True)
 
         # visual backbone
