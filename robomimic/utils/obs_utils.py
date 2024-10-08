@@ -41,8 +41,9 @@ OBS_MODALITY_CLASSES = {}
 # in their config, without having to manually register their class internally.
 # This also future-proofs us for any additional encoder / randomizer classes we would
 # like to add ourselves.
-OBS_ENCODER_CORES = {"None": None}          # Include default None
-OBS_RANDOMIZERS = {"None": None}            # Include default None
+OBS_ENCODER_CORES = {"None": None}          # Per-modality core net as defined in obs_cores.py, e.g., "VisualCore"
+OBS_RANDOMIZERS = {"None": None}            # Obs randomizer defined in obs_cores.py, e.g., "CropRandomizer"
+OBS_ENCODER_BACKBONES = {"None": None}      # Architecture backbones for encoding obervation, e.g., "ResNet18Conv"
 
 
 def register_obs_key(target_class):
@@ -58,6 +59,10 @@ def register_encoder_core(target_class):
 def register_randomizer(target_class):
     assert target_class not in OBS_RANDOMIZERS, f"Already registered obs randomizer {target_class}!"
     OBS_RANDOMIZERS[target_class.__name__] = target_class
+
+def register_encoder_backbone(target_class):
+    assert target_class not in OBS_ENCODER_BACKBONES, f"Already registered obs encoder backbone {target_class}!"
+    OBS_ENCODER_BACKBONES[target_class.__name__] = target_class
 
 
 class ObservationKeyToModalityDict(dict):

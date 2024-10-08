@@ -16,6 +16,7 @@ from torchvision import transforms
 from torchvision import models as vision_models
 
 import robomimic.utils.tensor_utils as TensorUtils
+import robomimic.utils.obs_utils as ObsUtils
 
 
 CONV_ACTIVATIONS = {
@@ -462,6 +463,20 @@ class ConvBase(Module):
     """
     def __init__(self):
         super(ConvBase, self).__init__()
+
+    def __init_subclass__(cls, **kwargs):
+        """
+        Hook method to automatically register all valid subclasses so we can keep track of valid observation encoders
+        in a global dict.
+
+        This global dict stores mapping from observation encoder network name to class.
+        We keep track of these registries to enable automated class inference at runtime, allowing
+        users to simply extend our base encoder class and refer to that class in string form
+        in their config, without having to manually register their class internally.
+        This also future-proofs us for any additional encoder classes we would
+        like to add ourselves.
+        """
+        ObsUtils.register_encoder_backbone(cls)
 
     # dirty hack - re-implement to pass the buck onto subclasses from ABC parent
     def output_shape(self, input_shape):
