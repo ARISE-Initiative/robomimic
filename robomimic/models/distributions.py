@@ -2,7 +2,6 @@
 Contains distribution models used as parts of other networks. These
 classes usually inherit or emulate torch distributions.
 """
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +15,6 @@ class TanhWrappedDistribution(D.Distribution):
     Tanh Normal distribution - adapted from rlkit and CQL codebase
     (https://github.com/aviralkumar2907/CQL/blob/d67dbe9cf5d2b96e3b462b6146f249b3d6569796/d4rl/rlkit/torch/distributions.py#L6).
     """
-
     def __init__(self, base_dist, scale=1.0, epsilon=1e-6):
         """
         Args:
@@ -37,17 +35,13 @@ class TanhWrappedDistribution(D.Distribution):
         """
         value = value / self.scale
         if pre_tanh_value is None:
-            one_plus_x = (1.0 + value).clamp(min=self.tanh_epsilon)
-            one_minus_x = (1.0 - value).clamp(min=self.tanh_epsilon)
+            one_plus_x = (1. + value).clamp(min=self.tanh_epsilon)
+            one_minus_x = (1. - value).clamp(min=self.tanh_epsilon)
             pre_tanh_value = 0.5 * torch.log(one_plus_x / one_minus_x)
         lp = self.base_dist.log_prob(pre_tanh_value)
         tanh_lp = torch.log(1 - value * value + self.tanh_epsilon)
         # In case the base dist already sums up the log probs, make sure we do the same
-        return (
-            lp - tanh_lp
-            if len(lp.shape) == len(tanh_lp.shape)
-            else lp - tanh_lp.sum(-1)
-        )
+        return lp - tanh_lp if len(lp.shape) == len(tanh_lp.shape) else lp - tanh_lp.sum(-1)
 
     def sample(self, sample_shape=torch.Size(), return_pretanh_value=False):
         """
@@ -87,7 +81,6 @@ class DiscreteValueDistribution(object):
     of the support (categorical values, or in this case, value atoms). This is
     used for distributional value networks.
     """
-
     def __init__(self, values, probs=None, logits=None):
         """
         Creates a categorical distribution parameterized by either @probs or
@@ -121,7 +114,7 @@ class DiscreteValueDistribution(object):
         """
         dist_squared = (self.mean().unsqueeze(-1) - self.values).pow(2)
         return (self._categorical_dist.probs * dist_squared).sum(dim=-1)
-
+    
     def sample(self, sample_shape=torch.Size()):
         """
         Sample from the distribution. Make sure to return value atoms, not categorical class indices.

@@ -1,7 +1,6 @@
 """
 Implementation of Behavioral Cloning (BC).
 """
-
 from collections import OrderedDict
 
 import torch
@@ -36,15 +35,13 @@ def algo_config_to_class(algo_config):
 
     # note: we need the check below because some configs import BCConfig and exclude
     # some of these options
-    gaussian_enabled = "gaussian" in algo_config and algo_config.gaussian.enabled
-    gmm_enabled = "gmm" in algo_config and algo_config.gmm.enabled
-    vae_enabled = "vae" in algo_config and algo_config.vae.enabled
+    gaussian_enabled = ("gaussian" in algo_config and algo_config.gaussian.enabled)
+    gmm_enabled = ("gmm" in algo_config and algo_config.gmm.enabled)
+    vae_enabled = ("vae" in algo_config and algo_config.vae.enabled)
 
     rnn_enabled = algo_config.rnn.enabled
     # support legacy configs that do not have "transformer" item
-    transformer_enabled = (
-        "transformer" in algo_config
-    ) and algo_config.transformer.enabled
+    transformer_enabled = ("transformer" in algo_config) and algo_config.transformer.enabled
 
     if gaussian_enabled:
         if rnn_enabled:
@@ -82,7 +79,6 @@ class BC(PolicyAlgo):
     """
     Normal BC training.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -93,9 +89,7 @@ class BC(PolicyAlgo):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor_layer_dims,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
         self.nets = self.nets.float().to(self.device)
 
@@ -110,20 +104,17 @@ class BC(PolicyAlgo):
 
         Returns:
             input_batch (dict): processed and filtered batch that
-                will be used for training
+                will be used for training 
         """
         input_batch = dict()
-        # input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
-        input_batch["obs"] = {
-            k: v[:, 0, :] if v.ndim != 1 else v for k, v in batch["obs"].items()
-        }
-        input_batch["goal_obs"] = batch.get(
-            "goal_obs", None
-        )  # goals may not be present
+        #input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
+        input_batch["obs"] = {k: v[:, 0, :] if v.ndim != 1 else v for k, v in batch['obs'].items()}
+        input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
         return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
+
 
     def train_on_batch(self, batch, epoch, validate=False):
         """
@@ -169,9 +160,7 @@ class BC(PolicyAlgo):
             predictions (dict): dictionary containing network outputs
         """
         predictions = OrderedDict()
-        actions = self.nets["policy"](
-            obs_dict=batch["obs"], goal_dict=batch["goal_obs"]
-        )
+        actions = self.nets["policy"](obs_dict=batch["obs"], goal_dict=batch["goal_obs"])
         predictions["actions"] = actions
         return predictions
 
@@ -266,7 +255,6 @@ class BC_Gaussian(BC):
     """
     BC training with a Gaussian policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -284,9 +272,7 @@ class BC_Gaussian(BC):
             std_limits=(self.algo_config.gaussian.min_std, 7.5),
             std_activation=self.algo_config.gaussian.std_activation,
             low_noise_eval=self.algo_config.gaussian.low_noise_eval,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)
@@ -304,7 +290,7 @@ class BC_Gaussian(BC):
             predictions (dict): dictionary containing network outputs
         """
         dists = self.nets["policy"].forward_train(
-            obs_dict=batch["obs"],
+            obs_dict=batch["obs"], 
             goal_dict=batch["goal_obs"],
         )
 
@@ -352,7 +338,7 @@ class BC_Gaussian(BC):
         """
         log = PolicyAlgo.log_info(self, info)
         log["Loss"] = info["losses"]["action_loss"].item()
-        log["Log_Likelihood"] = info["losses"]["log_probs"].item()
+        log["Log_Likelihood"] = info["losses"]["log_probs"].item() 
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log
@@ -362,7 +348,6 @@ class BC_GMM(BC_Gaussian):
     """
     BC training with a Gaussian Mixture Model policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -379,9 +364,7 @@ class BC_GMM(BC_Gaussian):
             min_std=self.algo_config.gmm.min_std,
             std_activation=self.algo_config.gmm.std_activation,
             low_noise_eval=self.algo_config.gmm.low_noise_eval,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
         )
 
         self.nets = self.nets.float().to(self.device)
@@ -391,7 +374,6 @@ class BC_VAE(BC):
     """
     BC training with a VAE policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -402,12 +384,10 @@ class BC_VAE(BC):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             device=self.device,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **VAENets.vae_args_from_config(self.algo_config.vae),
         )
-
+        
         self.nets = self.nets.float().to(self.device)
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -415,13 +395,8 @@ class BC_VAE(BC):
         Update from superclass to set categorical temperature, for categorical VAEs.
         """
         if self.algo_config.vae.prior.use_categorical:
-            temperature = (
-                self.algo_config.vae.prior.categorical_init_temp
-                - epoch * self.algo_config.vae.prior.categorical_temp_anneal_step
-            )
-            temperature = max(
-                temperature, self.algo_config.vae.prior.categorical_min_temp
-            )
+            temperature = self.algo_config.vae.prior.categorical_init_temp - epoch * self.algo_config.vae.prior.categorical_temp_anneal_step
+            temperature = max(temperature, self.algo_config.vae.prior.categorical_min_temp)
             self.nets["policy"].set_gumbel_temperature(temperature)
         return super(BC_VAE, self).train_on_batch(batch, epoch, validate=validate)
 
@@ -499,9 +474,7 @@ class BC_VAE(BC):
         if self.algo_config.vae.prior.use_categorical:
             log["Gumbel_Temperature"] = self.nets["policy"].get_gumbel_temperature()
         else:
-            log["Encoder_Variance"] = (
-                info["predictions"]["encoder_variance"].mean().item()
-            )
+            log["Encoder_Variance"] = info["predictions"]["encoder_variance"].mean().item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log
@@ -511,7 +484,6 @@ class BC_RNN(BC):
     """
     BC training with an RNN policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -522,9 +494,7 @@ class BC_RNN(BC):
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
             mlp_layer_dims=self.algo_config.actor_layer_dims,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.rnn_args_from_config(self.algo_config.rnn),
         )
 
@@ -550,9 +520,7 @@ class BC_RNN(BC):
         """
         input_batch = dict()
         input_batch["obs"] = batch["obs"]
-        input_batch["goal_obs"] = batch.get(
-            "goal_obs", None
-        )  # goals may not be present
+        input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"]
 
         if self._rnn_is_open_loop:
@@ -561,9 +529,7 @@ class BC_RNN(BC):
             # on the rnn hidden state.
             n_steps = batch["actions"].shape[1]
             obs_seq_start = TensorUtils.index_at_time(batch["obs"], ind=0)
-            input_batch["obs"] = TensorUtils.unsqueeze_expand_at(
-                obs_seq_start, size=n_steps, dim=1
-            )
+            input_batch["obs"] = TensorUtils.unsqueeze_expand_at(obs_seq_start, size=n_steps, dim=1)
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
@@ -584,9 +550,7 @@ class BC_RNN(BC):
 
         if self._rnn_hidden_state is None or self._rnn_counter % self._rnn_horizon == 0:
             batch_size = list(obs_dict.values())[0].shape[0]
-            self._rnn_hidden_state = self.nets["policy"].get_rnn_init_state(
-                batch_size=batch_size, device=self.device
-            )
+            self._rnn_hidden_state = self.nets["policy"].get_rnn_init_state(batch_size=batch_size, device=self.device)
 
             if self._rnn_is_open_loop:
                 # remember the initial observation, and use it instead of the current observation
@@ -600,8 +564,7 @@ class BC_RNN(BC):
 
         self._rnn_counter += 1
         action, self._rnn_hidden_state = self.nets["policy"].forward_step(
-            obs_to_use, goal_dict=goal_dict, rnn_state=self._rnn_hidden_state
-        )
+            obs_to_use, goal_dict=goal_dict, rnn_state=self._rnn_hidden_state)
         return action
 
     def reset(self):
@@ -616,7 +579,6 @@ class BC_RNN_GMM(BC_RNN):
     """
     BC training with an RNN GMM policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -634,9 +596,7 @@ class BC_RNN_GMM(BC_RNN):
             min_std=self.algo_config.gmm.min_std,
             std_activation=self.algo_config.gmm.std_activation,
             low_noise_eval=self.algo_config.gmm.low_noise_eval,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.rnn_args_from_config(self.algo_config.rnn),
         )
 
@@ -660,13 +620,13 @@ class BC_RNN_GMM(BC_RNN):
             predictions (dict): dictionary containing network outputs
         """
         dists = self.nets["policy"].forward_train(
-            obs_dict=batch["obs"],
+            obs_dict=batch["obs"], 
             goal_dict=batch["goal_obs"],
         )
 
         # make sure that this is a batch of multivariate action distributions, so that
         # the log probability computation will be correct
-        assert len(dists.batch_shape) == 2  # [B, T]
+        assert len(dists.batch_shape) == 2 # [B, T]
         log_probs = dists.log_prob(batch["actions"])
 
         predictions = OrderedDict(
@@ -708,7 +668,7 @@ class BC_RNN_GMM(BC_RNN):
         """
         log = PolicyAlgo.log_info(self, info)
         log["Loss"] = info["losses"]["action_loss"].item()
-        log["Log_Likelihood"] = info["losses"]["log_probs"].item()
+        log["Log_Likelihood"] = info["losses"]["log_probs"].item() 
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log
@@ -718,7 +678,6 @@ class BC_Transformer(BC):
     """
     BC training with a Transformer policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -730,14 +689,12 @@ class BC_Transformer(BC):
             obs_shapes=self.obs_shapes,
             goal_shapes=self.goal_shapes,
             ac_dim=self.ac_dim,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.transformer_args_from_config(self.algo_config.transformer),
         )
         self._set_params_from_config()
         self.nets = self.nets.float().to(self.device)
-
+        
     def _set_params_from_config(self):
         """
         Read specific config variables we need for training / eval.
@@ -760,20 +717,16 @@ class BC_Transformer(BC):
         input_batch = dict()
         h = self.context_length
         input_batch["obs"] = {k: batch["obs"][k][:, :h, :] for k in batch["obs"]}
-        input_batch["goal_obs"] = batch.get(
-            "goal_obs", None
-        )  # goals may not be present
+        input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
 
         if self.supervise_all_steps:
             # supervision on entire sequence (instead of just current timestep)
             input_batch["actions"] = batch["actions"][:, :h, :]
         else:
             # just use current timestep
-            input_batch["actions"] = batch["actions"][:, h - 1, :]
+            input_batch["actions"] = batch["actions"][:, h-1, :]
 
-        input_batch = TensorUtils.to_device(
-            TensorUtils.to_float(input_batch), self.device
-        )
+        input_batch = TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
         return input_batch
 
     def _forward_training(self, batch, epoch=None):
@@ -790,18 +743,14 @@ class BC_Transformer(BC):
         """
         # ensure that transformer context length is consistent with temporal dimension of observations
         TensorUtils.assert_size_at_dim(
-            batch["obs"],
-            size=(self.context_length),
-            dim=1,
-            msg="Error: expect temporal dimension of obs batch to match transformer context length {}".format(
-                self.context_length
-            ),
+            batch["obs"], 
+            size=(self.context_length), 
+            dim=1, 
+            msg="Error: expect temporal dimension of obs batch to match transformer context length {}".format(self.context_length),
         )
 
         predictions = OrderedDict()
-        predictions["actions"] = self.nets["policy"](
-            obs_dict=batch["obs"], actions=None, goal_dict=batch["goal_obs"]
-        )
+        predictions["actions"] = self.nets["policy"](obs_dict=batch["obs"], actions=None, goal_dict=batch["goal_obs"])
         if not self.supervise_all_steps:
             # only supervise final timestep
             predictions["actions"] = predictions["actions"][:, -1, :]
@@ -818,16 +767,13 @@ class BC_Transformer(BC):
         """
         assert not self.nets.training
 
-        return self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)[
-            :, -1, :
-        ]
+        return self.nets["policy"](obs_dict, actions=None, goal_dict=goal_dict)[:, -1, :]
 
 
 class BC_Transformer_GMM(BC_Transformer):
     """
     BC training with a Transformer GMM policy.
     """
-
     def _create_networks(self):
         """
         Creates networks and places them into @self.nets.
@@ -844,9 +790,7 @@ class BC_Transformer_GMM(BC_Transformer):
             min_std=self.algo_config.gmm.min_std,
             std_activation=self.algo_config.gmm.std_activation,
             low_noise_eval=self.algo_config.gmm.low_noise_eval,
-            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(
-                self.obs_config.encoder
-            ),
+            encoder_kwargs=ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder),
             **BaseNets.transformer_args_from_config(self.algo_config.transformer),
         )
         self._set_params_from_config()
@@ -858,16 +802,14 @@ class BC_Transformer_GMM(BC_Transformer):
         """
         # ensure that transformer context length is consistent with temporal dimension of observations
         TensorUtils.assert_size_at_dim(
-            batch["obs"],
-            size=(self.context_length),
-            dim=1,
-            msg="Error: expect temporal dimension of obs batch to match transformer context length {}".format(
-                self.context_length
-            ),
+            batch["obs"], 
+            size=(self.context_length), 
+            dim=1, 
+            msg="Error: expect temporal dimension of obs batch to match transformer context length {}".format(self.context_length),
         )
 
         dists = self.nets["policy"].forward_train(
-            obs_dict=batch["obs"],
+            obs_dict=batch["obs"], 
             actions=None,
             goal_dict=batch["goal_obs"],
             low_noise_eval=False,
@@ -875,7 +817,7 @@ class BC_Transformer_GMM(BC_Transformer):
 
         # make sure that this is a batch of multivariate action distributions, so that
         # the log probability computation will be correct
-        assert len(dists.batch_shape) == 2  # [B, T]
+        assert len(dists.batch_shape) == 2 # [B, T]
 
         if not self.supervise_all_steps:
             # only use final timestep prediction by making a new distribution with only final timestep.
@@ -885,9 +827,7 @@ class BC_Transformer_GMM(BC_Transformer):
                 scale=dists.component_distribution.base_dist.scale[:, -1],
             )
             component_distribution = D.Independent(component_distribution, 1)
-            mixture_distribution = D.Categorical(
-                logits=dists.mixture_distribution.logits[:, -1]
-            )
+            mixture_distribution = D.Categorical(logits=dists.mixture_distribution.logits[:, -1])
             dists = D.MixtureSameFamily(
                 mixture_distribution=mixture_distribution,
                 component_distribution=component_distribution,
@@ -930,7 +870,7 @@ class BC_Transformer_GMM(BC_Transformer):
         """
         log = PolicyAlgo.log_info(self, info)
         log["Loss"] = info["losses"]["action_loss"].item()
-        log["Log_Likelihood"] = info["losses"]["log_probs"].item()
+        log["Log_Likelihood"] = info["losses"]["log_probs"].item() 
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log

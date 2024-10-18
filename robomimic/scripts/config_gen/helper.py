@@ -6,10 +6,7 @@ import datetime
 import robomimic
 import robomimic.utils.hyperparam_utils as HyperparamUtils
 
-base_path = os.path.abspath(
-    os.path.join(os.path.dirname(robomimic.__file__), os.pardir)
-)
-
+base_path = os.path.abspath(os.path.join(os.path.dirname(robomimic.__file__), os.pardir))
 
 def scan_datasets(folder, postfix=".h5"):
     dataset_paths = []
@@ -28,23 +25,14 @@ def get_generator(algo_name, config_file, args, algo_name_short=None, pt=False):
             args.env,
             args.mod,
         ]
-        args.wandb_proj_name = "_".join([str(s) for s in strings if s is not None])
+        args.wandb_proj_name = '_'.join([str(s) for s in strings if s is not None])
 
     if args.script is not None:
         generated_config_dir = os.path.join(os.path.dirname(args.script), "json")
     else:
-        curr_time = datetime.datetime.fromtimestamp(time.time()).strftime(
-            "%m-%d-%y-%H-%M-%S"
-        )
-        generated_config_dir = os.path.join(
-            "~/",
-            "tmp/autogen_configs/ril",
-            algo_name,
-            args.env,
-            args.mod,
-            args.name,
-            curr_time,
-            "json",
+        curr_time = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d-%y-%H-%M-%S')
+        generated_config_dir=os.path.join(
+            '~/', 'tmp/autogen_configs/ril', algo_name, args.env, args.mod, args.name, curr_time, "json",
         )
 
     generator = HyperparamUtils.ConfigGenerator(
@@ -67,7 +55,9 @@ def set_env_settings(generator, args):
             key="experiment.rollout.enabled",
             name="",
             group=-1,
-            values=[False],
+            values=[
+                False
+            ],
         )
         generator.add_param(
             key="experiment.save.every_n_epochs",
@@ -122,8 +112,7 @@ def set_env_settings(generator, args):
                 values=[
                     [
                         "camera/image/hand_camera_left_image",
-                        "camera/image/varied_camera_1_left_image",
-                        "camera/image/varied_camera_2_left_image",  # uncomment to use all 3 cameras
+                        "camera/image/varied_camera_1_left_image", "camera/image/varied_camera_2_left_image" # uncomment to use all 3 cameras
                     ]
                 ],
             )
@@ -134,7 +123,7 @@ def set_env_settings(generator, args):
             values=[
                 # "CropRandomizer", # crop only
                 # "ColorRandomizer", # jitter only
-                ["ColorRandomizer", "CropRandomizer"],  # jitter, followed by crop
+                ["ColorRandomizer", "CropRandomizer"], # jitter, followed by crop
             ],
             hidename=True,
         )
@@ -145,48 +134,44 @@ def set_env_settings(generator, args):
             values=[
                 # {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}, # crop only
                 # {}, # jitter only
-                [
-                    {},
-                    {
-                        "crop_height": 116,
-                        "crop_width": 116,
-                        "num_crops": 1,
-                        "pos_enc": False,
-                    },
-                ],  # jitter, followed by crop
+                [{}, {"crop_height": 116, "crop_width": 116, "num_crops": 1, "pos_enc": False}], # jitter, followed by crop
             ],
             hidename=True,
         )
-        if (
-            "observation.encoder.rgb.obs_randomizer_kwargs" not in generator.parameters
-        ) and (
-            "observation.encoder.rgb.obs_randomizer_kwargs.crop_height"
-            not in generator.parameters
-        ):
+        if ("observation.encoder.rgb.obs_randomizer_kwargs" not in generator.parameters) and \
+            ("observation.encoder.rgb.obs_randomizer_kwargs.crop_height" not in generator.parameters):
             generator.add_param(
                 key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
                 name="",
                 group=-1,
-                values=[116],
+                values=[
+                    116
+                ],
             )
             generator.add_param(
                 key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
                 name="",
                 group=-1,
-                values=[116],
+                values=[
+                    116
+                ],
             )
         # remove spatial softmax by default for r2d2 dataset
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.pool_class",
             name="",
             group=-1,
-            values=[None],
+            values=[
+                None
+            ],
         )
         generator.add_param(
             key="observation.encoder.rgb.core_kwargs.pool_kwargs",
             name="",
             group=-1,
-            values=[None],
+            values=[
+                None
+            ],
         )
 
         # specify dataset type is r2d2 rather than default robomimic
@@ -194,9 +179,11 @@ def set_env_settings(generator, args):
             key="train.data_format",
             name="",
             group=-1,
-            values=["r2d2"],
+            values=[
+                "r2d2"
+            ],
         )
-
+        
         # here, we list how each action key should be treated (normalized etc)
         generator.add_param(
             key="train.action_config",
@@ -204,40 +191,40 @@ def set_env_settings(generator, args):
             group=-1,
             values=[
                 {
-                    "action/cartesian_position": {
+                    "action/cartesian_position":{
                         "normalization": "min_max",
                     },
-                    "action/abs_pos": {
+                    "action/abs_pos":{
                         "normalization": "min_max",
                     },
-                    "action/abs_rot_6d": {
+                    "action/abs_rot_6d":{
                         "normalization": "min_max",
                         "format": "rot_6d",
                         "convert_at_runtime": "rot_euler",
                     },
-                    "action/abs_rot_euler": {
+                    "action/abs_rot_euler":{
                         "normalization": "min_max",
                         "format": "rot_euler",
                     },
-                    "action/gripper_position": {
+                    "action/gripper_position":{
                         "normalization": "min_max",
                     },
-                    "action/cartesian_velocity": {
+                    "action/cartesian_velocity":{
                         "normalization": None,
                     },
-                    "action/rel_pos": {
+                    "action/rel_pos":{
                         "normalization": None,
                     },
-                    "action/rel_rot_6d": {
+                    "action/rel_rot_6d":{
                         "format": "rot_6d",
                         "normalization": None,
                         "convert_at_runtime": "rot_euler",
                     },
-                    "action/rel_rot_euler": {
+                    "action/rel_rot_euler":{
                         "format": "rot_euler",
                         "normalization": None,
                     },
-                    "action/gripper_velocity": {
+                    "action/gripper_velocity":{
                         "normalization": None,
                     },
                 }
@@ -270,24 +257,20 @@ def set_env_settings(generator, args):
             key="train.shuffled_obs_key_groups",
             name="",
             group=-1,
-            values=[
-                [
-                    [
-                        (
-                            "camera/image/varied_camera_1_left_image",
-                            "camera/image/varied_camera_1_right_image",
-                            "camera/extrinsics/varied_camera_1_left",
-                            "camera/extrinsics/varied_camera_1_right",
-                        ),
-                        (
-                            "camera/image/varied_camera_2_left_image",
-                            "camera/image/varied_camera_2_right_image",
-                            "camera/extrinsics/varied_camera_2_left",
-                            "camera/extrinsics/varied_camera_2_right",
-                        ),
-                    ]
-                ]
-            ],
+            values=[[[
+                (
+                "camera/image/varied_camera_1_left_image",
+                "camera/image/varied_camera_1_right_image",
+                "camera/extrinsics/varied_camera_1_left",
+                "camera/extrinsics/varied_camera_1_right",
+                ),
+                (
+                "camera/image/varied_camera_2_left_image",
+                "camera/image/varied_camera_2_right_image",
+                "camera/extrinsics/varied_camera_2_left",
+                "camera/extrinsics/varied_camera_2_right",
+                ),  
+            ]]],
         )
     elif args.env == "kitchen":
         generator.add_param(
@@ -296,51 +279,51 @@ def set_env_settings(generator, args):
             group=-1,
             values=[
                 {
-                    "actions": {
+                    "actions":{
                         "normalization": None,
                     },
-                    "action_dict/abs_pos": {"normalization": "min_max"},
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
                     "action_dict/abs_rot_axis_angle": {
                         "normalization": "min_max",
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/abs_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/rel_pos": {
                         "normalization": None,
                     },
                     "action_dict/rel_rot_axis_angle": {
                         "normalization": None,
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/rel_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/gripper": {
                         "normalization": None,
                     },
                     "action_dict/base_mode": {
                         "normalization": None,
-                    },
+                    }
                 }
             ],
         )
-
-        if args.mod == "im":
+        
+        if args.mod == 'im':
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_base_pos",
-                        "robot0_gripper_qpos",
-                    ]
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_base_pos",
+                     "robot0_gripper_qpos"]
                 ],
             )
             generator.add_param(
@@ -348,11 +331,9 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_agentview_left_image",
-                        "robot0_agentview_right_image",
-                        "robot0_eye_in_hand_image",
-                    ]
+                    ["robot0_agentview_left_image",
+                     "robot0_agentview_right_image",
+                     "robot0_eye_in_hand_image"]
                 ],
             )
         else:
@@ -361,16 +342,15 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_gripper_qpos",
-                        "robot0_base_pos",
-                        "object",
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "robot0_base_pos",
+                     "object",
                     ]
                 ],
             )
-    elif args.env in ["square", "lift", "place_close"]:
+    elif args.env in ['square', 'lift', 'place_close']:
         # # set videos off
         # args.no_video = True
 
@@ -380,48 +360,57 @@ def set_env_settings(generator, args):
             group=-1,
             values=[
                 {
-                    "actions": {
+                    "actions":{
                         "normalization": None,
                     },
-                    "action_dict/abs_pos": {"normalization": "min_max"},
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
                     "action_dict/abs_rot_axis_angle": {
                         "normalization": "min_max",
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/abs_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/rel_pos": {
                         "normalization": None,
                     },
                     "action_dict/rel_rot_axis_angle": {
                         "normalization": None,
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/rel_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/gripper": {
                         "normalization": None,
-                    },
+                    }
                 }
             ],
         )
 
-        if args.mod == "im":
+        if args.mod == 'im':
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
                 name="",
                 group=-1,
-                values=[["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]],
+                values=[
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos"]
+                ],
             )
             generator.add_param(
                 key="observation.modalities.obs.rgb",
                 name="",
                 group=-1,
-                values=[["agentview_image", "robot0_eye_in_hand_image"]],
+                values=[
+                    ["agentview_image",
+                     "robot0_eye_in_hand_image"]
+                ],
             )
         else:
             generator.add_param(
@@ -429,15 +418,13 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_gripper_qpos",
-                        "object",
-                    ]
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "object"]
                 ],
             )
-    elif args.env == "transport":
+    elif args.env == 'transport':
         # set videos off
         args.no_video = True
 
@@ -448,50 +435,50 @@ def set_env_settings(generator, args):
             group=-1,
             values=[
                 {
-                    "actions": {
+                    "actions":{
                         "normalization": None,
                     },
-                    "action_dict/abs_pos": {"normalization": "min_max"},
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
                     "action_dict/abs_rot_axis_angle": {
                         "normalization": "min_max",
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/abs_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/rel_pos": {
                         "normalization": None,
                     },
                     "action_dict/rel_rot_axis_angle": {
                         "normalization": None,
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/rel_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/gripper": {
                         "normalization": None,
-                    },
+                    }
                 }
             ],
         )
 
-        if args.mod == "im":
+        if args.mod == 'im':
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_gripper_qpos",
-                        "robot1_eef_pos",
-                        "robot1_eef_quat",
-                        "robot1_gripper_qpos",
-                    ]
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "robot1_eef_pos",
+                     "robot1_eef_quat",
+                     "robot1_gripper_qpos"]
                 ],
             )
             generator.add_param(
@@ -499,12 +486,10 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "shouldercamera0_image",
-                        "robot0_eye_in_hand_image",
-                        "shouldercamera1_image",
-                        "robot1_eye_in_hand_image",
-                    ]
+                    ["shouldercamera0_image",
+                     "robot0_eye_in_hand_image",
+                     "shouldercamera1_image",
+                     "robot1_eye_in_hand_image"]
                 ],
             )
         else:
@@ -513,15 +498,13 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_gripper_qpos",
-                        "robot1_eef_pos",
-                        "robot1_eef_quat",
-                        "robot1_gripper_qpos",
-                        "object",
-                    ]
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "robot1_eef_pos",
+                     "robot1_eef_quat",
+                     "robot1_gripper_qpos",
+                     "object"]
                 ],
             )
 
@@ -531,7 +514,7 @@ def set_env_settings(generator, args):
             group=-1,
             values=[700],
         )
-    elif args.env == "tool_hang":
+    elif args.env == 'tool_hang':
         # set videos off
         args.no_video = True
 
@@ -541,72 +524,89 @@ def set_env_settings(generator, args):
             group=-1,
             values=[
                 {
-                    "actions": {
+                    "actions":{
                         "normalization": None,
                     },
-                    "action_dict/abs_pos": {"normalization": "min_max"},
+                    "action_dict/abs_pos": {
+                        "normalization": "min_max"
+                    },
                     "action_dict/abs_rot_axis_angle": {
                         "normalization": "min_max",
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/abs_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/rel_pos": {
                         "normalization": None,
                     },
                     "action_dict/rel_rot_axis_angle": {
                         "normalization": None,
-                        "format": "rot_axis_angle",
+                        "format": "rot_axis_angle"
                     },
                     "action_dict/rel_rot_6d": {
                         "normalization": None,
-                        "format": "rot_6d",
+                        "format": "rot_6d"
                     },
                     "action_dict/gripper": {
                         "normalization": None,
-                    },
+                    }
                 }
             ],
         )
 
-        if args.mod == "im":
+        if args.mod == 'im':
             generator.add_param(
                 key="observation.modalities.obs.low_dim",
                 name="",
                 group=-1,
-                values=[["robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]],
+                values=[
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos"]
+                ],
             )
             generator.add_param(
                 key="observation.modalities.obs.rgb",
                 name="",
                 group=-1,
-                values=[["sideview_image", "robot0_eye_in_hand_image"]],
+                values=[
+                    ["sideview_image",
+                     "robot0_eye_in_hand_image"]
+                ],
             )
             generator.add_param(
                 key="observation.encoder.rgb.obs_randomizer_kwargs.crop_height",
                 name="",
                 group=-1,
-                values=[216],
+                values=[
+                    216
+                ],
             )
             generator.add_param(
                 key="observation.encoder.rgb.obs_randomizer_kwargs.crop_width",
                 name="",
                 group=-1,
-                values=[216],
+                values=[
+                    216
+                ],
             )
             generator.add_param(
                 key="observation.encoder.rgb2.obs_randomizer_kwargs.crop_height",
                 name="",
                 group=-1,
-                values=[216],
+                values=[
+                    216
+                ],
             )
             generator.add_param(
                 key="observation.encoder.rgb2.obs_randomizer_kwargs.crop_width",
                 name="",
                 group=-1,
-                values=[216],
+                values=[
+                    216
+                ],
             )
         else:
             generator.add_param(
@@ -614,12 +614,10 @@ def set_env_settings(generator, args):
                 name="",
                 group=-1,
                 values=[
-                    [
-                        "robot0_eef_pos",
-                        "robot0_eef_quat",
-                        "robot0_gripper_qpos",
-                        "object",
-                    ]
+                    ["robot0_eef_pos",
+                     "robot0_eef_quat",
+                     "robot0_gripper_qpos",
+                     "object"]
                 ],
             )
 
@@ -634,15 +632,17 @@ def set_env_settings(generator, args):
 
 
 def set_mod_settings(generator, args):
-    if args.mod == "ld":
+    if args.mod == 'ld':
         if "experiment.save.epochs" not in generator.parameters:
             generator.add_param(
                 key="experiment.save.epochs",
                 name="",
                 group=-1,
-                values=[[2000]],
+                values=[
+                    [2000]
+                ],
             )
-    elif args.mod == "im":
+    elif args.mod == 'im':
         if "experiment.save.every_n_epochs" not in generator.parameters:
             generator.add_param(
                 key="experiment.save.every_n_epochs",
@@ -830,14 +830,14 @@ def get_argparser():
     parser.add_argument(
         "--env",
         type=str,
-        default="r2d2",
+        default='r2d2',
     )
 
     parser.add_argument(
-        "--mod",
+        '--mod',
         type=str,
-        choices=["ld", "im"],
-        default="im",
+        choices=['ld', 'im'],
+        default='im',
     )
 
     parser.add_argument(
@@ -847,32 +847,55 @@ def get_argparser():
         default=None,
     )
 
-    parser.add_argument("--script", type=str, default=None)
+    parser.add_argument(
+        "--script",
+        type=str,
+        default=None
+    )
 
-    parser.add_argument("--wandb_proj_name", type=str, default=None)
+    parser.add_argument(
+        "--wandb_proj_name",
+        type=str,
+        default=None
+    )
 
     parser.add_argument(
         "--debug",
         action="store_true",
     )
 
-    parser.add_argument("--no_video", action="store_true")
+    parser.add_argument(
+        '--no_video',
+        action='store_true'
+    )
 
     parser.add_argument(
         "--tmplog",
         action="store_true",
     )
 
-    parser.add_argument("--nr", type=int, default=-1)
+    parser.add_argument(
+        "--nr",
+        type=int,
+        default=-1
+    )
 
     parser.add_argument(
         "--no_wandb",
         action="store_true",
     )
 
-    parser.add_argument("--n_seeds", type=int, default=None)
+    parser.add_argument(
+        "--n_seeds",
+        type=int,
+        default=None
+    )
 
-    parser.add_argument("--num_cmd_groups", type=int, default=None)
+    parser.add_argument(
+        "--num_cmd_groups",
+        type=int,
+        default=None
+    )
 
     return parser
 
@@ -881,7 +904,7 @@ def make_generator(args, make_generator_helper):
     if args.tmplog or args.debug and args.name is None:
         args.name = "debug"
     else:
-        time_str = datetime.datetime.fromtimestamp(time.time()).strftime("%m-%d-")
+        time_str = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d-')
         args.name = time_str + str(args.name)
 
     if args.debug or args.tmplog:
@@ -894,7 +917,7 @@ def make_generator(args, make_generator_helper):
         pass
 
     if (args.debug or args.tmplog) and (args.wandb_proj_name is None):
-        args.wandb_proj_name = "debug"
+        args.wandb_proj_name = 'debug'
 
     if not args.debug:
         assert args.name is not None

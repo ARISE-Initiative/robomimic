@@ -2,7 +2,6 @@
 A collection of utilities for working with nested tensor structures consisting
 of numpy arrays and torch tensors.
 """
-
 import collections
 import numpy as np
 import torch
@@ -10,27 +9,23 @@ import torch
 
 def recursive_dict_list_tuple_apply(x, type_func_dict):
     """
-    Recursively apply functions to a nested dictionary or list or tuple, given a dictionary of
+    Recursively apply functions to a nested dictionary or list or tuple, given a dictionary of 
     {data_type: function_to_apply}.
 
     Args:
         x (dict or list or tuple): a possibly nested dictionary or list or tuple
-        type_func_dict (dict): a mapping from data types to the functions to be
+        type_func_dict (dict): a mapping from data types to the functions to be 
             applied for each data type.
 
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
     """
-    assert list not in type_func_dict
-    assert tuple not in type_func_dict
-    assert dict not in type_func_dict
+    assert(list not in type_func_dict)
+    assert(tuple not in type_func_dict)
+    assert(dict not in type_func_dict)
 
     if isinstance(x, (dict, collections.OrderedDict)):
-        new_x = (
-            collections.OrderedDict()
-            if isinstance(x, collections.OrderedDict)
-            else dict()
-        )
+        new_x = collections.OrderedDict() if isinstance(x, collections.OrderedDict) else dict()
         for k, v in x.items():
             new_x[k] = recursive_dict_list_tuple_apply(v, type_func_dict)
         return new_x
@@ -44,7 +39,8 @@ def recursive_dict_list_tuple_apply(x, type_func_dict):
             if isinstance(x, t):
                 return f(x)
         else:
-            raise NotImplementedError("Cannot handle data type %s" % str(type(x)))
+            raise NotImplementedError(
+                'Cannot handle data type %s' % str(type(x)))
 
 
 def map_tensor(x, func):
@@ -64,7 +60,7 @@ def map_tensor(x, func):
         {
             torch.Tensor: func,
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -85,13 +81,13 @@ def map_ndarray(x, func):
         {
             np.ndarray: func,
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def map_tensor_ndarray(x, tensor_func, ndarray_func):
     """
-    Apply function @tensor_func to torch.Tensor objects and @ndarray_func to
+    Apply function @tensor_func to torch.Tensor objects and @ndarray_func to 
     np.ndarray objects in a nested dictionary or list or tuple.
 
     Args:
@@ -108,7 +104,7 @@ def map_tensor_ndarray(x, tensor_func, ndarray_func):
             torch.Tensor: tensor_func,
             np.ndarray: ndarray_func,
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -129,7 +125,7 @@ def clone(x):
             torch.Tensor: lambda x: x.clone(),
             np.ndarray: lambda x: x.copy(),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -148,13 +144,13 @@ def detach(x):
         x,
         {
             torch.Tensor: lambda x: x.detach(),
-        },
+        }
     )
 
 
 def to_batch(x):
     """
-    Introduces a leading batch dimension of 1 for all torch tensors and numpy
+    Introduces a leading batch dimension of 1 for all torch tensors and numpy 
     arrays in nested dictionary or list or tuple and returns a new nested structure.
 
     Args:
@@ -169,13 +165,13 @@ def to_batch(x):
             torch.Tensor: lambda x: x[None, ...],
             np.ndarray: lambda x: x[None, ...],
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_sequence(x):
     """
-    Introduces a time dimension of 1 at dimension 1 for all torch tensors and numpy
+    Introduces a time dimension of 1 at dimension 1 for all torch tensors and numpy 
     arrays in nested dictionary or list or tuple and returns a new nested structure.
 
     Args:
@@ -190,7 +186,7 @@ def to_sequence(x):
             torch.Tensor: lambda x: x[:, None, ...],
             np.ndarray: lambda x: x[:, None, ...],
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -212,7 +208,7 @@ def index_at_time(x, ind):
             torch.Tensor: lambda x: x[:, ind, ...],
             np.ndarray: lambda x: x[:, ind, ...],
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -234,13 +230,13 @@ def unsqueeze(x, dim):
             torch.Tensor: lambda x: x.unsqueeze(dim=dim),
             np.ndarray: lambda x: np.expand_dims(x, axis=dim),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def contiguous(x):
     """
-    Makes all torch tensors and numpy arrays contiguous in nested dictionary or
+    Makes all torch tensors and numpy arrays contiguous in nested dictionary or 
     list or tuple and returns a new nested structure.
 
     Args:
@@ -255,7 +251,7 @@ def contiguous(x):
             torch.Tensor: lambda x: x.contiguous(),
             np.ndarray: lambda x: np.ascontiguousarray(x),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -276,14 +272,14 @@ def to_device(x, device):
         {
             torch.Tensor: lambda x, d=device: x.to(d),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_tensor(x):
     """
     Converts all numpy arrays in nested dictionary or list or tuple to
-    torch tensors (and leaves existing torch Tensors as-is), and returns
+    torch tensors (and leaves existing torch Tensors as-is), and returns 
     a new nested structure.
 
     Args:
@@ -298,14 +294,14 @@ def to_tensor(x):
             torch.Tensor: lambda x: x,
             np.ndarray: lambda x: torch.from_numpy(x),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_numpy(x):
     """
     Converts all torch tensors in nested dictionary or list or tuple to
-    numpy (and leaves existing numpy arrays as-is), and returns
+    numpy (and leaves existing numpy arrays as-is), and returns 
     a new nested structure.
 
     Args:
@@ -314,26 +310,24 @@ def to_numpy(x):
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
     """
-
     def f(tensor):
         if tensor.is_cuda:
             return tensor.detach().cpu().numpy()
         else:
             return tensor.detach().numpy()
-
     return recursive_dict_list_tuple_apply(
         x,
         {
             torch.Tensor: f,
             np.ndarray: lambda x: x,
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_list(x):
     """
-    Converts all torch tensors and numpy arrays in nested dictionary or list
+    Converts all torch tensors and numpy arrays in nested dictionary or list 
     or tuple to a list, and returns a new nested structure. Useful for
     json encoding.
 
@@ -343,26 +337,24 @@ def to_list(x):
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
     """
-
     def f(tensor):
         if tensor.is_cuda:
             return tensor.detach().cpu().numpy().tolist()
         else:
             return tensor.detach().numpy().tolist()
-
     return recursive_dict_list_tuple_apply(
         x,
         {
             torch.Tensor: f,
             np.ndarray: lambda x: x.tolist(),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_float(x):
     """
-    Converts all torch tensors and numpy arrays in nested dictionary or list
+    Converts all torch tensors and numpy arrays in nested dictionary or list 
     or tuple to float type entries, and returns a new nested structure.
 
     Args:
@@ -377,13 +369,13 @@ def to_float(x):
             torch.Tensor: lambda x: x.float(),
             np.ndarray: lambda x: x.astype(np.float32),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_uint8(x):
     """
-    Converts all torch tensors and numpy arrays in nested dictionary or list
+    Converts all torch tensors and numpy arrays in nested dictionary or list 
     or tuple to uint8 type entries, and returns a new nested structure.
 
     Args:
@@ -398,13 +390,13 @@ def to_uint8(x):
             torch.Tensor: lambda x: x.byte(),
             np.ndarray: lambda x: x.astype(np.uint8),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
 def to_torch(x, device):
     """
-    Converts all numpy arrays and torch tensors in nested dictionary or list or tuple to
+    Converts all numpy arrays and torch tensors in nested dictionary or list or tuple to 
     torch tensors on device @device and returns a new nested structure.
 
     Args:
@@ -435,7 +427,7 @@ def to_one_hot_single(tensor, num_class):
 
 def to_one_hot(tensor, num_class):
     """
-    Convert all tensors in nested dictionary or list or tuple to one-hot representation,
+    Convert all tensors in nested dictionary or list or tuple to one-hot representation, 
     assuming a certain number of total class labels.
 
     Args:
@@ -479,7 +471,7 @@ def flatten(x, begin_axis=1):
         x,
         {
             torch.Tensor: lambda x, b=begin_axis: flatten_single(x, begin_axis=b),
-        },
+        }
     )
 
 
@@ -497,10 +489,10 @@ def reshape_dimensions_single(x, begin_axis, end_axis, target_dims):
     Returns:
         y (torch.Tensor): reshaped tensor
     """
-    assert begin_axis <= end_axis
-    assert begin_axis >= 0
-    assert end_axis < len(x.shape)
-    assert isinstance(target_dims, (tuple, list))
+    assert(begin_axis <= end_axis)
+    assert(begin_axis >= 0)
+    assert(end_axis < len(x.shape))
+    assert(isinstance(target_dims, (tuple, list)))
     s = x.shape
     final_s = []
     for i in range(len(s)):
@@ -513,9 +505,9 @@ def reshape_dimensions_single(x, begin_axis, end_axis, target_dims):
 
 def reshape_dimensions(x, begin_axis, end_axis, target_dims):
     """
-    Reshape selected dimensions for all tensors in nested dictionary or list or tuple
+    Reshape selected dimensions for all tensors in nested dictionary or list or tuple 
     to a target dimension.
-
+    
     Args:
         x (dict or list or tuple): a possibly nested dictionary or list or tuple
         begin_axis (int): begin dimension
@@ -530,13 +522,11 @@ def reshape_dimensions(x, begin_axis, end_axis, target_dims):
         x,
         {
             torch.Tensor: lambda x, b=begin_axis, e=end_axis, t=target_dims: reshape_dimensions_single(
-                x, begin_axis=b, end_axis=e, target_dims=t
-            ),
+                x, begin_axis=b, end_axis=e, target_dims=t),
             np.ndarray: lambda x, b=begin_axis, e=end_axis, t=target_dims: reshape_dimensions_single(
-                x, begin_axis=b, end_axis=e, target_dims=t
-            ),
+                x, begin_axis=b, end_axis=e, target_dims=t),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -557,13 +547,11 @@ def join_dimensions(x, begin_axis, end_axis):
         x,
         {
             torch.Tensor: lambda x, b=begin_axis, e=end_axis: reshape_dimensions_single(
-                x, begin_axis=b, end_axis=e, target_dims=[-1]
-            ),
+                x, begin_axis=b, end_axis=e, target_dims=[-1]),
             np.ndarray: lambda x, b=begin_axis, e=end_axis: reshape_dimensions_single(
-                x, begin_axis=b, end_axis=e, target_dims=[-1]
-            ),
+                x, begin_axis=b, end_axis=e, target_dims=[-1]),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -672,15 +660,13 @@ def named_reduce(x, reduction, dim):
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
     """
-    return map_tensor(
-        x, func=lambda t, r=reduction, d=dim: named_reduce_single(t, r, d)
-    )
+    return map_tensor(x, func=lambda t, r=reduction, d=dim: named_reduce_single(t, r, d))
 
 
 def gather_along_dim_with_dim_single(x, target_dim, source_dim, indices):
     """
     This function indexes out a target dimension of a tensor in a structured way,
-    by allowing a different value to be selected for each member of a flat index
+    by allowing a different value to be selected for each member of a flat index 
     tensor (@indices) corresponding to a source dimension. This can be interpreted
     as moving along the source dimension, using the corresponding index value
     in @indices to select values for all other dimensions outside of the
@@ -694,7 +680,7 @@ def gather_along_dim_with_dim_single(x, target_dim, source_dim, indices):
             from the other dimensions
         indices (torch.Tensor): flat index tensor with same shape as tensor @x along
             @source_dim
-
+    
     Returns:
         y (torch.Tensor): gathered tensor, with dimension @target_dim indexed out
     """
@@ -719,7 +705,7 @@ def gather_along_dim_with_dim_single(x, target_dim, source_dim, indices):
 
 def gather_along_dim_with_dim(x, target_dim, source_dim, indices):
     """
-    Apply @gather_along_dim_with_dim_single to all tensors in a nested
+    Apply @gather_along_dim_with_dim_single to all tensors in a nested 
     dictionary or list or tuple.
 
     Args:
@@ -733,17 +719,13 @@ def gather_along_dim_with_dim(x, target_dim, source_dim, indices):
     Returns:
         y (dict or list or tuple): new nested dict-list-tuple
     """
-    return map_tensor(
-        x,
-        lambda y, t=target_dim, s=source_dim, i=indices: gather_along_dim_with_dim_single(
-            y, t, s, i
-        ),
-    )
-
+    return map_tensor(x, 
+        lambda y, t=target_dim, s=source_dim, i=indices: gather_along_dim_with_dim_single(y, t, s, i))
+    
 
 def gather_sequence_single(seq, indices):
     """
-    Given a tensor with leading dimensions [B, T, ...], gather an element from each sequence in
+    Given a tensor with leading dimensions [B, T, ...], gather an element from each sequence in 
     the batch given an index for each sequence.
 
     Args:
@@ -753,9 +735,7 @@ def gather_sequence_single(seq, indices):
     Return:
         y (torch.Tensor): indexed tensor of shape [B, ....]
     """
-    return gather_along_dim_with_dim_single(
-        seq, target_dim=1, source_dim=0, indices=indices
-    )
+    return gather_along_dim_with_dim_single(seq, target_dim=1, source_dim=0, indices=indices)
 
 
 def gather_sequence(seq, indices):
@@ -828,14 +808,12 @@ def pad_sequence(seq, padding, batched=False, pad_same=True, pad_values=None):
     return recursive_dict_list_tuple_apply(
         seq,
         {
-            torch.Tensor: lambda x, p=padding, b=batched, ps=pad_same, pv=pad_values: pad_sequence_single(
-                x, p, b, ps, pv
-            ),
-            np.ndarray: lambda x, p=padding, b=batched, ps=pad_same, pv=pad_values: pad_sequence_single(
-                x, p, b, ps, pv
-            ),
+            torch.Tensor: lambda x, p=padding, b=batched, ps=pad_same, pv=pad_values:
+                pad_sequence_single(x, p, b, ps, pv),
+            np.ndarray: lambda x, p=padding, b=batched, ps=pad_same, pv=pad_values:
+                pad_sequence_single(x, p, b, ps, pv),
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -854,7 +832,7 @@ def assert_size_at_dim_single(x, size, dim, msg):
 
 def assert_size_at_dim(x, size, dim, msg):
     """
-    Ensure that arrays and tensors in nested dictionary or list or tuple have
+    Ensure that arrays and tensors in nested dictionary or list or tuple have 
     size @size in dim @dim.
 
     Args:
@@ -882,7 +860,7 @@ def get_shape(x):
             torch.Tensor: lambda x: x.shape,
             np.ndarray: lambda x: x.shape,
             type(None): lambda x: x,
-        },
+        }
     )
 
 
@@ -908,7 +886,7 @@ def list_of_flat_dict_to_dict_of_list(list_of_dict):
     return dic
 
 
-def flatten_nested_dict_list(d, parent_key="", sep="_", item_key=""):
+def flatten_nested_dict_list(d, parent_key='', sep='_', item_key=''):
     """
     Flatten a nested dict or list to a list.
 
@@ -948,9 +926,7 @@ def flatten_nested_dict_list(d, parent_key="", sep="_", item_key=""):
         return [(new_key, d)]
 
 
-def time_distributed(
-    inputs, op, activation=None, inputs_as_kwargs=False, inputs_as_args=False, **kwargs
-):
+def time_distributed(inputs, op, activation=None, inputs_as_kwargs=False, inputs_as_args=False, **kwargs):
     """
     Apply function @op to all tensors in nested dictionary or list or tuple @inputs in both the
     batch (B) and time (T) dimension, where the tensors are expected to have shape [B, T, ...].
@@ -980,7 +956,5 @@ def time_distributed(
 
     if activation is not None:
         outputs = map_tensor(outputs, activation)
-    outputs = reshape_dimensions(
-        outputs, begin_axis=0, end_axis=0, target_dims=(batch_size, seq_len)
-    )
+    outputs = reshape_dimensions(outputs, begin_axis=0, end_axis=0, target_dims=(batch_size, seq_len))
     return outputs

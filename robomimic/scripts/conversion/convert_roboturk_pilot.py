@@ -70,13 +70,11 @@ def convert_rt_pilot_hdf5(ref_folder):
         actions = np.concatenate([jvels, gripper_acts], axis=1)
 
         # IMPORTANT: clip actions to -1, 1, since this is expected by the codebase
-        actions = np.clip(actions, -1.0, 1.0)
+        actions = np.clip(actions, -1., 1.)
         ep_data_grp.create_dataset("actions", data=actions)
 
         # store model xml directly in the new hdf5 file
-        model_path = os.path.join(
-            ref_folder, "models", f["data/{}".format(ep)].attrs["model_file"]
-        )
+        model_path = os.path.join(ref_folder, "models", f["data/{}".format(ep)].attrs["model_file"])
         f_model = open(model_path, "r")
         model_xml = f_model.read()
         f_model.close()
@@ -84,9 +82,7 @@ def convert_rt_pilot_hdf5(ref_folder):
 
         # store num samples for this ep
         num_samples = actions.shape[0]
-        ep_data_grp.attrs["num_samples"] = (
-            num_samples  # number of transitions in this episode
-        )
+        ep_data_grp.attrs["num_samples"] = num_samples # number of transitions in this episode
         num_samples_arr.append(num_samples)
 
     # write dataset attributes (metadata)
@@ -95,7 +91,7 @@ def convert_rt_pilot_hdf5(ref_folder):
     # construct and save env metadata
     env_meta = dict()
     env_meta["type"] = EB.EnvType.ROBOSUITE_TYPE
-    env_meta["env_name"] = f["data"].attrs["env"] + "Teleop"
+    env_meta["env_name"] = (f["data"].attrs["env"] + "Teleop")
     # hardcode robosuite v0.3 args
     robosuite_args = {
         "has_renderer": False,
@@ -112,7 +108,7 @@ def convert_rt_pilot_hdf5(ref_folder):
         "control_freq": 100,
     }
     env_meta["env_kwargs"] = robosuite_args
-    f_new_grp.attrs["env_args"] = json.dumps(env_meta, indent=4)  # environment info
+    f_new_grp.attrs["env_args"] = json.dumps(env_meta, indent=4) # environment info
 
     print("\n====== Added env meta ======")
     print(f_new_grp.attrs["env_args"])
@@ -148,14 +144,10 @@ def split_fastest_from_hdf5(hdf5_path, n):
 
     # create filter key
     name = "fastest_{}".format(n)
-    lengths = create_hdf5_filter_key(
-        hdf5_path=hdf5_path, demo_keys=filtered_demos, key_name=name
-    )
+    lengths = create_hdf5_filter_key(hdf5_path=hdf5_path, demo_keys=filtered_demos, key_name=name)
 
     print("Total number of samples in fastest {} demos: {}".format(n, np.sum(lengths)))
-    print(
-        "Average number of samples in fastest {} demos: {}".format(n, np.mean(lengths))
-    )
+    print("Average number of samples in fastest {} demos: {}".format(n, np.mean(lengths)))
 
 
 if __name__ == "__main__":
@@ -185,14 +177,8 @@ if __name__ == "__main__":
     print("\nCreating filter key for fastest {} trajectories...".format(args.n))
     split_fastest_from_hdf5(hdf5_path=hdf5_path, n=args.n)
 
-    print(
-        "\nCreating 90-10 train-validation split for fastest {} trajectories...".format(
-            args.n
-        )
-    )
-    split_train_val_from_hdf5(
-        hdf5_path=hdf5_path, val_ratio=0.1, filter_key="fastest_{}".format(args.n)
-    )
+    print("\nCreating 90-10 train-validation split for fastest {} trajectories...".format(args.n))
+    split_train_val_from_hdf5(hdf5_path=hdf5_path, val_ratio=0.1, filter_key="fastest_{}".format(args.n))
 
     print(
         "\nWARNING: new dataset has replaced old one in demo.hdf5 file. "
@@ -202,7 +188,5 @@ if __name__ == "__main__":
     print(
         "\nNOTE: the new dataset also contains a fastest_{} filter key, for an easy way "
         "to train on the fastest trajectories. Just set config.train.hdf5_filter to train on this "
-        "subset. A common choice is 225 when training on the bins-Can dataset.\n".format(
-            args.n
-        )
+        "subset. A common choice is 225 when training on the bins-Can dataset.\n".format(args.n)
     )

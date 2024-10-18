@@ -2,7 +2,6 @@
 A collection of utility functions for working with files, such as reading metadata from
 demonstration datasets, loading model checkpoints, or downloading dataset files.
 """
-
 import os
 import h5py
 import json
@@ -37,7 +36,7 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
     Args:
         hdf5_path (str): path to hdf5 file
         demo_keys ([str]): list of demonstration keys which should
-            correspond to this filter key. For example, ["demo_0",
+            correspond to this filter key. For example, ["demo_0", 
             "demo_1"].
         key_name (str): name of filter key to create
 
@@ -45,7 +44,7 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
         ep_lengths ([int]): list of episode lengths that corresponds to
             each demonstration in the new filter key
     """
-    f = h5py.File(hdf5_path, "a")
+    f = h5py.File(hdf5_path, "a")  
     demos = sorted(list(f["data"].keys()))
 
     # collect episode lengths for the keys of interest
@@ -59,7 +58,7 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
     k = "mask/{}".format(key_name)
     if k in f:
         del f[k]
-    f[k] = np.array(demo_keys, dtype="S")
+    f[k] = np.array(demo_keys, dtype='S')
 
     f.close()
     return ep_lengths
@@ -75,13 +74,11 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
 
     Returns:
         demo_keys ([str]): list of demonstration keys that
-            correspond to this filter key. For example, ["demo_0",
+            correspond to this filter key. For example, ["demo_0", 
             "demo_1"].
     """
     f = h5py.File(hdf5_path, "r")
-    demo_keys = [
-        elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])
-    ]
+    demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
     f.close()
     return demo_keys
 
@@ -95,7 +92,7 @@ def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=
 
         set_env_specific_obs_processors (bool): environment might have custom rules for how to process
             observations - if this flag is true, make sure ObsUtils will use these custom settings. This
-            is a good place to do this operation to make sure it happens before loading data, running a
+            is a good place to do this operation to make sure it happens before loading data, running a 
             trained model, etc.
 
     Returns:
@@ -115,9 +112,7 @@ def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=
     return env_meta
 
 
-def get_shape_metadata_from_dataset(
-    dataset_path, all_obs_keys=None, verbose=False, ac_key="actions"
-):
+def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False, ac_key="actions"):
     """
     Retrieves shape metadata from dataset.
 
@@ -170,10 +165,10 @@ def get_shape_metadata_from_dataset(
 
     f.close()
 
-    shape_meta["all_shapes"] = all_shapes
-    shape_meta["all_obs_keys"] = all_obs_keys
-    shape_meta["use_images"] = ObsUtils.has_modality("rgb", all_obs_keys)
-    shape_meta["use_depths"] = ObsUtils.has_modality("depth", all_obs_keys)
+    shape_meta['all_shapes'] = all_shapes
+    shape_meta['all_obs_keys'] = all_obs_keys
+    shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
+    shape_meta['use_depths'] = ObsUtils.has_modality("depth", all_obs_keys)
 
     return shape_meta
 
@@ -181,7 +176,7 @@ def get_shape_metadata_from_dataset(
 def load_dict_from_checkpoint(ckpt_path):
     """
     Load checkpoint dictionary from a checkpoint file.
-
+    
     Args:
         ckpt_path (str): Path to checkpoint file.
 
@@ -287,41 +282,22 @@ def update_config(cfg):
             }
 
             if "visual_feature_dimension" in old_encoder_cfg:
-                rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg[
-                    "visual_feature_dimension"
-                ]
+                rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg["visual_feature_dimension"]
 
             if "visual_core" in old_encoder_cfg:
-                rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg[
-                    "visual_core"
-                ]
+                rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg["visual_core"]
 
             for kwarg in ("pretrained", "input_coord_conv"):
-                if (
-                    "visual_core_kwargs" in old_encoder_cfg
-                    and kwarg in old_encoder_cfg["visual_core_kwargs"]
-                ):
-                    rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = (
-                        old_encoder_cfg["visual_core_kwargs"][kwarg]
-                    )
+                if "visual_core_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["visual_core_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = old_encoder_cfg["visual_core_kwargs"][kwarg]
 
             # Optionally add pooling info too
             if old_encoder_cfg.get("use_spatial_softmax", True):
                 rgb_encoder_cfg["core_kwargs"]["pool_class"] = "SpatialSoftmax"
 
-            for kwarg in (
-                "num_kp",
-                "learnable_temperature",
-                "temperature",
-                "noise_std",
-            ):
-                if (
-                    "spatial_softmax_kwargs" in old_encoder_cfg
-                    and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]
-                ):
-                    rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = (
-                        old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
-                    )
+            for kwarg in ("num_kp", "learnable_temperature", "temperature", "noise_std"):
+                if "spatial_softmax_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
 
             # Update obs randomizer as well
             for kwarg in ("obs_randomizer_class", "obs_randomizer_kwargs"):
@@ -343,9 +319,7 @@ def update_config(cfg):
             }
 
 
-def config_from_checkpoint(
-    algo_name=None, ckpt_path=None, ckpt_dict=None, verbose=False
-):
+def config_from_checkpoint(algo_name=None, ckpt_path=None, ckpt_dict=None, verbose=False):
     """
     Helper function to restore config from a checkpoint file or loaded model dictionary.
 
@@ -369,7 +343,7 @@ def config_from_checkpoint(
         algo_name, _ = algo_name_from_checkpoint(ckpt_dict=ckpt_dict)
 
     # restore config from loaded model dictionary
-    config_dict = json.loads(ckpt_dict["config"])
+    config_dict = json.loads(ckpt_dict['config'])
     update_config(cfg=config_dict)
 
     if verbose:
@@ -410,9 +384,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
 
     # algo name and config from model dict
     algo_name, _ = algo_name_from_checkpoint(ckpt_dict=ckpt_dict)
-    config, _ = config_from_checkpoint(
-        algo_name=algo_name, ckpt_dict=ckpt_dict, verbose=verbose
-    )
+    config, _ = config_from_checkpoint(algo_name=algo_name, ckpt_dict=ckpt_dict, verbose=verbose)
 
     # read config to set up metadata for observation modalities (e.g. detecting rgb observations)
     ObsUtils.initialize_obs_utils_with_config(config)
@@ -449,14 +421,7 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     return model, ckpt_dict
 
 
-def env_from_checkpoint(
-    ckpt_path=None,
-    ckpt_dict=None,
-    env_name=None,
-    render=False,
-    render_offscreen=False,
-    verbose=False,
-):
+def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=False, render_offscreen=False, verbose=False):
     """
     Creates an environment using the metadata saved in a checkpoint.
 
@@ -486,19 +451,15 @@ def env_from_checkpoint(
 
     # create env from saved metadata
     env = EnvUtils.create_env_from_metadata(
-        env_meta=env_meta,
-        env_name=env_name,
-        render=render,
+        env_meta=env_meta, 
+        env_name=env_name, 
+        render=render, 
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta.get("use_images", False),
         use_depth_obs=shape_meta.get("use_depths", False),
     )
-    config, _ = config_from_checkpoint(
-        algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False
-    )
-    env = EnvUtils.wrap_env_from_config(
-        env, config=config
-    )  # apply environment wrapper, if applicable
+    config, _ = config_from_checkpoint(algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False)
+    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment wrapper, if applicable
     if verbose:
         print("============= Loaded Environment =============")
         print(env)
@@ -524,7 +485,7 @@ def url_is_alive(url):
         is_alive (bool): True if url is reachable, False otherwise
     """
     request = urllib.request.Request(url)
-    request.get_method = lambda: "HEAD"
+    request.get_method = lambda: 'HEAD'
 
     try:
         urllib.request.urlopen(request)
@@ -560,13 +521,9 @@ def download_url(url, download_dir, check_overwrite=True):
     # If we're checking overwrite and the path already exists,
     # we ask the user to verify that they want to overwrite the file
     if check_overwrite and os.path.exists(file_to_write):
-        user_response = input(
-            f"Warning: file {file_to_write} already exists. Overwrite? y/n\n"
-        )
-        assert user_response.lower() in {
-            "yes",
-            "y",
-        }, f"Did not receive confirmation. Aborting download."
+        user_response = input(f"Warning: file {file_to_write} already exists. Overwrite? y/n\n")
+        assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
 
-    with DownloadProgressBar(unit="B", unit_scale=True, miniters=1, desc=fname) as t:
+    with DownloadProgressBar(unit='B', unit_scale=True,
+                             miniters=1, desc=fname) as t:
         urllib.request.urlretrieve(url, filename=file_to_write, reporthook=t.update_to)
