@@ -608,9 +608,11 @@ def unnormalize_batch(batch, normalization_stats):
             std = normalization_stats[m]["std"][0]        
 
             batch["obs"][m] = _unnorm_helper(batch["obs"][m], mean, std)
-    
+
     for k in batch:
         if "actions" in k:
+            if normalization_stats is None:
+                continue
             ac_mean = normalization_stats[k]["mean"][0]
             ac_std = normalization_stats[k]["std"][0]
 
