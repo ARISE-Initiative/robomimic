@@ -156,7 +156,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         seq_length=config.train.seq_length,
         pad_frame_stack=config.train.pad_frame_stack,
         pad_seq_length=config.train.pad_seq_length,
-        get_pad_mask=True,
+        get_pad_mask=False,
         goal_mode=config.train.goal_mode,
         hdf5_cache_mode=config.train.hdf5_cache_mode,
         hdf5_use_swmr=config.train.hdf5_use_swmr,
@@ -496,44 +496,6 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
-def delete_checkpoints(ckpt_dir, top_n=3, smallest=True):
-    """
-    Delete checkpoints in a directory, keeping top @top_n checkpoints based on lowest validation loss.  Where checkpoints are saved in the form "model_epoch_{n}_best_validation_{validation loss}.pth
-    """
-    # get all checkpoints
-    all_checkpoints = []
-    for filename in os.listdir(ckpt_dir):
-        if filename.endswith(".pth"):
-            all_checkpoints.append(filename)
-    all_checkpoints = sorted(all_checkpoints)
-
-    # get validation losses
-    validation_losses = []
-    for ckpt in all_checkpoints:
-        val_loss = float(ckpt.split("best_validation_")[1].split(".pth")[0])
-
-        validation_losses.append((val_loss, ckpt))
-    # validation_losses = np.array(validation_losses)
-    validation_losses = sorted(validation_losses, key=lambda x: x[0])
-
-    # delete checkpoints
-    if smallest:
-        for ckpt in all_checkpoints[top_n:]:
-            os.remove(os.path.join(ckpt_dir, ckpt))
-    else:
-        for ckpt in all_checkpoints[:-top_n]:
-            os.remove(os.path.join(ckpt_dir, ckpt))
-
-def get_gpu_usage_mb(index):
-    """Returns the GPU usage in B."""
-    h = nvmlDeviceGetHandleByIndex(index)
-    info = nvmlDeviceGetMemoryInfo(h)
-    print(f'total    : {info.total}')
-    print(f'free     : {info.free}')
-    print(f'used     : {info.used}')
-
-    return info.used / 1024 / 1024
-
 def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
     """
     Run an epoch of training or validation.
@@ -559,9 +521,6 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
     Returns:
         step_log_all (dict): dictionary of logged training metrics averaged across all batches
     """
-
-    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
-    
     epoch_timestamp = time.time()
     if validate:
         model.set_eval()
@@ -597,109 +556,6 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         # forward and backward pass
         t = time.time()
         info = model.train_on_batch(input_batch, epoch, validate=validate)
-        timing_stats["Train_Batch"].append(time.time() - t)
-
-        # tensorboard logging
-        t = time.time()
-        step_log = model.log_info(info)
-        step_log_all.append(step_log)
-        timing_stats["Log_Info"].append(time.time() - t)
-
-    # flatten and take the mean of the metrics
-    step_log_dict = {}
-    for i in range(len(step_log_all)):
-        for k in step_log_all[i]:
-            if k not in step_log_dict:
-                step_log_dict[k] = []
-            step_log_dict[k].append(step_log_all[i][k])
-    step_log_all = dict((k, float(np.mean(v))) for k, v in step_log_dict.items())
-
-    # add in timing stats
-    for k in timing_stats:
-        # sum across all training steps, and convert from seconds to minutes
-        step_log_all["Time_{}".format(k)] = np.sum(timing_stats[k]) / 60.
-    step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
-
-    return step_log_all
-
-def run_epoch_2_dataloaders(model, data_loader, epoch, data_loader_2, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
-    """
-    Run an epoch of training or validation.
-
-    Args:
-        model (Algo instance): model to train
-
-        data_loader (DataLoader instance): data loader that will be used to serve batches of data
-            to the model
-
-        epoch (int): epoch number
-
-        validate (bool): whether this is a training epoch or validation epoch. This tells the model
-            whether to do gradient steps or purely do forward passes.
-
-        num_steps (int): if provided, this epoch lasts for a fixed number of batches (gradient steps),
-            otherwise the epoch is a complete pass through the training dataset
-
-        obs_normalization_stats (dict or None): if provided, this should map observation keys to dicts
-            with a "mean" and "std" of shape (1, ...) where ... is the default
-            shape for the observation.
-
-    Returns:
-        step_log_all (dict): dictionary of logged training metrics averaged across all batches
-    """
-
-    #print("LOCAL RANK:",int(os.environ.get("LOCAL_RANK"))," USAGE:",get_gpu_usage_mb(int(os.environ.get(" LOCAL_RANK: ",os.environ.get("SLURM_LOCAL_ID",0))))," SLURM_LOCAL_ID: ",os.environ.get("SLURM_LOCAL_ID",0))
-    # breakpoint()
-    epoch_timestamp = time.time()
-    if validate:
-        model.set_eval()
-    else:
-        model.set_train()
-    if num_steps is None:
-        num_steps = len(data_loader)
-
-    step_log_all = []
-    timing_stats = dict(Data_Loading=[], Process_Batch=[], Train_Batch=[], Log_Info=[])
-    start_time = time.time()
-
-    data_loader_iter = iter(data_loader)
-    data_loader_2_iter = None if data_loader_2 is None else iter(data_loader_2)
-    # breakpoint()
-    for _ in LogUtils.custom_tqdm(range(num_steps)):
-
-        # load next batch from data loader
-        try:
-            t = time.time()
-            batch = next(data_loader_iter)
-            batch_2 = None if data_loader_2_iter is None else next(data_loader_2_iter)
-        except StopIteration:
-            # reset for next dataset pass
-            data_loader_iter = iter(data_loader)
-            data_loader_2_iter = None if data_loader_2 is None else iter(data_loader_2)
-            t = time.time()
-            batch = next(data_loader_iter)
-            batch_2 = None if data_loader_2_iter is None else next(data_loader_2_iter)
-        timing_stats["Data_Loading"].append(time.time() - t)
-
-        # process batch for training
-        t = time.time()
-        # breakpoint()
-        input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
-        input_batch_2 = None if batch_2 is None else model.process_batch_for_training(batch_2, ac_key=ac_key)
-
-        # breakpoint()
-        input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
-        input_batch_2 = None if input_batch_2 is None else model.postprocess_batch_for_training(input_batch_2, obs_normalization_stats=obs_normalization_stats)
-
-        timing_stats["Process_Batch"].append(time.time() - t)
-
-        # forward and backward pass
-        t = time.time()
-        # breakpoint()
-        if input_batch_2 is not None:
-            info = model.train_on_batch([input_batch, input_batch_2], epoch, validate=validate)
-        else:
-            info = model.train_on_batch(input_batch, epoch, validate=validate)
         timing_stats["Train_Batch"].append(time.time() - t)
 
         # tensorboard logging
