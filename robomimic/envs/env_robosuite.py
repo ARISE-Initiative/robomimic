@@ -17,7 +17,6 @@ except ImportError:
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
-from libero.libero.utils.utils import postprocess_model_xml
 
 # protect against missing mujoco-py module, since robosuite might be using mujoco-py or DM backend
 try:
