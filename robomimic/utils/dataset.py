@@ -17,76 +17,6 @@ import time
 import scipy
 import matplotlib.pyplot as plt
 
-def interpolate_arr(v, seq_length):
-    """
-    v: (B, T, D)
-    seq_length: int
-    """
-    assert len(v.shape) == 3
-    if v.shape[1] == seq_length:
-        return
-    
-    interpolated = []
-    for i in range(v.shape[0]):
-        index = v[i]
-        # if i == 20:
-        #     plt.plot(index[:, 2])
-        #     plt.savefig('index.png')
-        #     plt.close()
-
-        interp = scipy.interpolate.interp1d(
-            np.linspace(0, 1, index.shape[0]), index, axis=0
-        )
-        interpolated.append(interp(np.linspace(0, 1, seq_length)))
-
-        # if i == 20:
-        #     plt.plot(interpolated[-1][:, 2])
-        #     plt.savefig('interpolated.png')
-        #     plt.close()
-        
-
-    # L = v.shape[0]
-    # if L == seq_length:
-    #     return v
-
-    # interp = scipy.interpolate.interp1d(
-    #     np.linspace(0, 1, L), v, axis=0
-    # )
-    # return interp(np.linspace(0, 1, seq_length))
-
-    return np.array(interpolated)
-
-def interpolate_keys(obs, keys, seq_length):
-    """
-    obs: dict with values of shape (T, D)
-    keys: list of keys to interpolate
-    seq_length: int changes shape (T, D) to (seq_length, D)
-    """
-    for k in keys:
-        v = obs[k]
-        L = v.shape[0]
-        if L == seq_length:
-            continue
-
-        if k == "pad_mask":
-            # interpolate it by simply copying each index (seq_length / seq_length_to_load) times
-            obs[k] = np.repeat(v, (seq_length // L), axis=0)
-        elif k != "pad_mask":
-            # plot v[:, 3]
-            # plt.plot(v[:, 2])
-            # plt.savefig('v_3.png')
-            # plt.close()
-            interp = scipy.interpolate.interp1d(
-                np.linspace(0, 1, L), v, axis=0
-            )
-            try:
-                obs[k] = interp(np.linspace(0, 1, seq_length))
-            except:
-                raise ValueError(f"Interpolation failed for key: {k} with shape{k.shape}")
-            # plt.plot(obs[k][:, 2])
-            # plt.savefig('v_3_after.png')
-            # plt.close()
-
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -588,7 +518,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         return seq, pad_mask
 
-    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs", dont_load_fut=False, seq_length_to_load=None):
+    def get_obs_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, prefix="obs", dont_load_fut=False):
         """
         Extract a (sub)sequence of observation items from a demo given the @keys of the items.
 
@@ -603,9 +533,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         Returns:
             a dictionary of extracted items.
         """
-        if seq_length_to_load is None:
-            seq_length_to_load = seq_length
-
+        seq_length_to_load = 1 if self.prestacked_actions else seq_length
         obs, pad_mask = self.get_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
@@ -622,12 +550,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         # to_interp = [k for k in obs if ObsUtils.key_is_obs_modality(k, "low_dim")]
         to_interp = ["pad_mask"]
         # t = time.time()
-        interpolate_keys(obs, to_interp, seq_length)
+        obs["pad_mask"] = np.repeat(obs["pad_mask"], seq_length, axis=0)
         # print("Interpolation time: ", time.time() - t)
 
         return obs
 
-    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1, seq_length_to_load=None):
+    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
         """
         Extract a (sub)sequence of dataset items from a demo given the @keys of the items (e.g., states, actions).
         
@@ -641,9 +569,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         Returns:
             a dictionary of extracted items.
         """
-        if seq_length_to_load is None:
-            seq_length_to_load = seq_length
-
+        seq_length_to_load = 1 if self.prestacked_actions else seq_length
         data, pad_mask = self.get_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
@@ -665,7 +591,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 if not "actions" in k:
                     raise ValueError("Interpolating actions, but key is not an action, key: ", k)
 
-        interpolate_keys(data, to_interp, seq_length)
+        data["pad_mask"] = np.repeat(data["pad_mask"], seq_length, axis=0)
         # print("Interpolation time: ", time.time() - t)
         return data
 

@@ -496,7 +496,7 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
-def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None, ac_key=None):
+def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_normalization_stats=None):
     """
     Run an epoch of training or validation.
 
@@ -549,7 +549,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
 
         # process batch for training
         t = time.time()
-        input_batch = model.process_batch_for_training(batch, ac_key=ac_key)
+        input_batch = model.process_batch_for_training(batch)
         input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=obs_normalization_stats)
         timing_stats["Process_Batch"].append(time.time() - t)
 
@@ -580,6 +580,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
     step_log_all["Time_Epoch"] = (time.time() - epoch_timestamp) / 60.
 
     return step_log_all
+
 
 def is_every_n_steps(interval, current_step, skip_zero=False):
     """

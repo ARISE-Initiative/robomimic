@@ -149,10 +149,14 @@ class EnvRobosuite(EB.EnvBase):
         should_ret = False
         if "model" in state:
             self.reset()
-            # ----- loading LIBERO model xml ----
-            model_xml = state["model"]
-            model_xml = postprocess_model_xml(model_xml, {})
-            self.env.reset_from_xml_string(model_xml)
+            robosuite_version_id = int(robosuite.__version__.split(".")[1])
+            if robosuite_version_id <= 3:
+                from robosuite.utils.mjcf_utils import postprocess_model_xml
+                xml = postprocess_model_xml(state["model"])
+            else:
+                # v1.4 and above use the class-based edit_model_xml function
+                xml = self.env.edit_model_xml(state["model"])
+            self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
                 # hide teleop visualization after restoring from model

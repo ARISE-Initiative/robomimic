@@ -11,9 +11,3 @@ matplotlib
 egl_probe>=1.0.1
 torch
 torchvision
-wandb
-pytorch_lightning
-ipython
-cv2
-scipy
-pytorch-kinematics
