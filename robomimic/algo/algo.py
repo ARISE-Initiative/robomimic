@@ -241,7 +241,7 @@ class Algo(object):
                 if k in obs_keys:
                     # found key - stop search and process observation
                     if d[k] is not None:
-                        d[k] = ObsUtils.process_obs_dict(d[k])
+                        d[k] = ObsUtils.process_obs_dict(d[k], imagenet_normalize=self.global_config.train.imagenet_normalize_images)
                 elif isinstance(d[k], dict):
                     # search down into dictionary
                     recurse_helper(d[k])

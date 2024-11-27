@@ -325,7 +325,7 @@ def batch_image_chw_to_hwc(im):
         return im.permute(start_dims + [s + 2, s + 3, s + 1])
 
 
-def process_obs(obs, obs_modality=None, obs_key=None):
+def process_obs(obs, obs_modality=None, obs_key=None, imagenet_normalize=False):
     """
     Process observation @obs corresponding to @obs_modality modality (or implicitly inferred from @obs_key)
     to prepare for network input.
@@ -345,10 +345,10 @@ def process_obs(obs, obs_modality=None, obs_key=None):
     assert obs_modality is not None or obs_key is not None, "Either obs_modality or obs_key must be specified!"
     if obs_key is not None:
         obs_modality = OBS_KEYS_TO_MODALITIES[obs_key]
-    return OBS_MODALITY_CLASSES[obs_modality].process_obs(obs)
+    return OBS_MODALITY_CLASSES[obs_modality].process_obs(obs, imagenet_normalize=imagenet_normalize)
 
 
-def process_obs_dict(obs_dict):
+def process_obs_dict(obs_dict, imagenet_normalize=False):
     """
     Process observations in observation dictionary to prepare for network input.
 
@@ -359,10 +359,11 @@ def process_obs_dict(obs_dict):
     Returns:
         new_dict (dict): dictionary where observation keys have been processed by their corresponding processors
     """
-    return { k : process_obs(obs=obs, obs_key=k) for k, obs in obs_dict.items() } # shallow copy
+
+    return { k : process_obs(obs=obs, obs_key=k, imagenet_normalize=imagenet_normalize) for k, obs in obs_dict.items() } # shallow copy
 
 
-def process_frame(frame, channel_dim, scale):
+def process_frame(frame, channel_dim, scale, imagenet_normalize=False):
     """
     Given frame fetched from dataset, process for network input. Converts array
     to float (from uint8), normalizes pixels from range [0, @scale] to [0, 1], and channel swaps
@@ -382,6 +383,10 @@ def process_frame(frame, channel_dim, scale):
     if scale is not None:
         frame = frame / scale
         frame = frame.clip(0.0, 1.0)
+        if imagenet_normalize:
+            mean = np.array([0.485, 0.456, 0.406])
+            std = np.array([0.229, 0.224, 0.225])
+            frame = (frame - mean) / std
     frame = batch_image_hwc_to_chw(frame)
 
     return frame
@@ -890,7 +895,7 @@ class Modality:
         raise NotImplementedError
 
     @classmethod
-    def process_obs(cls, obs):
+    def process_obs(cls, obs, imagenet_normalize=False):
         """
         Prepares an observation @obs of this modality for network input.
 
@@ -902,7 +907,10 @@ class Modality:
         """
         processor = cls._custom_obs_processor if \
             cls._custom_obs_processor is not None else cls._default_obs_processor
-        return processor(obs)
+        if isinstance(cls, ImageModality):
+            return processor(obs, imagenet_normalize=imagenet_normalize)
+        else:
+            return processor(obs)
 
     @classmethod
     def unprocess_obs(cls, obs):
@@ -949,7 +957,7 @@ class ImageModality(Modality):
     name = "rgb"
 
     @classmethod
-    def _default_obs_processor(cls, obs):
+    def _default_obs_processor(cls, obs, imagenet_normalize=False):
         """
         Given image fetched from dataset, process for network input. Converts array
         to float (from uint8), normalizes pixels from range [0, 255] to [0, 1], and channel swaps
@@ -961,7 +969,7 @@ class ImageModality(Modality):
         Returns:
             processed_obs (np.array or torch.Tensor): processed image
         """
-        return process_frame(frame=obs, channel_dim=3, scale=255.)
+        return process_frame(frame=obs, channel_dim=3, scale=255., imagenet_normalize=imagenet_normalize)
 
     @classmethod
     def _default_obs_unprocessor(cls, obs):

@@ -590,7 +590,7 @@ class ViT_Rein(ConvBase):
 
         self.preprocess = nn.Sequential(
             transforms.Resize((294,294)),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
         
         try:
@@ -740,7 +740,7 @@ class Vit(ConvBase):
 
         self.preprocess = nn.Sequential(
             transforms.Resize((294,294)),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
         
         try:
@@ -845,7 +845,7 @@ class R3MConv(ConvBase):
         preprocess = nn.Sequential(
             transforms.Resize(256),
             transforms.CenterCrop(224),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
         self.nets = Sequential(*([preprocess] + list(net.module.convnet.children())), has_output_shape = False)
         if freeze:

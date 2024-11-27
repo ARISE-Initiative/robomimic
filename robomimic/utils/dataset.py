@@ -37,7 +37,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         load_next_obs=True,
         prestacked_actions=False,
         hdf5_normalize_actions=False,
-        imagenet_normalize_images=False,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -95,7 +94,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.hdf5_path = os.path.expanduser(hdf5_path)
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
-        self.imagenet_normalize_images = imagenet_normalize_images
         self.hdf5_normalize_actions = hdf5_normalize_actions
         self._hdf5_file = None
         self.ac_key = ac_key
@@ -428,7 +426,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         goal_index = None
         if self.goal_mode == "last":
             goal_index = end_index_in_demo - 1
-
         meta["obs"] = self.get_obs_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
@@ -485,7 +482,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             a dictionary of extracted items.
         """
 
-        breakpoint()
         if dont_load_fut is None:
             dont_load_fut = []
         assert num_frames_to_stack >= 0
