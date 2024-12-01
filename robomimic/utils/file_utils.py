@@ -154,6 +154,10 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
         all_obs_keys = [k for k in demo["obs"]]
 
     for k in sorted(all_obs_keys):
+        if k not in demo["obs"]:
+            if verbose:
+                print(f"Warning: {k} not in some demos['obs']")
+            continue
         initial_shape = demo["obs/{}".format(k)].shape[1:]
         if verbose:
             print("obs key {} with shape {}".format(k, initial_shape))

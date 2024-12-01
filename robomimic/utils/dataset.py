@@ -333,7 +333,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         obs_normalization_stats = {}
         # keys_to_norm = [f"obs/{k}" for k in self.obs_keys if ObsUtils.key_is_obs_modality(k, "low_dim")] + ["actions"]
         for key in self.obs_keys:
-            if ObsUtils.key_is_obs_modality(key, "low_dim"):
+            # hardcoded language key not normalized for now
+            if ObsUtils.key_is_obs_modality(key, "low_dim") and "lang" not in key:
                 obs_normalization_stats[key] = _calc_helper(f"obs/{key}")
 
         for key in self.dataset_keys:
@@ -364,6 +365,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         Helper utility to get a dataset for a specific demonstration.
         Takes into account whether the dataset has been loaded into memory.
         """
+        
 
         # check if this key should be in memory
         key_should_be_in_memory = (self.hdf5_cache_mode in ["all", "low_dim"])
@@ -374,7 +376,7 @@ class SequenceDataset(torch.utils.data.Dataset):
                 assert(key1 in ['obs', 'next_obs'])
                 if key2 not in self.obs_keys_in_memory:
                     key_should_be_in_memory = False
-
+        
         if key_should_be_in_memory:
             # read cache
             if '/' in key:
