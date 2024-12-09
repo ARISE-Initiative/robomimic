@@ -36,6 +36,11 @@ try:
     from libero.libero.envs.problems import *
 except ImportError:
     print("WARNING: could not import libero envs")
+try:
+    # try to import libero environments
+    from libero.libero.envs.problems import *
+except ImportError:
+    print("WARNING: could not import libero envs")
 
 
 class EnvRobosuite(EB.EnvBase):
