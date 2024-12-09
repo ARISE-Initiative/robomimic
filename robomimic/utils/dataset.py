@@ -973,6 +973,20 @@ class R2D2Dataset(SequenceDataset):
         return meta
 
 
+class CustomWeightedRandomSampler(torch.utils.data.WeightedRandomSampler):
+    """WeightedRandomSampler except allows for more than 2^24 categories"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __iter__(self):
+        rand_tensor = np.random.choice(range(0, len(self.weights)),
+                                       size=self.num_samples,
+                                       p=self.weights.numpy() / torch.sum(self.weights).numpy(),
+                                       replace=self.replacement)
+        rand_tensor = torch.from_numpy(rand_tensor)
+        return iter(rand_tensor.tolist())
+
+
 class MetaDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -1029,7 +1043,7 @@ class MetaDataset(torch.utils.data.Dataset):
         for i, (start, end) in enumerate(zip(self._ds_ind_bins[:-1], self._ds_ind_bins[1:])):
             weights[start:end] = self.ds_weights[i]
 
-        sampler = torch.utils.data.WeightedRandomSampler(
+        sampler = CustomWeightedRandomSampler(
             weights=weights,
             num_samples=len(self),
             replacement=True,
