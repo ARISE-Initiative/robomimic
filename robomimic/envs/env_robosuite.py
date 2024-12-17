@@ -19,6 +19,11 @@ try:
     import mimicgen_envs
 except ImportError:
     pass
+try:
+    # this is needed for ensuring robosuite can find the additional robocasa environments (see https://robocasa.ai)
+    import robocasa
+except ImportError:
+    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
@@ -127,13 +132,19 @@ class EnvRobosuite(EB.EnvBase):
         obs = self.get_observation(obs)
         return obs, r, self.is_done(), info
 
-    def reset(self):
+    def reset(self, unset_ep_meta=True):
         """
         Reset environment.
 
+        Args:
+            unset_ep_meta (np.array): whether to reset any previously set episode meta data
+        
         Returns:
             observation (dict): initial observation dictionary.
         """
+        if unset_ep_meta and hasattr(self.env, "unset_ep_meta"):
+            # unset the ep meta to clear out any ep meta that was previously set
+            self.env.unset_ep_meta()
         di = self.env.reset()
         return self.get_observation(di)
 
@@ -152,7 +163,20 @@ class EnvRobosuite(EB.EnvBase):
         """
         should_ret = False
         if "model" in state:
-            self.reset()
+            if state.get("ep_meta", None) is not None:
+                # set relevant episode information
+                ep_meta = json.loads(state["ep_meta"])
+            else:
+                ep_meta = {}
+
+            if hasattr(self.env, "set_attrs_from_ep_meta"): # older versions had this function
+                self.env.set_attrs_from_ep_meta(ep_meta)
+            elif hasattr(self.env, "set_ep_meta"): # newer versions
+                self.env.set_ep_meta(ep_meta)
+            # this reset is necessary.
+            # while the call to env.reset_from_xml_string does call reset,
+            # that is only a "soft" reset that doesn't actually reload the model.
+            self.reset(unset_ep_meta=False)
             robosuite_version_id = int(robosuite.__version__.split(".")[1])
             if robosuite_version_id <= 3:
                 from robosuite.utils.mjcf_utils import postprocess_model_xml
@@ -329,7 +353,11 @@ class EnvRobosuite(EB.EnvBase):
         """
         xml = self.env.sim.model.get_xml() # model xml file
         state = np.array(self.env.sim.get_state().flatten()) # simulator state
-        return dict(model=xml, states=state)
+        info = dict(model=xml, states=state)
+        if hasattr(self.env, "get_ep_meta"):
+            # get ep_meta if applicable
+            info["ep_meta"] = json.dumps(self.env.get_ep_meta(), indent=4)
+        return info
 
     def get_reward(self):
         """

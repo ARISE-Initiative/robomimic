@@ -281,6 +281,7 @@ def playback_dataset(args):
         initial_state = dict(states=states[0])
         if is_robosuite_env:
             initial_state["model"] = f["data/{}".format(ep)].attrs["model_file"]
+            initial_state["ep_meta"] = f["data/{}".format(ep)].attrs.get("ep_meta", None)
 
         # supply actions if using open-loop action playback
         actions = None
