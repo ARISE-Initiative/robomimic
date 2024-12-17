@@ -142,8 +142,9 @@ class EnvRobosuite(EB.EnvBase):
         Returns:
             observation (dict): initial observation dictionary.
         """
-        if unset_ep_meta and hasattr(self.env, "unset_ep_meta"):
+        if unset_ep_meta and self.is_v15_or_higher:
             # unset the ep meta to clear out any ep meta that was previously set
+            # this feature was set from robosuite v1.5 onwards
             self.env.unset_ep_meta()
         di = self.env.reset()
         return self.get_observation(di)
@@ -169,9 +170,7 @@ class EnvRobosuite(EB.EnvBase):
             else:
                 ep_meta = {}
 
-            if hasattr(self.env, "set_attrs_from_ep_meta"): # older versions had this function
-                self.env.set_attrs_from_ep_meta(ep_meta)
-            elif hasattr(self.env, "set_ep_meta"): # newer versions
+            if self.is_v15_or_higher: # newer versions of robosuite have this feature
                 self.env.set_ep_meta(ep_meta)
             # this reset is necessary.
             # while the call to env.reset_from_xml_string does call reset,
@@ -354,8 +353,8 @@ class EnvRobosuite(EB.EnvBase):
         xml = self.env.sim.model.get_xml() # model xml file
         state = np.array(self.env.sim.get_state().flatten()) # simulator state
         info = dict(model=xml, states=state)
-        if hasattr(self.env, "get_ep_meta"):
-            # get ep_meta if applicable
+        if self.is_v15_or_higher:
+            # get ep_meta if applicable for newer versions of robosuite
             info["ep_meta"] = json.dumps(self.env.get_ep_meta(), indent=4)
         return info
 
@@ -419,6 +418,15 @@ class EnvRobosuite(EB.EnvBase):
         """
         return EB.EnvType.ROBOSUITE_TYPE
 
+    @property
+    def is_v15_or_higher(self):
+        """
+        Returns true if the robosuite versoin if v1.5.0+
+        """
+        main_version = int(robosuite.__version__.split(".")[0])
+        sub_version = int(robosuite.__version__.split(".")[1])
+        return (main_version > 1) or (main_version == 1 and sub_version >= 5)
+    
     @property
     def version(self):
         """
