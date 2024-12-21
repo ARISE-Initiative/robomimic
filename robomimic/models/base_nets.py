@@ -19,6 +19,8 @@ import robomimic.utils.tensor_utils as TensorUtils
 from robomimic.models.vit_rein import Reins, LoRAReins, MLPhead
 from robomimic.utils.log_utils import bcolors
 
+from peft import LoraConfig, get_peft_model
+
 CONV_ACTIVATIONS = {
     "relu": nn.ReLU,
     "None": None,
@@ -708,10 +710,10 @@ class ViT_Rein(ConvBase):
 
 class Vit(ConvBase):
     """
-    Vision transformer
+    Vision transformer with optional peft lora
     """
 
-    def __init__(self, input_channel=3, vit_model_class="vit_b", freeze=True, return_key="x_norm_patchtokens"):
+    def __init__(self, input_channel=3, vit_model_class="vit_b", freeze=True, return_key="x_norm_patchtokens", use_lora=False, **kwargs):
         """
         Using pretrained observation encoder network proposed in Vision Transformers 
         git clone https://github.com/facebookresearch/dinov2
@@ -720,60 +722,96 @@ class Vit(ConvBase):
             input_channel (int): number of input channels for input images to the network.
                 If not equal to 3, modifies first conv layer to handle the number
                 of input channels.
-            vit_model_class (str): select one of the vit pretrained model "vit_b", "vit_l", "vit_s" or "vit_g"
+            vit_model_class (str): select one of the vit pretrained model "vit_b", "vit_l", "vit_s", "vit_g" or "radio"
             freeze (bool): if True, use a frozen ViT pretrained model.
         """
         super(Vit, self).__init__()
 
         assert input_channel == 3 
-        assert vit_model_class in ["vit_b", "vit_l" ,"vit_g", "vit_s"] # make sure the selected vit model do exist
+        assert vit_model_class in ["vit_b", "vit_l" ,"vit_g", "vit_s", "radio"] # make sure the selected vit model do exist
 
         # cut the last fc layer
         self._input_channel = input_channel
         self._vit_model_class = vit_model_class
+
+        self._model_version = kwargs.get("model_version", None)
+
         self._freeze = freeze
         self._input_coord_conv = False
         self._pretrained = False
         self.return_key = return_key
         if self.return_key not in ["x_norm_patchtokens", "x_norm_clstoken"]:
             raise ValueError(f"return_key {self.return_key} not supported")
+        
+        self.use_lora = use_lora
 
         self.preprocess = nn.Sequential(
-            transforms.Resize((294,294)),
+            transforms.Resize((224, 224)),
             # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         )
+
         
         try:
             if self._vit_model_class == "vit_s":
                 self.nets = dinov2_vits14 = torch.hub.load(
                     "facebookresearch/dinov2", "dinov2_vits14"
                 )
+                self.patch_size = self.nets.patch_embed.patch_size
             if self._vit_model_class == "vit_l":
                 self.nets = dinov2_vits14 = torch.hub.load(
                     "facebookresearch/dinov2", "dinov2_vitl14"
                 )
+                self.patch_size = self.nets.patch_embed.patch_size
             if self._vit_model_class == "vit_g":
                 self.nets = dinov2_vits14 = torch.hub.load(
                     "facebookresearch/dinov2", "dinov2_vitg14"
                 )
+                self.patch_size = self.nets.patch_embed.patch_size
             if self._vit_model_class == "vit_b":
                 self.nets = dinov2_vits14 = torch.hub.load(
                     "facebookresearch/dinov2", "dinov2_vitb14"
                 )
+                self.patch_size = self.nets.patch_embed.patch_size
+            if self._vit_model_class == "radio":
+                radio_model_version = self._model_version if self._model_version is not None else "radio_v2.5-l"
+                self.nets = torch.hub.load(
+                    'NVlabs/RADIO', 'radio_model', version=radio_model_version, progress=True, skip_validation=True
+                )
+                self.preprocess = nn.Sequential(
+                    transforms.Resize((224, 224)),
+                    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                )
+                self.patch_size = self.nets.patch_size
+
+
         except ImportError:
             print("WARNING: could not load Vit")
 
-        if freeze:
+        if self.use_lora:
+            lora_config = LoraConfig(
+                r=8,
+                lora_alpha=32,
+                target_modules=["qkv", "query", "key", "value"],
+                lora_dropout=0.1,
+                bias="none",
+                task_type="SEQ_2_SEQ_LM"
+            )
+            self.nets = get_peft_model(self.nets, lora_config)
+
+        if self._freeze and not self.use_lora:
             for param in self.nets.parameters():
                 param.requires_grad = False
-
-        if self._freeze:
             self.nets.eval()
 
     def forward(self, inputs):
+
         x = self.preprocess(inputs)
         # x = self.nets(x)
-        x = self.nets.forward_features(x)[self.return_key]
+        if "vit" in self._vit_model_class:
+            x = self.nets.forward_features(x)[self.return_key]
+        else:
+            summary, x = self.nets(x)
+
         return x
 
     def output_shape(self, input_shape):
@@ -792,7 +830,7 @@ class Vit(ConvBase):
         out_dim = self.nets.patch_embed.proj.out_channels
 
         if self.return_key == "x_norm_patchtokens":
-            return [441, out_dim]
+            return [(H / self.patch_size) * (W / self.patch_size), out_dim]
         elif self.return_key == "x_norm_clstoken":
             return [out_dim]
 
@@ -802,7 +840,7 @@ class Vit(ConvBase):
         print("**Number of params:",sum(p.numel() for p in self.nets.parameters()))
 
         header = '{}'.format(str(self.__class__.__name__))
-        return header + '(input_channel={}, input_coord_conv={}, pretrained={}, freeze={})'.format(self._input_channel, self._input_coord_conv, self._pretrained, self._freeze)
+        return header + '(input_channel={}, input_coord_conv={}, pretrained={}, freeze={})'.format(self._input_channel, self._input_coord_conv, self._pretrained, self._freeze, self.use_lora)
 
 class R3MConv(ConvBase):
     """
