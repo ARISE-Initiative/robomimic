@@ -14,9 +14,11 @@ robomimic v0.1 datasets is a large-scale, diverse collection of task demonstrati
 <p class="admonition-title">Warning!</p>
 <!-- When working with these datasets, please make sure that you have installed [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. -->
 
-Since the release of robomimic v0.3, we recommend that users install [robosuite](https://robosuite.ai/) from source and are on the `v1.4.1` branch. The `v1.4.1` branch of robosuite uses Google DeepMind's [mujoco python bindings](https://github.com/deepmind/mujoco) which replaces the now deprecated [mujoco-py](https://github.com/openai/mujoco-py).
+Since the release of robomimic v0.4, we recommend that users install [robosuite](https://robosuite.ai/) from source and are on the `v1.5.1` branch. The `v1.5.1` branch of robosuite uses Google DeepMind's [mujoco python bindings](https://github.com/deepmind/mujoco) which replaces the now deprecated [mujoco-py](https://github.com/openai/mujoco-py).
 
-Note that the CoRL 2021 datasets relied on the mujoco-py based `offline_study` branch of robosuite. In this version of robomimic we provide users with datasets based on `v1.4.1`, which we found produce similar results to the original `offline_study` datasets. However if you would like to download the `offline_study` datasets, please use the `v0.2.0` branch of robomimic and consult the [v0.2 docs](https://robomimic.github.io/docs/v0.2/datasets/robomimic_v0.1.html) for instructions.
+Note that the CoRL 2021 datasets relied on the mujoco-py based `offline_study` branch of robosuite. In this version of robomimic we provide users with datasets based on `v1.5.1`, which allows users to use new robosuite features. However, it is possible that learning results may not match exactly with the original `offline_study` datasets. If you would like to download the `offline_study` datasets, please use the `v0.2.0` branch of robomimic and consult the [v0.2 docs](https://robomimic.github.io/docs/v0.2/datasets/robomimic_v0.1.html) for instructions.
+
+Previously, we also had datasets based on the `v1.4.1` branch of robosuite, packaged with robomimic v0.3. If you would like to use those, please switch to robomimic v0.3 and consult the [v0.3 docs](https://robomimic.github.io/docs/v0.3/datasets/robomimic_v0.1.html) for instructions.
 
 </div>
 
@@ -51,7 +53,14 @@ $ python download_datasets.py --download_dir /tmp/datasets
 
 ### Method 2: Using Direct Download Links
 
-We also provide direct download links for each hdf5 dataset (the download links for the raw datasets are also included – they allow flexibility in extracting different kinds of observations and rewards during postprocessing):
+We also provide direct download links for each hdf5 dataset (the download links for the raw datasets are also included – they allow flexibility in extracting different kinds of observations and rewards during postprocessing).
+
+<div class="admonition info">
+<p class="admonition-title">HuggingFace repository</p>
+
+You can also find all of the datasets at the Hugging Face link [here](https://huggingface.co/datasets/amandlek/robomimic/tree/main/v1.5) (except for the real robot datasets, which are not hosted there).
+
+</div>
 
 **Proficient-Human (PH)** [**info**](robomimic_v0.1.html#proficient-human-ph)
 
@@ -64,8 +73,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(PH)**                      |                      **Can<br />(PH)**                       |                     **Square<br />(PH)**                     |                   **Transport<br />(PH)**                    |                   **Tool Hang<br />(PH)**                    |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |               ![square](../images/square.png)                |            ![transport](../images/transport.png)             |            ![tool_hang](../images/tool_hang.png)             |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/demo_v141.hdf5) |
-| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/ph/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/tool_hang/ph/low_dim_v141.hdf5) |
+| [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/ph/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/ph/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/square/ph/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/transport/ph/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/tool_hang/ph/demo_v15.hdf5?download=true) |
+| [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/ph/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/ph/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/square/ph/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/transport/ph/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/tool_hang/ph/low_dim_v15.hdf5?download=true) |
 
 |                   **Lift Real<br />(PH)**                    |                    **Can Real<br />(PH)**                    |                 **Tool Hang Real<br />(PH)**                 |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
@@ -88,8 +97,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(MH)**                      |                      **Can<br />(MH)**                       |                     **Square<br />(MH)**                     |                   **Transport<br />(MH)**                    |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |               ![square](../images/square.png)                |            ![transport](../images/transport.png)             |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/demo_v141.hdf5) |
-| [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/square/mh/low_dim_v141.hdf5) | [low_dim](http://downloads.cs.stanford.edu/downloads/rt_benchmark/transport/mh/low_dim_v141.hdf5) |
+| [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/mh/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/mh/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/square/mh/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/transport/mh/demo_v15.hdf5?download=true) |
+| [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/mh/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/mh/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/square/mh/low_dim_v15.hdf5?download=true) | [low_dim](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/transport/mh/low_dim_v15.hdf5?download=true) |
 </p>
 </details>
 
@@ -107,9 +116,9 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                      **Lift<br />(MG)**                      |                      **Can<br />(MG)**                       |
 | :----------------------------------------------------------: | :----------------------------------------------------------: |
 |                 ![lift](../images/lift.png)                  |                  ![can](../images/can.png)                   |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/demo_v141.hdf5) | [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/demo_v141.hdf5) |
-| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_sparse_v141.hdf5) | [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_sparse_v141.hdf5) |
-| [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/lift/mg/low_dim_dense_v141.hdf5) | [low_dim (dense)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/mg/low_dim_dense_v141.hdf5) |
+| [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/mg/demo_v15.hdf5?download=true) | [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/mg/demo_v15.hdf5?download=true) |
+| [low_dim (sparse)](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/mg/low_dim_sparse_v15.hdf5?download=true) | [low_dim (sparse)](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/mg/low_dim_sparse_v15.hdf5?download=true) |
+| [low_dim (dense)](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/lift/mg/low_dim_dense_v15.hdf5?download=true) | [low_dim (dense)](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/mg/low_dim_dense_v15.hdf5?download=true) |
 
 </p>
 </details>
@@ -126,8 +135,8 @@ We also provide direct download links for each hdf5 dataset (the download links 
 |                        **Can Paired**                        |
 | :----------------------------------------------------------: |
 | <img src="../images/can_paired.png" alt="can_paired" style="zoom:12%;" /> |
-| [raw](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/demo_v141.hdf5) |
-| [low_dim (sparse)](http://downloads.cs.stanford.edu/downloads/rt_benchmark/can/paired/low_dim_v141.hdf5) |
+| [raw](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/paired/demo_v15.hdf5?download=true) |
+| [low_dim (sparse)](https://huggingface.co/datasets/amandlek/robomimic/resolve/main/v1.5/can/paired/low_dim_v15.hdf5?download=true) |
 
 </p>
 </details>
@@ -188,7 +197,7 @@ python /path/to/robomimic/scripts/train.py --config /path/to/robomimic/exps/pape
 <div class="admonition info">
 <p class="admonition-title">Want to Run Experiments on Custom Observations?</p>
 
-We provide the raw (observation-free) `demo_v141.hdf5` datasets so that you can generate your own custom set of observations, such as additional camera viewpoints. For information, see [Extracting Observations from Datasets](robosuite.md#extracting-observations-from-mujoco-states).
+We provide the raw (observation-free) `demo_v15.hdf5` datasets so that you can generate your own custom set of observations, such as additional camera viewpoints. For information, see [Extracting Observations from Datasets](robosuite.md#extracting-observations-from-mujoco-states).
 
 **NOTE**: To compare against how our paper's released datasets were generated, please see the `extract_obs_from_raw_datasets.sh` script.
 

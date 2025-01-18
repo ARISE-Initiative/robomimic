@@ -3,6 +3,8 @@ A collection of utility functions for working with files, such as reading metada
 demonstration datasets, loading model checkpoints, or downloading dataset files.
 """
 import os
+import shutil
+import tempfile
 import h5py
 import json
 import time
@@ -10,6 +12,7 @@ import urllib.request
 import numpy as np
 from collections import OrderedDict
 from tqdm import tqdm
+from huggingface_hub import hf_hub_download
 
 import torch
 
@@ -523,3 +526,31 @@ def download_url(url, download_dir, check_overwrite=True):
     with DownloadProgressBar(unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:
         urllib.request.urlretrieve(url, filename=file_to_write, reporthook=t.update_to)
+
+
+def download_file_from_hf(repo_id, filename, download_dir, check_overwrite=True):
+    """
+    Downloads a file from Hugging Face.
+    Reference: https://huggingface.co/docs/huggingface_hub/main/en/guides/download
+    Example usage:
+        repo_id = "amandlek/mimicgen_datasets"
+        filename = "core/coffee_d0.hdf5"
+        download_dir = "/tmp"
+        download_file_from_hf(repo_id, filename, download_dir, check_overwrite=True)
+    Args:
+        repo_id (str): Hugging Face repo ID
+        filename (str): path to file in repo
+        download_dir (str): path to directory where file should be downloaded
+        check_overwrite (bool): if True, will sanity check the download fpath to make sure a file of that name
+            doesn't already exist there
+    """
+    with tempfile.TemporaryDirectory() as td:
+        # first check if file exists
+        file_to_write = os.path.join(download_dir, os.path.basename(filename))
+        if check_overwrite and os.path.exists(file_to_write):
+            user_response = input(f"Warning: file {file_to_write} already exists. Overwrite? y/n\n")
+            assert user_response.lower() in {"yes", "y"}, f"Did not receive confirmation. Aborting download."
+
+        # note: fpath is a pointer, so we need to look up the actual path on disk and then move it
+        fpath = hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset", cache_dir=td)
+        shutil.move(os.path.realpath(fpath), file_to_write)

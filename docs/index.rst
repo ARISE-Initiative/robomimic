@@ -81,6 +81,7 @@ Welcome to robomimic's documentation!
    :maxdepth: 1
    :caption: Previous Versions
 
+   versions/v0.3
    versions/v0.2
 
 
