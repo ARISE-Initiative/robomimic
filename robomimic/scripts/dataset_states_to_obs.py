@@ -196,7 +196,6 @@ def get_camera_info(
                 eef_site_name = env.base_env.robots[robot_ind].composite_controller.part_controllers["right"].ref_name
             else:
                 eef_site_name = env.base_env.robots[robot_ind].controller.eef_name
-            eef_site_name = env.base_env.robots[0].controller.eef_name
             eef_pos = np.array(env.base_env.sim.data.site_xpos[env.base_env.sim.model.site_name2id(eef_site_name)])
             eef_rot = np.array(env.base_env.sim.data.site_xmat[env.base_env.sim.model.site_name2id(eef_site_name)].reshape([3, 3]))
             eef_pose = np.zeros((4, 4)) # eef pose in world frame
