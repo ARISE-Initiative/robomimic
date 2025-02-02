@@ -29,6 +29,7 @@ class BCConfig(BaseConfig):
         self.algo.optim_params.policy.learning_rate.decay_factor = 0.1  # factor to decay LR by (if epoch schedule non-empty)
         self.algo.optim_params.policy.learning_rate.epoch_schedule = [] # epochs where LR decay occurs
         self.algo.optim_params.policy.learning_rate.scheduler_type = "multistep" # learning rate scheduler ("multistep", "linear", etc) 
+        self.algo.optim_params.policy.learning_rate.do_not_lock_keys()
         self.algo.optim_params.policy.regularization.L2 = 0.00          # L2 regularization strength
 
         # loss weights

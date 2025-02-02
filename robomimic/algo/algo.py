@@ -174,10 +174,13 @@ class Algo(object):
         self.optimizers = dict()
         self.lr_schedulers = dict()
 
+        self.step_lr_schedulers_every_batch = dict()
+
         for k in self.optim_params:
             # only make optimizers for networks that have been created - @optim_params may have more
             # settings for unused networks
             if k in self.nets:
+                self.step_lr_schedulers_every_batch[k] = self.optim_params[k].learning_rate.get("step_every_batch", False)
                 if isinstance(self.nets[k], nn.ModuleList):
                     self.optimizers[k] = [
                         TorchUtils.optimizer_from_optim_params(net_optim_params=self.optim_params[k], net=self.nets[k][i])
@@ -255,6 +258,15 @@ class Algo(object):
         assert validate or self.nets.training
         return OrderedDict()
 
+    def on_gradient_step(self):
+        """
+        Called after each gradient step.
+        """
+        # LR scheduling updates
+        for k, v in self.step_lr_schedulers_every_batch.items():
+            if v and self.lr_schedulers[k] is not None: 
+                self.lr_schedulers[k].step()
+
     def log_info(self, info):
         """
         Process info dictionary from @train_on_batch to summarize
@@ -279,10 +291,9 @@ class Algo(object):
         """
         Called at the end of each epoch.
         """
-
         # LR scheduling updates
-        for k in self.lr_schedulers:
-            if self.lr_schedulers[k] is not None:
+        for k, v in self.step_lr_schedulers_every_batch.items():
+            if not v and self.lr_schedulers[k] is not None: 
                 self.lr_schedulers[k].step()
 
     def set_eval(self):

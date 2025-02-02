@@ -2,6 +2,7 @@
 This file contains some PyTorch utilities.
 """
 import numpy as np
+import math
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
@@ -138,11 +139,13 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
         lr_scheduler (torch.optim.lr_scheduler or None): learning rate scheduler
     """
     lr_scheduler_type = net_optim_params["learning_rate"].get("scheduler_type", "multistep")
-    epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+    num_train_batches = net_optim_params["num_train_batches"]
+    num_epochs = net_optim_params["num_epochs"]
 
     lr_scheduler = None
-    if len(epoch_schedule) > 0:
-        if lr_scheduler_type == "linear":
+    if lr_scheduler_type == "linear":
+        epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+        if len(epoch_schedule) > 0:
             assert len(epoch_schedule) == 1
             end_epoch = epoch_schedule[0]
             
@@ -152,14 +155,29 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
                 end_factor=net_optim_params["learning_rate"]["decay_factor"],
                 total_iters=end_epoch,
             )
-        elif lr_scheduler_type == "multistep":
+    elif lr_scheduler_type == "multistep":
+        epoch_schedule = net_optim_params["learning_rate"]["epoch_schedule"]
+        if len(epoch_schedule) > 0:
             return optim.lr_scheduler.MultiStepLR(
                 optimizer=optimizer,
                 milestones=epoch_schedule,
                 gamma=net_optim_params["learning_rate"]["decay_factor"],
             )
-        else:
-            raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
+    elif lr_scheduler_type == "cosine":
+        assert net_optim_params["learning_rate"]["step_every_batch"]
+        # source: https://github.com/huggingface/diffusers/blob/ee7e141d805b0d87ad207872060ae1f15ce65943/src/diffusers/optimization.py#L154
+        num_warmup_steps = net_optim_params["learning_rate"].get("warmup_steps", 0)
+        num_training_steps = num_train_batches * num_epochs
+        num_cycles = net_optim_params["learning_rate"].get("num_cycles", 0.5) # number of cosine cycles (0 to 2pi) in the LR schedule, default to half-cycle 
+        def lr_lambda(current_step):
+            if current_step < num_warmup_steps:
+                return float(current_step) / float(max(1, num_warmup_steps))
+            progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
+            return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
+        return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    else:
+        raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
         
     return lr_scheduler
 
