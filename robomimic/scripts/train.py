@@ -42,7 +42,7 @@ from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
 
 
-def train(config, device):
+def train(config, device, resume=False):
     """
     Train a model using the algorithm.
     """
@@ -57,7 +57,11 @@ def train(config, device):
     print("\n============= New Training Run with Config =============")
     print(config)
     print("")
-    log_dir, ckpt_dir, video_dir, vis_dir = TrainUtils.get_exp_dir(config)
+    log_dir, ckpt_dir, video_dir, vis_dir, time_dir = TrainUtils.get_exp_dir(config, resume=resume)
+
+    # path for latest model and backup (to support @resume functionality)
+    latest_model_path = os.path.join(time_dir, "last.pth")
+    latest_model_backup_path = os.path.join(time_dir, "last_bak.pth")
 
     if config.experiment.logging.terminal_output_to_txt:
         # log stdout and stderr to a text file
@@ -221,6 +225,20 @@ def train(config, device):
         ac_dim=shape_meta_list[0]["ac_dim"],
         device=device
     )
+
+    if resume:
+        # load ckpt dict
+        print("*" * 50)
+        print("resuming from ckpt at {}".format(latest_model_path))
+        try:
+            ckpt_dict = FileUtils.load_dict_from_checkpoint(ckpt_path=latest_model_path)
+        except Exception as e:
+            print("got error: {} when loading from {}".format(e, latest_model_path))
+            print("trying backup path {}".format(latest_model_backup_path))
+            ckpt_dict = FileUtils.load_dict_from_checkpoint(ckpt_path=latest_model_backup_path)
+        # load model weights and optimizer state
+        model.deserialize(ckpt_dict["model"])
+        print("*" * 50)
     
     # save the config as a json file
     with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
@@ -251,7 +269,19 @@ def train(config, device):
     best_success_rate = {k: -1. for k in envs} if config.experiment.rollout.enabled else None
     last_ckpt_time = time.time()
 
-    for epoch in range(1, config.train.num_epochs + 1): # epoch numbers start at 1
+    start_epoch = 1 # epoch numbers start at 1
+    if resume:
+        # load variable state needed for train loop
+        variable_state = ckpt_dict["variable_state"]
+        start_epoch = variable_state["epoch"] + 1 # start at next epoch, since this recorded the last epoch of training completed
+        best_valid_loss = variable_state["best_valid_loss"]
+        best_return = variable_state["best_return"]
+        best_success_rate = variable_state["best_success_rate"]
+        print("*" * 50)
+        print("resuming training from epoch {}".format(start_epoch))
+        print("*" * 50)
+
+    for epoch in range(start_epoch, config.train.num_epochs + 1):
         step_log = TrainUtils.run_epoch(
             model=model,
             data_loader=train_loader,
@@ -399,6 +429,14 @@ def train(config, device):
         #     for env_name in video_paths:
         #         os.remove(video_paths[env_name])
 
+        # get variable state for saving model
+        variable_state = dict(
+            epoch=epoch,
+            best_valid_loss=best_valid_loss,
+            best_return=best_return,
+            best_success_rate=best_success_rate,
+        )
+
         # Save model checkpoints based on conditions (success rate, validation loss, etc)
         if should_save_ckpt:    
             TrainUtils.save_model(
@@ -406,10 +444,28 @@ def train(config, device):
                 config=config,
                 env_meta=env_meta,
                 shape_meta=shape_meta,
+                variable_state=variable_state,
                 ckpt_path=os.path.join(ckpt_dir, epoch_ckpt_name + ".pth"),
                 obs_normalization_stats=obs_normalization_stats,
                 action_normalization_stats=action_normalization_stats,
             )
+
+        # always save latest model for resume functionality
+        print("\nsaving latest model at {}...\n".format(latest_model_path))
+        TrainUtils.save_model(
+            model=model,
+            config=config,
+            env_meta=env_meta,
+            shape_meta=shape_meta,
+            variable_state=variable_state,
+            ckpt_path=latest_model_path,
+            obs_normalization_stats=obs_normalization_stats,
+            action_normalization_stats=action_normalization_stats,
+        )
+
+        # keep a backup model in case last.pth is malformed (e.g. job died last time during saving)
+        shutil.copyfile(latest_model_path, latest_model_backup_path)
+        print("\nsaved backup of latest model at {}\n".format(latest_model_backup_path))
 
         # Finally, log memory usage in MB
         process = psutil.Process(os.getpid())
@@ -467,7 +523,7 @@ def main(args):
     # catch error during training and print it
     res_str = "finished run successfully!"
     try:
-        train(config, device=device)
+        train(config, device=device, resume=args.resume)
     except Exception as e:
         res_str = "run failed with error:\n{}\n\n{}".format(e, traceback.format_exc())
     print(res_str)
@@ -513,6 +569,13 @@ if __name__ == "__main__":
         "--debug",
         action='store_true',
         help="set this flag to run a quick training run for debugging purposes"
+    )
+
+    # resume training from latest checkpoint
+    parser.add_argument(
+        "--resume",
+        action='store_true',
+        help="set this flag to resume training from latest checkpoint",
     )
 
     args = parser.parse_args()

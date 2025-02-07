@@ -379,6 +379,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
         """
         return {
             "nets": self.nets.state_dict(),
+            "optimizers": { k : self.optimizers[k].state_dict() for k in self.optimizers },
+            "lr_schedulers": { k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
             "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
         }
 
@@ -393,6 +395,11 @@ class DiffusionPolicyUNet(PolicyAlgo):
         self.nets.load_state_dict(model_dict["nets"])
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
+        for k in model_dict["optimizers"]:
+            self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
+        for k in model_dict["lr_schedulers"]:
+            if model_dict["lr_schedulers"][k] is not None:
+                self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
 
     
             

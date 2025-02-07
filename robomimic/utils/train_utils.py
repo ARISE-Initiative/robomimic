@@ -29,7 +29,7 @@ from robomimic.algo import RolloutPolicy
 from tianshou.env import SubprocVectorEnv
 
 
-def get_exp_dir(config, auto_remove_exp_dir=False):
+def get_exp_dir(config, auto_remove_exp_dir=False, resume=False):
     """
     Create experiment directory from config. If an identical experiment directory
     exists and @auto_remove_exp_dir is False (default), the function will prompt 
@@ -39,6 +39,8 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     Args:
         auto_remove_exp_dir (bool): if True, automatically remove the existing experiment
             folder if it exists at the same path.
+        resume (bool): if True, resume an existing training run instead of creating a 
+            new experiment directory
     
     Returns:
         log_dir (str): path to created log directory (sub-folder in experiment directory)
@@ -57,7 +59,13 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
         # relative paths are specified relative to robomimic module location
         base_output_dir = os.path.join(robomimic.__path__[0], base_output_dir)
     base_output_dir = os.path.join(base_output_dir, config.experiment.name)
-    if os.path.exists(base_output_dir):
+    if resume:
+        assert os.path.exists(base_output_dir), "Resuming training run, but output dir {} does not exist".format(base_output_dir)
+        subdir_lst = os.listdir(base_output_dir)
+        assert len(subdir_lst) == 1, "Found more than one subdir {} in output dir {}".format(subdir_lst, base_output_dir)
+        time_str = subdir_lst[0]
+        assert os.path.isdir(os.path.join(base_output_dir, time_str)), "Found item {} that is not a subdirectory in {}".format(time_str, base_output_dir)
+    elif os.path.exists(base_output_dir):
         if not auto_remove_exp_dir:
             ans = input("WARNING: model directory ({}) already exists! \noverwrite? (y/n)\n".format(base_output_dir))
         else:
@@ -70,21 +78,23 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     output_dir = None
     if config.experiment.save.enabled:
         output_dir = os.path.join(base_output_dir, time_str, "models")
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=resume)
 
     # tensorboard directory
     log_dir = os.path.join(base_output_dir, time_str, "logs")
-    os.makedirs(log_dir)
+    os.makedirs(log_dir, exist_ok=resume)
 
     # video directory
     video_dir = os.path.join(base_output_dir, time_str, "videos")
-    os.makedirs(video_dir)
+    os.makedirs(video_dir, exist_ok=resume)
 
     # vis directory
     vis_dir = os.path.join(base_output_dir, time_str, "vis")
-    os.makedirs(vis_dir)
+    os.makedirs(vis_dir, exist_ok=resume)
+
+    time_dir = os.path.join(base_output_dir, time_str)
     
-    return log_dir, output_dir, video_dir, vis_dir
+    return log_dir, output_dir, video_dir, vis_dir, time_dir
 
 
 def load_data_for_training(config, obs_keys):
@@ -672,7 +682,7 @@ def should_save_from_rollout_logs(
     )
 
 
-def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None, action_normalization_stats=None):
+def save_model(model, config, env_meta, shape_meta, ckpt_path, variable_state=None, obs_normalization_stats=None, action_normalization_stats=None):
     """
     Save model to a torch pth file.
 
@@ -686,6 +696,9 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         shape_meta (dict): shape metdata for this training run
 
         ckpt_path (str): writes model checkpoint to this path
+
+        variable_state (dict): internal variable state in main train loop, used for restoring training process
+            from ckpt
 
         obs_normalization_stats (dict): optionally pass a dictionary for observation
             normalization. This should map observation keys to dicts
@@ -702,6 +715,7 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         algo_name=config.algo_name,
         env_metadata=env_meta,
         shape_metadata=shape_meta,
+        variable_state=variable_state,
     )
     if obs_normalization_stats is not None:
         assert config.train.hdf5_normalize_obs
