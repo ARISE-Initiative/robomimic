@@ -41,6 +41,11 @@ try:
     from libero.libero.envs.problems import *
 except ImportError:
     print("WARNING: could not import libero envs")
+try:
+    # try to import mimiclabs environments
+    from mimiclabs.mimiclabs.envs import *
+except ImportError:
+    print("WARNING: could not import mimiclabs envs")
 
 
 class EnvRobosuite(EB.EnvBase):
