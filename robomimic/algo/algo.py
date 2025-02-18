@@ -230,12 +230,30 @@ class Algo(object):
         Returns:
             batch (dict): postproceesed batch
         """
+
+        # ensure obs_normalization_stats are torch Tensors on proper device
+        obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(obs_normalization_stats), self.device))
+
+        # we will search the nested batch dictionary for the following special batch dict keys
+        # and apply the processing function to their values (which correspond to observations)
         obs_keys = ["obs", "next_obs", "goal_obs"]
-        for k in obs_keys:
-            if k in batch and batch[k] is not None:
-                batch[k] = ObsUtils.process_obs_dict(batch[k])
-                if obs_normalization_stats is not None:
-                    batch[k] = ObsUtils.normalize_dict(batch[k], obs_normalization_stats=obs_normalization_stats)
+
+        def recurse_helper(d):
+            """
+            Apply process_obs_dict to values in nested dictionary d that match a key in obs_keys.
+            """
+            for k in d:
+                if k in obs_keys:
+                    # found key - stop search and process observation
+                    if d[k] is not None:
+                        d[k] = ObsUtils.process_obs_dict(d[k])
+                        if obs_normalization_stats is not None:
+                            d[k] = ObsUtils.normalize_dict(d[k], normalization_stats=obs_normalization_stats)
+                elif isinstance(d[k], dict):
+                    # search down into dictionary
+                    recurse_helper(d[k])
+
+        recurse_helper(batch)
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -641,13 +659,17 @@ class RolloutPolicy(object):
 
             batched (bool): whether the input is already batched
         """
-        if self.obs_normalization_stats is not None:
-            ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
         if not batched:
             ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
+        if self.obs_normalization_stats is not None:
+            # ensure obs_normalization_stats are torch Tensors on proper device
+            obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(self.obs_normalization_stats), self.policy.device))
+            # limit normalization to obs keys being used, in case environment includes extra keys
+            ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
+            ob = ObsUtils.normalize_dict(ob, normalization_stats=obs_normalization_stats)
         return ob
 
     def __repr__(self):

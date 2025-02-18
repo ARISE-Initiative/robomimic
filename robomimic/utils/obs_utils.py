@@ -41,8 +41,9 @@ OBS_MODALITY_CLASSES = {}
 # in their config, without having to manually register their class internally.
 # This also future-proofs us for any additional encoder / randomizer classes we would
 # like to add ourselves.
-OBS_ENCODER_CORES = {"None": None}          # Include default None
-OBS_RANDOMIZERS = {"None": None}            # Include default None
+OBS_ENCODER_CORES = {"None": None}          # Per-modality core net as defined in obs_cores.py, e.g., "VisualCore"
+OBS_RANDOMIZERS = {"None": None}            # Obs randomizer defined in obs_cores.py, e.g., "CropRandomizer"
+OBS_ENCODER_BACKBONES = {"None": None}      # Architecture backbones for encoding obervation, e.g., "ResNet18Conv"
 
 
 def register_obs_key(target_class):
@@ -58,6 +59,10 @@ def register_encoder_core(target_class):
 def register_randomizer(target_class):
     assert target_class not in OBS_RANDOMIZERS, f"Already registered obs randomizer {target_class}!"
     OBS_RANDOMIZERS[target_class.__name__] = target_class
+
+def register_encoder_backbone(target_class):
+    assert target_class not in OBS_ENCODER_BACKBONES, f"Already registered obs encoder backbone {target_class}!"
+    OBS_ENCODER_BACKBONES[target_class.__name__] = target_class
 
 
 class ObservationKeyToModalityDict(dict):
@@ -372,7 +377,7 @@ def process_frame(frame, channel_dim, scale):
     Args:
         frame (np.array or torch.Tensor): frame array
         channel_dim (int): Number of channels to sanity check for
-        scale (float): Value to normalize inputs by
+        scale (float or None): Value to normalize inputs by
 
     Returns:
         processed_frame (np.array or torch.Tensor): processed frame
@@ -380,8 +385,9 @@ def process_frame(frame, channel_dim, scale):
     # Channel size should either be 3 (RGB) or 1 (depth)
     assert (frame.shape[-1] == channel_dim)
     frame = TU.to_float(frame)
-    frame /= scale
-    frame = frame.clip(0.0, 1.0)
+    if scale is not None:
+        frame = frame / scale
+        frame = frame.clip(0.0, 1.0)
     frame = batch_image_hwc_to_chw(frame)
 
     return frame
@@ -434,7 +440,7 @@ def unprocess_frame(frame, channel_dim, scale):
     Args:
         frame (np.array or torch.Tensor): frame array
         channel_dim (int): What channel dimension should be (used for sanity check)
-        scale (float): Scaling factor to apply during denormalization
+        scale (float or None): Scaling factor to apply during denormalization
 
     Returns:
         unprocessed_frame (np.array or torch.Tensor): frame passed through
@@ -442,7 +448,8 @@ def unprocess_frame(frame, channel_dim, scale):
     """
     assert frame.shape[-3] == channel_dim # check for channel dimension
     frame = batch_image_chw_to_hwc(frame)
-    frame *= scale
+    if scale is not None:
+        frame = scale * frame
     return frame
 
 
@@ -480,22 +487,26 @@ def normalize_dict(dict, normalization_stats):
     """
 
     # ensure we have statistics for each modality key in the dict
-    assert set(dict.keys()).issubset(normalization_stats)
+    assert set(dict.keys()).issubset(normalization_stats), f"dict keys {list(dict.keys())} \
+         should be subset of normalization stats keys {list(normalization_stats.keys())}"
 
     for m in dict:
-        offset = normalization_stats[m]["offset"]
-        scale = normalization_stats[m]["scale"]
+        offset = normalization_stats[m]["offset"][0]
+        scale = normalization_stats[m]["scale"][0]
 
         # check shape consistency
-        shape_len_diff = len(offset.shape) - len(dict[m].shape)
-        assert shape_len_diff in [0, 1], "shape length mismatch in @normalize_dict"
-        # if dict has no leading batch dim, check shapes match exactly, else allow first dim to broadcast
-        assert offset.shape[1:] == dict[m].shape[(1 - shape_len_diff):], "shape mismatch in @normalize_dict"
+        o_num_dims = len(offset.shape)
+        shape_len_diff = len(offset.shape) - o_num_dims
+        assert shape_len_diff >= 0, "shape length mismatch in @normalize_dict"
+        assert dict[m].shape[-o_num_dims:] == offset.shape, "shape mismatch in @normalize_obs"
 
-        # handle case where obs dict is not batched by removing stats batch dimension
-        if shape_len_diff == 1:
-            offset = offset[0]
-            scale = scale[0]
+        # Obs can have one or more leading batch dims - prepare for broadcasting.
+        # 
+        # As an example, if the obs has shape [B, T, D] and our offset / scale stats are shape [D]
+        # then we should pad the stats to shape [1, 1, D].
+        reshape_padding = tuple([1] * shape_len_diff)
+        offset = offset.reshape(reshape_padding + tuple(offset.shape))
+        scale = scale.reshape(reshape_padding + tuple(scale.shape))
 
         dict[m] = (dict[m] - offset) / scale
 
@@ -980,10 +991,34 @@ class ScanModality(Modality):
 
     @classmethod
     def _default_obs_processor(cls, obs):
+        # Channel swaps ([...,] L, C) --> ([...,] C, L)
+        
+        # First, add extra dimension at 2nd to last index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+        
+        # Convert shape
+        obs = batch_image_hwc_to_chw(obs)
+        
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
     @classmethod
     def _default_obs_unprocessor(cls, obs):
+        # Channel swaps ([B,] C, L) --> ([B,] L, C)
+        
+        # First, add extra dimension at 1st index to treat this as a frame
+        shape = obs.shape
+        new_shape = [*shape[:-2], 1, *shape[-2:]]
+        obs = obs.reshape(new_shape)
+
+        # Convert shape
+        obs = batch_image_chw_to_hwc(obs)
+
+        # Remove extra dimension (it's the second from last dimension)
+        obs = obs.squeeze(-2)
         return obs
 
 

@@ -83,12 +83,19 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
     return demo_keys
 
 
-def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
+def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_specific_obs_processors=True):
     """
     Retrieves env metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+
+        ds_format (str): dataset format, defaults to "robomimic"
+
+        set_env_specific_obs_processors (bool): environment might have custom rules for how to process
+            observations - if this flag is true, make sure ObsUtils will use these custom settings. This
+            is a good place to do this operation to make sure it happens before loading data, running a 
+            trained model, etc.
 
     Returns:
         env_meta (dict): environment metadata. Contains 3 keys:
@@ -107,6 +114,9 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic"):
     else:
         raise ValueError
     f.close()
+    if set_env_specific_obs_processors:
+        # handle env-specific custom observation processing logic
+        EnvUtils.set_env_specific_obs_processing(env_meta=env_meta)
     return env_meta
 
 
@@ -128,6 +138,7 @@ def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=No
             :`'all_shapes'`: dictionary that maps observation key string to shape
             :`'all_obs_keys'`: list of all observation modalities used
             :`'use_images'`: bool, whether or not image modalities are present
+            :`'use_depths'`: bool, whether or not depth modalities are present
     """
 
     shape_meta = {}
@@ -212,6 +223,7 @@ def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=No
     shape_meta['all_shapes'] = all_shapes
     shape_meta['all_obs_keys'] = all_obs_keys
     shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
+    shape_meta['use_depths'] = ObsUtils.has_modality("depth", all_obs_keys)
 
     return shape_meta
 
@@ -506,12 +518,14 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
     # create env from saved metadata
     env = EnvUtils.create_env_from_metadata(
         env_meta=env_meta, 
+        env_name=env_name, 
         render=render, 
         render_offscreen=render_offscreen,
-        use_image_obs=shape_meta["use_images"],
+        use_image_obs=shape_meta.get("use_images", False),
+        use_depth_obs=shape_meta.get("use_depths", False),
     )
     config, _ = config_from_checkpoint(algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False)
-    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment warpper, if applicable
+    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment wrapper, if applicable
     if verbose:
         print("============= Loaded Environment =============")
         print(env)

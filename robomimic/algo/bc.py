@@ -40,7 +40,8 @@ def algo_config_to_class(algo_config):
     vae_enabled = ("vae" in algo_config and algo_config.vae.enabled)
 
     rnn_enabled = algo_config.rnn.enabled
-    transformer_enabled = algo_config.transformer.enabled
+    # support legacy configs that do not have "transformer" item
+    transformer_enabled = ("transformer" in algo_config) and algo_config.transformer.enabled
 
     if gaussian_enabled:
         if rnn_enabled:

@@ -33,10 +33,8 @@ class PrintLogger(object):
         self.log_file.flush()
 
     def flush(self):
-        # this flush method is needed for python 3 compatibility.
-        # this handles the flush command by doing nothing.
-        # you might want to specify some extra behavior here.
-        pass
+        # ensure stdout gets flushed
+        self.terminal.flush()
 
 
 class DataLogger(object):
@@ -139,7 +137,7 @@ class DataLogger(object):
                     if log_stats:
                         stats = self.get_stats(k)
                         for (stat_k, stat_v) in stats.items():
-                            self._wandb_logger.log({stat_k: stat_v}, step=epoch)
+                            self._wandb_logger.log({"{}/{}".format(k, stat_k): stat_v}, step=epoch)
                 elif data_type == 'image':
                     import wandb
                     self._wandb_logger.log({k: wandb.Image(v)}, step=epoch)
