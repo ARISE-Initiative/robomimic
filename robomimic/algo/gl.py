@@ -108,6 +108,9 @@ class GL(PlannerAlgo):
             input_batch (dict): processed and filtered batch that
                 will be used for training 
         """
+        assert len(batch.values()) == 1, "expected dictionary of batches with single key, got {}".format(batch.keys())
+        batch = batch["data"]
+
         input_batch = dict()
 
         # remove temporal batches for all except scalar signals (to be compatible with model outputs)
@@ -117,7 +120,9 @@ class GL(PlannerAlgo):
         input_batch["target_subgoals"] = input_batch["subgoals"]
         input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # NOTE: need to move to device first before float conversion because images will be uint8
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def get_actor_goal_for_training_from_processed_batch(self, processed_batch, **kwargs):
         """
@@ -573,12 +578,17 @@ class ValuePlanner(PlannerAlgo, ValueAlgo):
             input_batch (dict): processed and filtered batch that
                 will be used for training 
         """
+        assert len(batch.values()) == 1, "expected dictionary of batches with single key, got {}".format(batch.keys())
+        batch = batch["data"]
+
         input_batch = dict()
 
         input_batch["planner"] = self.planner.process_batch_for_training(batch)
         input_batch["value_net"] = self.value_net.process_batch_for_training(batch)
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # NOTE: need to move to device first before float conversion because images will be uint8
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def train_on_batch(self, batch, epoch, validate=False):
         """

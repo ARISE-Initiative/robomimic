@@ -60,6 +60,7 @@ class BaseConfig(Config):
         self.train_config()
         self.algo_config()
         self.observation_config()
+        self.meta_config()
 
         # After Config init, new keys cannot be added to the config, except under nested
         # attributes that have called @do_not_lock_keys
@@ -81,9 +82,11 @@ class BaseConfig(Config):
         """
 
         self.experiment.name = "test"                               # name of experiment used to make log files
-        self.experiment.validate = True                             # whether to do validation or not
+        self.experiment.validate = False                            # whether to do validation or not
         self.experiment.logging.terminal_output_to_txt = True       # whether to log stdout to txt file 
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
+        self.experiment.logging.log_wandb = False                   # enable wandb logging
+        self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
 
 
         ## save config - if and when to save model checkpoints ##
@@ -101,8 +104,6 @@ class BaseConfig(Config):
 
         # envs to evaluate model on (assuming rollouts are enabled), to override the metadata stored in dataset
         self.experiment.env = None                                  # no need to set this (unless you want to override)
-        self.experiment.additional_envs = None                      # additional environments that should get evaluated
-
 
         ## rendering config ##
         self.experiment.render = False                              # render on-screen or not
@@ -118,6 +119,14 @@ class BaseConfig(Config):
         self.experiment.rollout.rate = 50                           # do rollouts every @rate epochs
         self.experiment.rollout.warmstart = 0                       # number of epochs to wait before starting rollouts
         self.experiment.rollout.terminate_on_success = True         # end rollout early after task success
+        self.experiment.rollout.mode = None                         # set to specific strings to support different policy execution modes
+        self.experiment.rollout.use_subproc_eval = False            # if True, run rollouts in subprocess
+        self.experiment.rollout.batched = False
+        self.experiment.rollout.num_batch_envs = 5
+        
+        # for updating the evaluation env meta data
+        self.experiment.env_meta_update_dict = Config()
+        self.experiment.env_meta_update_dict.do_not_lock_keys()
 
     def train_config(self):
         """
@@ -152,6 +161,9 @@ class BaseConfig(Config):
         # used for parallel data loading
         self.train.hdf5_use_swmr = True
 
+        # whether to load "next_obs" group from hdf5 - only needed for batch / offline RL algorithms
+        self.train.hdf5_load_next_obs = False
+
         # if true, normalize observations at train and test time, using the global mean and standard deviation
         # of each observation in each dimension, computed across the training set. See SequenceDataset.normalize_obs
         # in utils/dataset.py for more information.
@@ -160,6 +172,20 @@ class BaseConfig(Config):
         # if provided, use the list of demo keys under the hdf5 group "mask/@hdf5_filter_key" for training, instead 
         # of the full dataset. This provides a convenient way to train on only a subset of the trajectories in a dataset.
         self.train.hdf5_filter_key = None
+
+        # if provided, use the list of demo keys under the hdf5 group "mask/@hdf5_validation_filter_key" for validation.
+        # Must be provided if @experiment.validate is True.
+        self.train.hdf5_validation_filter_key = None
+
+        # if provided, use the first N demo keys in the hdf5 (or under hdf5 filter key) for training
+        self.train.hdf5_first_n_demos = None
+
+        # length of experience sequence to fetch from the dataset
+        # and whether to pad the beginning / end of the sequence at boundaries of trajectory in dataset
+        self.train.seq_length = 1
+        self.train.pad_seq_length = True
+        self.train.frame_stack = 1
+        self.train.pad_frame_stack = True
 
         # length of experience sequence to fetch from the dataset
         self.train.seq_length = 1
@@ -171,6 +197,26 @@ class BaseConfig(Config):
             "rewards", 
             "dones",
         )
+
+        self.train.action_keys = ["actions"]
+
+        # specifing each action keys to load and their corresponding normalization/conversion requirement
+        # e.g. for dataset keys "action/eef_pos" and "action/eef_rot"
+        # the desired value of self.train.action_config is: 
+        # {
+        #   "action/eef_pos": {
+        #       "normalization": "min_max",
+        #       "rot_conversion: None  
+        #   },
+        #   "action/eef_rot": {
+        #       "normalization": None,
+        #       "rot_conversion: "axis_angle_to_6d"
+        #   }
+        # }
+        # self.train.action_config.actions.normalization = None # "min_max"
+        # self.train.action_config.actions.rot_conversion = None # "axis_angle_to_6d"
+        self.train.action_config = {}
+        # self.train.action_config.do_not_lock_keys()
 
         # one of [None, "last"] - set to "last" to include goal observations in each batch
         self.train.goal_mode = None
@@ -214,10 +260,12 @@ class BaseConfig(Config):
         self.observation.modalities.obs.rgb = []              # specify rgb image observations for agent
         self.observation.modalities.obs.depth = []
         self.observation.modalities.obs.scan = []
+        self.observation.modalities.obs.lang = []
         self.observation.modalities.goal.low_dim = []           # specify low-dim goal observations to condition agent on
         self.observation.modalities.goal.rgb = []             # specify rgb image goal observations to condition agent on
         self.observation.modalities.goal.depth = []
         self.observation.modalities.goal.scan = []
+        self.observation.modalities.goal.lang = []
         self.observation.modalities.obs.do_not_lock_keys()
         self.observation.modalities.goal.do_not_lock_keys()
 
@@ -235,27 +283,13 @@ class BaseConfig(Config):
         self.observation.encoder.low_dim.obs_randomizer_kwargs.do_not_lock_keys()
 
         # =============== RGB default encoder (ResNet backbone + linear layer output) ===============
-        self.observation.encoder.rgb.core_class = "VisualCore"
-        self.observation.encoder.rgb.core_kwargs.feature_dimension = 64
-        self.observation.encoder.rgb.core_kwargs.flatten = True
-        self.observation.encoder.rgb.core_kwargs.backbone_class = "ResNet18Conv"
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = False
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
-        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.do_not_lock_keys()
-        self.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"                # Alternate options are "SpatialMeanPool" or None (no pooling)
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32                      # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.output_variance = False          # Default arguments for "SpatialSoftmax"
-        self.observation.encoder.rgb.core_kwargs.pool_kwargs.do_not_lock_keys()
+        self.observation.encoder.rgb.core_class = "VisualCore"                  # Default VisualCore class combines backbone (like ResNet-18) with pooling operation (like spatial softmax)
+        self.observation.encoder.rgb.core_kwargs = Config()                     # See models/obs_core.py for important kwargs to set and defaults used
+        self.observation.encoder.rgb.core_kwargs.do_not_lock_keys()
 
         # RGB: Obs Randomizer settings
-        self.observation.encoder.rgb.obs_randomizer_class = None                  # Can set to 'CropRandomizer' to use crop randomization
-        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_height = 76       # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.crop_width = 76        # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.num_crops = 1          # Default arguments for "CropRandomizer"
-        self.observation.encoder.rgb.obs_randomizer_kwargs.pos_enc = False        # Default arguments for "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_class = None                # Can set to 'CropRandomizer' to use crop randomization
+        self.observation.encoder.rgb.obs_randomizer_kwargs = Config()           # See models/obs_core.py for important kwargs to set and defaults used
         self.observation.encoder.rgb.obs_randomizer_kwargs.do_not_lock_keys()
 
         # Allow for other custom modalities to be specified
@@ -266,15 +300,27 @@ class BaseConfig(Config):
 
         # =============== Scan default encoder (Conv1d backbone + linear layer output) ===============
         self.observation.encoder.scan = deepcopy(self.observation.encoder.rgb)
-        self.observation.encoder.scan.core_kwargs.pop("backbone_class")
-        self.observation.encoder.scan.core_kwargs.pop("backbone_kwargs")
 
         # Scan: Modify the core class + kwargs, otherwise, is same as rgb encoder
-        self.observation.encoder.scan.core_class = "ScanCore"
-        self.observation.encoder.scan.core_kwargs.conv_activation = "relu"
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.out_channels = [32, 64, 64]
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.kernel_size = [8, 4, 2]
-        self.observation.encoder.scan.core_kwargs.conv_kwargs.stride = [4, 2, 1]
+        self.observation.encoder.scan.core_class = "ScanCore"                   # Default ScanCore class uses Conv1D to process this modality
+        self.observation.encoder.scan.core_kwargs = Config()                    # See models/obs_core.py for important kwargs to set and defaults used
+        self.observation.encoder.scan.core_kwargs.do_not_lock_keys()
+
+        # =============== Lang default encoder (no encoder) ===============
+        self.observation.encoder.lang = deepcopy(self.observation.encoder.low_dim)
+
+    def meta_config(self):
+        """
+        This function populates the `config.meta` attribute of the config. This portion of the config 
+        is used to specify job information primarily for hyperparameter sweeps.
+        It contains hyperparameter keys and values, which are populated automatically
+        by the hyperparameter config generator (see `utils/hyperparam_utils.py`).
+        These values are read by the wandb logger (see `utils/log_utils.py`) to set job tags.
+        """
+
+        self.meta.hp_base_config_file = None            # base config file in hyperparam sweep
+        self.meta.hp_keys = []                          # relevant keys (swept) in hyperparam sweep
+        self.meta.hp_values = []                        # values corresponding to keys in hyperparam sweep
 
     @property
     def use_goals(self):

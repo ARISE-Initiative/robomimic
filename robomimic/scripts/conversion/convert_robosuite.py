@@ -38,9 +38,13 @@ if __name__ == "__main__":
     # store env meta
     env_name = f["data"].attrs["env"]
     env_info = json.loads(f["data"].attrs["env_info"])
+    if "env_name" in env_info:
+        # make sure we only store environment name at top-level
+        del env_info["env_name"]
     env_meta = dict(
         type=EB.EnvType.ROBOSUITE_TYPE,
         env_name=env_name,
+        env_version=f["data"].attrs["repository_version"],
         env_kwargs=env_info,
     )
     if "env_args" in f["data"].attrs:

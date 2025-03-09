@@ -9,6 +9,13 @@ from robomimic.config.base_config import BaseConfig
 class GLConfig(BaseConfig):
     ALGO_NAME = "gl"
 
+    def train_config(self):
+        """
+        Batch RL algos need next obs
+        """
+        super(GLConfig, self).train_config()
+        self.train.hdf5_load_next_obs = True
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the 

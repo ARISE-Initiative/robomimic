@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 from copy import deepcopy
 from contextlib import contextmanager
+from collections import OrderedDict
 
 import torch.utils.data
 
@@ -20,7 +21,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         self,
         hdf5_path,
         obs_keys,
+        action_keys,
         dataset_keys,
+        action_config,
         frame_stack=1,
         seq_length=1,
         pad_frame_stack=True,
@@ -32,6 +35,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         hdf5_normalize_obs=False,
         filter_by_attribute=None,
         load_next_obs=True,
+        first_n_demos=None,
+        lang=None,
     ):
         """
         Dataset class for fetching sequences of experience.
@@ -79,10 +84,14 @@ class SequenceDataset(torch.utils.data.Dataset):
                 demonstrations to load
 
             load_next_obs (bool): whether to load next_obs from the dataset
+
+            first_n_demos (int or None): if provided, restrict training to use the first N demos
+
+            lang (str or None): language string to embed as language-conditioning
         """
         super(SequenceDataset, self).__init__()
 
-        self.hdf5_path = os.path.expanduser(hdf5_path)
+        self.hdf5_path = os.path.expandvars(os.path.expanduser(hdf5_path))
         self.hdf5_use_swmr = hdf5_use_swmr
         self.hdf5_normalize_obs = hdf5_normalize_obs
         self._hdf5_file = None
@@ -93,9 +102,16 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.load_next_obs = load_next_obs
         self.filter_by_attribute = filter_by_attribute
 
-        # get all keys that needs to be fetched
+        # get all keys that need to be fetched
+        self.lang = lang
         self.obs_keys = tuple(obs_keys)
+        self.action_keys = tuple(action_keys)
         self.dataset_keys = tuple(dataset_keys)
+        if self.action_keys is not None:
+            # add action keys to dataset keys
+            self.dataset_keys = tuple(set(self.dataset_keys).union(set(self.action_keys)))
+
+        self.action_config = action_config
 
         self.n_frame_stack = frame_stack
         assert self.n_frame_stack >= 1
@@ -113,12 +129,15 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.pad_frame_stack = pad_frame_stack
         self.get_pad_mask = get_pad_mask
 
-        self.load_demo_info(filter_by_attribute=self.filter_by_attribute)
+        self.first_n_demos = first_n_demos
+        self.load_demo_info(filter_by_attribute=self.filter_by_attribute, first_n=self.first_n_demos)
 
-        # maybe prepare for observation normalization
+        # maybe prepare for normalization
         self.obs_normalization_stats = None
         if self.hdf5_normalize_obs:
             self.obs_normalization_stats = self.normalize_obs()
+        # TODO: not sure why this is loaded lazily
+        self.action_normalization_stats = None
 
         # maybe store dataset in memory for fast access
         if self.hdf5_cache_mode in ["all", "low_dim"]:
@@ -153,7 +172,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         self.close_and_delete_hdf5_handle()
 
-    def load_demo_info(self, filter_by_attribute=None, demos=None):
+    def load_demo_info(self, filter_by_attribute=None, demos=None, first_n=None):
         """
         Args:
             filter_by_attribute (str): if provided, use the provided filter key
@@ -162,6 +181,8 @@ class SequenceDataset(torch.utils.data.Dataset):
             demos (list): list of demonstration keys to load from the hdf5 file. If 
                 omitted, all demos in the file (or under the @filter_by_attribute 
                 filter key) are used.
+
+            first_n (int or None): if provided, limit the demos in training to the first N demos
         """
         # filter demo trajectory by mask
         if demos is not None:
@@ -174,8 +195,12 @@ class SequenceDataset(torch.utils.data.Dataset):
         # sort demo keys
         inds = np.argsort([int(elem[5:]) for elem in self.demos])
         self.demos = [self.demos[i] for i in inds]
+        if first_n is not None:
+            self.demos = self.demos[:first_n]
 
         self.n_demos = len(self.demos)
+        if first_n is not None:
+            assert self.n_demos == first_n, "mismatch in number of requested demos {} and actual number of demos {}".format(first_n, self.n_demos)
 
         # keep internal index maps to know which transitions belong to which demos
         self._index_to_demo_id = dict()  # maps every index to a demo id
@@ -245,13 +270,13 @@ class SequenceDataset(torch.utils.data.Dataset):
         msg += " (\n\tpath={}\n\tobs_keys={}\n\tseq_length={}\n\tfilter_key={}\n\tframe_stack={}\n"
         msg += "\tpad_seq_length={}\n\tpad_frame_stack={}\n\tgoal_mode={}\n"
         msg += "\tcache_mode={}\n"
-        msg += "\tnum_demos={}\n\tnum_sequences={}\n)"
+        msg += "\tnum_demos={}\n\tnum_sequences={}\n\tlang=\"{}\"\n)"
         filter_key_str = self.filter_by_attribute if self.filter_by_attribute is not None else "none"
         goal_mode_str = self.goal_mode if self.goal_mode is not None else "none"
         cache_mode_str = self.hdf5_cache_mode if self.hdf5_cache_mode is not None else "none"
         msg = msg.format(self.hdf5_path, self.obs_keys, self.seq_length, filter_key_str, self.n_frame_stack,
                          self.pad_seq_length, self.pad_frame_stack, goal_mode_str, cache_mode_str,
-                         self.n_demos, self.total_num_sequences)
+                         self.n_demos, self.total_num_sequences, self.lang if self.lang is not None else "none")
         return msg
 
     def __len__(self):
@@ -284,9 +309,11 @@ class SequenceDataset(torch.utils.data.Dataset):
             all_data[ep]["attrs"] = {}
             all_data[ep]["attrs"]["num_samples"] = hdf5_file["data/{}".format(ep)].attrs["num_samples"]
             # get obs
-            all_data[ep]["obs"] = {k: hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in obs_keys}
+            # all_data[ep]["obs"] = {k: hdf5_file["data/{}/obs/{}".format(ep, k)][()].astype('float32') for k in obs_keys}
+            all_data[ep]["obs"] = {k: hdf5_file["data/{}/obs/{}".format(ep, k)][()] for k in obs_keys}
             if load_next_obs:
-                all_data[ep]["next_obs"] = {k: hdf5_file["data/{}/next_obs/{}".format(ep, k)][()].astype('float32') for k in obs_keys}
+                # all_data[ep]["next_obs"] = {k: hdf5_file["data/{}/next_obs/{}".format(ep, k)][()].astype('float32') for k in obs_keys}
+                all_data[ep]["next_obs"] = {k: hdf5_file["data/{}/next_obs/{}".format(ep, k)][()] for k in obs_keys}
             # get other dataset keys
             for k in dataset_keys:
                 if k in hdf5_file["data/{}".format(ep)]:
@@ -304,33 +331,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         Computes a dataset-wide mean and standard deviation for the observations 
         (per dimension and per obs key) and returns it.
         """
-        def _compute_traj_stats(traj_obs_dict):
-            """
-            Helper function to compute statistics over a single trajectory of observations.
-            """
-            traj_stats = { k : {} for k in traj_obs_dict }
-            for k in traj_obs_dict:
-                traj_stats[k]["n"] = traj_obs_dict[k].shape[0]
-                traj_stats[k]["mean"] = traj_obs_dict[k].mean(axis=0, keepdims=True) # [1, ...]
-                traj_stats[k]["sqdiff"] = ((traj_obs_dict[k] - traj_stats[k]["mean"]) ** 2).sum(axis=0, keepdims=True) # [1, ...]
-            return traj_stats
-
-        def _aggregate_traj_stats(traj_stats_a, traj_stats_b):
-            """
-            Helper function to aggregate trajectory statistics.
-            See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
-            for more information.
-            """
-            merged_stats = {}
-            for k in traj_stats_a:
-                n_a, avg_a, M2_a = traj_stats_a[k]["n"], traj_stats_a[k]["mean"], traj_stats_a[k]["sqdiff"]
-                n_b, avg_b, M2_b = traj_stats_b[k]["n"], traj_stats_b[k]["mean"], traj_stats_b[k]["sqdiff"]
-                n = n_a + n_b
-                mean = (n_a * avg_a + n_b * avg_b) / n
-                delta = (avg_b - avg_a)
-                M2 = M2_a + M2_b + (delta ** 2) * (n_a * n_b) / n
-                merged_stats[k] = dict(n=n, mean=mean, sqdiff=M2)
-            return merged_stats
 
         # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
         # with the previous statistics.
@@ -348,8 +348,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         obs_normalization_stats = { k : {} for k in merged_stats }
         for k in merged_stats:
             # note we add a small tolerance of 1e-3 for std
-            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"]
-            obs_normalization_stats[k]["std"] = np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3
+            obs_normalization_stats[k]["mean"] = merged_stats[k]["mean"].astype(np.float32)
+            obs_normalization_stats[k]["std"] = (np.sqrt(merged_stats[k]["sqdiff"] / merged_stats[k]["n"]) + 1e-3).astype(np.float32)
         return obs_normalization_stats
 
     def get_obs_normalization_stats(self):
@@ -366,6 +366,40 @@ class SequenceDataset(torch.utils.data.Dataset):
         assert self.hdf5_normalize_obs, "not using observation normalization!"
         return deepcopy(self.obs_normalization_stats)
 
+    def get_action_traj(self, ep):
+        action_traj = dict()
+        for key in self.action_keys:
+            action_traj[key] = self.hdf5_file["data/{}/{}".format(ep, key)][()].astype('float32')
+        return action_traj
+
+    def get_action_stats(self):
+        ep = self.demos[0]
+        action_traj = self.get_action_traj(ep)
+        action_stats = _compute_traj_stats(action_traj)
+        print("SequenceDataset: normalizing actions...")
+        for ep in LogUtils.custom_tqdm(self.demos[1:]):
+            action_traj = self.get_action_traj(ep)
+            traj_stats = _compute_traj_stats(action_traj)
+            action_stats = _aggregate_traj_stats(action_stats, traj_stats)
+        return action_stats
+
+    def set_action_normalization_stats(self, action_normalization_stats):
+        self.action_normalization_stats = action_normalization_stats
+
+    def get_action_normalization_stats(self):
+        """
+        Computes a dataset-wide min, max, mean and standard deviation for the actions 
+        (per dimension) and returns it.
+        """
+
+        # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
+        # with the previous statistics.
+        if self.action_normalization_stats is None:
+            action_stats = self.get_action_stats()
+            self.action_normalization_stats = action_stats_to_normalization_stats(
+                action_stats, self.action_config)
+        return self.action_normalization_stats
+
     def get_dataset_for_ep(self, ep, key):
         """
         Helper utility to get a dataset for a specific demonstration.
@@ -378,7 +412,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             # if key is an observation, it may not be in memory
             if '/' in key:
                 key1, key2 = key.split('/')
-                assert(key1 in ['obs', 'next_obs'])
+                assert(key1 in ['obs', 'next_obs', 'action_dict', 'actions_dict'])
                 if key2 not in self.obs_keys_in_memory:
                     key_should_be_in_memory = False
 
@@ -386,7 +420,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             # read cache
             if '/' in key:
                 key1, key2 = key.split('/')
-                assert(key1 in ['obs', 'next_obs'])
+                assert(key1 in ['obs', 'next_obs', 'action_dict', 'actions_dict'])
                 ret = self.hdf5_cache[ep][key1][key2]
             else:
                 ret = self.hdf5_cache[ep][key]
@@ -425,6 +459,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=index_in_demo,
             keys=self.dataset_keys,
+            num_frames_to_stack=self.n_frame_stack - 1, # note: need to decrement self.n_frame_stack by one
             seq_length=self.seq_length
         )
 
@@ -441,8 +476,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             seq_length=self.seq_length,
             prefix="obs"
         )
-        if self.hdf5_normalize_obs:
-            meta["obs"] = ObsUtils.normalize_obs(meta["obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if self.load_next_obs:
             meta["next_obs"] = self.get_obs_sequence_from_demo(
@@ -453,8 +486,6 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=self.seq_length,
                 prefix="next_obs"
             )
-            if self.hdf5_normalize_obs:
-                meta["next_obs"] = ObsUtils.normalize_obs(meta["next_obs"], obs_normalization_stats=self.obs_normalization_stats)
 
         if goal_index is not None:
             goal = self.get_obs_sequence_from_demo(
@@ -465,9 +496,29 @@ class SequenceDataset(torch.utils.data.Dataset):
                 seq_length=1,
                 prefix="next_obs",
             )
-            if self.hdf5_normalize_obs:
-                goal = ObsUtils.normalize_obs(goal, obs_normalization_stats=self.obs_normalization_stats)
             meta["goal_obs"] = {k: goal[k][0] for k in goal}  # remove sequence dimension for goal
+
+        # NOTE: always do action normalization for convenience of implementation (e.g. reshaping from action dict to action vec 
+        #       by using action norm stats shapes for example)
+
+        # get action components
+        ac_dict = OrderedDict()
+        for k in self.action_keys:
+            ac = meta[k]
+            # expand action shape if needed
+            if len(ac.shape) == 1:
+                ac = ac.reshape(-1, 1)
+            ac_dict[k] = ac
+
+        # normalize actions
+        action_normalization_stats = self.get_action_normalization_stats()
+        ac_dict = ObsUtils.normalize_dict(ac_dict, normalization_stats=action_normalization_stats)
+
+        # concatenate all action components
+        meta["actions"] = TensorUtils.dict_to_vector(ac_dict)
+
+        # also return the sampled index
+        meta["index"] = index
 
         return meta
 
@@ -509,11 +560,11 @@ class SequenceDataset(torch.utils.data.Dataset):
         seq = dict()
         for k in keys:
             data = self.get_dataset_for_ep(demo_id, k)
-            seq[k] = data[seq_begin_index: seq_end_index].astype("float32")
+            seq[k] = data[seq_begin_index: seq_end_index]
 
         seq = TensorUtils.pad_sequence(seq, padding=(seq_begin_pad, seq_end_pad), pad_same=True)
         pad_mask = np.array([0] * seq_begin_pad + [1] * (seq_end_index - seq_begin_index) + [0] * seq_end_pad)
-        pad_mask = pad_mask[:, None].astype(np.bool)
+        pad_mask = pad_mask[:, None].astype(bool)
 
         return seq, pad_mask
 
@@ -539,14 +590,13 @@ class SequenceDataset(torch.utils.data.Dataset):
             num_frames_to_stack=num_frames_to_stack,
             seq_length=seq_length,
         )
-        obs = {k.split('/')[1]: obs[k] for k in obs}  # strip the prefix
+        obs = {'/'.join(k.split('/')[1:]): obs[k] for k in obs}  # strip the prefix
         if self.get_pad_mask:
             obs["pad_mask"] = pad_mask
 
-        # prepare image observations from dataset
-        return ObsUtils.process_obs_dict(obs)
+        return obs
 
-    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, seq_length=1):
+    def get_dataset_sequence_from_demo(self, demo_id, index_in_demo, keys, num_frames_to_stack=0, seq_length=1):
         """
         Extract a (sub)sequence of dataset items from a demo given the @keys of the items (e.g., states, actions).
         
@@ -554,6 +604,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id (str): id of the demo, e.g., demo_0
             index_in_demo (int): beginning index of the sequence wrt the demo
             keys (tuple): list of keys to extract
+            num_frames_to_stack (int): numbers of frame to stack. Seq gets prepended with repeated items if out of range
             seq_length (int): sequence length to extract. Seq gets post-pended with repeated items if out of range
 
         Returns:
@@ -563,7 +614,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=index_in_demo,
             keys=keys,
-            num_frames_to_stack=0,  # don't frame stack for meta keys
+            num_frames_to_stack=num_frames_to_stack,
             seq_length=seq_length,
         )
         if self.get_pad_mask:
@@ -582,6 +633,7 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=0,
             keys=self.dataset_keys,
+            num_frames_to_stack=self.n_frame_stack - 1, # note: need to decrement self.n_frame_stack by one
             seq_length=demo_length
         )
         meta["obs"] = self.get_obs_sequence_from_demo(
@@ -611,3 +663,306 @@ class SequenceDataset(torch.utils.data.Dataset):
         `DataLoader` documentation, for more info.
         """
         return None
+
+
+class ReweightedDataset(SequenceDataset):
+    """
+    A dataset class that re-weights the probability of sampling each datapoint
+    according to a binary mask that should be present for each datapoint under
+    the @weight_dataset_key in each trajectory. The negatives will have weight 
+    1.0 and the positives will have weight @weight_value. If no weight is supplied,
+    balanced sampling will be used.
+    """
+    def __init__(
+        self,
+        weight_dataset_key="interventions",
+        weight_value=None,
+        **ds_kwargs,
+    ):
+        """
+        Args:
+            weight_dataset_key (str): name under which the binary mask is stored
+                for each datapoint in a trajectory. For example, if "interventions"
+                is supplied, then the binary mask for the first trajectory should
+                be located in the hdf5 under "data/demo_0/interventions".
+
+            weight_value (float): if provided, weight the positives with this weight
+                value. Otherwise, this weight will be set to approximately
+                sample the positives and negatives in equal proportion.
+        """
+        super(ReweightedDataset, self).__init__(**ds_kwargs)
+
+        self.weight_dataset_key = weight_dataset_key
+        self.weight_value = weight_value
+
+        # build internal map of which dataset items have positive and negative values according
+        # to the mask
+        self._sa_class_map = dict()
+        num_pos = 0.
+        num_total = 0.
+        for ep in self.demos:
+            ep_mask = self.hdf5_file["data/{}/{}".format(ep, self.weight_dataset_key)][()].astype('float32')
+            self._sa_class_map[ep] = np.array(ep_mask).astype('float32')
+            num_pos += np.sum(self._sa_class_map[ep])
+            num_total += ep_mask.shape[0]
+        self._num_pos = num_pos
+        self._num_total = num_total
+
+        # if no weight was provided, use the negative to positive ratio for balanced sampling
+        if self.weight_value is None:
+            assert self._num_pos > 0.
+            self.weight_value = (self._num_total - self._num_pos) / self._num_pos
+
+    def __repr__(self):
+        """
+        Update from superclass to include args.
+        """
+        msg = str(self.__class__.__name__)
+        msg += " (\n\tpath={}\n\tobs_keys={}\n\tseq_length={}\n\tfilter_key={}\n\tframe_stack={}\n"
+        msg += "\tpad_seq_length={}\n\tpad_frame_stack={}\n\tgoal_mode={}\n"
+        msg += "\tcache_mode={}\n"
+        msg += "\tnum_demos={}\n\tnum_sequences={}\n"
+        msg += "\tnum_pos={}\n\tnum_total={}\n\tweight_dataset_key={}\n\tweight_value={}\n\t\n)"
+        filter_key_str = self.filter_by_attribute if self.filter_by_attribute is not None else "none"
+        goal_mode_str = self.goal_mode if self.goal_mode is not None else "none"
+        cache_mode_str = self.hdf5_cache_mode if self.hdf5_cache_mode is not None else "none"
+        msg = msg.format(self.hdf5_path, self.obs_keys, self.seq_length, filter_key_str, self.n_frame_stack,
+                         self.pad_seq_length, self.pad_frame_stack, goal_mode_str, cache_mode_str,
+                         self.n_demos, self.total_num_sequences,
+                         self._num_pos, self._num_total, self.weight_dataset_key, self.weight_value)
+        return msg
+
+    def get_dataset_sampler(self):
+        """
+        Return instance of torch.utils.data.Sampler that weights the relative
+        probability of sampling positive points.
+        """
+        weights = np.zeros(len(self))
+        for index in range(len(self)):
+
+            # index to demo id and offset
+            demo_id = self._index_to_demo_id[index]
+            demo_start_index = self._demo_id_to_start_indices[demo_id]
+            demo_length = self._demo_id_to_demo_length[demo_id]
+            demo_index_offset = 0 if self.pad_frame_stack else (self.n_frame_stack - 1)
+            index_in_demo = index - demo_start_index + demo_index_offset
+
+            # positives get weighted
+            is_positive = bool(self._sa_class_map[demo_id][index_in_demo : index_in_demo + 1].round().astype(int)[0])
+            if is_positive:
+                weights[index] = self.weight_value
+            else:
+                weights[index] = 1.
+
+        sampler = torch.utils.data.WeightedRandomSampler(
+            weights=weights, 
+            num_samples=len(self), 
+            replacement=True,
+        )
+        return sampler
+
+
+def _compute_traj_stats(traj_obs_dict):
+    """
+    Helper function to compute statistics over a single trajectory of observations.
+    """
+    traj_stats = { k : {} for k in traj_obs_dict }
+    for k in traj_obs_dict:
+        traj_stats[k]["n"] = traj_obs_dict[k].shape[0]
+        traj_stats[k]["mean"] = traj_obs_dict[k].mean(axis=0, keepdims=True) # [1, ...]
+        traj_stats[k]["sqdiff"] = ((traj_obs_dict[k] - traj_stats[k]["mean"]) ** 2).sum(axis=0, keepdims=True) # [1, ...]
+        traj_stats[k]["min"] = traj_obs_dict[k].min(axis=0, keepdims=True)
+        traj_stats[k]["max"] = traj_obs_dict[k].max(axis=0, keepdims=True)
+    return traj_stats
+
+
+def _aggregate_traj_stats(traj_stats_a, traj_stats_b):
+    """
+    Helper function to aggregate trajectory statistics.
+    See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+    for more information.
+    """
+    merged_stats = {}
+    for k in traj_stats_a:
+        n_a, avg_a, M2_a, min_a, max_a = traj_stats_a[k]["n"], traj_stats_a[k]["mean"], traj_stats_a[k]["sqdiff"], traj_stats_a[k]["min"], traj_stats_a[k]["max"]
+        n_b, avg_b, M2_b, min_b, max_b = traj_stats_b[k]["n"], traj_stats_b[k]["mean"], traj_stats_b[k]["sqdiff"], traj_stats_b[k]["min"], traj_stats_b[k]["max"]
+        n = n_a + n_b
+        mean = (n_a * avg_a + n_b * avg_b) / n
+        delta = (avg_b - avg_a)
+        M2 = M2_a + M2_b + (delta ** 2) * (n_a * n_b) / n
+        min_ = np.minimum(min_a, min_b)
+        max_ = np.maximum(max_a, max_b)
+        merged_stats[k] = dict(n=n, mean=mean, sqdiff=M2, min=min_, max=max_)
+    return merged_stats
+
+
+def action_stats_to_normalization_stats(action_stats, action_config):
+    action_normalization_stats = OrderedDict()
+    for action_key in action_stats.keys():
+        # get how this action should be normalized from config, default to None
+        norm_method = action_config[action_key].get("normalization", None)
+        if norm_method is None:
+            # no normalization, unit scale, zero offset
+            action_normalization_stats[action_key] = {
+                "scale": np.ones_like(action_stats[action_key]["mean"], dtype=np.float32),
+                "offset": np.zeros_like(action_stats[action_key]["mean"], dtype=np.float32)
+            }
+            assert (action_stats[action_key]["min"].astype(np.float32) >= -1 - 1e-5).all()
+            assert (action_stats[action_key]["max"].astype(np.float32) <= 1 + 1e-5).all()
+        elif norm_method == "min_max":
+            # normalize min to -1 and max to 1
+            range_eps = 1e-4
+            input_min = action_stats[action_key]["min"].astype(np.float32)
+            input_max = action_stats[action_key]["max"].astype(np.float32)
+            # instead of -1 and 1 use numbers just below threshold to prevent numerical instability issues
+            output_min = -0.999999
+            output_max = 0.999999
+            
+            # ignore input dimentions that is too small to prevent division by zero
+            input_range = input_max - input_min
+            ignore_dim = input_range < range_eps
+            input_range[ignore_dim] = output_max - output_min    
+
+            # expected usage of scale and offset
+            # normalized_action = (raw_action - offset) / scale
+            # raw_action = scale * normalized_action + offset
+
+            # eq1: input_max = scale * output_max + offset
+            # eq2: input_min = scale * output_min + offset
+
+            # solution for scale and offset
+            # eq1 - eq2: 
+            #   input_max - input_min = scale * (output_max - output_min)
+            #   (input_max - input_min) / (output_max - output_min) = scale <- eq3
+            # offset = input_min - scale * output_min <- eq4
+            scale = input_range / (output_max - output_min)
+            offset = input_min - scale * output_min
+
+            offset[ignore_dim] = input_min[ignore_dim] - (output_max + output_min) / 2
+
+            action_normalization_stats[action_key] = {
+                "scale": scale,
+                "offset": offset
+            }
+        elif norm_method == "gaussian":
+            # normalize to zero mean unit variance
+            input_mean = action_stats[action_key]["mean"].astype(np.float32)
+            input_std = np.sqrt(action_stats[action_key]["sqdiff"] / action_stats[action_key]["n"]).astype(np.float32)
+
+            # ignore input dimentions that is too small to prevent division by zero
+            std_eps = 1e-6
+            ignore_dim = input_std < std_eps
+            input_std[ignore_dim] = 1.0
+
+            action_normalization_stats[action_key] = {
+                "scale": input_mean,
+                "offset": input_std
+            }
+        else:
+            raise NotImplementedError(
+                'action_config.actions.normalization: "{}" is not supported'.format(norm_method))
+    
+    return action_normalization_stats
+
+
+class MetaDataset(torch.utils.data.Dataset):
+    def __init__(
+        self,
+        datasets,
+        ds_weights,
+        normalize_weights_by_ds_size=False,
+    ):
+        super(MetaDataset, self).__init__()
+        self.datasets = datasets
+        ds_lens = np.array([len(ds) for ds in self.datasets])
+        if normalize_weights_by_ds_size:
+            self.ds_weights = np.array(ds_weights) / ds_lens
+        else:
+            self.ds_weights = ds_weights
+        self._ds_ind_bins = np.cumsum([0] + list(ds_lens))
+
+        # cache mode "all" not supported! The action normalization stats of each
+        # dataset will change after the datasets are already initialized
+        for ds in self.datasets:
+            assert ds.hdf5_cache_mode != "all"
+
+        # TODO: comment
+        action_stats = self.get_action_stats()
+        self.action_normalization_stats = action_stats_to_normalization_stats(
+            action_stats, self.datasets[0].action_config)
+        self.set_action_normalization_stats(self.action_normalization_stats)
+    
+    def __len__(self):
+        return np.sum([len(ds) for ds in self.datasets])
+
+    def __getitem__(self, idx):
+        ds_ind = np.digitize(idx, self._ds_ind_bins) - 1
+        ind_in_ds = idx - self._ds_ind_bins[ds_ind]
+        meta = self.datasets[ds_ind].__getitem__(ind_in_ds)
+        meta["index"] = idx
+        return meta
+
+    def get_ds_label(self, idx):
+        ds_ind = np.digitize(idx, self._ds_ind_bins) - 1
+        ds_label = self.ds_labels[ds_ind]
+        return ds_label
+    
+    def get_ds_id(self, idx):
+        ds_ind = np.digitize(idx, self._ds_ind_bins) - 1
+        ds_label = self.ds_labels[ds_ind]
+        return self.ds_labels_to_ids[ds_label]
+
+    def __repr__(self):
+        str_output = '\n'.join([ds.__repr__() for ds in self.datasets])
+        return str_output
+
+    def get_dataset_sampler(self):
+        weights = np.ones(len(self))
+        for i, (start, end) in enumerate(zip(self._ds_ind_bins[:-1], self._ds_ind_bins[1:])):
+            weights[start:end] = self.ds_weights[i]
+
+        sampler = torch.utils.data.WeightedRandomSampler(
+            weights=weights,
+            num_samples=len(self),
+            replacement=True,
+        )
+        return sampler
+
+    def get_action_stats(self):
+        meta_action_stats = self.datasets[0].get_action_stats()
+        for dataset in self.datasets[1:]:
+            ds_action_stats = dataset.get_action_stats()
+            meta_action_stats = _aggregate_traj_stats(meta_action_stats, ds_action_stats)
+            
+        return meta_action_stats
+    
+    def set_action_normalization_stats(self, action_normalization_stats):
+        self.action_normalization_stats = action_normalization_stats
+        for ds in self.datasets:
+            ds.set_action_normalization_stats(self.action_normalization_stats)
+
+    def get_action_normalization_stats(self):
+        """
+        Computes a dataset-wide min, max, mean and standard deviation for the actions 
+        (per dimension) and returns it.
+        """
+        
+        # Run through all trajectories. For each one, compute minimal observation statistics, and then aggregate
+        # with the previous statistics.
+        if self.action_normalization_stats is None:
+            action_stats = self.get_action_stats()
+            self.action_normalization_stats = action_stats_to_normalization_stats(
+                action_stats, self.datasets[0].action_config)
+        return self.action_normalization_stats
+
+    def __repr__(self):
+        """
+        Pretty print the class and important attributes on a call to `print`.
+        """
+        msg = str(self.__class__.__name__)
+        msg += " (\n\tnum_datasets={}\n\tds_weights={}\n)"
+        msg = msg.format(len(self.datasets), self.ds_weights)
+        for ds_ind, ds in enumerate(self.datasets):
+            msg += "\nDataset {}\n".format(ds_ind)
+            msg += ds.__repr__()
+        return msg

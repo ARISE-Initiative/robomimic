@@ -17,6 +17,9 @@ class CQLConfig(BaseConfig):
         # increase batch size to 1024 (found to work better for most manipulation experiments)
         self.train.batch_size = 1024
 
+        # Batch RL algos need next obs
+        self.train.hdf5_load_next_obs = True
+
     def algo_config(self):
         """
         This function populates the `config.algo` attribute of the config, and is given to the 

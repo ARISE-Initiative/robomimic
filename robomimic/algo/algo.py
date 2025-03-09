@@ -10,12 +10,16 @@ These factory functions are registered into a global dictionary with the
 import textwrap
 from copy import deepcopy
 from collections import OrderedDict
+from collections.abc import Iterable
 
+import numpy as np
+import torch
 import torch.nn as nn
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
+from robomimic.utils.vis_utils import add_red_border, add_blue_border
 
 
 # mapping from algo name to factory functions that map algo configs to algo class names
@@ -144,7 +148,7 @@ class Algo(object):
         self.subgoal_shapes = OrderedDict()
 
         # We check across all modality groups (obs, goal, subgoal), and see if the inputted observation key exists
-        # across all modalitie specified in the config. If so, we store its corresponding shape internally
+        # across all modalities specified in the config. If so, we store its corresponding shape internally
         for k in obs_key_shapes:
             if "obs" in self.obs_config.modalities and k in [obs_key for modality in self.obs_config.modalities.obs.values() for obs_key in modality]:
                 self.obs_shapes[k] = obs_key_shapes[k]
@@ -199,6 +203,51 @@ class Algo(object):
             input_batch (dict): processed and filtered batch that
                 will be used for training 
         """
+        return batch
+
+    def postprocess_batch_for_training(self, batch, obs_normalization_stats):
+        """
+        Does some operations (like channel swap, uint8 to float conversion, normalization)
+        after @process_batch_for_training is called, in order to ensure these operations
+        take place on GPU.
+
+        Args:
+            batch (dict): dictionary with torch.Tensors sampled
+                from a data loader. Assumed to be on the device where
+                training will occur (after @process_batch_for_training
+                is called)
+
+            obs_normalization_stats (dict or None): if provided, this should map observation 
+                keys to dicts with a "mean" and "std" of shape (1, ...) where ... is the 
+                default shape for the observation.
+
+        Returns:
+            batch (dict): postproceesed batch
+        """
+
+        # ensure obs_normalization_stats are torch Tensors on proper device
+        obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(obs_normalization_stats), self.device))
+
+        # we will search the nested batch dictionary for the following special batch dict keys
+        # and apply the processing function to their values (which correspond to observations)
+        obs_keys = ["obs", "next_obs", "goal_obs"]
+
+        def recurse_helper(d):
+            """
+            Apply process_obs_dict to values in nested dictionary d that match a key in obs_keys.
+            """
+            for k in d:
+                if k in obs_keys:
+                    # found key - stop search and process observation
+                    if d[k] is not None:
+                        d[k] = ObsUtils.process_obs_dict(d[k])
+                        if obs_normalization_stats is not None:
+                            d[k] = ObsUtils.normalize_dict(d[k], normalization_stats=obs_normalization_stats)
+                elif isinstance(d[k], dict):
+                    # search down into dictionary
+                    recurse_helper(d[k])
+
+        recurse_helper(batch)
         return batch
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -267,17 +316,25 @@ class Algo(object):
         """
         Get dictionary of current model parameters.
         """
-        return self.nets.state_dict()
+        return dict(
+            nets=self.nets.state_dict(),
+            optimizers={ k : self.optimizers[k].state_dict() for k in self.optimizers },
+            lr_schedulers={ k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
+        )
 
     def deserialize(self, model_dict):
         """
         Load model from a checkpoint.
 
         Args:
-            model_dict (dict): a dictionary saved by self.serialize() that contains
-                the same keys as @self.network_classes
+            model_dict (dict): a dictionary saved by self.serialize()
         """
-        self.nets.load_state_dict(model_dict)
+        self.nets.load_state_dict(model_dict["nets"])
+        for k in model_dict["optimizers"]:
+            self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
+        for k in model_dict["lr_schedulers"]:
+            if model_dict["lr_schedulers"][k] is not None:
+                self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
 
     def __repr__(self):
         """
@@ -421,7 +478,7 @@ class RolloutPolicy(object):
     """
     Wraps @Algo object to make it easy to run policies in a rollout loop.
     """
-    def __init__(self, policy, obs_normalization_stats=None):
+    def __init__(self, policy, obs_normalization_stats=None, action_normalization_stats=None):
         """
         Args:
             policy (Algo instance): @Algo object to wrap to prepare for rollouts
@@ -430,9 +487,13 @@ class RolloutPolicy(object):
                 normalization. This should map observation keys to dicts
                 with a "mean" and "std" of shape (1, ...) where ... is the default
                 shape for the observation.
+
+            action_normalization_stats (dict): optionally pass a dictionary for
+                action normalization.
         """
         self.policy = policy
         self.obs_normalization_stats = obs_normalization_stats
+        self.action_normalization_stats = action_normalization_stats
 
     def start_episode(self):
         """
@@ -441,7 +502,7 @@ class RolloutPolicy(object):
         self.policy.set_eval()
         self.policy.reset()
 
-    def _prepare_observation(self, ob):
+    def _prepare_observation(self, ob, batched=False):
         """
         Prepare raw observation dict from environment for policy.
 
@@ -449,19 +510,31 @@ class RolloutPolicy(object):
             ob (dict): single observation dictionary from environment (no batch dimension, 
                 and np.array values for each key)
         """
-        if self.obs_normalization_stats is not None:
-            ob = ObsUtils.normalize_obs(ob, obs_normalization_stats=self.obs_normalization_stats)
         ob = TensorUtils.to_tensor(ob)
-        ob = TensorUtils.to_batch(ob)
+        if not batched:
+            ob = TensorUtils.to_batch(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
+        if self.obs_normalization_stats is not None:
+            # ensure obs_normalization_stats are torch Tensors on proper device
+            obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(self.obs_normalization_stats), self.policy.device))
+            # limit normalization to obs keys being used, in case environment includes extra keys
+            ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
+            ob = ObsUtils.normalize_dict(ob, normalization_stats=obs_normalization_stats)
         return ob
+
+    def modify_rollout_video_frame(self, frame):
+        """
+        Optionally modify the input video frame according to any internal policy state. Good
+        for adding any visualization.
+        """
+        return frame
 
     def __repr__(self):
         """Pretty print network description"""
         return self.policy.__repr__()
 
-    def __call__(self, ob, goal=None):
+    def __call__(self, ob, goal=None, batched=False):
         """
         Produce action from raw observation dict (and maybe goal dict) from environment.
 
@@ -470,8 +543,37 @@ class RolloutPolicy(object):
                 and np.array values for each key)
             goal (dict): goal observation
         """
-        ob = self._prepare_observation(ob)
+        ob = self._prepare_observation(ob, batched)
         if goal is not None:
-            goal = self._prepare_observation(goal)
-        ac = self.policy.get_action(obs_dict=ob, goal_dict=goal)
-        return TensorUtils.to_numpy(ac[0])
+            goal = self._prepare_observation(goal, batched)
+        acts = self.policy.get_action(obs_dict=ob, goal_dict=goal)
+        acts = TensorUtils.to_numpy(acts)
+        acts_final = []
+        for idx in range(acts.shape[0]):
+            ac = acts[idx]
+            if self.action_normalization_stats is not None:
+                import robomimic.utils.file_utils as FileUtils
+                action_keys, action_config = FileUtils.get_action_info_from_config(self.policy.global_config)
+
+                # convert flat action prediction to action dict
+                action_shapes = { k : self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats }
+                ac_dict = TensorUtils.vector_to_dict(ac, shapes=action_shapes, keys=action_keys)
+
+                # unnormalize each action
+                ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
+
+                # HACK: convert 6D rotation representation to axis-angle here
+                for key, value in ac_dict.items():
+                    this_format = action_config[key].get('format', None)
+                    if this_format == 'rot_6d':
+                        rot_6d = torch.from_numpy(value).unsqueeze(0)
+                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze().numpy()
+                        ac_dict[key] = rot
+
+                # convert action dict to flat action
+                ac = TensorUtils.dict_to_vector(ac_dict, keys=action_keys)
+            acts_final.append(ac)
+        if batched:
+            return np.array(acts_final)
+        else:
+            return acts_final[0]

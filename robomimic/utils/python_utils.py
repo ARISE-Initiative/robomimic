@@ -2,8 +2,10 @@
 Set of general purpose utility functions for easier interfacing with Python API
 """
 import inspect
+import argparse
+import ast
 from copy import deepcopy
-import robomimic.utils.macros as Macros
+import robomimic.macros as Macros
 
 
 def get_class_init_kwargs(cls):
@@ -71,3 +73,22 @@ def extract_class_init_kwargs_from_dict(cls, dic, copy=False, verbose=False):
             print(f"Warning: For class {cls.__name__}, got missing keys: {keys_not_in_dic} ")
 
     return subdic
+
+
+class DictionaryAction(argparse.Action):
+    """
+    Allows for interpreting commandline arguments as dictionaries.
+    For example, python script.py --dictionary "{'key': 'value', 'foo': 'bar'}""
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None:
+            setattr(namespace, self.dest, None)
+            return
+
+        try:
+            dictionary = ast.literal_eval(values)
+            if not isinstance(dictionary, dict):
+                raise ValueError("Value is not a valid dictionary.")
+            setattr(namespace, self.dest, dictionary)
+        except (ValueError, SyntaxError) as e:
+            raise argparse.ArgumentTypeError(f"Invalid dictionary syntax: {values}") from e

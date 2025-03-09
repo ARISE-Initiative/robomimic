@@ -20,10 +20,10 @@ Args:
 Example usage:
 
     # downloads to default path at robomimic/datasets/d4rl
-    python convert_d4rl.py --env walker2d-medium-expert-v0
+    python convert_d4rl.py --env walker2d-medium-expert-v2
 
     # download to custom path
-    python convert_d4rl.py --env walker2d-medium-expert-v0 --folder /path/to/folder
+    python convert_d4rl.py --env walker2d-medium-expert-v2 --folder /path/to/folder
 """
 
 import os

@@ -6,6 +6,7 @@ action-value estimates or distributions.
 """
 import numpy as np
 from collections import OrderedDict
+from collections.abc import Iterable
 
 import torch
 import torch.nn as nn

@@ -40,6 +40,9 @@ class TD3_BCConfig(BaseConfig):
         """
         super(TD3_BCConfig, self).train_config()
 
+        # Batch RL algos need next obs
+        self.train.hdf5_load_next_obs = True
+
         # update to normalize observations
         self.train.hdf5_normalize_obs = True 
 

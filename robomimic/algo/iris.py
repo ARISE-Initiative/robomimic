@@ -135,6 +135,9 @@ class IRIS(HBC, ValueAlgo):
             input_batch (dict): processed and filtered batch that
                 will be used for training 
         """
+        assert len(batch.values()) == 1, "expected dictionary of batches with single key, got {}".format(batch.keys())
+        batch = batch["data"]
+
         input_batch = dict()
 
         input_batch["planner"] = self.planner.process_batch_for_training(batch)
@@ -151,7 +154,9 @@ class IRIS(HBC, ValueAlgo):
             # otherwise, use planner subgoal target as goal for the policy
             input_batch["actor"]["goal_obs"] = input_batch["planner"]["planner"]["target_subgoals"]
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # NOTE: need to move to device first before float conversion because images will be uint8
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def get_state_value(self, obs_dict, goal_dict=None):
         """

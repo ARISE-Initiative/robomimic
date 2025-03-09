@@ -5,6 +5,7 @@ tqdm
 termcolor
 tensorboard
 tensorboardX
+matplotlib
 imageio
 imageio-ffmpeg
 egl_probe>=1.0.1

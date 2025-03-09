@@ -186,6 +186,9 @@ class CQL(PolicyAlgo, ValueAlgo):
             input_batch (dict): processed and filtered batch that
                 will be used for training
         """
+        assert len(batch.values()) == 1, "expected dictionary of batches with single key, got {}".format(batch.keys())
+        batch = batch["data"]
+        
         input_batch = dict()
 
         # Make sure the trajectory of actions received is greater than our step horizon
@@ -208,7 +211,9 @@ class CQL(PolicyAlgo, ValueAlgo):
         done_seq = batch["dones"][:, :self.n_step]
         input_batch["dones"] = (done_seq.sum(dim=1) > 0).float().unsqueeze(1)
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # NOTE: need to move to device first before float conversion because images will be uint8
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def train_on_batch(self, batch, epoch, validate=False):
         """

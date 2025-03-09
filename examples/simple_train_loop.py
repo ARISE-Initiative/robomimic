@@ -81,6 +81,9 @@ def get_example_model(dataset_path, device):
     ObsUtils.initialize_obs_utils_with_config(config)
 
     # read dataset to get some metadata for constructing model
+    env_meta = FileUtils.get_env_metadata_from_dataset(
+        dataset_path=dataset_path,
+    )
     shape_meta = FileUtils.get_shape_metadata_from_dataset(
         dataset_path=dataset_path, 
         all_obs_keys=sorted((
@@ -155,6 +158,7 @@ def run_train_loop(model, data_loader):
 
             # process batch for training
             input_batch = model.process_batch_for_training(batch)
+            input_batch = model.postprocess_batch_for_training(input_batch, obs_normalization_stats=None)
 
             # forward and backward pass
             info = model.train_on_batch(batch=input_batch, epoch=epoch, validate=False)

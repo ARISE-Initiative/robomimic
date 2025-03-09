@@ -21,7 +21,7 @@ import argparse
 import robomimic
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.test_utils as TestUtils
-import robomimic.utils.macros as Macros
+import robomimic.macros as Macros
 from robomimic.config import config_factory
 from robomimic.scripts.train import train
 
@@ -62,7 +62,7 @@ def robosuite_hyperparameters(config):
     ## evaluation rollout config ##
     config.experiment.rollout.enabled = True                    # enable evaluation rollouts
     config.experiment.rollout.n = 50                            # number of rollouts per evaluation
-    config.experiment.rollout.horizon = 400                     # maximum number of env steps per rollout
+    config.experiment.rollout.horizon = 400                     # set horizon based on length of demonstrations (can be obtained with scripts/get_dataset_info.py)
     config.experiment.rollout.rate = 50                         # do rollouts every @rate epochs
     config.experiment.rollout.warmstart = 0                     # number of epochs to wait before starting rollouts
     config.experiment.rollout.terminate_on_success = True       # end rollout early after task success
@@ -86,7 +86,8 @@ def robosuite_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 10
@@ -131,6 +132,18 @@ def robosuite_hyperparameters(config):
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False    # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0                # Default arguments for "SpatialSoftmax"
     config.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0                  # Default arguments for "SpatialSoftmax"
+
+    # if you prefer to use pre-trained visual representations, uncomment the following lines
+    # R3M
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'R3MConv'                         # R3M backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.r3m_model_class = 'resnet18'       # R3M model class (resnet18, resnet34, resnet50)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                      # whether to freeze network during training or allow finetuning
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                  # no pooling class for pretraining model
+    # MVP
+    # config.observation.encoder.rgb.core_kwargs.backbone_class = 'MVPConv'                                   # MVP backbone for image observations (unused if no image observations)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.mvp_model_class = 'vitb-mae-egosoup'         # MVP model class (vits-mae-hoi, vits-mae-in, vits-sup-in, vitb-mae-egosoup, vitl-256-mae-egosoup)
+    # config.observation.encoder.rgb.core_kwargs.backbone_kwargs.freeze = True                                # whether to freeze network during training or allow finetuning
+    # config.observation.encoder.rgb.core_kwargs.pool_class = None                                            # no pooling class for pretraining model
 
     # observation randomizer class - set to None to use no randomization, or 'CropRandomizer' to use crop randomization
     config.observation.encoder.rgb.obs_randomizer_class = None
@@ -236,7 +249,8 @@ def momart_hyperparameters(config):
     config.train.hdf5_normalize_obs = False                     # no obs normalization
 
     # if provided, demonstrations are filtered by the list of demo keys under "mask/@hdf5_filter_key"
-    config.train.hdf5_filter_key = None                         # by default, use no filter key
+    config.train.hdf5_filter_key = "train"                      # by default, use "train" and "valid" filter keys corresponding to train-valid split
+    config.train.hdf5_validation_filter_key = "valid"
 
     # fetch sequences of length 10 from dataset for RNN training
     config.train.seq_length = 50

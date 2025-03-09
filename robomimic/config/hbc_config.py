@@ -16,6 +16,7 @@ class HBCConfig(BaseConfig):
         """
         super(HBCConfig, self).train_config()
         self.train.seq_length = 10  # length of experience sequence to fetch from the buffer
+        self.train.hdf5_load_next_obs = True
 
     def algo_config(self):
         """

@@ -11,6 +11,7 @@ import numpy as np
 import torch
 
 import robomimic
+import robomimic.macros as Macros
 import robomimic.utils.file_utils as FileUtils
 import robomimic.utils.torch_utils as TorchUtils
 from robomimic.config import Config, config_factory
@@ -46,12 +47,12 @@ def example_dataset_path():
     from a server if it does not exist.
     """
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
-    dataset_path = os.path.join(dataset_folder, "test.hdf5")
+    dataset_path = os.path.join(dataset_folder, "test_v141.hdf5")
     if not os.path.exists(dataset_path):
         print("\nWARNING: test hdf5 does not exist! Downloading from server...")
         os.makedirs(dataset_folder, exist_ok=True)
         FileUtils.download_url(
-            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test.hdf5", 
+            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test_v141.hdf5", 
             download_dir=dataset_folder,
         )
     return dataset_path
@@ -129,6 +130,10 @@ def get_base_config(algo_name):
     config.experiment.epoch_every_n_steps = 3
     config.experiment.validation_epoch_every_n_steps = 3
     config.train.num_epochs = 1
+
+    # default train and validation filter keys
+    config.train.hdf5_filter_key = "train"
+    config.train.hdf5_validation_filter_key = "valid"
 
     # ensure model saving, rollout, and offscreen video rendering are tested too
     config.experiment.save.enabled = True
@@ -233,6 +238,7 @@ def test_run(base_config, config_modifier):
         ret (str): a green "passed!" string, or a red "failed with error" string that contains
             the traceback
     """
+
     try:
         # get config
         config = config_from_modifier(base_config=base_config, config_modifier=config_modifier)

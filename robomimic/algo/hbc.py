@@ -139,6 +139,9 @@ class HBC(HierarchicalAlgo):
             input_batch (dict): processed and filtered batch that
                 will be used for training 
         """
+        assert len(batch.values()) == 1, "expected dictionary of batches with single key, got {}".format(batch.keys())
+        batch = batch["data"]
+
         input_batch = dict()
 
         input_batch["planner"] = self.planner.process_batch_for_training(batch)
@@ -167,7 +170,9 @@ class HBC(HierarchicalAlgo):
                     num_prior_samples=self.algo_config.latent_subgoal.prior_correction.num_samples,
                 )
 
-        return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # return TensorUtils.to_device(TensorUtils.to_float(input_batch), self.device)
+        # NOTE: need to move to device first before float conversion because images will be uint8
+        return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
 
     def train_on_batch(self, batch, epoch, validate=False):
         """

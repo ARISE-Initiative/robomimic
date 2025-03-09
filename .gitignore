@@ -1,3 +1,6 @@
+# ignore private macros
+macros_private.py
+
 # pip distribution folder
 dist/
 

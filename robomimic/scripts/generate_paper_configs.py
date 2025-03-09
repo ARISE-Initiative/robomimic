@@ -215,17 +215,34 @@ def modify_config_for_dataset(config, task_name, dataset_type, hdf5_type, base_d
         if dataset_type == "mg":
             # machine-generated datasets did not use validation
             config.experiment.validate = False
+        else:
+            # all other datasets used validation
+            config.experiment.validate = True
 
         if is_real_dataset:
             # no evaluation rollouts for real robot training
             config.experiment.rollout.enabled = False
 
     with config.train.values_unlocked():
-        # set dataset path and possibly filter key
-        file_name = DATASET_REGISTRY[task_name][dataset_type][hdf5_type]["url"].split("/")[-1]
+        # set dataset path and possibly filter keys
+        url = DATASET_REGISTRY[task_name][dataset_type][hdf5_type]["url"]
+        if url is None:
+            # infer file_name
+            if task_name in ["lift", "can", "square", "tool_hang", "transport"]:
+                file_name = "{}_v141.hdf5".format(hdf5_type)
+            elif task_name in ["lift_real", "can_real", "tool_hang_real"]:
+                file_name = "{}.hdf5".format(hdf5_type)
+            else:
+                raise ValueError("Unknown dataset type")
+        else:
+            file_name = url.split("/")[-1]
         config.train.data = os.path.join(base_dataset_dir, task_name, dataset_type, file_name)
-        if filter_key is not None:
-            config.train.hdf5_filter_key = filter_key
+        config.train.hdf5_filter_key = None if filter_key is None else filter_key
+        config.train.hdf5_validation_filter_key = None
+        if config.experiment.validate:
+            # set train and valid keys for validation
+            config.train.hdf5_filter_key = "train" if filter_key is None else "{}_train".format(filter_key)
+            config.train.hdf5_validation_filter_key = "valid" if filter_key is None else "{}_valid".format(filter_key)
 
     with config.observation.values_unlocked():
         # maybe modify observation names and randomization sizes (since image size might be different)
@@ -1181,21 +1198,21 @@ def generate_d4rl_configs(
         return config
 
     d4rl_tasks = [
-        # "halfcheetah-random-v0",
-        # "hopper-random-v0",
-        # "walker2d-random-v0",
-        "halfcheetah-medium-v0",
-        "hopper-medium-v0",
-        "walker2d-medium-v0",
-        "halfcheetah-expert-v0",
-        "hopper-expert-v0",
-        "walker2d-expert-v0",
-        "halfcheetah-medium-expert-v0",
-        "hopper-medium-expert-v0",
-        "walker2d-medium-expert-v0",
-        # "halfcheetah-medium-replay-v0",
-        # "hopper-medium-replay-v0",
-        # "walker2d-medium-replay-v0",
+        # "halfcheetah-random-v2",
+        # "hopper-random-v2",
+        # "walker2d-random-v2",
+        "halfcheetah-medium-v2",
+        "hopper-medium-v2",
+        "walker2d-medium-v2",
+        "halfcheetah-expert-v2",
+        "hopper-expert-v2",
+        "walker2d-expert-v2",
+        "halfcheetah-medium-expert-v2",
+        "hopper-medium-expert-v2",
+        "walker2d-medium-expert-v2",
+        # "halfcheetah-medium-replay-v2",
+        # "hopper-medium-replay-v2",
+        # "walker2d-medium-replay-v2",
     ]
     d4rl_json_paths = Config() # use for convenient nested dict
     for task_name in d4rl_tasks:
@@ -1223,8 +1240,10 @@ def generate_d4rl_configs(
             # set output folder and dataset
             with config.train.values_unlocked():
                 if base_output_dir is None:
-                    base_output_dir = "../{}_trained_models".format(algo_name)
-                config.train.output_dir = os.path.join(base_output_dir, "d4rl", algo_name, task_name, "trained_models")
+                    base_output_dir_for_algo = "../{}_trained_models".format(algo_name)
+                else:
+                    base_output_dir_for_algo = base_output_dir
+                config.train.output_dir = os.path.join(base_output_dir_for_algo, "d4rl", algo_name, task_name, "trained_models")
                 config.train.data = os.path.join(base_dataset_dir, "d4rl", "converted", 
                     "{}.hdf5".format(task_name.replace("-", "_")))
 

@@ -63,12 +63,33 @@ def create_hdf5_filter_key(hdf5_path, demo_keys, key_name):
     return ep_lengths
 
 
-def get_env_metadata_from_dataset(dataset_path):
+def get_demos_for_filter_key(hdf5_path, filter_key):
+    """
+    Gets demo keys that correspond to a particular filter key.
+    Args:
+        hdf5_path (str): path to hdf5 file
+        filter_key (str): name of filter key
+    Returns:
+        demo_keys ([str]): list of demonstration keys that
+            correspond to this filter key. For example, ["demo_0", 
+            "demo_1"].
+    """
+    f = h5py.File(hdf5_path, "r")
+    demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    f.close()
+    return demo_keys
+
+
+def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=True):
     """
     Retrieves env metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+        set_env_specific_obs_processors (bool): environment might have custom rules for how to process
+            observations - if this flag is true, make sure ObsUtils will use these custom settings. This
+            is a good place to do this operation to make sure it happens before loading data, running a 
+            trained model, etc.
 
     Returns:
         env_meta (dict): environment metadata. Contains 3 keys:
@@ -77,19 +98,23 @@ def get_env_metadata_from_dataset(dataset_path):
             :`'type'`: type of environment, should be a value in EB.EnvType
             :`'env_kwargs'`: dictionary of keyword arguments to pass to environment constructor
     """
-    dataset_path = os.path.expanduser(dataset_path)
+    dataset_path = os.path.expandvars(os.path.expanduser(dataset_path))
     f = h5py.File(dataset_path, "r")
     env_meta = json.loads(f["data"].attrs["env_args"])
     f.close()
+    if set_env_specific_obs_processors:
+        # handle env-specific custom observation processing logic
+        EnvUtils.set_env_specific_obs_processing(env_meta=env_meta)
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=False):
+def get_shape_metadata_from_dataset(dataset_path, action_keys, all_obs_keys=None, verbose=False):
     """
     Retrieves shape metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
+        action_keys (list): list of all action key strings
         all_obs_keys (list): list of all modalities used by the model. If not provided, all modalities
             present in the file are used.
         verbose (bool): if True, include print statements
@@ -101,18 +126,22 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
             :`'all_shapes'`: dictionary that maps observation key string to shape
             :`'all_obs_keys'`: list of all observation modalities used
             :`'use_images'`: bool, whether or not image modalities are present
+            :`'use_depths'`: bool, whether or not depth modalities are present
     """
 
     shape_meta = {}
 
     # read demo file for some metadata
-    dataset_path = os.path.expanduser(dataset_path)
+    dataset_path = os.path.expandvars(os.path.expanduser(dataset_path))
     f = h5py.File(dataset_path, "r")
     demo_id = list(f["data"].keys())[0]
     demo = f["data/{}".format(demo_id)]
 
     # action dimension
-    shape_meta['ac_dim'] = f["data/{}/actions".format(demo_id)].shape[1]
+    for key in action_keys:
+        assert len(demo[key].shape) == 2 # shape should be (B, D)
+    action_dim = sum([demo[key].shape[1] for key in action_keys])
+    shape_meta["ac_dim"] = action_dim
 
     # observation dimensions
     all_shapes = OrderedDict()
@@ -136,8 +165,33 @@ def get_shape_metadata_from_dataset(dataset_path, all_obs_keys=None, verbose=Fal
     shape_meta['all_shapes'] = all_shapes
     shape_meta['all_obs_keys'] = all_obs_keys
     shape_meta['use_images'] = ObsUtils.has_modality("rgb", all_obs_keys)
+    shape_meta['use_depths'] = ObsUtils.has_modality("depth", all_obs_keys)
 
     return shape_meta
+
+
+def get_action_info_from_config(config, relative=False):
+    """
+    Extract action keys and action config from config object. Ensures defaults are populated as well
+    in case the user has not specified some information.
+    """
+    if not relative:
+        config = config.train
+
+    action_keys = config.action_keys
+    if (action_keys is None) or (len(action_keys) == 0):
+        # default action keys value
+        action_keys = ["actions"]
+
+    # each action key should at least have an empty dict
+    action_config = config.action_config
+    if (action_config is None):
+        action_config = dict()
+    for k in action_keys:
+        if k not in action_config:
+            action_config[k] = dict()
+
+    return action_keys, action_config
 
 
 def load_dict_from_checkpoint(ckpt_path):
@@ -150,7 +204,7 @@ def load_dict_from_checkpoint(ckpt_path):
     Returns:
         ckpt_dict (dict): Loaded checkpoint dictionary.
     """
-    ckpt_path = os.path.expanduser(ckpt_path)
+    ckpt_path = os.path.expandvars(os.path.expanduser(ckpt_path))
     if not torch.cuda.is_available():
         ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage)
     else:
@@ -197,6 +251,93 @@ def algo_name_from_checkpoint(ckpt_path=None, ckpt_dict=None):
     ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path, ckpt_dict=ckpt_dict)
     algo_name = ckpt_dict["algo_name"]
     return algo_name, ckpt_dict
+
+
+def update_config(cfg):
+    """
+    Updates the config for backwards-compatibility if it uses outdated configurations.
+
+    See https://github.com/ARISE-Initiative/robomimic/releases/tag/v0.2.0 for more info.
+
+    Args:
+        cfg (dict): Raw dictionary of config values
+    """
+    # Check if image modality is defined -- this means we're using an outdated config
+    # Note: There may be a nested hierarchy, so we possibly check all the nested obs cfgs which can include
+    # e.g. a planner and actor for HBC
+
+    def find_obs_dicts_recursively(dic):
+        dics = []
+        if "modalities" in dic:
+            dics.append(dic)
+        else:
+            for child_dic in dic.values():
+                dics += find_obs_dicts_recursively(child_dic)
+        return dics
+
+    obs_cfgs = find_obs_dicts_recursively(cfg["observation"])
+    for obs_cfg in obs_cfgs:
+        modalities = obs_cfg["modalities"]
+
+        found_img = False
+        for modality_group in ("obs", "subgoal", "goal"):
+            if modality_group in modalities:
+                img_modality = modalities[modality_group].pop("image", None)
+                if img_modality is not None:
+                    found_img = True
+                    modalities[modality_group]["rgb"] = img_modality
+
+        if found_img:
+            # Also need to map encoder kwargs correctly
+            old_encoder_cfg = obs_cfg.pop("encoder")
+
+            # Create new encoder entry for RGB
+            rgb_encoder_cfg = {
+                "core_class": "VisualCore",
+                "core_kwargs": {
+                    "backbone_kwargs": dict(),
+                    "pool_kwargs": dict(),
+                },
+                "obs_randomizer_class": None,
+                "obs_randomizer_kwargs": dict(),
+            }
+
+            if "visual_feature_dimension" in old_encoder_cfg:
+                rgb_encoder_cfg["core_kwargs"]["feature_dimension"] = old_encoder_cfg["visual_feature_dimension"]
+
+            if "visual_core" in old_encoder_cfg:
+                rgb_encoder_cfg["core_kwargs"]["backbone_class"] = old_encoder_cfg["visual_core"]
+
+            for kwarg in ("pretrained", "input_coord_conv"):
+                if "visual_core_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["visual_core_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["backbone_kwargs"][kwarg] = old_encoder_cfg["visual_core_kwargs"][kwarg]
+
+            # Optionally add pooling info too
+            if old_encoder_cfg.get("use_spatial_softmax", True):
+                rgb_encoder_cfg["core_kwargs"]["pool_class"] = "SpatialSoftmax"
+
+            for kwarg in ("num_kp", "learnable_temperature", "temperature", "noise_std"):
+                if "spatial_softmax_kwargs" in old_encoder_cfg and kwarg in old_encoder_cfg["spatial_softmax_kwargs"]:
+                    rgb_encoder_cfg["core_kwargs"]["pool_kwargs"][kwarg] = old_encoder_cfg["spatial_softmax_kwargs"][kwarg]
+
+            # Update obs randomizer as well
+            for kwarg in ("obs_randomizer_class", "obs_randomizer_kwargs"):
+                if kwarg in old_encoder_cfg:
+                    rgb_encoder_cfg[kwarg] = old_encoder_cfg[kwarg]
+
+            # Store rgb config
+            obs_cfg["encoder"] = {"rgb": rgb_encoder_cfg}
+
+            # Also add defaults for low dim
+            obs_cfg["encoder"]["low_dim"] = {
+                "core_class": None,
+                "core_kwargs": {
+                    "backbone_kwargs": dict(),
+                    "pool_kwargs": dict(),
+                },
+                "obs_randomizer_class": None,
+                "obs_randomizer_kwargs": dict(),
+            }
 
 
 def config_from_checkpoint(algo_name=None, ckpt_path=None, ckpt_dict=None, verbose=False):
@@ -279,6 +420,13 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
             for k in obs_normalization_stats[m]:
                 obs_normalization_stats[m][k] = np.array(obs_normalization_stats[m][k])
 
+    # maybe restore action normalization stats
+    action_normalization_stats = ckpt_dict.get("action_normalization_stats", None)
+    if action_normalization_stats is not None:
+        for m in action_normalization_stats:
+            for k in action_normalization_stats[m]:
+                action_normalization_stats[m][k] = np.array(action_normalization_stats[m][k])
+
     if device is None:
         # get torch device
         device = TorchUtils.get_torch_device(try_to_use_cuda=config.train.cuda)
@@ -293,14 +441,18 @@ def policy_from_checkpoint(device=None, ckpt_path=None, ckpt_dict=None, verbose=
     )
     model.deserialize(ckpt_dict["model"])
     model.set_eval()
-    model = RolloutPolicy(model, obs_normalization_stats=obs_normalization_stats)
+    model = RolloutPolicy(
+        model,
+        obs_normalization_stats=obs_normalization_stats,
+        action_normalization_stats=action_normalization_stats,
+    )
     if verbose:
         print("============= Loaded Policy =============")
         print(model)
     return model, ckpt_dict
 
 
-def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=False, render_offscreen=False, verbose=False):
+def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, env_class=None, render=False, render_offscreen=False, verbose=False):
     """
     Creates an environment using the metadata saved in a checkpoint.
 
@@ -330,11 +482,16 @@ def env_from_checkpoint(ckpt_path=None, ckpt_dict=None, env_name=None, render=Fa
 
     # create env from saved metadata
     env = EnvUtils.create_env_from_metadata(
-        env_meta=env_meta, 
+        env_meta=env_meta,
+        env_name=env_name,
+        env_class=env_class,
         render=render, 
         render_offscreen=render_offscreen,
         use_image_obs=shape_meta["use_images"],
+        use_depth_obs=shape_meta.get("use_depths", False),
     )
+    config, _ = config_from_checkpoint(algo_name=ckpt_dict["algo_name"], ckpt_dict=ckpt_dict, verbose=False)
+    env = EnvUtils.wrap_env_from_config(env, config=config) # apply environment wrapper, if applicable
     if verbose:
         print("============= Loaded Environment =============")
         print(env)
@@ -402,3 +559,37 @@ def download_url(url, download_dir, check_overwrite=True):
     with DownloadProgressBar(unit='B', unit_scale=True,
                              miniters=1, desc=fname) as t:
         urllib.request.urlretrieve(url, filename=file_to_write, reporthook=t.update_to)
+
+
+def find_and_replace_path_prefix(org_path, replace_prefixes, new_prefix, assert_replace=False):
+    """
+    Try to find and replace one of several prefixes (@replace_prefixes) in string @org_path
+    with another prefix (@new_prefix). If @assert_replace is True, the function asserts that
+    replacement did occur.
+    """
+    check_ind = -1
+    for i, x in enumerate(replace_prefixes):
+        if org_path.startswith(x):
+            check_ind = i
+    if assert_replace:
+        assert check_ind != -1
+    if check_ind == -1:
+        return org_path
+    replace_prefix = replace_prefixes[check_ind]
+    return org_path.replace(replace_prefix, new_prefix, 1)
+
+
+def numpy_array_json_encoder(obj):
+    """
+    Helper function to allow writing nested dictionaries with numpy array values to json strings.
+    An example use case is:
+
+    dict_as_json_string = json.dumps(
+        d, indent=4,
+        default=numpy_array_json_encoder,
+    )
+    """
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
