@@ -236,15 +236,6 @@ class EnvRobosuite(EB.EnvBase):
         """
         if di is None:
             di = self.env._get_observations(force_update=True) if self._is_v1 else self.env._get_observation()
-        if "libero" in self.env.__class__.__name__.lower():
-            # image key conventions for libero envs
-            if "agentview_image" in di:
-                di["agentview_rgb"] = di["agentview_image"]
-            pf = ""
-            if self._is_v1:
-                pf = self.env.robots[0].robot_model.naming_prefix
-            if f"{pf}eye_in_hand_image" in di:
-                di["eye_in_hand_rgb"] = di[f"{pf}eye_in_hand_image"]
         ret = {}
         for k in di:
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
@@ -275,16 +266,6 @@ class EnvRobosuite(EB.EnvBase):
                     if k.startswith(pf) and (k not in ret) and \
                             (not k.endswith("proprio-state")):
                         ret[k] = np.array(di[k])
-                        if "libero" in self.env.__class__.__name__.lower():
-                            # proprioception key conventions for libero envs
-                            _k = "_".join(k.split("_")[1:])
-                            if _k.startswith("eef"):
-                                _k = "ee" + _k[3:]
-                            elif _k == "gripper_qpos":
-                                _k = "gripper_states"
-                            elif _k == "joint_pos":
-                                _k = "joint_states"
-                            ret[_k] = np.array(di[k])
         else:
             # minimal proprioception for older versions of robosuite
             ret["proprio"] = np.array(di["robot-state"])
