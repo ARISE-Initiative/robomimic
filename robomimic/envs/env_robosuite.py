@@ -139,14 +139,15 @@ class EnvRobosuite(EB.EnvBase):
         Reset environment.
 
         Args:
-            unset_ep_meta (np.array): whether to reset any previously set episode meta data
+            unset_ep_meta (np.array): whether to reset any previously set episode metadata (otherwise
+                will continue to use previous episode metadata)
         
         Returns:
             observation (dict): initial observation dictionary.
         """
         if unset_ep_meta and self.is_v15_or_higher:
             # unset the ep meta to clear out any ep meta that was previously set
-            # this feature was set from robosuite v1.5 onwards
+            # (this feature was set from robosuite v1.5 onwards)
             self.env.unset_ep_meta()
         di = self.env.reset()
         return self.get_observation(di)

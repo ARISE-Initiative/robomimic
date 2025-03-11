@@ -7,6 +7,7 @@ dist/
 # local test dataset that is lazily downloaded by example scripts
 tests/assets/test.hdf5
 tests/assets/test_v141.hdf5
+tests/assets/test_v15.hdf5
 
 # pycharm configs
 .idea/
