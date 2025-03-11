@@ -177,6 +177,10 @@ def get_camera_info(
     # TODO: make this function more general than just robosuite environments
     assert EnvUtils.is_robosuite_env(env=env)
 
+    # check for v1.5+ robosuite
+    import robosuite
+    is_v15 = (robosuite.__version__.split(".")[0] == "1") and (robosuite.__version__.split(".")[1] >= "5")
+
     if camera_names is None:
         return None
 
@@ -186,8 +190,12 @@ def get_camera_info(
         R = env.get_camera_extrinsic_matrix(camera_name=cam_name) # camera pose in world frame
         if "eye_in_hand" in cam_name:
             # convert extrinsic matrix to be relative to robot eef control frame
-            assert cam_name.startswith("robot0")
-            eef_site_name = env.base_env.robots[0].controller.eef_name
+            assert cam_name.startswith("robot0") or cam_name.startswith("robot1")
+            robot_ind = int(cam_name[5])
+            if is_v15:
+                eef_site_name = env.base_env.robots[robot_ind].composite_controller.part_controllers["right"].ref_name
+            else:
+                eef_site_name = env.base_env.robots[robot_ind].controller.eef_name
             eef_pos = np.array(env.base_env.sim.data.site_xpos[env.base_env.sim.model.site_name2id(eef_site_name)])
             eef_rot = np.array(env.base_env.sim.data.site_xmat[env.base_env.sim.model.site_name2id(eef_site_name)].reshape([3, 3]))
             eef_pose = np.zeros((4, 4)) # eef pose in world frame

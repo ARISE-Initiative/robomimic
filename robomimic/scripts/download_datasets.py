@@ -48,7 +48,7 @@ import argparse
 
 import robomimic
 import robomimic.utils.file_utils as FileUtils
-from robomimic import DATASET_REGISTRY
+from robomimic import DATASET_REGISTRY, HF_REPO_ID
 
 ALL_TASKS = ["lift", "can", "square", "transport", "tool_hang", "lift_real", "can_real", "tool_hang_real"]
 ALL_DATASET_TYPES = ["ph", "mh", "mg", "paired"]
@@ -156,8 +156,18 @@ if __name__ == "__main__":
                             else:
                                 # Make sure path exists and create if it doesn't
                                 os.makedirs(download_dir, exist_ok=True)
-                                FileUtils.download_url(
-                                    url=DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"], 
-                                    download_dir=download_dir,
-                                )
+                                if "real" in task:
+                                    # real world datasets are still hosted at Stanford
+                                    FileUtils.download_url(
+                                        url=DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"], 
+                                        download_dir=download_dir,
+                                    )
+                                else:
+                                    # sim datasets are hosted on HF
+                                    FileUtils.download_file_from_hf(
+                                        repo_id=HF_REPO_ID,
+                                        filename=DATASET_REGISTRY[task][dataset_type][hdf5_type]["url"],
+                                        download_dir=download_dir,
+                                        check_overwrite=True,
+                                    )
                             print("")

@@ -19,6 +19,11 @@ try:
     import mimicgen_envs
 except ImportError:
     pass
+try:
+    # this is needed for ensuring robosuite can find the additional robocasa environments (see https://robocasa.ai)
+    import robocasa
+except ImportError:
+    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.envs.env_base as EB
@@ -84,6 +89,8 @@ class EnvRobosuite(EB.EnvBase):
             use_camera_obs=use_image_obs,
             camera_depths=use_depth_obs,
         )
+        if render and self.is_v15_or_higher:
+            update_kwargs["renderer"] = "mujoco"
         kwargs.update(update_kwargs)
 
         if self._is_v1:
@@ -127,13 +134,21 @@ class EnvRobosuite(EB.EnvBase):
         obs = self.get_observation(obs)
         return obs, r, self.is_done(), info
 
-    def reset(self):
+    def reset(self, unset_ep_meta=True):
         """
         Reset environment.
 
+        Args:
+            unset_ep_meta (np.array): whether to reset any previously set episode metadata (otherwise
+                will continue to use previous episode metadata)
+        
         Returns:
             observation (dict): initial observation dictionary.
         """
+        if unset_ep_meta and self.is_v15_or_higher:
+            # unset the ep meta to clear out any ep meta that was previously set
+            # (this feature was set from robosuite v1.5 onwards)
+            self.env.unset_ep_meta()
         di = self.env.reset()
         return self.get_observation(di)
 
@@ -152,7 +167,18 @@ class EnvRobosuite(EB.EnvBase):
         """
         should_ret = False
         if "model" in state:
-            self.reset()
+            if state.get("ep_meta", None) is not None:
+                # set relevant episode information
+                ep_meta = json.loads(state["ep_meta"])
+            else:
+                ep_meta = {}
+
+            if self.is_v15_or_higher: # newer versions of robosuite have this feature
+                self.env.set_ep_meta(ep_meta)
+            # this reset is necessary.
+            # while the call to env.reset_from_xml_string does call reset,
+            # that is only a "soft" reset that doesn't actually reload the model.
+            self.reset(unset_ep_meta=False)
             robosuite_version_id = int(robosuite.__version__.split(".")[1])
             if robosuite_version_id <= 3:
                 from robosuite.utils.mjcf_utils import postprocess_model_xml
@@ -194,9 +220,9 @@ class EnvRobosuite(EB.EnvBase):
             return self.env.render()
         elif mode == "rgb_array":
             im = self.env.sim.render(height=height, width=width, camera_name=camera_name)
-            if self.use_depth_obs:
-                # render() returns a tuple when self.use_depth_obs=True
-                return im[0][::-1]
+            # if self.use_depth_obs:
+            #     # render() returns a tuple when self.use_depth_obs=True
+            #     return im[0][::-1]
             return im[::-1]
         else:
             raise NotImplementedError("mode={} is not implemented".format(mode))
@@ -329,7 +355,11 @@ class EnvRobosuite(EB.EnvBase):
         """
         xml = self.env.sim.model.get_xml() # model xml file
         state = np.array(self.env.sim.get_state().flatten()) # simulator state
-        return dict(model=xml, states=state)
+        info = dict(model=xml, states=state)
+        if self.is_v15_or_higher:
+            # get ep_meta if applicable for newer versions of robosuite
+            info["ep_meta"] = json.dumps(self.env.get_ep_meta(), indent=4)
+        return info
 
     def get_reward(self):
         """
@@ -391,6 +421,15 @@ class EnvRobosuite(EB.EnvBase):
         """
         return EB.EnvType.ROBOSUITE_TYPE
 
+    @property
+    def is_v15_or_higher(self):
+        """
+        Returns true if the robosuite version is v1.5.0+
+        """
+        main_version = int(robosuite.__version__.split(".")[0])
+        sub_version = int(robosuite.__version__.split(".")[1])
+        return (main_version > 1) or (main_version == 1 and sub_version >= 5)
+    
     @property
     def version(self):
         """
