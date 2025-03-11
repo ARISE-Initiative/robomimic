@@ -77,7 +77,6 @@ class EnvRobosuite(EB.EnvBase):
         self._is_v1 = (robosuite.__version__.split(".")[0] == "1")
         if self._is_v1:
             assert (int(robosuite.__version__.split(".")[1]) >= 2), "only support robosuite v0.3 and v1.2+"
-        self._is_v15 = self._is_v1 and (int(robosuite.__version__.split(".")[1]) >= 5)
 
         kwargs = deepcopy(kwargs)
 
@@ -90,7 +89,7 @@ class EnvRobosuite(EB.EnvBase):
             use_camera_obs=use_image_obs,
             camera_depths=use_depth_obs,
         )
-        if render and self._is_v15:
+        if render and self.is_v15_or_higher:
             update_kwargs["renderer"] = "mujoco"
         kwargs.update(update_kwargs)
 
@@ -424,7 +423,7 @@ class EnvRobosuite(EB.EnvBase):
     @property
     def is_v15_or_higher(self):
         """
-        Returns true if the robosuite versoin if v1.5.0+
+        Returns true if the robosuite version is v1.5.0+
         """
         main_version = int(robosuite.__version__.split(".")[0])
         sub_version = int(robosuite.__version__.split(".")[1])
