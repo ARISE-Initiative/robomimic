@@ -46,13 +46,38 @@ def example_dataset_path():
     from a server if it does not exist.
     """
     dataset_folder = os.path.join(robomimic.__path__[0], "../tests/assets/")
-    dataset_path = os.path.join(dataset_folder, "test_v141.hdf5")
+
+    # try to determine version of robosuite to grab the correct test hdf5
+    robosuite_is_v12 = True
+    robosuite_is_v14 = False
+    robosuite_is_v15 = False
+    try:
+        import robosuite
+        main_version = int(robosuite.__version__.split(".")[0])
+        sub_version = int(robosuite.__version__.split(".")[1])
+        if (main_version > 1) or (main_version == 1 and sub_version >= 5):
+            robosuite_is_v15 = True
+            robosuite_is_v12 = False
+        elif (main_version == 1 and sub_version == 4):
+            robosuite_is_v14 = True
+            robosuite_is_v12 = False
+    except ImportError:
+        pass
+
+    if robosuite_is_v12:
+        dataset_path = os.path.join(dataset_folder, "test.hdf5")
+    elif robosuite_is_v14:
+        dataset_path = os.path.join(dataset_folder, "test_v141.hdf5")
+    else:
+        dataset_path = os.path.join(dataset_folder, "test_v15.hdf5")
     if not os.path.exists(dataset_path):
         print("\nWARNING: test hdf5 does not exist! Downloading from server...")
         os.makedirs(dataset_folder, exist_ok=True)
-        FileUtils.download_url(
-            url="http://downloads.cs.stanford.edu/downloads/rt_benchmark/test_v141.hdf5", 
+        FileUtils.download_file_from_hf(
+            repo_id=robomimic.HF_REPO_ID,
+            filename="test/{}".format(os.path.basename(dataset_path)),
             download_dir=dataset_folder,
+            check_overwrite=True,
         )
     return dataset_path
 
