@@ -457,6 +457,8 @@ def get_robocasa_ds(
     for name in ds_names:
         cfg = dict()
         ds_path = get_ds_path(name, ds_type=f"{src}_im")
+        if ds_path is None:
+            continue
 
         # set path and horizon
         cfg["path"] = ds_path

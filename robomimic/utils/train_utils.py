@@ -297,7 +297,12 @@ def run_rollout(
     batched = isinstance(env, SubprocVectorEnv)
 
     ob_dict = env.reset()
-    policy.start_episode(lang=env._ep_lang_str)
+    
+    if batched:
+        lang = env.get_env_attr("_ep_lang_str", id=list(range(len(env))))
+    else:
+        lang = env._ep_lang_str
+    policy.start_episode(lang=lang)
 
     goal_dict = None
     if use_goals:
@@ -367,12 +372,6 @@ def run_rollout(
                                 policy_ob[im_name][env_i, -1]
                             )
                             im = np.transpose(im, (1, 2, 0))
-                            if policy_ob.get("ret", None) is not None:
-                                im_ret = TensorUtils.to_numpy(
-                                    policy_ob["ret"]["obs"][im_name][env_i,:,-1]
-                                )
-                                im_ret = np.transpose(im_ret, (0, 2, 3, 1))
-                                im = np.concatenate((im, *im_ret), axis=0)
                             cam_imgs.append(im)
                         frame = np.concatenate(cam_imgs, axis=1)
                         frame = (frame * 255.0).astype(np.uint8)
@@ -525,6 +524,9 @@ def rollout_with_stats(
         horizon_list = [horizon]
 
     for env, horizon in zip(envs, horizon_list):
+        if env is None:
+            continue
+
         batched = isinstance(env, SubprocVectorEnv)
 
         if batched:
@@ -552,7 +554,7 @@ def rollout_with_stats(
         else:
             iterator = range(num_episodes)
         if not verbose:
-            iterator = LogUtils.custom_tqdm(iterator, total=num_episodes)
+            iterator = LogUtils.custom_tqdm(iterator, total=len(iterator))
 
         num_success = 0
         for ep_i in iterator:
@@ -606,7 +608,7 @@ def rollout_with_stats(
 
         if del_envs_after_rollouts:
             # delete the environment after use
-            env.env.env.close()
+            env.close()
             del env
 
         if data_logger is not None:

@@ -636,6 +636,9 @@ class RolloutPolicy(object):
         """
         if self.lang_encoder is not None:
             self._ep_lang_emb = TensorUtils.to_numpy(self.lang_encoder.get_lang_emb(lang))
+            # batchify if needed
+            if len(self._ep_lang_emb.shape) == 1:
+                self._ep_lang_emb = TensorUtils.to_batch(self._ep_lang_emb)
         self.policy.set_eval()
         self.policy.reset()
 
@@ -651,15 +654,17 @@ class RolloutPolicy(object):
         """
         if self.obs_normalization_stats is not None:
             ob = ObsUtils.normalize_dict(ob, obs_normalization_stats=self.obs_normalization_stats)
-        assert batched is False
-        if self._ep_lang_emb is not None:
-            if len(ob["robot0_eef_pos"].shape) == 1:
-                ob["lang_emb"] = self._ep_lang_emb
-            else:
-                ob["lang_emb"] = np.repeat(self._ep_lang_emb[np.newaxis], len(ob["robot0_eef_pos"]), axis=0)
-        ob = TensorUtils.to_tensor(ob)
         if not batched:
             ob = TensorUtils.to_batch(ob)
+        if self._ep_lang_emb is not None:
+            assert len(self._ep_lang_emb.shape) == 2
+            if len(ob["robot0_eef_pos"].shape) == 2: # (B, D)
+                ob["lang_emb"] = self._ep_lang_emb
+            elif len(ob["robot0_eef_pos"].shape) == 3: # (B, T, D)
+                ob["lang_emb"] = np.repeat(self._ep_lang_emb[:,np.newaxis], ob["robot0_eef_pos"].shape[1], axis=1)
+            else:
+                raise NotImplementedError
+        ob = TensorUtils.to_tensor(ob)
         ob = TensorUtils.to_device(ob, self.policy.device)
         ob = TensorUtils.to_float(ob)
         return ob

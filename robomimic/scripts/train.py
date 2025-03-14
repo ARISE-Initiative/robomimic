@@ -136,14 +136,19 @@ def train(config, device, eval_only=False):
 
                 return env
 
-            if config.experiment.rollout.batched:
-                from tianshou.env import SubprocVectorEnv
-                env_fns = [lambda env_i=i: create_env_helper(env_i) for i in range(config.experiment.rollout.num_batch_envs)]
-                env = SubprocVectorEnv(env_fns)
-                # env_name = env.get_env_attr(key="name", id=0)[0]
-            else:
-                env = create_env_helper()
-                # env_name = env.name
+            try:
+                if config.experiment.rollout.batched:
+                    from tianshou.env import SubprocVectorEnv
+                    env_fns = [lambda env_i=i: create_env_helper(env_i) for i in range(config.experiment.rollout.num_batch_envs)]
+                    env = SubprocVectorEnv(env_fns)
+                    # env_name = env.get_env_attr(key="name", id=0)[0]
+                else:
+                    env = create_env_helper()
+                    # env_name = env.name
+            except Exception as e:
+                print("EXCEPTION! creating envs for eval led to error:")
+                print(traceback.print_exc())
+                env = None
             print(env)
             yield env
 

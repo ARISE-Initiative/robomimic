@@ -454,3 +454,19 @@ class EnvRobosuite(EB.EnvBase):
         Pretty-print env description.
         """
         return self.name + "\n" + json.dumps(self._init_kwargs, sort_keys=True, indent=4)
+
+    def close(self):
+        # close and delete all nested env wrappers and base env
+        env = self
+        env_chain = []
+        while True:
+            if hasattr(env, "env"):
+                env = env.env
+            else:
+                break
+            env_chain = [env] + env_chain
+        
+        for env in env_chain:
+            if hasattr(env, "close"):
+                env.close()
+            del env
