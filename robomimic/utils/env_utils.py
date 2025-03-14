@@ -172,7 +172,6 @@ def create_env(
         lang: language instruction for the environment
     """
 
-    # note: pass @postprocess_visual_obs True, to make sure images are processed for network inputs
     env_class = get_env_class(env_type=env_type)
     env = env_class(
         env_name=env_name, 
@@ -180,7 +179,6 @@ def create_env(
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs,
         use_depth_obs=use_depth_obs,
-        postprocess_visual_obs=True,
         lang=lang,
         **kwargs,
     )

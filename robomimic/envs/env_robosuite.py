@@ -41,7 +41,6 @@ class EnvRobosuite(EB.EnvBase):
         render_offscreen=False, 
         use_image_obs=False, 
         use_depth_obs=False, 
-        postprocess_visual_obs=True, 
         lang=None,
         **kwargs,
     ):
@@ -63,13 +62,8 @@ class EnvRobosuite(EB.EnvBase):
                 on every env.step call. Set this to False for efficiency reasons, if depth
                 observations are not required.
 
-            postprocess_visual_obs (bool): if True, postprocess image observations
-                to prepare for learning. This should only be False when extracting observations
-                for saving to a dataset (to save space on RGB images for example).
-
             lang: language descripton for the environment
         """
-        self.postprocess_visual_obs = postprocess_visual_obs
         self.use_depth_obs = use_depth_obs
 
         # robosuite version check
@@ -241,8 +235,6 @@ class EnvRobosuite(EB.EnvBase):
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
                 # by default images from mujoco are flipped in height
                 ret[k] = di[k][::-1]
-                if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
             elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
                 # by default depth images from mujoco are flipped in height
                 ret[k] = di[k][::-1]
@@ -251,8 +243,6 @@ class EnvRobosuite(EB.EnvBase):
                 assert len(ret[k].shape) == 3 
                 # scale entries in depth map to correspond to real distance.
                 ret[k] = self.get_real_depth_map(ret[k])
-                if self.postprocess_visual_obs:
-                    ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
 
         # "object" key contains object information
         ret["object"] = np.array(di["object-state"])
@@ -517,14 +507,12 @@ class EnvRobosuite(EB.EnvBase):
             obs_modality_specs["obs"]["depth"] = depth_modalities
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs)
 
-        # note that @postprocess_visual_obs is False since this env's images will be written to a dataset
         return cls(
             env_name=env_name,
             render=(False if render is None else render), 
             render_offscreen=(has_camera if render_offscreen is None else render_offscreen), 
             use_image_obs=(has_camera if use_image_obs is None else use_image_obs), 
             use_depth_obs=use_depth_obs,
-            postprocess_visual_obs=False,
             **kwargs,
         )
 

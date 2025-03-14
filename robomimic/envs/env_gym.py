@@ -26,7 +26,6 @@ class EnvGym(EB.EnvBase):
         render_offscreen=False, 
         use_image_obs=False, 
         use_depth_obs=False, 
-        postprocess_visual_obs=True, 
         **kwargs,
     ):
         """
@@ -39,8 +38,6 @@ class EnvGym(EB.EnvBase):
             render_offscreen (bool): ignored - gym envs always support off-screen rendering
 
             use_image_obs (bool): ignored - gym envs don't typically use images
-
-            postprocess_visual_obs (bool): ignored - gym envs don't typically use images
         """
         self._init_kwargs = deepcopy(kwargs)
         self._env_name = env_name

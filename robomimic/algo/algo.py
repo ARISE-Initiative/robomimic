@@ -649,7 +649,7 @@ class RolloutPolicy(object):
         self.policy.set_eval()
         self.policy.reset()
 
-    def _prepare_observation(self, ob, batched=False):
+    def _prepare_observation(self, ob, batched=False, postprocess_visual_obs=True):
         """
         Prepare raw observation dict from environment for policy.
 
@@ -658,6 +658,9 @@ class RolloutPolicy(object):
                 and np.array values for each key)
 
             batched (bool): whether the input is already batched
+
+            postprocess_visual_obs (bool): if True, postprocess image observations
+                to prepare for learning.
         """
         ob = TensorUtils.to_tensor(ob)
         if not batched:
@@ -670,6 +673,10 @@ class RolloutPolicy(object):
             # limit normalization to obs keys being used, in case environment includes extra keys
             ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
             ob = ObsUtils.normalize_dict(ob, normalization_stats=obs_normalization_stats)
+        # postprocess visual observations
+        for k in ob:
+            if ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb") or ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
+                ob[k] = ObsUtils.process_obs(obs=ob[k], obs_key=k)
         return ob
 
     def __repr__(self):
