@@ -9,7 +9,13 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
-        "mse":{},
+        "mse": {
+            "enabled": false,
+            "every_n_epochs": 50,
+            "on_save_ckpt": true,
+            "num_samples": 20,
+            "visualize": true
+        },
         "save": {
             "enabled": true,
             "every_n_seconds": null,
@@ -33,12 +39,17 @@
             "horizon": 400,
             "rate": 50,
             "warmstart": 0,
-            "terminate_on_success": true
-        }
+            "terminate_on_success": true,
+            "batched": false,
+            "num_batch_envs": 5
+        },
+        "env_meta_update_dict": {},
+        "ckpt_path": null
     },
     "train": {
         "data": null,
         "output_dir": "../bc_trained_models",
+        "normalize_weights_by_ds_size": false,
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
         "hdf5_use_swmr": true,
@@ -50,16 +61,24 @@
         "pad_seq_length": true,
         "frame_stack": 1,
         "pad_frame_stack": true,
+        "demo_limit": null,
         "dataset_keys": [
             "actions",
             "rewards",
             "dones"
         ],
+        "action_keys": [
+            "actions"
+        ],
+        "action_config": {},
         "goal_mode": null,
         "cuda": true,
         "batch_size": 100,
         "num_epochs": 2000,
-        "seed": 1
+        "seed": 1,
+        "max_grad_norm": null,
+        "data_format": "robomimic",
+        "shuffled_obs_key_groups": null
     },
     "algo": {
         "optim_params": {
@@ -158,7 +177,9 @@
             "sinusoidal_embedding": false,
             "activation": "gelu",
             "supervise_all_steps": false,
-            "nn_parameter_for_timesteps": true
+            "nn_parameter_for_timesteps": true,
+            "pred_future_acs": false,
+            "causal": true
         }
     },
     "observation": {

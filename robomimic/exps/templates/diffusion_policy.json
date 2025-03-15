@@ -9,7 +9,13 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
-        "mse":{},
+        "mse": {
+            "enabled": false,
+            "every_n_epochs": 50,
+            "on_save_ckpt": true,
+            "num_samples": 20,
+            "visualize": true
+        },
         "save": {
             "enabled": true,
             "every_n_seconds": null,
@@ -33,37 +39,58 @@
             "horizon": 400,
             "rate": 50,
             "warmstart": 0,
-            "terminate_on_success": true
-        }
+            "terminate_on_success": true,
+            "batched": false,
+            "num_batch_envs": 5
+        },
+        "env_meta_update_dict": {},
+        "ckpt_path": null
     },
     "train": {
         "data": null,
-        "output_dir":"../diffusion_policy_trained_models",
+        "output_dir": "../diffusion_policy_trained_models",
+        "normalize_weights_by_ds_size": false,
         "num_data_workers": 0,
-        "hdf5_cache_mode": "low_dim",
+        "hdf5_cache_mode": "all",
         "hdf5_use_swmr": true,
-        "hdf5_load_next_obs": false,
+        "hdf5_load_next_obs": true,
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
-        "seq_length": 15,
+        "hdf5_validation_filter_key": null,
+        "seq_length": 1,
         "pad_seq_length": true,
-        "frame_stack": 2,
+        "frame_stack": 1,
         "pad_frame_stack": true,
+        "demo_limit": null,
         "dataset_keys": [
+            "actions",
+            "rewards",
+            "dones"
+        ],
+        "action_keys": [
             "actions"
         ],
+        "action_config": {},
         "goal_mode": null,
         "cuda": true,
-        "batch_size": 256,
+        "batch_size": 100,
         "num_epochs": 2000,
-        "seed": 1
+        "seed": 1,
+        "max_grad_norm": null,
+        "data_format": "robomimic",
+        "shuffled_obs_key_groups": null
     },
     "algo": {
         "optim_params": {
             "policy": {
+                "optimizer_type": "adam",
                 "learning_rate": {
                     "initial": 0.0001,
                     "decay_factor": 0.1,
+                    "step_every_batch": true,
+                    "scheduler_type": "cosine",
+                    "num_cycles": 0.5,
+                    "warmup_steps": 500,
                     "epoch_schedule": []
                 },
                 "regularization": {
@@ -79,7 +106,11 @@
         "unet": {
             "enabled": true,
             "diffusion_step_embed_dim": 256,
-            "down_dims": [256,512,1024],
+            "down_dims": [
+                256,
+                512,
+                1024
+            ],
             "kernel_size": 5,
             "n_groups": 8
         },
@@ -135,28 +166,9 @@
             },
             "rgb": {
                 "core_class": "VisualCore",
-                "core_kwargs": {
-                    "feature_dimension": 64,
-                    "backbone_class": "ResNet18Conv",
-                    "backbone_kwargs": {
-                        "pretrained": false,
-                        "input_coord_conv": false
-                    },
-                    "pool_class": "SpatialSoftmax",
-                    "pool_kwargs": {
-                        "num_kp": 32,
-                        "learnable_temperature": false,
-                        "temperature": 1.0,
-                        "noise_std": 0.0
-                    }
-                },
-                "obs_randomizer_class": "CropRandomizer",
-                "obs_randomizer_kwargs": {
-                    "crop_height": 76,
-                    "crop_width": 76,
-                    "num_crops": 1,
-                    "pos_enc": false
-                }
+                "core_kwargs": {},
+                "obs_randomizer_class": null,
+                "obs_randomizer_kwargs": {}
             },
             "depth": {
                 "core_class": "VisualCore",
@@ -171,5 +183,10 @@
                 "obs_randomizer_kwargs": {}
             }
         }
+    },
+    "meta": {
+        "hp_base_config_file": null,
+        "hp_keys": [],
+        "hp_values": []
     }
 }
