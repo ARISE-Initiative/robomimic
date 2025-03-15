@@ -22,7 +22,7 @@ Sections of the config that are not involved in the scan and that do not differ 
 
 </div>
 
-We modify `/tmp/gen_configs/base.json`, adding a base experiment name (`"bc_rnn_hyper"`) and specified the dataset path (`"/tmp/test_v141.hdf5"`).
+We modify `/tmp/gen_configs/base.json`, adding a base experiment name (`"bc_rnn_hyper"`) and specified the dataset path (`"/tmp/test_v15.hdf5"`).
 
 ```sh
 $ cat /tmp/gen_configs/base.json
@@ -59,7 +59,7 @@ $ cat /tmp/gen_configs/base.json
         }
     },
     "train": {
-        "data": "/tmp/test_v141.hdf5",
+        "data": "/tmp/test_v15.hdf5",
         "output_dir": "../bc_trained_models",
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
