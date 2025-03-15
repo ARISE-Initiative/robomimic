@@ -19,6 +19,11 @@ try:
     import mimicgen_envs
 except ImportError:
     pass
+try:
+    # try to import mimiclabs envs
+    from mimiclabs.mimiclabs.envs import *
+except ImportError:
+    pass
 
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.lang_utils as LangUtils
