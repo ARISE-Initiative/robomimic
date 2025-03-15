@@ -90,16 +90,18 @@ def obs_encoder_factory(
         if not isinstance(obs_randomizer_kwargs_list, list):
             obs_randomizer_kwargs_list = [obs_randomizer_kwargs_list]
 
+        rand_input_shape = obs_shape
         for rand_class, rand_kwargs in zip(obs_randomizer_class_list, obs_randomizer_kwargs_list):            
             rand = None
             if rand_class is not None:
-                rand_kwargs["input_shape"] = obs_shape
+                rand_kwargs["input_shape"] = rand_input_shape
                 rand_kwargs = extract_class_init_kwargs_from_dict(
                     cls=ObsUtils.OBS_RANDOMIZERS[rand_class],
                     dic=rand_kwargs,
                     copy=False,
                 )
                 rand = ObsUtils.OBS_RANDOMIZERS[rand_class](**rand_kwargs)
+                rand_input_shape = rand.output_shape_in(rand_input_shape)
             randomizers.append(rand)
 
         enc.register_obs_key(
@@ -179,12 +181,13 @@ class ObservationEncoder(Module):
             assert share_net_from in self.obs_shapes
 
         net_kwargs = deepcopy(net_kwargs) if net_kwargs is not None else {}
+        rand_output_shape = shape
         for rand in randomizers:
             if rand is not None:
                 assert isinstance(rand, Randomizer)
-                if net_kwargs is not None:
-                    # update input shape to visual core
-                    net_kwargs["input_shape"] = rand.output_shape_in(shape)
+                rand_output_shape = rand.output_shape_in(rand_output_shape)
+        if net_kwargs is not None:
+            net_kwargs["input_shape"] = rand_output_shape
 
         self.obs_shapes[name] = shape
         self.obs_nets_classes[name] = net_class
@@ -291,7 +294,7 @@ class ObservationEncoder(Module):
                 if self.activation is not None:
                     x = self.activation(x)
             # maybe process encoder output with randomizer
-            for rand in self.obs_randomizers[k]:
+            for rand in reversed(self.obs_randomizers[k]):
                 if rand is not None:
                     x = rand.forward_out(x)
             # flatten to [B, D]
