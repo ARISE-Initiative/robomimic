@@ -245,7 +245,7 @@ def train(config, device, resume=False):
 
     # if checkpoint is specified, load in model weights
     ckpt_path = config.experiment.ckpt_path
-    if ckpt_path is not None:
+    if (ckpt_path is not None) and (not resume):
         print("LOADING MODEL WEIGHTS FROM " + ckpt_path)
         from robomimic.utils.file_utils import maybe_dict_from_checkpoint
         ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
