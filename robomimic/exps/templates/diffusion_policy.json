@@ -83,7 +83,7 @@
     "algo": {
         "optim_params": {
             "policy": {
-                "optimizer_type": "adam",
+                "optimizer_type": "adamw",
                 "learning_rate": {
                     "initial": 0.0001,
                     "decay_factor": 0.1,
@@ -94,7 +94,7 @@
                     "epoch_schedule": []
                 },
                 "regularization": {
-                    "L2": 0.0
+                    "L2": 1e-06
                 }
             }
         },
