@@ -112,8 +112,6 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_s
     if ds_format == "robomimic":
         env_meta = json.loads(f["data"].attrs["env_args"])
         if "env_lang" in env_meta["env_kwargs"]: del env_meta["env_kwargs"]["env_lang"]
-    elif ds_format == "r2d2":
-        env_meta = dict(f.attrs)
     else:
         raise ValueError
     f.close()
@@ -177,43 +175,6 @@ def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=No
             if verbose:
                 print("obs key {} with shape {}".format(k, initial_shape))
             # Store processed shape for each obs key
-            all_shapes[k] = ObsUtils.get_processed_shape(
-                obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
-                input_shape=initial_shape,
-            )
-    elif ds_format == "r2d2":
-        for key in action_keys:
-            assert len(f[key].shape) == 2 # shape should be (B, D)
-        action_dim = sum([f[key].shape[1] for key in action_keys])
-        shape_meta["ac_dim"] = action_dim
-        
-        # observation dimensions
-        all_shapes = OrderedDict()
-
-        # hack all relevant obs shapes for now
-        for k in [
-            "robot_state/cartesian_position",
-            "robot_state/gripper_position",
-            "robot_state/joint_positions",
-            "camera/image/hand_camera_left_image",
-            "camera/image/hand_camera_right_image",
-            "camera/image/varied_camera_1_left_image",
-            "camera/image/varied_camera_1_right_image",
-            "camera/image/varied_camera_2_left_image",
-            "camera/image/varied_camera_2_right_image",
-            "camera/extrinsics/hand_camera_left",
-            "camera/extrinsics/hand_camera_left_gripper_offset",
-            "camera/extrinsics/hand_camera_right",
-            "camera/extrinsics/hand_camera_right_gripper_offset",
-            "camera/extrinsics/varied_camera_1_left",
-            "camera/extrinsics/varied_camera_1_right",
-            "camera/extrinsics/varied_camera_2_left",
-            "camera/extrinsics/varied_camera_2_right",
-        ]:
-            initial_shape = f["observation/{}".format(k)].shape[1:]
-            if len(initial_shape) == 0:
-                initial_shape = (1,)
-
             all_shapes[k] = ObsUtils.get_processed_shape(
                 obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
                 input_shape=initial_shape,

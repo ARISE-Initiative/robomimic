@@ -78,8 +78,8 @@ Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this frame
   year={2021}
 }
 ```
-python robomimic/scripts/convertion/convert_r2d2.py --folder <folder-containing-r2d2-data>
-```
+
+
 ### robosuite datasets
 1. Convert the raw robosuite dataset to robomimic format
 ```
@@ -126,9 +126,3 @@ Want to intialize your model with weights from a previous model checkpoint? Set 
 -------
 ## Logging and viewing results
 Read this short [tutorial page](https://robomimic.github.io/docs/tutorials/viewing_results.html).
-
--------
-## Real robot evaluation (r2d2 only)
-Use this forked r2d2: https://github.com/snasiriany/r2d2/tree/robomimic-eval. Note that the branch is `robomimic-eval`.
-
-Run this script: https://github.com/snasiriany/r2d2/blob/robomimic-eval/scripts/evaluation/evaluate_policy.py. Before doing so, make sure to fill out `CKPT_PATH` with the path to the saved robomimic checkpoint you wish to evaluate.
