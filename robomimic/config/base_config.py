@@ -87,13 +87,6 @@ class BaseConfig(Config):
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
         self.experiment.logging.log_wandb = False                   # enable wandb logging
         self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
-
-        # log model prediction MSE
-        self.experiment.mse.enabled = False                         # whether to log model prediction MSE
-        self.experiment.mse.every_n_epochs = 50                     # log model prediction MSE every n epochs
-        self.experiment.mse.on_save_ckpt = True                     # log model prediction MSE on model checkpoint
-        self.experiment.mse.num_samples = 20                        # number of datapoints to use for MSE prediction
-        self.experiment.mse.visualize = True                        # save model prediction visualizations
                 
         ## save config - if and when to save model checkpoints ##
         self.experiment.save.enabled = True                         # whether model saving should be enabled or disabled

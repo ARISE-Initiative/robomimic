@@ -9,13 +9,6 @@
             "log_wandb": false,
             "wandb_proj_name": "debug"
         },
-        "mse": {
-            "enabled": false,
-            "every_n_epochs": 50,
-            "on_save_ckpt": true,
-            "num_samples": 20,
-            "visualize": true
-        },
         "save": {
             "enabled": true,
             "every_n_seconds": null,

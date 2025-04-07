@@ -56,7 +56,7 @@ def train(config, device, resume=False):
     print("\n============= New Training Run with Config =============")
     print(config)
     print("")
-    log_dir, ckpt_dir, video_dir, vis_dir, time_dir = TrainUtils.get_exp_dir(config, resume=resume)
+    log_dir, ckpt_dir, video_dir, time_dir = TrainUtils.get_exp_dir(config, resume=resume)
 
     # path for latest model and backup (to support @resume functionality)
     latest_model_path = os.path.join(time_dir, "last.pth")
@@ -392,35 +392,6 @@ def train(config, device, resume=False):
             should_save_ckpt = (config.experiment.save.enabled and updated_stats["should_save_ckpt"]) or should_save_ckpt
             if updated_stats["ckpt_reason"] is not None:
                 ckpt_reason = updated_stats["ckpt_reason"]
-
-        # check if we need to save model MSE
-        should_save_mse = False
-        if config.experiment.mse.enabled:
-            if config.experiment.mse.every_n_epochs is not None and epoch % config.experiment.mse.every_n_epochs == 0:
-                should_save_mse = True
-            if config.experiment.mse.on_save_ckpt and should_save_ckpt:
-                should_save_mse = True
-        if should_save_mse:
-            print("Computing MSE ...")
-            if config.experiment.mse.visualize:
-                save_vis_dir = os.path.join(vis_dir, epoch_ckpt_name)
-            else:
-                save_vis_dir = None
-            mse_log, vis_log = model.compute_mse_visualize(
-                trainset,
-                validset,
-                num_samples=config.experiment.mse.num_samples,
-                savedir=save_vis_dir,
-            )    
-            for k, v in mse_log.items():
-                data_logger.record("{}".format(k), v, epoch)
-            
-            for k, v in vis_log.items():
-                data_logger.record("{}".format(k), v, epoch, data_type='image')
-
-
-            print("MSE Log Epoch {}".format(epoch))
-            print(json.dumps(mse_log, sort_keys=True, indent=4))
         
         # # Only keep saved videos if the ckpt should be saved (but not because of validation score)
         # should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
