@@ -71,3 +71,18 @@ def extract_class_init_kwargs_from_dict(cls, dic, copy=False, verbose=False):
             print(f"Warning: For class {cls.__name__}, got missing keys: {keys_not_in_dic} ")
 
     return subdic
+
+
+def deep_update(d, u):
+    """
+    Deeply update dictionary @d with values from dictionary @u.
+
+    Copied from https://stackoverflow.com/a/3233356
+    """
+    import collections
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d

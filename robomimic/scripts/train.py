@@ -88,7 +88,7 @@ def train(config, device, resume=False):
         env_meta["lang"] = dataset_cfg.get("lang", "dummy")
 
         # update env meta if applicable
-        from robomimic.utils.script_utils import deep_update
+        from robomimic.utils.python_utils import deep_update
         deep_update(env_meta, config.experiment.env_meta_update_dict)
         env_meta_list.append(env_meta)
 
