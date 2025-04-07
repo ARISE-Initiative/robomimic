@@ -394,6 +394,13 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 the same keys as @self.network_classes
         """
         self.nets.load_state_dict(model_dict["nets"])
+
+        # for backwards compatibility
+        if "optimizers" not in model_dict:
+            model_dict["optimizers"] = {}
+        if "lr_schedulers" not in model_dict:
+            model_dict["lr_schedulers"] = {}
+
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
         for k in model_dict["optimizers"]:

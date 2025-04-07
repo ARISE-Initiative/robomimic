@@ -342,6 +342,11 @@ class Algo(object):
         Args:
             model_dict (dict): a dictionary saved by self.serialize()
         """
+        if "nets" not in model_dict:
+            # for backwards compatibility
+            model_dict = {"nets": model_dict}
+            model_dict["optimizers"] = {}
+            model_dict["lr_schedulers"] = {}
         self.nets.load_state_dict(model_dict["nets"])
         for k in model_dict["optimizers"]:
             self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
