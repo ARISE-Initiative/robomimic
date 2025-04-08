@@ -233,6 +233,9 @@ class BC(PolicyAlgo):
             log["Cosine_Loss"] = info["losses"]["cos_loss"].item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
+        log["Number of Parameters"] = sum(
+            p.numel() for p in self.nets.parameters() if p.requires_grad
+        )
         return log
 
     def get_action(self, obs_dict, goal_dict=None):

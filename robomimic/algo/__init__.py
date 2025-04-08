@@ -9,3 +9,7 @@ from robomimic.algo.gl import GL, GL_VAE, ValuePlanner
 from robomimic.algo.hbc import HBC
 from robomimic.algo.iris import IRIS
 from robomimic.algo.td3_bc import TD3_BC
+
+# my custom algo
+from robomimic.algo.graph_bc import GAT_BC
+from robomimic.algo.diff_graph import DIFF_GAT

@@ -10,3 +10,7 @@ from robomimic.config.gl_config import GLConfig
 from robomimic.config.hbc_config import HBCConfig
 from robomimic.config.iris_config import IRISConfig
 from robomimic.config.td3_bc_config import TD3_BCConfig
+
+# my custom config
+from robomimic.config.graph_config import GATConfig
+from robomimic.config.diff_graph_config import DiffGATConfig
