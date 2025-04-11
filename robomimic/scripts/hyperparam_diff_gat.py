@@ -18,7 +18,7 @@ def make_generator_simple(config_file, script_file):
         key="experiment.logging.log_wandb",
         name="",
         group=-1,
-        values=[True], # Ensure WandB logging is enabled
+        values=[False], # Ensure WandB logging is enabled
     )
     generator.add_param(
         key="experiment.logging.wandb_proj_name",
