@@ -37,6 +37,7 @@ class DiffGATConfig(BaseConfig):
         # Diffusion models typically predict action sequences based on past observations.
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
         self.train.hdf5_load_next_obs = False
+        self.train.data = "datasets/can/ph/low_dim_v141.hdf5"
 
         # Core training parameters
         self.train.seq_length = 3     # Length of action sequences predicted by the policy
@@ -58,11 +59,11 @@ class DiffGATConfig(BaseConfig):
         # --- Optimization ---
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adam" # Adam optimizer is standard
-        optim_params.learning_rate.initial = 2e-4     # Initial learning rate
+        optim_params.learning_rate.initial = 1e-4     # Initial learning rate
         optim_params.learning_rate.decay_factor = 0.1 # Multiplicative factor for LR decay
-        optim_params.learning_rate.epoch_schedule = [600, 800] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
+        optim_params.learning_rate.epoch_schedule = [] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
         optim_params.learning_rate.scheduler_type = "multistep" # 'multistep' or 'cosine'
-        optim_params.regularization.L2 = 1e-6        # L2 weight decay (0 means none)
+        optim_params.regularization.L2 = 1e-6       # L2 weight decay (0 means none)
         self.algo.grad_clip = 1.0                     # Max norm for gradient clipping (helps stability)
 
         # --- Diffusion Process ---
@@ -72,7 +73,7 @@ class DiffGATConfig(BaseConfig):
         # GNN (GATv2 Backbone) parameters
         gnn = self.algo.gnn
         gnn.num_layers = 4         # Number of message-passing layers
-        gnn.hidden_dim = 128       # Hidden dimension within GNN layers and output embedding size
+        gnn.hidden_dim = 512       # Hidden dimension within GNN layers and output embedding size
         gnn.num_heads = 4          # Number of attention heads in GATv2 layers (hidden_dim must be divisible by num_heads)
         gnn.attention_dropout = 0.3 # Dropout rate specifically on attention weights
 
@@ -81,11 +82,11 @@ class DiffGATConfig(BaseConfig):
         transformer.num_layers = 4        # Number of decoder layers
         transformer.num_heads = 4         # Number of attention heads in decoder layers
         # Feedforward dimension is often a multiple of the model dimension (hidden_dim)
-        transformer.ff_dim_multiplier = 4
+        transformer.ff_dim_multiplier = 2
 
         # General Network parameters
         network = self.algo.network
-        network.dropout = 0.15 # General dropout rate applied in MLPs, positional encoding, etc.
+        network.dropout = 0.2 # General dropout rate applied in MLPs, positional encoding, etc.
 
         # --- Loss Configuration ---
         # For standard diffusion models, the primary loss is MSE between predicted and actual noise.
