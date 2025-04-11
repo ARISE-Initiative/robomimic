@@ -37,7 +37,7 @@ class DiffGATConfig(BaseConfig):
         # Diffusion models typically predict action sequences based on past observations.
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
         self.train.hdf5_load_next_obs = False
-        self.train.data = "datasets/can/ph/low_dim_v141.hdf5"
+        self.train.data = "datasets/can/ph/low_dim_v*.hdf5" # Path to dataset files
 
         # Core training parameters
         self.train.seq_length = 3     # Length of action sequences predicted by the policy
