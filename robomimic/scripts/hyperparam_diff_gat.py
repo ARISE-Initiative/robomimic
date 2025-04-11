@@ -20,6 +20,12 @@ def make_generator_simple(config_file, script_file):
         group=-1,
         values=[True], # Ensure WandB logging is enabled
     )
+    generator.add_param(
+        key="experiment.logging.wandb_proj_name",
+        name="",
+        group=-1,
+        values=["robomimic"], # Ensure TensorBoard logging is enabled
+    )
 
     # --- Simplified Hyperparameter Sweep ---
     # Parameters are placed in different groups because they have different numbers of values.

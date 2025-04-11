@@ -81,7 +81,7 @@ class DiffGATConfig(BaseConfig):
         transformer = self.algo.transformer
         transformer.num_layers = 4        # Number of decoder layers
         transformer.num_heads = 4         # Number of attention heads in decoder layers
-        # Feedforward dimension is often a multiple of the model dimension (hidden_dim)
+        # Feedfor`wa`rd dimension is often a multiple of the model dimension (hidden_dim)
         transformer.ff_dim_multiplier = 2
 
         # General Network parameters
