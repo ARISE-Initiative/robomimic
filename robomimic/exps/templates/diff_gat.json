@@ -67,7 +67,7 @@
             "policy": {
                 "optimizer_type": "adam",
                 "learning_rate": {
-                    "initial": 0.0002,
+                    "initial": 0.0001,
                     "decay_factor": 0.1,
                     "epoch_schedule": [],
                     "scheduler_type": "multistep"
@@ -83,17 +83,17 @@
         },
         "gnn": {
             "num_layers": 4,
-            "hidden_dim": 128,
+            "hidden_dim": 512,
             "num_heads": 4,
             "attention_dropout": 0.3
         },
         "transformer": {
             "num_layers": 4,
             "num_heads": 4,
-            "ff_dim_multiplier": 4
+            "ff_dim_multiplier": 2
         },
         "network": {
-            "dropout": 0.15
+            "dropout": 0.2
         },
         "loss": {
             "l2_weight": 1.0,
