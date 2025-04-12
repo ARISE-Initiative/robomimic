@@ -522,7 +522,7 @@ class ResNet18Conv(ConvBase):
                 (a convolution where input channels are modified to encode spatial pixel location)
         """
         super(ResNet18Conv, self).__init__()
-        net = vision_models.resnet18(pretrained=pretrained)
+        net = vision_models.resnet18(weights=(vision_models.ResNet18_Weights.DEFAULT if pretrained else None))
 
         if input_coord_conv:
             net.conv1 = CoordConv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False)
