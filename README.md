@@ -66,6 +66,19 @@ It offers a broad set of demonstration datasets collected on robot manipulation 
 
 The robomimic framework also makes reproducing the results from different benchmarks and datasets easy. See the [datasets page](https://robomimic.github.io/docs/datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
+## Docker
+
+You can use the `Dockerfile` to easily build a containerized environment for setting up robomimic with Python 3.9, Miniconda, robosuite, and PyTorch (CPU/GPU support).
+
+To build, run:
+`docker build -t robomimic .`
+
+To run without GPU (CPU only), run:
+`docker run -it robomimic`
+
+To run with GPU (if available), run:
+`docker run --gpus all -it robomimic`
+
 ## Troubleshooting
 
 Please see the [troubleshooting](https://robomimic.github.io/docs/miscellaneous/troubleshooting.html) section for common fixes, or [submit an issue](https://github.com/ARISE-Initiative/robomimic/issues) on our github page.
