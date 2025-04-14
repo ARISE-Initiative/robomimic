@@ -36,7 +36,7 @@
         }
     },
     "train": {
-        "data": "datasets/can/ph/low_dim_v15.hdf5",
+        "data": null,
         "output_dir": "../diff_gat_trained_models",
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
@@ -67,9 +67,12 @@
             "policy": {
                 "optimizer_type": "adam",
                 "learning_rate": {
-                    "initial": 0.0001,
+                    "initial": 0.0002,
                     "decay_factor": 0.1,
-                    "epoch_schedule": [],
+                    "epoch_schedule": [
+                        600,
+                        800
+                    ],
                     "scheduler_type": "multistep"
                 },
                 "regularization": {
@@ -83,7 +86,7 @@
         },
         "gnn": {
             "num_layers": 4,
-            "hidden_dim": 512,
+            "hidden_dim": 128,
             "num_heads": 4,
             "attention_dropout": 0.3
         },
@@ -93,7 +96,7 @@
             "ff_dim_multiplier": 2
         },
         "network": {
-            "dropout": 0.2
+            "dropout": 0.15
         },
         "loss": {
             "l2_weight": 1.0,
