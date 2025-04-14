@@ -31,12 +31,17 @@ class DiffGATConfig(BaseConfig):
         self.experiment.rollout.warmstart = 200 # Steps before starting rollouts
         self.experiment.rollout.terminate_on_success = True # End rollout if task succeeds
 
+        self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
+        self.experiment.logging.wandb_proj_name = "robomimic"
+
     def train_config(self):
         """Configure training loop settings."""
         super().train_config()
         # Diffusion models typically predict action sequences based on past observations.
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
         self.train.hdf5_load_next_obs = False
+
+        self.train.data = "../datasets/can/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
 
         # Core training parameters
         self.train.seq_length = 3     # Length of action sequences predicted by the policy
