@@ -13,6 +13,10 @@ from torch_geometric.data import Batch
 from torch_geometric.nn import GATv2Conv, global_mean_pool
 import pytorch_kinematics as pk
 import os
+from robomimic.models.obs_nets import ObservationEncoder, ObservationDecoder
+from robomimic.models.obs_core import CropRandomizer
+import robomimic.utils.obs_utils as ObsUtils
+
 # Note: robomimic imports are kept for potential future use or integration,
 # but the core model here relies primarily on torch and torch_geometric.
 # from robomimic.models.obs_nets import ObservationGroupEncoder
@@ -27,6 +31,7 @@ class SinusoidalPositionEmbeddings(nn.Module):
     Copied from Phil Wang's implementation:
     https://github.com/lucidrains/denoising-diffusion-pytorch/blob/main/denoising_diffusion_pytorch/denoising_diffusion_pytorch.py
     """
+
     def __init__(self, dim: int):
         """
         Initializes the module.
@@ -53,7 +58,9 @@ class SinusoidalPositionEmbeddings(nn.Module):
         half_dim = self.dim // 2
         embeddings = math.log(10000) / (half_dim - 1)
         embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
-        embeddings = t.float()[:, None] * embeddings[None, :] # Ensure t is float for multiplication
+        embeddings = (
+            t.float()[:, None] * embeddings[None, :]
+        )  # Ensure t is float for multiplication
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
         return embeddings
 
@@ -65,6 +72,7 @@ class GATv2Backbone(nn.Module):
     Processes graph structures (nodes, edges) and outputs a graph-level embedding
     using GATv2 convolutions, Layer Normalization, SiLU activation, and global pooling.
     """
+
     def __init__(
         self,
         input_feature_dim: int,
@@ -111,11 +119,12 @@ class GATv2Backbone(nn.Module):
                     heads=self.heads,
                     concat=True,  # Concatenate head outputs
                     dropout=self.attention_dropout,
-                    add_self_loops=True, # Recommended for GAT variants
+                    add_self_loops=True,  # Recommended for GAT variants
                 )
             )
-            # LayerNorm is applied on the concatenated output (hidden_dim)
-            self.norms.append(nn.LayerNorm(self.hidden_dim))
+            # GroupNorm is applied on the concatenated output (hidden_dim)
+            self.norms.append(nn.GroupNorm(self.hidden_dim // 16, self.hidden_dim))
+
             current_dim = self.hidden_dim  # Input for the next layer
 
         if activation.lower() == "silu":
@@ -140,7 +149,7 @@ class GATv2Backbone(nn.Module):
         """
         x, edge_index, batch_indices = graph.x, graph.edge_index, graph.batch
         if x.dtype != torch.float32:
-             x = x.float() # Ensure float32 for GNN layers
+            x = x.float()  # Ensure float32 for GNN layers
 
         for i in range(self.num_layers):
             x = self.convs[i](x, edge_index)
@@ -159,6 +168,7 @@ class PositionalEncoding(nn.Module):
     """
     Standard fixed sinusoidal positional encoding for sequences.
     """
+
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 50):
         """
         Initializes the positional encoding module.
@@ -172,12 +182,14 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
         position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model) # Shape: (max_len, 1, d_model)
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
+        )
+        pe = torch.zeros(max_len, 1, d_model)  # Shape: (max_len, 1, d_model)
         pe[:, 0, 0::2] = torch.sin(position * div_term)
         pe[:, 0, 1::2] = torch.cos(position * div_term)
         # Register 'pe' as a buffer, not a parameter
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -192,7 +204,7 @@ class PositionalEncoding(nn.Module):
         """
         # self.pe is (max_len, 1, d_model). Select up to seq_len and remove the middle dim.
         # x is (batch_size, seq_len, d_model). Broadcasting adds pe to each batch element.
-        x = x + self.pe[:x.size(1)].squeeze(1)
+        x = x + self.pe[: x.size(1)].squeeze(1)
         return self.dropout(x)
 
 
@@ -203,18 +215,20 @@ class TransformerDiffusionHead(nn.Module):
     Takes noisy actions, timestep embeddings, and context vectors (from GNN)
     as input, and predicts the noise added to the actions using a Transformer decoder.
     """
-    def __init__(self,
-                 action_dim: int,
-                 d_model: int,
-                 context_dim: int,
-                 nhead: int,
-                 num_decoder_layers: int,
-                 dim_feedforward: int,
-                 dropout: float,
-                 timestep_emb_dim: int,
-                 max_seq_len: int = 20, # Max length for positional encoding
-                 activation: str = "silu",
-                 ):
+
+    def __init__(
+        self,
+        action_dim: int,
+        d_model: int,
+        context_dim: int,
+        nhead: int,
+        num_decoder_layers: int,
+        dim_feedforward: int,
+        dropout: float,
+        timestep_emb_dim: int,
+        max_seq_len: int = 20,  # Max length for positional encoding
+        activation: str = "silu",
+    ):
         """
         Initializes the Transformer decoder head.
 
@@ -258,15 +272,15 @@ class TransformerDiffusionHead(nn.Module):
             dim_feedforward=dim_feedforward,
             dropout=dropout,
             activation=transformer_activation,
-            batch_first=True, # Expect input/output as (batch, seq, feature)
-            norm_first=True   # Apply LayerNorm before attention/FFN (more stable)
+            batch_first=True,  # Expect input/output as (batch, seq, feature)
+            norm_first=True,  # Apply GroupNorm before attention/FFN (more stable)
         )
 
         # Stack of decoder layers
         self.transformer_decoder = nn.TransformerDecoder(
             decoder_layer,
             num_layers=num_decoder_layers,
-            norm=nn.LayerNorm(d_model) # Final LayerNorm after all decoder layers
+            norm=nn.LayerNorm(d_model),  # Final GroupNorm for the output
         )
 
         # Output layer mapping decoder output back to action dimension (noise prediction)
@@ -276,7 +290,7 @@ class TransformerDiffusionHead(nn.Module):
         self,
         noisy_action: torch.Tensor,
         timestep_embedding: torch.Tensor,
-        context_vector: torch.Tensor
+        context_vector: torch.Tensor,
     ) -> torch.Tensor:
         """
         Forward pass through the Transformer decoder head.
@@ -293,20 +307,24 @@ class TransformerDiffusionHead(nn.Module):
 
         # 1. Prepare Target Sequence (tgt) for Decoder
         # Expand timestep embedding to match sequence length: (batch, 1, emb_dim) -> (batch, seq_len, emb_dim)
-        timestep_embedding_expanded = timestep_embedding.unsqueeze(1).expand(-1, seq_len, -1)
+        timestep_embedding_expanded = timestep_embedding.unsqueeze(1).expand(
+            -1, seq_len, -1
+        )
 
         # Concatenate noisy action and expanded timestep embedding along the feature dimension
-        action_time = torch.cat([noisy_action, timestep_embedding_expanded], dim=-1) # Shape: (batch, seq_len, action_dim + emb_dim)
+        action_time = torch.cat(
+            [noisy_action, timestep_embedding_expanded], dim=-1
+        )  # Shape: (batch, seq_len, action_dim + emb_dim)
 
         # Project concatenated features to d_model: (batch, seq_len, d_model)
         tgt = self.action_time_proj(action_time)
 
         # Add positional encoding to the target sequence
-        tgt = self.pos_encoder(tgt) # Shape: (batch, seq_len, d_model)
+        tgt = self.pos_encoder(tgt)  # Shape: (batch, seq_len, d_model)
 
         # 2. Prepare Memory Sequence (memory) for Decoder
         # Project context vector (GNN output) to d_model: (batch, d_model)
-        context_proj = self.context_proj(context_vector) # Shape: (batch, d_model)
+        context_proj = self.context_proj(context_vector)  # Shape: (batch, d_model)
 
         # Add a sequence dimension (length 1) for the decoder's memory input: (batch, 1, d_model)
         memory = context_proj.unsqueeze(1)
@@ -314,7 +332,7 @@ class TransformerDiffusionHead(nn.Module):
         # 3. Pass through Transformer Decoder
         # tgt: (batch, seq_len, d_model), memory: (batch, 1, d_model)
         # Output shape: (batch, seq_len, d_model)
-        # Note: LayerNorms are handled internally by the decoder (norm_first=True and final norm)
+        # Note: GroupNorms are handled internally by the decoder (norm_first=True and final norm)
         decoder_output = self.transformer_decoder(tgt=tgt, memory=memory)
 
         # 4. Project Decoder Output to Noise Prediction
@@ -323,12 +341,14 @@ class TransformerDiffusionHead(nn.Module):
 
         return noise_pred
 
+
 class JointDecoder(nn.Module):
     """
     Joint decoder module for infering joint agnles from graph embedding.
 
     """
-    def __init__(self, algo_config, d_model: int, q_dim: int):
+
+    def __init__(self, algo_config, hidden_dim: int, q_dim: int):
         """
         Initializes the JointDecoder.
 
@@ -338,11 +358,15 @@ class JointDecoder(nn.Module):
             q_dim (int): Dimension of the joint angles.
         """
         super().__init__()
-        self.q_dim = q_dim
-        self.d_model = d_model
-
         # Linear layer to project GNN output to action dimension
-        self.linear = nn.Linear(d_model, q_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 2),
+            nn.SiLU(),
+            nn.Linear(
+                hidden_dim * 2, q_dim
+            ),  # Output dimension is q_dim (joint angles)
+        )
+        # Linear layer to project GNN output to action dimension
 
     def forward(self, graph_embedding: torch.Tensor) -> torch.Tensor:
         """
@@ -355,14 +379,16 @@ class JointDecoder(nn.Module):
             torch.Tensor: Predicted joint angles, shape (batch_size, action_dim).
         """
         # Project graph embedding to action dimension
-        joint_angles = self.linear(graph_embedding)
+        joint_angles = self.mlp(graph_embedding)  # Shape: (batch_size, q_dim)
         return joint_angles
-    
+
+
 class DiffFwdKinEncoder(nn.Module):
     """
     Compute the forward kinematics from joint angles to end effector positions.
     Create embedding for the end effector positions.
     """
+
     def __init__(self, algo_config, q_dim: int, hidden_dim: int, device: str = "cpu"):
         """
         Initializes the DiffFwdKin.
@@ -374,7 +400,7 @@ class DiffFwdKinEncoder(nn.Module):
         """
         super().__init__()
 
-                # --- Kinematics Loading ---
+        # --- Kinematics Loading ---
         self.q_dim = q_dim
         self.hidden_dim = hidden_dim
         self.chain = None
@@ -382,24 +408,22 @@ class DiffFwdKinEncoder(nn.Module):
         try:
             mjcf_path = "robomimic/algo/panda/robot.xml"
             if os.path.exists(mjcf_path):
-                 self.chain = pk.build_serial_chain_from_mjcf(
+                self.chain = pk.build_serial_chain_from_mjcf(
                     open(mjcf_path).read(), "link7"
-                 ).to(dtype=torch.float32, device=self.device) 
-                 print("Successfully loaded kinematic chain from robot.xml.")
+                ).to(dtype=torch.float32, device=self.device)
+                print("Successfully loaded kinematic chain from robot.xml.")
             else:
-                 print(f"Warning: Kinematic definition file not found at {mjcf_path}")
+                print(f"Warning: Kinematic definition file not found at {mjcf_path}")
         except Exception as e:
             print(f"Warning: Failed to load robot.xml for kinematics: {e}")
 
-
         # Linear layer to project fwd kinematics to hidden dimension
-        input_dim = 3 + 9 # 3 for position, 9 for rotation matrix
+        input_dim = 3 + 9  # 3 for position, 9 for rotation matrix
         self.mlp = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.SiLU(),
-            nn.Linear(hidden_dim, hidden_dim)
+            nn.Linear(hidden_dim, hidden_dim),
         ).to(self.device)
-
 
     def forward(self, joint_pos: torch.Tensor) -> torch.Tensor:
         """
@@ -420,8 +444,10 @@ class DiffFwdKinEncoder(nn.Module):
         eef_rot = transf[:, :3, :3]  # Extract end effector rotation (3x3 matrix)
         # Flatten the rotation matrix from (batch, 3, 3) to (batch, 9)
         eef_rot_flat = eef_rot.flatten(start_dim=1)  # Flatten all dims except batch dim
-        eef_pose = torch.cat((eef_pos, eef_rot_flat), dim=-1)  # Concatenate position and flattened rotation
-        
+        eef_pose = torch.cat(
+            (eef_pos, eef_rot_flat), dim=-1
+        )  # Concatenate position and flattened rotation
+
         eef_pose_embedding = self.mlp(eef_pose)  # Shape: (batch_size, hidden_dim)
         return eef_pose_embedding
 
@@ -434,9 +460,10 @@ class DiffusionPolicy(nn.Module):
     timestep information, and uses a Transformer decoder to predict noise for
     denoising action sequences.
     """
+
     def __init__(
         self,
-        algo_config, # Configuration object 
+        algo_config,  # Configuration object
         global_config,
         graph_input_feature_dim: int,
         timestep_emb_dim: int = 128,
@@ -462,22 +489,27 @@ class DiffusionPolicy(nn.Module):
         transformer_config = algo_config.transformer
         network_config = algo_config.network
 
-        hidden_dim = gnn_config.hidden_dim # GNN output dim, also used as Transformer d_model
+        hidden_dim = (
+            gnn_config.hidden_dim
+        )  # GNN output dim, also used as Transformer d_model
         transformer_nhead = transformer_config.num_heads
         transformer_layers = transformer_config.num_layers
         transformer_ff_dim = hidden_dim * transformer_config.ff_dim_multiplier
 
         # Context dimension is the output of the GNN backbone
-        context_dim = hidden_dim * 2 # GNN output dim + EEF embedding dim
+        context_dim = hidden_dim * 2  # GNN output dim + EEF embedding dim + image features
 
         # --- Timestep Encoding ---
         # Projects timestep index to an embedding, then processes it through MLPs
         self.timestep_encoder = nn.Sequential(
             SinusoidalPositionEmbeddings(timestep_emb_dim),
-            nn.Linear(timestep_emb_dim, hidden_dim * 2), # Intermediate projection
+            nn.Linear(timestep_emb_dim, hidden_dim * 2),  # Intermediate projection
             nn.SiLU(),
-            nn.Linear(hidden_dim * 2, timestep_emb_dim), # Final embedding dim for Transformer head
+            nn.Linear(
+                hidden_dim * 2, timestep_emb_dim
+            ),  # Final embedding dim for Transformer head
         ).to(device)
+
 
         # --- GATv2 Graph Encoder Backbone ---
         self.gnn = GATv2Backbone(
@@ -486,38 +518,35 @@ class DiffusionPolicy(nn.Module):
             hidden_dim=hidden_dim,
             num_heads=gnn_config.num_heads,
             attention_dropout=gnn_config.attention_dropout,
-            activation="silu", # Hardcoded or could be from config
+            activation="silu",  # Hardcoded or could be from config
         ).to(device)
 
         # --- Transformer Decoder Head ---
         self.transformer_head = TransformerDiffusionHead(
             action_dim=algo_config.action_dim,
-            d_model=hidden_dim,                # Matches GNN output dim
-            context_dim=context_dim,           # GNN output dimension provides context
+            d_model=hidden_dim,  # Matches GNN output dim
+            context_dim=context_dim,  # GNN output dimension provides context
             nhead=transformer_nhead,
             num_decoder_layers=transformer_layers,
             dim_feedforward=transformer_ff_dim,
-            dropout=network_config.dropout,    # General network dropout
-            timestep_emb_dim=timestep_emb_dim, # Dimension of the processed timestep embedding
-            max_seq_len=global_config.train.seq_length + 5, # Provide margin over sequence length
-            activation="silu", # Hardcoded or could be from config
+            dropout=network_config.dropout,  # General network dropout
+            timestep_emb_dim=timestep_emb_dim,  # Dimension of the processed timestep embedding
+            max_seq_len=global_config.train.seq_length
+            + 5,  # Provide margin over sequence length
+            activation="silu",  # Hardcoded or could be from config
         ).to(device)
-
 
         # --- Joint Decoder ---
         self.joint_decoder = JointDecoder(
-            algo_config=algo_config,
-            d_model=hidden_dim,
-            q_dim=algo_config.num_joints
+            algo_config=algo_config, hidden_dim=hidden_dim, q_dim=algo_config.num_joints
         ).to(device)
-
 
         # --- Differential Forward Kinematics Encoder ---
         self.fwd_kin_encoder = DiffFwdKinEncoder(
             algo_config=algo_config,
             q_dim=algo_config.num_joints,
             hidden_dim=hidden_dim,
-            device=device
+            device=device,
         ).to(device)
         # Initialize model weights
         self.apply(self._init_weights)
@@ -531,19 +560,18 @@ class DiffusionPolicy(nn.Module):
             if module.bias is not None:
                 # Zero initialization for biases
                 nn.init.constant_(module.bias, 0)
-        elif isinstance(module, nn.LayerNorm):
-            # Standard initialization for LayerNorm
-            nn.init.constant_(module.bias, 0)
-            nn.init.constant_(module.weight, 1.0)
-        # GATv2Conv layers use default PyG initialization, which is usually fine.
+        elif isinstance(module, nn.GroupNorm):
+            # Standard initialization for GroupNorm layers
+            nn.init.ones_(module.weight)
+            nn.init.zeros_(module.bias)
 
     def forward(
         self,
         noisy_action: torch.Tensor,
-        state: dict, # Original observation dict (unused if only graph is needed)
+        obs_cond: torch.Tensor,  # Original observation dict (unused if only graph is needed)
         timestep: torch.Tensor,
-        graph: Optional[Batch] = None
-    ) -> torch.Tensor:
+        graph: Optional[Batch] = None,
+    ) -> Optional[torch.Tensor]:
         """
         Forward pass of the Diffusion Policy.
 
@@ -562,22 +590,36 @@ class DiffusionPolicy(nn.Module):
         """
         if graph is None:
             # If only raw state was to be used, an alternative encoder would be needed here.
-            raise ValueError("Graph data (PyG Batch) must be provided for GAT backbone.")
-
+            raise ValueError(
+                "Graph data (PyG Batch) must be provided for GAT backbone."
+            )
+        batch_size = noisy_action.shape[0]
         # 1. Encode Diffusion Timestep
         # Input: (batch,) -> Output: (batch, timestep_emb_dim)
-        t_emb = self.timestep_encoder(timestep)
+        timesteps = timestep
+        if not torch.is_tensor(timesteps):
+            timesteps = torch.tensor(
+                [timesteps], dtype=torch.long, device=noisy_action.device
+            )
+        elif torch.is_tensor(timesteps) and len(timesteps.shape) == 0:
+            timesteps = timesteps[None].to(noisy_action.device)
+        # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+        timesteps = timesteps.expand(noisy_action.shape[0])
+        t_emb = self.timestep_encoder(timesteps)
+
 
         # 2. Encode State using GNN
         # Input: PyG Batch -> Output: (batch_size, hidden_dim)
-        s_emb = self.gnn(graph) # Graph embedding serves as context
+        s_emb = self.gnn(graph)  # Graph embedding serves as context
 
         q_pos = self.joint_decoder(s_emb)
         eef_pos_embedding = self.fwd_kin_encoder(q_pos)
 
         # 3. Define Context Vector
         # Currently uses only the GNN embedding. Could be extended to include other features.
-        context_vector = torch.cat((s_emb, eef_pos_embedding), dim=-1) # Shape: (batch_size, hidden_dim + 3 + 9)
+        context_vector = torch.cat(
+            (s_emb, eef_pos_embedding), dim=-1
+        )  # Shape: (batch_size, hidden_dim + 3 + 9)
 
         # 4. Predict Noise using Transformer Head
         # Inputs: noisy_action, timestep embedding, context vector
@@ -585,7 +627,7 @@ class DiffusionPolicy(nn.Module):
         noise_pred = self.transformer_head(
             noisy_action=noisy_action,
             timestep_embedding=t_emb,
-            context_vector=context_vector
+            context_vector=context_vector,
         )
 
         return q_pos, noise_pred

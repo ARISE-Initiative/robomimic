@@ -28,7 +28,7 @@ class DiffGATConfig(BaseConfig):
         self.experiment.rollout.n = 10       # Number of rollout episodes
         self.experiment.rollout.horizon = 400 # Max steps per rollout
         self.experiment.rollout.rate = 50    # Frequency of rollouts (e.g., every 50 epochs)
-        self.experiment.rollout.warmstart = 200 # Steps before starting rollouts
+        self.experiment.rollout.warmstart = 100 # Steps before starting rollouts
         self.experiment.rollout.terminate_on_success = True # End rollout if task succeeds
 
         self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
@@ -41,15 +41,15 @@ class DiffGATConfig(BaseConfig):
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
         self.train.hdf5_load_next_obs = False
 
-        self.train.data = "../datasets/can/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
+        self.train.data = "datasets/can/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
 
         # Core training parameters
-        self.train.seq_length = 3     # Length of action sequences predicted by the policy
-        self.train.frame_stack = 3    # Number of observation frames provided as input context
+        self.train.seq_length = 2     # Length of action sequences predicted by the policy
+        self.train.frame_stack = 2    # Number of observation frames provided as input context
         self.train.batch_size = 256   # Number of sequences per training batch (adjust based on GPU memory)
         self.train.num_epochs = 2000  # Total number of training epochs
         self.train.num_data_workers = 0 # Number of parallel data loading workers
-
+        self.train.seed = 0
     def algo_config(self):
         """Configure algorithm-specific hyperparameters."""
         super().algo_config() # Ensure base algo config is initialized
@@ -63,11 +63,11 @@ class DiffGATConfig(BaseConfig):
         # --- Optimization ---
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adam" # Adam optimizer is standard
-        optim_params.learning_rate.initial = 2e-4     # Initial learning rate
+        optim_params.learning_rate.initial = 1e-4     # Initial learning rate
         optim_params.learning_rate.decay_factor = 0.1 # Multiplicative factor for LR decay
-        optim_params.learning_rate.epoch_schedule = [600, 800] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
+        optim_params.learning_rate.epoch_schedule = [] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
         optim_params.learning_rate.scheduler_type = "multistep" # 'multistep' or 'cosine'
-        optim_params.regularization.L2 = 1e-6        # L2 weight decay (0 means none)
+        optim_params.regularization.L2 = 0        # L2 weight decay (0 means none)
         self.algo.grad_clip = 1.0                     # Max norm for gradient clipping (helps stability)
 
         # --- Diffusion Process ---
@@ -79,7 +79,7 @@ class DiffGATConfig(BaseConfig):
         gnn.num_layers = 4         # Number of message-passing layers
         gnn.hidden_dim = 128       # Hidden dimension within GNN layers and output embedding size
         gnn.num_heads = 4          # Number of attention heads in GATv2 layers (hidden_dim must be divisible by num_heads)
-        gnn.attention_dropout = 0.3 # Dropout rate specifically on attention weights
+        gnn.attention_dropout = 0.15 # Dropout rate specifically on attention weights
 
         # Transformer Decoder Head parameters
         transformer = self.algo.transformer
@@ -92,6 +92,21 @@ class DiffGATConfig(BaseConfig):
         network = self.algo.network
         network.dropout = 0.15 # General dropout rate applied in MLPs, positional encoding, etc.
 
+        # EMA
+        ema = self.algo.ema
+        ema.enabled = True
+        ema.power = 0.9999 # Exponential moving average decay rate
+
+        # DDIM (Deterministic Denoising Diffusion) parameters
+        ddim = self.algo.ddim
+        ddim.enabled = True
+        ddim.num_train_timesteps = 100
+        ddim.num_inference_timesteps = 10
+        ddim.beta_schedule = 'squaredcos_cap_v2'
+        ddim.clip_sample = True
+        ddim.set_alpha_to_one = True
+        ddim.steps_offset = 0
+        ddim.prediction_type = 'epsilon'
         # --- Loss Configuration ---
         # For standard diffusion models, the primary loss is MSE between predicted and actual noise.
         # Weights below are placeholders if other loss components were added (e.g., L1).
@@ -112,14 +127,35 @@ class DiffGATConfig(BaseConfig):
             "robot0_eef_pos",       # End-effector position
             "robot0_eef_quat",      # End-effector orientation (quaternion)
             "robot0_gripper_qpos",  # Gripper joint positions
-            "object",               # Object-related features (e.g., pose, relative pose)
+            "object",
         ]
-        # Disable image observations if not used
-        obs_modalities.rgb = []
-        obs_modalities.depth = []
-        obs_modalities.scan = []
+        # obs_modalities.rgb = [
+        #     "robot0_eye_in_hand_image", # RGB image from the robot's camera
+        # ]
 
         # Configure observation processing (e.g., normalization)
         # By default, Robomimic normalizes low_dim and image observations.
         self.observation.encoder.low_dim.core_kwargs.normalization = True
         self.observation.encoder.low_dim.obs_randomizer_kwargs.gaussian_noise_std = 0.0 # Disable obs noise injection
+
+        self.observation.encoder.rgb.core_kwargs.feature_dimension = 64
+        self.observation.encoder.rgb.core_kwargs.backbone_class = 'ResNet18Conv'
+        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.pretrained = True
+        self.observation.encoder.rgb.core_kwargs.backbone_kwargs.input_coord_conv = False
+        self.observation.encoder.rgb.core_kwargs.pool_class = "SpatialSoftmax"
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.num_kp = 32
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.learnable_temperature = False
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.temperature = 1.0
+        self.observation.encoder.rgb.core_kwargs.pool_kwargs.noise_std = 0.0
+        self.observation.encoder.rgb.obs_randomizer_class = "CropRandomizer"
+        self.observation.encoder.rgb.obs_randomizer_kwargs = {
+            "crop_height": 76,
+            "crop_width": 76,
+            "num_crops": 1,
+            "pos_enc":  False,
+        }
+        
+
+
+        
+        
