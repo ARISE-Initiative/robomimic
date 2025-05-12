@@ -13,3 +13,4 @@ from robomimic.algo.td3_bc import TD3_BC
 # my custom algo
 from robomimic.algo.graph_bc import GAT_BC
 from robomimic.algo.diff_graph import DIFF_GAT
+from robomimic.algo.flow_graph import FLOW_GAT

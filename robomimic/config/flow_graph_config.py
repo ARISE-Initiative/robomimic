@@ -1,51 +1,51 @@
+
 """
-Configuration Class for the Diffusion Graph Attention Network (DiffGAT) Algorithm.
+Configuration Class for the Flow Graph Attention Network (FlowGAT) Algorithm.
 """
 
 from robomimic.config.base_config import BaseConfig
 
 
-class DiffGATConfig(BaseConfig):
+class FlowGATConfig(BaseConfig):
     """
-    Configuration settings for the DiffGAT algorithm.
+    Configuration settings for the FlowGAT algorithm.
 
     Organizes parameters related to:
-    - Experiment setup (name, logging)
-    - Training parameters (batch size, sequence length, frame stack, optimizer)
-    - Diffusion process (number of timesteps)
-    - Network architecture (GNN layers/heads/dims, Transformer layers/heads/dims, dropout)
-    - Loss function weights (currently only MSE implied by diffusion framework)
-    - Observation modalities
+    - Experiment setup (name, logging, rollouts)
+    - Training parameters (dataset, batch size, sequence length, frame stack, optimizer)
+    - Network architecture details (handled within model definition, e.g., GNN layers/heads/dims)
+    - Observation modalities (implicitly defined by dataset and model)
     """
-    ALGO_NAME = 'diff_gat'
+    ALGO_NAME = 'flow_gat'
 
     def experiment_config(self):
         """Configure experiment settings."""
         super().experiment_config()
         # Unique name for this experiment run
-        self.experiment.name = "diff_gat_panda_example"
+        self.experiment.name = "flow_gat_panda_example"
         # Configure rollout settings for evaluation
-        self.experiment.rollout.n = 20       # Number of rollout episodes
+        self.experiment.rollout.n = 50       # Number of rollout episodes
         self.experiment.rollout.horizon = 400 # Max steps per rollout
         self.experiment.rollout.rate = 50    # Frequency of rollouts (e.g., every 50 epochs)
-        self.experiment.rollout.warmstart =500 # Steps before starting rollouts
+        self.experiment.rollout.warmstart = 100 # Steps before starting rollouts
         self.experiment.rollout.terminate_on_success = True # End rollout if task succeeds
 
         self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
-        self.experiment.logging.wandb_proj_name = "robomimic"
+        self.experiment.logging.wandb_proj_name = "thesis_evaluation"
+        self.experiment.render_video = True # Disable video rendering during rollouts
 
     def train_config(self):
         """Configure training loop settings."""
         super().train_config()
         # Diffusion models typically predict action sequences based on past observations.
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
-        self.train.hdf5_load_next_obs = False
+        self.train.hdf5_load_next_obs = True
 
-        self.train.data = "datasets/can/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
+        self.train.data = "datasets/square/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
 
         # Core training parameters
         self.train.seq_length = 2     # Length of action sequences predicted by the policy
-        self.train.frame_stack = 4    # Number of observation frames provided as input context
+        self.train.frame_stack = 2    # Number of observation frames provided as input context
         self.train.batch_size = 256   # Number of sequences per training batch (adjust based on GPU memory)
         self.train.num_epochs = 2000  # Total number of training epochs
         self.train.num_data_workers = 0 # Number of parallel data loading workers
@@ -57,56 +57,59 @@ class DiffGATConfig(BaseConfig):
         # --- Action Space ---
         self.algo.action_dim = 7 # Dimension of the action vector at each step (pos and quat for gripper)
         self.algo.num_joints = 7 # Number of joints in the robot arm (e.g., 7 for Panda + 1 for gripper)
-        # Full action dimension over the sequence (useful for reference, not direct config)
-        # self.algo.full_action_dim = self.train.seq_length * self.algo.action_dim
+        self.algo.grad_clip = 1.0   
+        self.algo.t_a = 2 # Action execution horizon
+        self.algo.graph_frame_stack = 2    # ≤ frame_stack; number of obs frames the GNN actually sees
+
 
         # --- Optimization ---
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adam" # Adam optimizer is standard
         optim_params.learning_rate.initial = 1e-4     # Initial learning rate
         optim_params.learning_rate.decay_factor = 0.1 # Multiplicative factor for LR decay
-        optim_params.learning_rate.epoch_schedule = [500,1500,2000,2500,3000,3500] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
+        optim_params.learning_rate.epoch_schedule = [1000, 1500] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
         optim_params.learning_rate.scheduler_type = "multistep" # 'multistep' or 'cosine'
-        optim_params.regularization.L2 = 0        # L2 weight decay (0 means none)
-        self.algo.grad_clip = 1.0                     # Max norm for gradient clipping (helps stability)
-
-        # --- Diffusion Process ---
-        self.algo.diffusion.num_timesteps = 100 # Number of noise levels in the diffusion process (T)
+        optim_params.regularization.L2 = 1e-5       # L2 weight decay (0 means none)                  # Max norm for gradient clipping (helps stability)
 
         # --- Network Architecture ---
         # GNN (GATv2 Backbone) parameters
         gnn = self.algo.gnn
         gnn.num_layers = 4         # Number of message-passing layers
-        gnn.hidden_dim = 256       # Hidden dimension within GNN layers and output embedding size
+        gnn.node_dim = 64          # Dimension of node features (e.g., 64 for each joint)
+        gnn.hidden_dim = 64       # Hidden dimension within GNN layers and output embedding size
         gnn.num_heads = 4          # Number of attention heads in GATv2 layers (hidden_dim must be divisible by num_heads)
-        gnn.attention_dropout = 0.3 # Dropout rate specifically on attention weights
+        gnn.attention_dropout = 0.1 # Dropout rate specifically on attention weights
+        gnn.node_input_dim = {'joint_0': 10, 
+                              'joint_1': 10,
+                              'joint_2': 10,
+                              'joint_3': 10,
+                              'joint_4': 10,
+                              'joint_5': 10,
+                              'joint_6': 10,
+                              'eef': 9,
+                              'object': 14,
+                            #   'base_frame': 14,
+                            #   'insertion_hook': 14,
+                            #   'wrench': 14
+                              } # Node feature dimension for each joint
 
-        # Transformer Decoder Head parameters
+        # --- Cross Attention ---
+        # Transformer parameters
         transformer = self.algo.transformer
-        transformer.num_layers = 4        # Number of decoder layers
-        transformer.num_heads = 4         # Number of attention heads in decoder layers
-        # Feedfor`wa`rd dimension is often a multiple of the model dimension (hidden_dim)
-        transformer.ff_dim_multiplier = 2
+        transformer.num_layers = 4
+        transformer.num_heads = 4          # Number of attention heads in Transformer layers
+        transformer.hidden_dim = 64       # Hidden dimension within Transformer layers
+        transformer.attention_dropout = 0.1 # Dropout rate specifically on attention weights
 
         # General Network parameters
         network = self.algo.network
-        network.dropout = 0.15 # General dropout rate applied in MLPs, positional encoding, etc.
+        network.dropout = 0.1 # General dropout rate applied in MLPs, positional encoding, etc.
 
         # EMA
         ema = self.algo.ema
         ema.enabled = True
         ema.power = 0.9999 # Exponential moving average decay rate
 
-        # DDIM (Deterministic Denoising Diffusion) parameters
-        ddim = self.algo.ddim
-        ddim.enabled = True
-        ddim.num_train_timesteps = 100
-        ddim.num_inference_timesteps = 10
-        ddim.beta_schedule = 'squaredcos_cap_v2'
-        ddim.clip_sample = True
-        ddim.set_alpha_to_one = True
-        ddim.steps_offset = 0
-        ddim.prediction_type = 'epsilon'
         # --- Loss Configuration ---
         # For standard diffusion models, the primary loss is MSE between predicted and actual noise.
         # Weights below are placeholders if other loss components were added (e.g., L1).
@@ -155,8 +158,3 @@ class DiffGATConfig(BaseConfig):
             "num_crops": 1,
             "pos_enc":  False,
         }
-        
-
-
-        
-        

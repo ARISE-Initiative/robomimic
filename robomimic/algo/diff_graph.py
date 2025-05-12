@@ -24,7 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mpl_toolkits.mplot3d import Axes3D
 from torch_geometric.data import Batch, Data
-from torch_geometric.utils import to_networkx
+from torch_geometric.utils import to_networkx, unbatch
 
 # requires diffusers==0.11.1
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
@@ -33,7 +33,7 @@ from diffusers.training_utils import EMAModel
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 from robomimic.algo import PolicyAlgo, register_algo_factory_func
-from robomimic.models.diffusion_policy import DiffusionPolicy
+from robomimic.models.diffusion_policy import DiffusionPolicy, GNNPolicy
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.models.obs_nets as ObsNets
 
@@ -44,13 +44,14 @@ def algo_config_to_class(algo_config):
     return DIFF_GAT, {}
 
 
-class NodeFeatureProcessor:
+class NodeFeatureProcessor(nn.Module):
     """
     Processes raw observation dictionaries into structured node features and
     constructs graph representations (spatial and temporal) for the GNN.
     """
 
     def __init__(self, num_joints: int = 8, chain: Optional[pk.SerialChain] = None):
+        super().__init__()
         """
         Initializes the processor.
 
@@ -84,10 +85,13 @@ class NodeFeatureProcessor:
         self.num_nodes = self.adjacency_matrix.size(0)  # Number of nodes per frame
 
         # Pre-compute static edge index from the adjacency matrix
-        # Shape: (2, num_edges), where each column is [source_node, target_node]
         self.static_edge_index = (
             self.adjacency_matrix.nonzero(as_tuple=False).t().contiguous()
         )
+
+        # Define node types and mapping to IDs (for one-hot encoding)
+        self.node_type_list = [f"joint_{i}" for i in range(num_joints)] + ["eef", "object"]
+        self.node_type_to_id = {name: i for i, name in enumerate(self.node_type_list)}
 
         # Will be set after processing first batch
         self.node_feature_dim: Optional[int] = None
@@ -125,78 +129,75 @@ class NodeFeatureProcessor:
         eef_pos = obs_dict["robot0_eef_pos"].float()
         eef_quat = obs_dict["robot0_eef_quat"].float()
         gripper_qpos = obs_dict["robot0_gripper_qpos"].float()
-        object_features = obs_dict[
-            "object"
-        ].float()  # Includes object state, potentially relative pos
+        object_features = obs_dict["object"].float()
+
+        # Compute se3_pose if not present (inference)
+        if "robot0_joint_se3" not in obs_dict:
+            # joint_pos: (batch, frame_stack, num_joints)
+            B, T, J = joint_pos.shape
+            qpos_flat = joint_pos.reshape(B * T, J)
+            fk = self.chain.forward_kinematics(qpos_flat, end_only=False)
+            se3s = []
+            for i in range(self.num_joints):
+                link_name = f"link{i}"
+                mat = fk[link_name].get_matrix()  # (B*T, 4, 4)
+                pos = mat[:, :3, 3]
+                rot = mat[:, :3, :3]
+                rot6d = rot[:, :, :2].reshape(B * T, 6)
+                se3 = torch.cat([pos, rot6d], dim=-1)  # (B*T, 9)
+                se3s.append(se3)
+            se3_pose = torch.stack(se3s, dim=1)  # (B*T, num_joints, 9)
+            se3_pose = se3_pose.permute(0, 1, 2).reshape(B, T, self.num_joints, 9)
+            obs_dict["robot0_joint_se3"] = se3_pose.reshape(B, T, self.num_joints * 9)
+        else:
+            se3_pose = obs_dict["robot0_joint_se3"].float().view(
+                self.batch_size, self.frame_stack, self.num_joints, 9
+            )
 
         node_dict = {}
 
         # --- Joint Features ---
-        if self.chain:
-            self.chain = self.chain.to(device=device)
-            # Flatten batch and frame dimensions for FK calculation
-            flat_joint_pos = joint_pos.reshape(-1, self.num_joints)
-            # Calculate FK for all links up to the specified number of joints
-            fk_results = self.chain.forward_kinematics(flat_joint_pos, end_only=False)
-
-            for i in range(self.num_joints):
-                link_name = f"link{i}"  # Assuming standard link naming convention
-                if link_name in fk_results:
-                    # Get transformation matrix (batch*frame, 4, 4)
-                    transform_matrix = fk_results[link_name].get_matrix()
-                    # Extract position (translation part)
-                    link_pos = transform_matrix[:, :3, 3]
-                    # Apply robot base offset
-                    link_pos += self.robot_base_offset
-                    # Reshape back to (batch, frame, 3)
-                    link_pos = link_pos.view(self.batch_size, self.frame_stack, 3)
-                    # Concatenate link position and corresponding joint angle
-                    # Joint angle needs unsqueezing the last dim: (batch, frame) -> (batch, frame, 1)
-                    node_dict[f"joint_{i}"] = torch.cat(
-                        [link_pos, joint_pos[..., i].unsqueeze(-1)], dim=-1
-                    )  # Feature: [x, y, z, angle]
-                else:
-                    # Fallback if FK fails or link name mismatch (e.g., zeros)
-                    node_dict[f"joint_{i}"] = torch.zeros(
-                        self.batch_size, self.frame_stack, 4, device=device
-                    )
-        else:
-            # If no kinematic chain, use zeros for joint positions (only angle available)
-            print(
-                "Warning: Kinematic chain not loaded. Using only joint angles for joint features."
-            )
-            for i in range(self.num_joints):
-                node_dict[f"joint_{i}"] = torch.cat(
-                    [
-                        torch.zeros(
-                            self.batch_size, self.frame_stack, 3, device=device
-                        ),
-                        joint_pos[..., i].unsqueeze(-1),
-                    ],
-                    dim=-1,
-                )  # Feature: [0, 0, 0, angle]
+        for i in range(self.num_joints):
+            node_name = f"joint_{i}"
+            base_features = se3_pose[..., i, :]
+            # Get one-hot encoding
+            node_id = torch.tensor(self.node_type_to_id[node_name], device=device)
+            one_hot_encoding = F.one_hot(node_id, num_classes=self.num_nodes).float() # Shape: (num_nodes,)
+            # Expand encoding to match (B, T, num_nodes)
+            one_hot_expanded = one_hot_encoding.unsqueeze(0).unsqueeze(0).expand(self.batch_size, self.frame_stack, -1)
+            # Concatenate base features and one-hot encoding
+            node_dict[node_name] = torch.cat([base_features, one_hot_expanded], dim=-1)
 
         # --- End Effector Features ---
-        node_dict["eef"] = torch.cat([eef_pos, eef_quat, gripper_qpos], dim=-1)
+        node_name = "eef"
+        base_features = torch.cat([eef_pos, eef_quat, gripper_qpos], dim=-1)
+        node_id = torch.tensor(self.node_type_to_id[node_name], device=device)
+        one_hot_encoding = F.one_hot(node_id, num_classes=self.num_nodes).float()
+        one_hot_expanded = one_hot_encoding.unsqueeze(0).unsqueeze(0).expand(self.batch_size, self.frame_stack, -1)
+        node_dict[node_name] = torch.cat([base_features, one_hot_expanded], dim=-1)
 
         # --- Object Features ---
-        node_dict["object"] = object_features
+        node_name = "object"
+        base_features = object_features
+        node_id = torch.tensor(self.node_type_to_id[node_name], device=device)
+        one_hot_encoding = F.one_hot(node_id, num_classes=self.num_nodes).float()
+        one_hot_expanded = one_hot_encoding.unsqueeze(0).unsqueeze(0).expand(self.batch_size, self.frame_stack, -1)
+        node_dict[node_name] = torch.cat([base_features, one_hot_expanded], dim=-1)
 
         # --- Padding for Consistent Feature Dimension ---
-        # Find the maximum feature dimension across all node types
+        # Find the maximum feature dimension across all node types (NOW includes one-hot dim)
         max_len = max(v.shape[-1] for v in node_dict.values())
 
         # Pad features of nodes with smaller dimensions using zeros
         for key, tensor in node_dict.items():
             if tensor.shape[-1] < max_len:
                 pad_size = max_len - tensor.shape[-1]
-                # Pad only the last dimension (features)
                 node_dict[key] = F.pad(
                     tensor, (0, pad_size), mode="constant", value=0.0
                 )
 
-        # Store node keys in the order they were processed
-        self.node_keys = list(node_dict.keys())
+        # Store node keys in the order they were processed (ensure consistent order)
+        self.node_keys = self.node_type_list # Use the predefined order
         # Store the final feature dimension after padding
         self.node_feature_dim = max_len
 
@@ -204,118 +205,98 @@ class NodeFeatureProcessor:
 
     def build_graph(self, obs_dict: Dict[str, torch.Tensor]) -> Batch:
         """
-        Constructs a PyG Batch object representing the spatio-temporal graph.
-
-        Args:
-            obs_dict (Dict[str, torch.Tensor]): Observation dictionary.
-
-        Returns:
-            torch_geometric.data.Batch: A batch containing graphs for each sample
-                in the input batch. Each graph combines multiple time frames with
-                spatial edges within frames and temporal edges between frames.
+        Fast spatio-temporal graph builder with full pairwise distances:
+         - Caches combined spatio-temporal edge_index per frame_stack
+         - Vectorizes node-feature stacking and flattening
+         - Keeps the full torch.cdist distance computation
         """
-        # Process raw observations into node features
+        # 1) Process your per-node features
         node_dict = self.process_features(obs_dict)
         device = next(iter(node_dict.values())).device
+        B, T, N = self.batch_size, self.frame_stack, self.num_nodes
+        F_node = self.node_feature_dim
 
-        # Ensure static tensors are on the correct device
-        static_edge_index = self.static_edge_index.to(device)
+        # 2) Stack node features: (B, N, T, F_node)
+        node_feats = torch.stack([node_dict[k] for k in self.node_keys], dim=1)
 
-        # --- Construct Spatio-Temporal Edge Index ---
-        # 1. Spatial Edges: Repeat static edges for each frame
-        # Shape: (2, num_static_edges * frame_stack)
-        spatial_edge_index = static_edge_index.repeat(1, self.frame_stack)
+        # 3) Compute full pairwise distances per frame
+        #    positions: (B, N, T, 3)
+        # positions = node_feats[..., :3]
+        # #    reshape to (B, T, N, 3) for cdist
+        # pos_per_frame = positions.permute(0, 2, 1, 3)
+        # #    distance: (B, T, N, N)
+        # dist = torch.cdist(pos_per_frame, pos_per_frame)
+        # #    reshape back to (B, N, T, N)
+        # dist = dist.permute(0, 2, 1, 3)
 
-        # Add offsets to node indices based on their frame
-        # Example: frame 0 nodes are 0..N-1, frame 1 nodes are N..2N-1, etc.
-        frame_offsets = (
-            torch.arange(self.frame_stack, device=device).repeat_interleave(
-                static_edge_index.size(1)  # Repeat offset for each edge in a frame
-            )
-            * self.num_nodes
-        )  # Offset by number of nodes per frame
-        # Apply offsets to both source and target nodes
-        spatial_edge_index = spatial_edge_index + frame_offsets
+        # # 4) Concatenate distances onto features: (B, N, T, F_node + N)
+        # feats_with_dist = torch.cat([node_feats, dist], dim=-1)
+        final_dim = F_node #+ N
 
-        # 2. Temporal Edges: Connect the same node across consecutive frames
-        # Connect node k in frame t to node k in frame t+1
-        num_temporal_nodes_to_connect = self.num_nodes * (self.frame_stack - 1)
-        temporal_edge_sources = torch.arange(
-            num_temporal_nodes_to_connect, device=device
+        # 5) Flatten into one big x: (B*T*N, final_dim)
+        x = node_feats.permute(0, 2, 1, 3).reshape(B * T * N, final_dim)
+
+        # 6) Build & cache the single-sample combined edge_index if needed
+        if not hasattr(self, "_cached_edge_index") or self._cached_T != T:
+            static = self.static_edge_index
+            static = static.to(device)  # (2, E_static)
+            # spatial edges repeated per frame
+            spatial = static.repeat(1, T) + (
+                torch.arange(T, device=device)
+                .repeat_interleave(static.size(1))
+                * N
+            ).unsqueeze(0)
+            # temporal edges between frames
+            src = torch.arange(N * (T - 1), device=device)
+            tgt = src + N
+            temporal = torch.stack([src, tgt], dim=0)
+            # cache
+            self._cached_edge_index = torch.cat([spatial, temporal], dim=1)
+            self._cached_T = T
+
+        edge_single = self._cached_edge_index.to(device)  # (2, E_single)
+        E = edge_single.size(1)
+
+        # 7) Replicate for all B graphs, offsetting node indices
+        batch_offsets = (
+            torch.arange(B, device=device)
+            .repeat_interleave(E)
+            * (T * N)
         )
-        temporal_edge_targets = (
-            temporal_edge_sources + self.num_nodes
-        )  # Target is the same node in the next frame
-        # Shape: (2, num_nodes * (frame_stack - 1))
-        temporal_edge_index = torch.stack(
-            [temporal_edge_sources, temporal_edge_targets], dim=0
-        )
+        edge_index = edge_single.repeat(1, B) + batch_offsets.unsqueeze(0)  # (2, B*E)
 
-        # Combine spatial and temporal edges
-        # Shape: (2, num_spatial_edges + num_temporal_edges)
-        combined_edge_index = torch.cat(
-            [spatial_edge_index, temporal_edge_index], dim=1
-        )
+        # 8) Build the batch vector
+        batch_idx = torch.arange(B, device=device).repeat_interleave(T * N)  # (B*T*N,)
+        batch = Batch(x=x, edge_index=edge_index, batch=batch_idx)
 
-        # --- Prepare Node Features ---
-        # Stack features from the dictionary: (batch, num_nodes, frame_stack, feature_dim)
-        node_features_stacked = torch.stack(
-            [node_dict[k] for k in self.node_keys], dim=1
-        )
+        # --- Optional Debug Visualization (first graph only) ---
+        # if not hasattr(self, "_graph_visualized"):
+        #     try:
+        #         # Number of nodes in one graph:
+        #         num_nodes_one = T * N  # frame_stack * num_nodes_per_frame
 
-        # Optional: Add pairwise distances as node features (can help GNN learn spatial relationships)
-        # Extract positions (first 3 dims): (batch, num_nodes, frame_stack, 3)
-        positions = node_features_stacked[..., :3]
-        # Reshape for pairwise distance calculation per frame: (batch, frame_stack, num_nodes, 3)
-        positions_per_frame = positions.permute(0, 2, 1, 3)
-        # Calculate pairwise distances within each frame
-        distance_matrices = torch.cdist(
-            positions_per_frame, positions_per_frame
-        )  # (batch, frame_stack, num_nodes, num_nodes)
-        # Reshape distances to match node feature stacking: (batch, num_nodes, frame_stack, num_nodes)
-        distance_matrices_reshaped = distance_matrices.permute(0, 2, 1, 3)
-        # Concatenate distances to the original node features
-        node_features_with_dist = torch.cat(
-            [node_features_stacked, distance_matrices_reshaped], dim=-1
-        )
+        #         # 1) x slice for graph 0
+        #         x0 = x[:num_nodes_one]
 
-        # Reshape features for PyG: Flatten frame and node dimensions
-        # Input: (batch, num_nodes, frame_stack, final_feature_dim)
-        # Permute to: (batch, frame_stack, num_nodes, final_feature_dim)
-        # Reshape to: (batch, frame_stack * num_nodes, final_feature_dim)
-        # This creates a single long sequence of nodes per batch sample.
-        batch_size, num_nodes, frame_stack, final_feature_dim = (
-            node_features_with_dist.shape
-        )
-        permuted_features = node_features_with_dist.permute(0, 2, 1, 3)
-        flat_node_features = permuted_features.reshape(
-            batch_size, frame_stack * num_nodes, final_feature_dim
-        )
+        #         # 2) edge mask for edges entirely within [0, num_nodes_one)
+        #         row, col = edge_index
+        #         mask = (row < num_nodes_one) & (col < num_nodes_one)
+        #         edge0 = torch.stack([row[mask], col[mask]], dim=0)
 
-        # --- Create PyG Data Objects and Batch ---
-        graphs = []
-        for i in range(self.batch_size):
-            # Create a Data object for each sample in the batch
-            # Note: edge_index is shared across all graphs in the batch,
-            # PyG handles this correctly when creating the Batch object.
-            graph_data = Data(x=flat_node_features[i], edge_index=combined_edge_index)
-            graphs.append(graph_data)
+        #         # 3) build Data and visualize
+        #         first_graph = Data(x=x0, edge_index=edge0)
+        #         debug_dir = os.path.join(os.path.expanduser("~"), "robomimic_debug_diffgat")
+        #         os.makedirs(debug_dir, exist_ok=True)
+        #         save_path = os.path.join(debug_dir, f"graph_vis_fs{T}.png")
+        #         self.visualize_graph(first_graph, save_path=save_path)
 
-            # --- Optional Debug Visualization (Visualize first graph of first batch) ---
-            # if i == 0 and not hasattr(self, '_graph_visualized'):
-            #     try:
-            #         print("Attempting to visualize the first graph...")
-            #         debug_dir = os.path.join(os.path.expanduser("~"), "robomimic_debug_diffgat")
-            #         save_path = os.path.join(debug_dir, f"graph_visualization_fs{self.frame_stack}.png")
-            #         self.visualize_graph(graph_data)
-            #         # self._graph_visualized = True # Prevent repeated visualization
-            #     except Exception as e:
-            #         print(f"Warning: Failed to visualize graph: {e}")
-            # --- End Debug Visualization ---
+        #         self._graph_visualized = True
+        #     except Exception as e:
+        #         print(f"Warning: Failed to visualize graph: {e}")
+        # --- End Debug Visualization ---
 
-        # Combine individual Data objects into a single Batch object
-        return Batch.from_data_list(graphs)
-
+        return batch 
+    
     def visualize_graph(self, graph_data: Data, save_path: str = None):
         """
         Visualize the graph structure in 3D space using Matplotlib and NetworkX.
@@ -595,12 +576,21 @@ class DIFF_GAT(PolicyAlgo):
             timestep_emb_dim=256,
             device=self.device,
         )
+        gnn_model = GNNPolicy(
+            algo_config=self.algo_config,
+            global_config=self.global_config,
+            graph_input_feature_dim=23,  # Use -1 for lazy initialization
+            timestep_emb_dim=256,
+            device=self.device,
+        )
         # model = torch.compile(model)
         # the final arch has 2 parts
         nets = nn.ModuleDict(
             {
                 "policy": nn.ModuleDict(
-                    {"obs_encoder": None, "diffusion_model": diffusion_model}
+                    {"obs_encoder": None, 
+                     "diffusion_model": diffusion_model,}
+                    #  "gnn_model": gnn_model}
                 )
             }
         )
@@ -722,6 +712,8 @@ class DIFF_GAT(PolicyAlgo):
             "obs": TensorUtils.to_float(TensorUtils.to_device(obs_data, self.device)),
         }
 
+        
+
         # Build graph representation from observations
         processed_batch["graph"] = self.node_feature_processor.build_graph(
             processed_batch["obs"]
@@ -788,6 +780,11 @@ class DIFF_GAT(PolicyAlgo):
             noise_losses = F.mse_loss(predicted_noise, noise)
             q_pos_losses = F.mse_loss(q_pos, next_q_pos_obs)
 
+            # p_actions = self.nets["policy"]["gnn_model"](
+            #     graph=graph)
+            
+            # loss = F.mse_loss(p_actions, actions)
+
             weight = self.algo_config.loss.tradeoff
             # Combine losses (weighted sum)
             losses = OrderedDict()
@@ -795,9 +792,11 @@ class DIFF_GAT(PolicyAlgo):
             losses["q_pos_loss"] = q_pos_losses
             losses["l2_loss"] = (1 - weight) * q_pos_losses + weight * noise_losses
 
+            # losses = OrderedDict()
+            # losses["l2_loss"] = loss
             # Store information for logging
             info = {
-                "predictions": TensorUtils.detach(predicted_noise),
+                # "predictions": TensorUtils.detach(predicted_noise),
                 "losses": TensorUtils.detach(losses),
             }
 
@@ -867,6 +866,9 @@ class DIFF_GAT(PolicyAlgo):
                 graph=graph,
                 num_steps=self.algo_config.ddim.num_inference_timesteps,
             )
+            # sampled_actions = self.nets["policy"]["gnn_model"](
+            #     graph=graph
+            # )
 
             # Convert to numpy and store in buffer
             self.action_buffer.clear()

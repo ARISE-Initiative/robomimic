@@ -14,3 +14,4 @@ from robomimic.config.td3_bc_config import TD3_BCConfig
 # my custom config
 from robomimic.config.graph_config import GATConfig
 from robomimic.config.diff_graph_config import DiffGATConfig
+from robomimic.config.flow_graph_config import FlowGATConfig

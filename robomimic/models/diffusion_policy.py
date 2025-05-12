@@ -418,7 +418,7 @@ class DiffFwdKinEncoder(nn.Module):
             print(f"Warning: Failed to load robot.xml for kinematics: {e}")
 
         # Linear layer to project fwd kinematics to hidden dimension
-        input_dim = 3 + 9  # 3 for position, 9 for rotation matrix
+        input_dim = 3 + 6  # 3 for position, 6 for 6D rotation matrix
         self.mlp = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.SiLU(),
@@ -441,9 +441,8 @@ class DiffFwdKinEncoder(nn.Module):
         transf = ret.get_matrix()
 
         eef_pos = transf[:, :3, 3]  # Extract end effector position (x, y, z)
-        eef_rot = transf[:, :3, :3]  # Extract end effector rotation (3x3 matrix)
-        # Flatten the rotation matrix from (batch, 3, 3) to (batch, 9)
-        eef_rot_flat = eef_rot.flatten(start_dim=1)  # Flatten all dims except batch dim
+        eef_rot = transf[:, :3, :2]  # Extract end effector rotation using 6D rotation representation
+        eef_rot_flat = eef_rot.reshape(eef_rot.shape[0], -1)  # Shape: (batch_size, 6)
         eef_pose = torch.cat(
             (eef_pos, eef_rot_flat), dim=-1
         )  # Concatenate position and flattened rotation
@@ -497,7 +496,7 @@ class DiffusionPolicy(nn.Module):
         transformer_ff_dim = hidden_dim * transformer_config.ff_dim_multiplier
 
         # Context dimension is the output of the GNN backbone
-        context_dim = hidden_dim * 2  # GNN output dim + EEF embedding dim + image features
+        context_dim = hidden_dim  # GNN output dim + EEF embedding dim + image features
 
         # --- Timestep Encoding ---
         # Projects timestep index to an embedding, then processes it through MLPs
@@ -627,7 +626,58 @@ class DiffusionPolicy(nn.Module):
         noise_pred = self.transformer_head(
             noisy_action=noisy_action,
             timestep_embedding=t_emb,
-            context_vector=context_vector,
+            context_vector=s_emb,
         )
 
         return q_pos, noise_pred
+
+
+class GNNPolicy(nn.Module):
+    def __init__(self,
+        algo_config,  # Configuration object
+        global_config,
+        graph_input_feature_dim: int,
+        timestep_emb_dim: int = 128,
+        device: str = "cpu",):
+        super().__init__()
+        # Initialize the GNNPolicy model
+        # This is a placeholder; actual implementation would go here.
+        self.device = device
+        # --- Configuration Parameters ---
+        gnn_config = algo_config.gnn
+        self.seq_len = global_config.train.seq_length
+        self.batch_size = global_config.train.batch_size
+
+        hidden_dim = (
+            gnn_config.hidden_dim
+        )
+        # --- GATv2 Graph Encoder Backbone ---
+        self.gnn = GATv2Backbone(
+            input_feature_dim=graph_input_feature_dim,
+            num_layers=gnn_config.num_layers,
+            hidden_dim=hidden_dim,
+            num_heads=gnn_config.num_heads,
+            attention_dropout=gnn_config.attention_dropout,
+            activation="silu",  # Hardcoded or could be from config
+        ).to(device)
+
+        # Decoder MLP
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 2),
+            nn.SiLU(),
+            nn.Linear(
+                hidden_dim * 2, algo_config.num_joints * self.seq_len
+            ),  # Output dimension is q_dim (joint angles)
+        ).to(device)
+
+
+    def forward(self, graph: Batch) -> torch.Tensor:
+        batch_size = graph.batch.max() + 1
+        # 1) run GNN → get node embeddings
+        g = self.gnn(graph)  # [num_nodes, hidden_dim]
+
+        # 2) MLP → actions
+        action = self.mlp(g)                   # [batch_size, seq_len * num_joints]
+        # action = torch.tanh(action)
+        action = action.view(batch_size, self.seq_len, -1)
+        return action
