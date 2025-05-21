@@ -6,8 +6,8 @@
         "logging": {
             "terminal_output_to_txt": true,
             "log_tb": true,
-            "log_wandb": false,
-            "wandb_proj_name": "debug"
+            "log_wandb": true,
+            "wandb_proj_name": "robomimic"
         },
         "save": {
             "enabled": true,
@@ -28,15 +28,15 @@
         "video_skip": 5,
         "rollout": {
             "enabled": true,
-            "n": 10,
+            "n": 20,
             "horizon": 400,
             "rate": 50,
-            "warmstart": 200,
+            "warmstart": 500,
             "terminate_on_success": true
         }
     },
     "train": {
-        "data": null,
+        "data": "datasets/can/ph/low_dim_v15.hdf5",
         "output_dir": "../diff_gat_trained_models",
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
@@ -45,9 +45,9 @@
         "hdf5_normalize_obs": false,
         "hdf5_filter_key": null,
         "hdf5_validation_filter_key": null,
-        "seq_length": 3,
+        "seq_length": 2,
         "pad_seq_length": true,
-        "frame_stack": 3,
+        "frame_stack": 4,
         "pad_frame_stack": true,
         "dataset_keys": [
             "actions",
@@ -58,7 +58,7 @@
         "cuda": true,
         "batch_size": 256,
         "num_epochs": 2000,
-        "seed": 1
+        "seed": 0
     },
     "algo": {
         "action_dim": 7,
@@ -67,16 +67,20 @@
             "policy": {
                 "optimizer_type": "adam",
                 "learning_rate": {
-                    "initial": 0.0002,
+                    "initial": 0.0001,
                     "decay_factor": 0.1,
                     "epoch_schedule": [
-                        600,
-                        800
+                        500,
+                        1500,
+                        2000,
+                        2500,
+                        3000,
+                        3500
                     ],
                     "scheduler_type": "multistep"
                 },
                 "regularization": {
-                    "L2": 1e-06
+                    "L2": 0
                 }
             }
         },
@@ -86,7 +90,7 @@
         },
         "gnn": {
             "num_layers": 4,
-            "hidden_dim": 128,
+            "hidden_dim": 256,
             "num_heads": 4,
             "attention_dropout": 0.3
         },
@@ -97,6 +101,20 @@
         },
         "network": {
             "dropout": 0.15
+        },
+        "ema": {
+            "enabled": true,
+            "power": 0.9999
+        },
+        "ddim": {
+            "enabled": true,
+            "num_train_timesteps": 100,
+            "num_inference_timesteps": 10,
+            "beta_schedule": "squaredcos_cap_v2",
+            "clip_sample": true,
+            "set_alpha_to_one": true,
+            "steps_offset": 0,
+            "prediction_type": "epsilon"
         },
         "loss": {
             "l2_weight": 1.0,
@@ -113,7 +131,8 @@
                     "robot0_eef_pos",
                     "robot0_eef_quat",
                     "robot0_gripper_qpos",
-                    "object"
+                    "object",
+                    "robot0_joint_se3"
                 ],
                 "rgb": [],
                 "depth": [],
@@ -139,9 +158,28 @@
             },
             "rgb": {
                 "core_class": "VisualCore",
-                "core_kwargs": {},
-                "obs_randomizer_class": null,
-                "obs_randomizer_kwargs": {}
+                "core_kwargs": {
+                    "feature_dimension": 64,
+                    "backbone_class": "ResNet18Conv",
+                    "backbone_kwargs": {
+                        "pretrained": true,
+                        "input_coord_conv": false
+                    },
+                    "pool_class": "SpatialSoftmax",
+                    "pool_kwargs": {
+                        "num_kp": 32,
+                        "learnable_temperature": false,
+                        "temperature": 1.0,
+                        "noise_std": 0.0
+                    }
+                },
+                "obs_randomizer_class": "CropRandomizer",
+                "obs_randomizer_kwargs": {
+                    "crop_height": 76,
+                    "crop_width": 76,
+                    "num_crops": 1,
+                    "pos_enc": false
+                }
             },
             "depth": {
                 "core_class": "VisualCore",

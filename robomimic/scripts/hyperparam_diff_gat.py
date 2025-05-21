@@ -41,6 +41,14 @@ def make_generator_simple(config_file, script_file):
         values=["flow_gnn"],
         value_names=["flow_gnn"]
     )
+    generator.add_param(
+        key = "algo.graph_name",
+        name = "graph_name",
+        group=1,
+        values=["skip_graph"],
+        value_names=["skip_graph"]
+    )
+
 
     generator.add_param(
         key="algo.inference_euler_steps",

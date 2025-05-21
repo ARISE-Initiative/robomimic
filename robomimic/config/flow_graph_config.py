@@ -22,7 +22,7 @@ class FlowGATConfig(BaseConfig):
         """Configure experiment settings."""
         super().experiment_config()
         # Unique name for this experiment run
-        self.experiment.name = "flow_gat_panda_example"
+        self.experiment.name = "graph_structure_experiment"
         # Configure rollout settings for evaluation
         self.experiment.rollout.n = 25       # Number of rollout episodes
         self.experiment.rollout.horizon = 400 # Max steps per rollout
@@ -31,7 +31,7 @@ class FlowGATConfig(BaseConfig):
         self.experiment.rollout.terminate_on_success = True # End rollout if task succeeds
 
         self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
-        self.experiment.logging.wandb_proj_name = "thesis_evaluation"
+        self.experiment.logging.wandb_proj_name = "thesis_evaluation_graph_structure"
         self.experiment.render_video = False # Disable video rendering during rollouts
         self.experiment.save.enabled = False
 
@@ -55,6 +55,7 @@ class FlowGATConfig(BaseConfig):
         """Configure algorithm-specific hyperparameters."""
         super().algo_config() # Ensure base algo config is initialized
         self.algo.name = "flow_gat" # Algorithm name
+        self.algo.graph_name = "skip_graph" # Graph structure name (e.g., "skip_graph")
 
 
         # --- Action Space ---
@@ -73,7 +74,7 @@ class FlowGATConfig(BaseConfig):
         optim_params.learning_rate.decay_factor = 0.01 # Multiplicative factor for LR decay
         optim_params.learning_rate.epoch_schedule = [1000, 1500] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
         optim_params.learning_rate.scheduler_type = "cosine_restart" # 'multistep' or 'cosine'
-        optim_params.learning_rate.cosine_max = 500
+        optim_params.learning_rate.cosine_max = 600
         optim_params.learning_rate.warmup_steps = 5 # Number of warmup steps for learning rate
         optim_params.regularization.L2 = 1e-5       # L2 weight decay (0 means none)                  # Max norm for gradient clipping (helps stability)
 
