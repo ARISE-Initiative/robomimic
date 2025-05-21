@@ -24,7 +24,7 @@ class FlowGATConfig(BaseConfig):
         # Unique name for this experiment run
         self.experiment.name = "flow_gat_panda_example"
         # Configure rollout settings for evaluation
-        self.experiment.rollout.n = 50       # Number of rollout episodes
+        self.experiment.rollout.n = 25       # Number of rollout episodes
         self.experiment.rollout.horizon = 400 # Max steps per rollout
         self.experiment.rollout.rate = 50    # Frequency of rollouts (e.g., every 50 epochs)
         self.experiment.rollout.warmstart = 100 # Steps before starting rollouts
@@ -32,7 +32,8 @@ class FlowGATConfig(BaseConfig):
 
         self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
         self.experiment.logging.wandb_proj_name = "thesis_evaluation"
-        self.experiment.render_video = True # Disable video rendering during rollouts
+        self.experiment.render_video = False # Disable video rendering during rollouts
+        self.experiment.save.enabled = False
 
     def train_config(self):
         """Configure training loop settings."""
@@ -53,6 +54,8 @@ class FlowGATConfig(BaseConfig):
     def algo_config(self):
         """Configure algorithm-specific hyperparameters."""
         super().algo_config() # Ensure base algo config is initialized
+        self.algo.name = "flow_gat" # Algorithm name
+
 
         # --- Action Space ---
         self.algo.action_dim = 7 # Dimension of the action vector at each step (pos and quat for gripper)
@@ -60,32 +63,35 @@ class FlowGATConfig(BaseConfig):
         self.algo.grad_clip = 1.0   
         self.algo.t_a = 2 # Action execution horizon
         self.algo.graph_frame_stack = 2    # ≤ frame_stack; number of obs frames the GNN actually sees
+        self.algo.inference_euler_steps = 5
 
 
         # --- Optimization ---
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adam" # Adam optimizer is standard
         optim_params.learning_rate.initial = 1e-4     # Initial learning rate
-        optim_params.learning_rate.decay_factor = 0.1 # Multiplicative factor for LR decay
+        optim_params.learning_rate.decay_factor = 0.01 # Multiplicative factor for LR decay
         optim_params.learning_rate.epoch_schedule = [1000, 1500] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
-        optim_params.learning_rate.scheduler_type = "multistep" # 'multistep' or 'cosine'
+        optim_params.learning_rate.scheduler_type = "cosine_restart" # 'multistep' or 'cosine'
+        optim_params.learning_rate.cosine_max = 500
+        optim_params.learning_rate.warmup_steps = 5 # Number of warmup steps for learning rate
         optim_params.regularization.L2 = 1e-5       # L2 weight decay (0 means none)                  # Max norm for gradient clipping (helps stability)
 
         # --- Network Architecture ---
         # GNN (GATv2 Backbone) parameters
         gnn = self.algo.gnn
         gnn.num_layers = 4         # Number of message-passing layers
-        gnn.node_dim = 64          # Dimension of node features (e.g., 64 for each joint)
-        gnn.hidden_dim = 64       # Hidden dimension within GNN layers and output embedding size
+        gnn.node_dim = 32          # Dimension of node features (e.g., 64 for each joint)
+        gnn.hidden_dim = 128       # Hidden dimension within GNN layers and output embedding size
         gnn.num_heads = 4          # Number of attention heads in GATv2 layers (hidden_dim must be divisible by num_heads)
         gnn.attention_dropout = 0.1 # Dropout rate specifically on attention weights
-        gnn.node_input_dim = {'joint_0': 10, 
-                              'joint_1': 10,
-                              'joint_2': 10,
-                              'joint_3': 10,
-                              'joint_4': 10,
-                              'joint_5': 10,
-                              'joint_6': 10,
+        gnn.node_input_dim = {'joint_0': 3, 
+                              'joint_1': 3,
+                              'joint_2': 3,
+                              'joint_3': 3,
+                              'joint_4': 3,
+                              'joint_5': 3,
+                              'joint_6': 3,
                               'eef': 9,
                               'object': 14,
                             #   'base_frame': 14,
@@ -98,7 +104,7 @@ class FlowGATConfig(BaseConfig):
         transformer = self.algo.transformer
         transformer.num_layers = 4
         transformer.num_heads = 4          # Number of attention heads in Transformer layers
-        transformer.hidden_dim = 64       # Hidden dimension within Transformer layers
+        transformer.hidden_dim = 128       # Hidden dimension within Transformer layers
         transformer.attention_dropout = 0.1 # Dropout rate specifically on attention weights
 
         # General Network parameters

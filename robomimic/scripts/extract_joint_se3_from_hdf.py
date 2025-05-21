@@ -36,12 +36,12 @@ def main(h5_path):
             #     obj_dset[...] = swapped
             #     print(f"{demo}: swapped object obs columns")
 
-            if NEW_KEY in grp["obs"]:
+            if NEW_KEY in grp["next_obs"]:
                 # Delete from the group if it exists
-                del grp["obs"][NEW_KEY]
+                del grp["next_obs"][NEW_KEY]
                 print(f"{demo}: deleted {NEW_KEY} from obs group")
                 continue
-            qpos = grp["obs/robot0_joint_pos"][:]
+            qpos = grp["next_obs/robot0_joint_pos"][:]
             n_steps = qpos.shape[0]
             se3s = np.zeros((n_steps, num_joints * 9), dtype=np.float32)
             qpos_torch = torch.tensor(qpos, dtype=torch.float32)
@@ -56,7 +56,7 @@ def main(h5_path):
                 rot6d = matrix_to_6d(torch.tensor(rot)).numpy()  # (n_steps, 6)
                 se3 = np.concatenate([pos, rot6d], axis=1)  # (n_steps, 9)
                 se3s[:, j*9:(j+1)*9] = se3
-            grp["obs"].create_dataset(NEW_KEY, data=se3s, compression="gzip")
+            grp["next_obs"].create_dataset(NEW_KEY, data=se3s, compression="gzip")
             print(f"{demo}: wrote {NEW_KEY} with shape {se3s.shape}")
 
 if __name__ == "__main__":

@@ -14,50 +14,41 @@ def make_generator_simple(config_file, script_file):
     )
 
     # --- Base Settings ---
-    generator.add_param(
-        key="experiment.logging.log_wandb",
-        name="",
-        group=-1,
-        values=[False], # Ensure WandB logging is enabled
-    )
-    generator.add_param(
-        key="experiment.logging.wandb_proj_name",
-        name="",
-        group=-1,
-        values=["robomimic"], # Ensure TensorBoard logging is enabled
-    )
 
     # --- Simplified Hyperparameter Sweep ---
     # Parameters are placed in different groups because they have different numbers of values.
 
     # Group 1: Loss Tradeoff (3 Values) - Highest Priority
     generator.add_param(
-        key="algo.loss.tradeoff",
-        name="tradeoff",
-        group=1,
-        values=[0.5, 0.8, 1.0], # Balanced, favoring noise, only noise
-        value_names=["0p5", "0p8", "1p0"]
-    )
-
-    # Group 2: Learning Rate (2 Values) - Second Priority
-    generator.add_param(
-        key="algo.optim_params.policy.learning_rate.initial",
-        name="lr",
+        key="train.seed",
+        name="seed",
         group=2,
-        values=[1e-4, 5e-5], # Default-ish and lower
-        value_names=["1e-4", "5e-5"]
+        values=[0,25,42],
+        value_names=["0", "25", "42"]
     )
-
-    # Group 3: Model Size (GNN Hidden Dimension) (2 Values) - Third Priority
     generator.add_param(
-        key="algo.gnn.hidden_dim",
-        name="gnnd",
-        group=3,
-        values=[256, 512], # Smaller and medium capacity
-        value_names=["256", "512"]
+        key ="algo.optim_params.policy.learning_rate.scheduler_type",
+        name="lr_scheduler_type",
+        group=1,
+        values=["cosine_restart"],
+        value_names=["cosine_restart"]
     )
 
-    # NOTE: All other parameters will use values from the base config.
+    generator.add_param(
+        key="algo.name",
+        name="algo_name",
+        group=1,
+        values=["flow_gnn"],
+        value_names=["flow_gnn"]
+    )
+
+    generator.add_param(
+        key="algo.inference_euler_steps",
+        name="inference_euler_steps",
+        group=1,
+        values=[5],
+        value_names=["5"]
+    )
 
     return generator
 
@@ -76,7 +67,7 @@ def main(args):
     print(f"Generated script file: {args.script}")
     print("\nInstructions:")
     print(f"1. Ensure your base config ('{args.config}') is correct.")
-    print(f"2. This script sweeps tradeoff (3 vals), learning rate (2 vals), and hidden_dim (2 vals).")
+    print(f"2. Check the generated configs in the same directory as '{args.config}'.")
     print(f"3. Execute the generated script to run the hyperparameter scan: bash {args.script}")
 
 

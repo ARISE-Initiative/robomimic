@@ -147,9 +147,8 @@ class NodeFeatureProcessor(nn.Module):
             node_name = f"joint_{i}"
             # Use the computed or extracted se3_pose here
             base_features = torch.cat(
-                [se3_pose[:, :, i, :], joint_pos[:, :, i].unsqueeze(-1)], dim=-1
+                [se3_pose[:, :, i,:3]], dim=-1
             )
-            # Concatenate base features and one-hot encoding
             node_dict[node_name] = torch.cat([base_features], dim=-1)
 
         # --- End Effector Features ---
@@ -161,7 +160,6 @@ class NodeFeatureProcessor(nn.Module):
 
         # --- Object Features ---
         node_name = "object"
-
         # Switch object features due to bug in dataset
         temp = object_features[:, :, 0:7].clone()
         object_features[:, :, 0:7] = object_features[:, :, 7:14]
@@ -173,26 +171,38 @@ class NodeFeatureProcessor(nn.Module):
         # --- Base Frame Features ---
         # node_name = "base_frame"
         # base_features = object_features[:, :, :14]
+        # # Switch object features due to bug in dataset
+        # temp = base_features[:, :, 0:7].clone()
+        # base_features[:, :, 0:7] = base_features[:, :, 7:14]
+        # base_features[:, :, 7:14] = temp
         # # Align base frame with the robot base frame. Assume first 3 features are position.
         # base_features[:, :, :3] = base_features[:, :, :3] - self.robot_base_offset
 
         # node_dict[node_name] = torch.cat([base_features], dim=-1)
 
-        # --- Insertion Hook Features ---
+        # # --- Insertion Hook Features ---
         # node_name = "insertion_hook"
         # base_features = object_features[:, :, 14:28]
+        # # Switch object features due to bug in dataset
+        # temp = base_features[:, :, 0:7].clone()
+        # base_features[:, :, 0:7] = base_features[:, :, 7:14]
+        # base_features[:, :, 7:14] = temp
         # # Align insertion hook with the robot base frame. Assume first 3 features are position.
         # base_features[:, :, :3] = base_features[:, :, :3] - self.robot_base_offset
 
         # node_dict[node_name] = torch.cat([base_features], dim=-1)
 
-        # --- Wrench Features ---
+        # # --- Wrench Features ---
         # node_name = "wrench"
         # base_features = object_features[:, :, 28:42]
+        # # Switch object features due to bug in dataset
+        # temp = base_features[:, :, 0:7].clone()
+        # base_features[:, :, 0:7] = base_features[:, :, 7:14]
+        # base_features[:, :, 7:14] = temp
         # # Align wrench with the robot base frame. Assume first 3 features are position.
         # base_features[:, :, :3] = base_features[:, :, :3] - self.robot_base_offset
 
-        # node_dict[node_name] = torch.cat([base_features], dim=-1)
+        node_dict[node_name] = torch.cat([base_features], dim=-1)
 
         return node_dict
 
@@ -283,6 +293,21 @@ class FLOW_GAT(PolicyAlgo):
         Called by the parent class's __init__.
         """
 
+        # observation_group_shapes = OrderedDict()
+        # observation_group_shapes["obs"] = OrderedDict(self.obs_shapes)
+        # encoder_kwargs = ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder)
+        
+        # obs_encoder = ObsNets.ObservationGroupEncoder(
+        #     observation_group_shapes=observation_group_shapes,
+        #     encoder_kwargs=encoder_kwargs,
+        # )
+        # # IMPORTANT!
+        # # replace all BatchNorm with GroupNorm to work with EMA
+        # # performance will tank if you forget to do this!
+        # obs_encoder = replace_bn_with_gn(obs_encoder)
+        
+        # obs_dim = obs_encoder.output_shape()[0]
+
         self.nets = nn.ModuleDict()
 
         flow_model = FlowPolicy(
@@ -290,17 +315,19 @@ class FLOW_GAT(PolicyAlgo):
             global_config=self.global_config,
             device=self.device,
         )
-        flow_model_target = FlowPolicy(
-            algo_config=self.algo_config,
-            global_config=self.global_config,
-            device=self.device,
-        )
+        # flow_model_target = FlowPolicy(
+        #     algo_config=self.algo_config,
+        #     global_config=self.global_config,
+        #     device=self.device,
+            
+        # )
         nets = nn.ModuleDict(
             {
                 "policy": nn.ModuleDict(
                     {
+                        # "obs_encoder": obs_encoder,
                         "flow_model": flow_model,
-                        "flow_model_target": flow_model_target,
+                        # "flow_model_target": flow_model_target,
                     }
                 )
             }
@@ -447,21 +474,23 @@ class FLOW_GAT(PolicyAlgo):
 
             # Predict the vector field using the Policy Network
             # Pass the derived feedback_actions from the batch here
+            # obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
             predicted_flow,pred_q, _, pred_next_g_emb = self.nets["policy"]["flow_model"](
                 action=x_t,  # Interpolated state x_t
                 timestep=t,  # Sampled times t
                 graph_data=graph_data,  # Observation condition
                 previous_unexecuted_actions=feedback_actions,  # Feedback actions from batch
+                obs = None
             )  # Shape [B, T, A]
 
-            with torch.no_grad():
-                # Predict the next graph embedding using the next_graph_data as target
-                _,_, next_g_emb, _ = self.nets["policy"]["flow_model_target"](
-                    action=None,  
-                    timestep=None,  
-                    graph_data=next_graph_data,  
-                    previous_unexecuted_actions=None,  
-                )
+            # with torch.no_grad():
+            #     # Predict the next graph embedding using the next_graph_data as target
+            #     _,_, next_g_emb, _ = self.nets["policy"]["flow_model_target"](
+            #         action=None,  
+            #         timestep=None,  
+            #         graph_data=next_graph_data,  
+            #         previous_unexecuted_actions=None,  
+            #     )
 
             # Compute loss
             flow_loss = F.huber_loss(predicted_flow, u_t, delta=1.0)
@@ -470,14 +499,14 @@ class FLOW_GAT(PolicyAlgo):
             # q = obs["robot0_joint_pos"][:, -1, :].float()
             # q_loss = F.huber_loss(pred_q, q, delta=1.0)
             # Dynamic loss
-            dyn_loss = F.huber_loss(pred_next_g_emb, next_g_emb, delta=1.0)
+            # dyn_loss = F.huber_loss(pred_next_g_emb, next_g_emb, delta=1.0)
 
             losses = OrderedDict()
             losses["flow_loss"] = flow_loss
-            losses["dyn_loss"] = dyn_loss
+            # losses["dyn_loss"] = dyn_loss
             # losses["q_loss"] = q_loss
             # Total loss
-            total_loss = flow_loss + dyn_loss #+ q_loss
+            total_loss = flow_loss #+ dyn_loss #+ q_loss
             losses["total_loss"] = total_loss 
             info = {"losses": TensorUtils.detach(losses)}
 
@@ -497,25 +526,25 @@ class FLOW_GAT(PolicyAlgo):
                     self.ema.step(self.nets["policy"]["flow_model"].parameters())
 
                 # --- TARGET NETWORK UPDATE ---
-                tau_target = self.algo_config.get("target_network_update_tau", 0.005)
-                target_model_params = self.nets["policy"]["flow_model_target"].parameters()
+                # tau_target = self.algo_config.get("target_network_update_tau", 0.005)
+                # target_model_params = self.nets["policy"]["flow_model_target"].parameters()
 
-                with torch.no_grad():
-                    if self.ema is not None and self.algo_config.get("update_target_from_ema", True): # Add a config for this
-                        # Update target from the EMA shadow parameters of the online model
-                        # self.ema.shadow_params should be a list of tensors in the same order as model parameters
-                        ema_online_shadow_params = self.ema.shadow_params
-                        for target_param, ema_online_param_data in zip(target_model_params, ema_online_shadow_params):
-                            target_param.data.copy_(
-                                tau_target * ema_online_param_data.data + (1.0 - tau_target) * target_param.data
-                            )
-                    else:
-                        # Update target from the regular (non-EMA) online model parameters
-                        online_model_params = self.nets["policy"]["flow_model"].parameters()
-                        for target_param, online_param in zip(target_model_params, online_model_params):
-                            target_param.data.copy_(
-                                tau_target * online_param.data + (1.0 - tau_target) * target_param.data
-                            )
+                # with torch.no_grad():
+                #     if self.ema is not None and self.algo_config.get("update_target_from_ema", True): # Add a config for this
+                #         # Update target from the EMA shadow parameters of the online model
+                #         # self.ema.shadow_params should be a list of tensors in the same order as model parameters
+                #         ema_online_shadow_params = self.ema.shadow_params
+                #         for target_param, ema_online_param_data in zip(target_model_params, ema_online_shadow_params):
+                #             target_param.data.copy_(
+                #                 tau_target * ema_online_param_data.data + (1.0 - tau_target) * target_param.data
+                #             )
+                #     else:
+                #         # Update target from the regular (non-EMA) online model parameters
+                #         online_model_params = self.nets["policy"]["flow_model"].parameters()
+                #         for target_param, online_param in zip(target_model_params, online_model_params):
+                #             target_param.data.copy_(
+                #                 tau_target * online_param.data + (1.0 - tau_target) * target_param.data
+                #             )
 
                         
                 info.update(step_info)
@@ -527,7 +556,7 @@ class FLOW_GAT(PolicyAlgo):
         log = super().log_info(info)
         log["Loss"] = info["losses"]["total_loss"].item()
         log["Flow_Loss"] = info["losses"]["flow_loss"].item()
-        log["Dyn_Loss"] = info["losses"]["dyn_loss"].item()
+        # log["Dyn_Loss"] = info["losses"]["dyn_loss"].item()
         # log["Q_Loss"] = info["losses"]["q_loss"].item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norm"] = info["policy_grad_norms"]  # Changed key slightly
@@ -577,8 +606,9 @@ class FLOW_GAT(PolicyAlgo):
                 graph_data=current_graph_data,  # Observation condition (dict)
                 previous_unexecuted_actions=feedback_actions_batched,  # Action feedback [1, num_feedback, A]
                 K=self.algo_config.get(
-                    "inference_euler_steps", 10
+                    "inference_euler_steps", 5
                 ), 
+                obs=processed_batch["obs"]
             )  # Output shape [1, t_p, A]
 
             sampled_action_sequence = sampled_action_sequence.to(self.device)
@@ -616,6 +646,7 @@ class FLOW_GAT(PolicyAlgo):
         graph_data: Dict,  # Observation condition (dict of features)
         previous_unexecuted_actions: torch.Tensor,  # Action feedback [1, num_feedback, A]
         K: int = 10,  # Number of Euler steps
+        obs: torch.Tensor = None,  # Observation features for the model
     ) -> torch.Tensor:
         """
         Generates an action sequence using Euler integration of the learned ODE.
@@ -657,13 +688,14 @@ class FLOW_GAT(PolicyAlgo):
             t_current = torch.full(
                 (B, T, 1), (i * dt), device=self.device, dtype=torch.float32
             )  # Time for current step [1, t_p, 1]
-
+            # obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
             # Predict flow v(x_t, t, cond, feedback)
             predicted_flow,_, _, _ = self.nets["policy"]["flow_model"](
                 action=x_t,
                 timestep=t_current,
                 graph_data=graph_data,  # Pass the dictionary
                 previous_unexecuted_actions=previous_unexecuted_actions,
+                obs=None,
             )  # Output shape [1, t_p, A]
 
             # Euler step: x_{t+dt} = x_t + dt * v(x_t, t, ...)
@@ -674,3 +706,60 @@ class FLOW_GAT(PolicyAlgo):
             self.ema.restore(self.nets["policy"]["flow_model"].parameters())
 
         return x_t.contiguous()  # Shape: [1, t_p, A]
+
+
+# =================== Vision Encoder Utils =====================
+def replace_submodules(
+        root_module: nn.Module, 
+        predicate: Callable[[nn.Module], bool], 
+        func: Callable[[nn.Module], nn.Module]) -> nn.Module:
+    """
+    Replace all submodules selected by the predicate with
+    the output of func.
+
+    predicate: Return true if the module is to be replaced.
+    func: Return new module to use.
+    """
+    if predicate(root_module):
+        return func(root_module)
+
+    if parse_version(torch.__version__) < parse_version('1.9.0'):
+        raise ImportError('This function requires pytorch >= 1.9.0')
+
+    bn_list = [k.split('.') for k, m 
+        in root_module.named_modules(remove_duplicate=True) 
+        if predicate(m)]
+    for *parent, k in bn_list:
+        parent_module = root_module
+        if len(parent) > 0:
+            parent_module = root_module.get_submodule('.'.join(parent))
+        if isinstance(parent_module, nn.Sequential):
+            src_module = parent_module[int(k)]
+        else:
+            src_module = getattr(parent_module, k)
+        tgt_module = func(src_module)
+        if isinstance(parent_module, nn.Sequential):
+            parent_module[int(k)] = tgt_module
+        else:
+            setattr(parent_module, k, tgt_module)
+    # verify that all modules are replaced
+    bn_list = [k.split('.') for k, m 
+        in root_module.named_modules(remove_duplicate=True) 
+        if predicate(m)]
+    assert len(bn_list) == 0
+    return root_module
+
+def replace_bn_with_gn(
+    root_module: nn.Module, 
+    features_per_group: int=16) -> nn.Module:
+    """
+    Relace all BatchNorm layers with GroupNorm.
+    """
+    replace_submodules(
+        root_module=root_module,
+        predicate=lambda x: isinstance(x, nn.BatchNorm2d),
+        func=lambda x: nn.GroupNorm(
+            num_groups=x.num_features//features_per_group, 
+            num_channels=x.num_features)
+    )
+    return root_module

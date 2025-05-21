@@ -157,6 +157,45 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
                 milestones=epoch_schedule,
                 gamma=net_optim_params["learning_rate"]["decay_factor"],
             )
+        elif lr_scheduler_type == "cosine":
+            return optim.lr_scheduler.CosineAnnealingLR(
+                optimizer=optimizer,
+                T_max= net_optim_params["learning_rate"]["cosine_max"] if "cosine_max" in net_optim_params["learning_rate"] else epoch_schedule[-1],
+                eta_min=net_optim_params["learning_rate"]["decay_factor"] * net_optim_params["learning_rate"]["initial"],
+            )
+        elif lr_scheduler_type == "cosine_warmup":
+            warmup = net_optim_params["learning_rate"]["warmup_steps"]
+            total = epoch_schedule[-1]
+            cosine_steps = total - warmup
+            initial = net_optim_params["learning_rate"]["initial"]
+            min_lr   = net_optim_params["learning_rate"]["decay_factor"] * initial
+
+            scheduler = optim.lr_scheduler.SequentialLR(
+                optimizer,
+                schedulers=[
+                    optim.lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1.0, total_iters=warmup),
+                    optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=min_lr),
+                ],
+                milestones=[warmup],
+            )
+            return scheduler
+        elif lr_scheduler_type == "cosine_restart":
+            T_0 = net_optim_params["learning_rate"]["cosine_max"]
+            T_mult = net_optim_params["learning_rate"].get("T_mult", 1)
+            scheduler = optim.lr_scheduler.SequentialLR(
+                optimizer,
+                schedulers=[
+                optim.lr_scheduler.LinearLR(optimizer, start_factor=1e-10, end_factor=1.0, total_iters=net_optim_params["learning_rate"]["warmup_steps"]),
+                optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer=optimizer,
+                T_0=T_0,
+                T_mult=T_mult,
+                eta_min=net_optim_params["learning_rate"]["decay_factor"] * net_optim_params["learning_rate"]["initial"],
+                )
+                ],
+                milestones=[net_optim_params["learning_rate"]["warmup_steps"]],
+            )
+            return scheduler
         else:
             raise ValueError("Invalid LR scheduler type: {}".format(lr_scheduler_type))
         

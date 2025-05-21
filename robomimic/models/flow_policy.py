@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import Batch
-from torch_geometric.nn import GATv2Conv, global_mean_pool
+from torch_geometric.nn import GATv2Conv, global_mean_pool, GCNConv
 import pytorch_kinematics as pk
 import os
 from robomimic.models.obs_nets import ObservationEncoder, ObservationDecoder
@@ -143,27 +143,34 @@ class GATv2Backbone(nn.Module):
         for i, (key, dim) in enumerate(input_feature_dim.items()):
             # Create a linear layer for each node type
             self.node_encoder[key] = nn.Linear(
-                dim + 4, node_encode_dim
-            )  # +4 for static features
+                dim + 3, node_encode_dim
+            )  # + 3 for static features
             # Initialize the weights of the linear layer
             nn.init.xavier_uniform_(self.node_encoder[key].weight)
             nn.init.zeros_(self.node_encoder[key].bias)
 
         current_dim = node_encode_dim
         for i in range(self.num_layers):
-            self.convs.append(
-            GATv2Conv(
+            # self.convs.append(
+            # GATv2Conv(
 
-                in_channels=current_dim,
-                out_channels=out_channels_per_head,
-                heads=self.heads,
-                concat=True,
-                dropout=self.attention_dropout,
-                add_self_loops=True,  # Recommended for GAT variants
-                residual=True,
-                edge_dim=3,  # Include relative distance edge features
+            #     in_channels=current_dim,
+            #     out_channels=out_channels_per_head,
+            #     heads=self.heads,
+            #     concat=True,
+            #     dropout=self.attention_dropout,
+            #     add_self_loops=True,  # Recommended for GAT variants
+            #     residual=True,
+            #     edge_dim=3,  # Include relative distance edge features
+            # )
+            self.convs.append(
+                GCNConv
+                (
+                    in_channels=current_dim if i == 0 else self.hidden_dim,
+                    out_channels=self.hidden_dim,
+                )
             )
-            )
+            
             
             current_dim = self.hidden_dim  # Input for the next layer
             self.norms.append(nn.LayerNorm(current_dim))
@@ -195,12 +202,12 @@ class GATv2Backbone(nn.Module):
             self.visualize_graph(graph, graph_idx=0, show_edge_weights=True, plot_3d=True)
 
         x, edge_index, batch_indices = graph.x, graph.edge_index, graph.batch
-        edge_attr = graph.edge_attr  # Relative distance edge features
+        # edge_attr = graph.edge_attr  # Relative distance edge features
         if x.dtype != torch.float32:
             x = x.float()  # Ensure float32 for GNN layers
 
         for i in range(self.num_layers):
-            x = self.convs[i](x, edge_index, edge_attr)
+            x = self.convs[i](x, edge_index)
             x = self.norms[i](x)
             x = self.activation(x)
 
@@ -224,7 +231,7 @@ class GATv2Backbone(nn.Module):
         #     [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0],  # joint_3 -> joint_2, joint_4
         #     [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0],  # joint_4 -> joint_3, joint_5
         #     [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],  # joint_5 -> joint_4, joint_6
-        #     [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],  # joint_6 -> joint_5, eef
+        #     [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0],  # joint_6 -> joint_5, eef
         #     [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1],  # eef -> joint_6, insertion_hook, wrench
         #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],  # base_frame -> insertion_hook, wrench
         #     [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],  # insertion_hook -> eef, base_frame
@@ -260,20 +267,20 @@ class GATv2Backbone(nn.Module):
         node_type_onehot = F.one_hot(node_types, num_classes=3).float()  # (N, 4)
 
         # === 2. SHORTEST PATH DISTANCE TO EEF
-        import networkx as nx
-        G = nx.from_numpy_array(adjacency_matrix.cpu().numpy(), create_using=nx.Graph)
-        dist_to_eef = torch.tensor(
-            [nx.shortest_path_length(G, source=i, target=7) for i in range(N)],
-            dtype=torch.float32,
-            device=device
-        ).unsqueeze(1)  # (N, 1)
+        # import networkx as nx
+        # G = nx.from_numpy_array(adjacency_matrix.cpu().numpy(), create_using=nx.Graph)
+        # dist_to_eef = torch.tensor(
+        #     [nx.shortest_path_length(G, source=i, target=7) for i in range(N)],
+        #     dtype=torch.float32,
+        #     device=device
+        # ).unsqueeze(1)  # (N, 1)
 
         # === 3. COMBINE STATIC FEATURES
-        static_features = torch.cat([node_type_onehot, dist_to_eef], dim=1)  # (N, 5)
+        # static_features = torch.cat([node_type_onehot, dist_to_eef], dim=1)  # (N, 5)
 
         node_order = [
             'joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6',
-            'eef', 'object',#'base_frame', 'insertion_hook', 'wrench'
+            'eef', 'object'#'base_frame', 'insertion_hook', 'wrench'
         ]
         if len(node_order) != N:
             raise ValueError(f"Mismatch between node_order length ({len(node_order)}) and N ({N})")
@@ -288,7 +295,7 @@ class GATv2Backbone(nn.Module):
                 raise ValueError(f"Missing encoder for node type: {key}")
 
             dynamic_feats = node_dict[key] # Shape: (B, T, F_k)
-            node_static_feats = static_features[i] # Shape: (5,)
+            node_static_feats = node_type_onehot[i] # Shape: (5,)
 
             # Expand static features to match batch and time dimensions
             B, T, F_k = dynamic_feats.shape
@@ -336,12 +343,12 @@ class GATv2Backbone(nn.Module):
         batch_idx = torch.arange(B, device=device).repeat_interleave(T * N)  # (B*T*N,)
 
         # Compute raw node positions for edge features
-        node_pos = torch.stack([node_dict[k][..., :3] for k in node_order], dim=1)  # (B, N, T, 3)
-        node_pos = node_pos.permute(0, 2, 1, 3).reshape(B * T * N, 3)  # (B*T*N, 3)
-        src, dst = edge_index  # (E,), (E,)
-        edge_attr = node_pos[dst] - node_pos[src]  # (E, 3)
+        # node_pos = torch.stack([node_dict[k][..., :3] for k in node_order], dim=1)  # (B, N, T, 3)
+        # node_pos = node_pos.permute(0, 2, 1, 3).reshape(B * T * N, 3)  # (B*T*N, 3)
+        # src, dst = edge_index  # (E,), (E,)
+        # edge_attr = node_pos[dst] - node_pos[src]  # (E, 3)
 
-        batch = Batch(x=x, edge_index=edge_index, edge_attr=edge_attr, batch=batch_idx, pos = node_pos)
+        batch = Batch(x=x, edge_index=edge_index, edge_attr=None, batch=batch_idx, pos = None)
         return batch
 
     def visualize_graph(self, graph: Batch, graph_idx: int = 0, show_edge_weights: bool = False, plot_3d: bool = False):
@@ -638,6 +645,26 @@ class TransformerDecoder(nn.Module):
         actions = self.output_projection(decoded)  # [B, T, A]
         return actions
 
+class ObservationEncoder(nn.Module):
+    def __init__(self, hidden_dim: int, obs_dim: int):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(obs_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),  # Add LayerNorm for better stability
+            nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),  # Add LayerNorm for the second layer
+            nn.SiLU(),
+            nn.Dropout(p=0.1)  # Add Dropout for regularization
+        )
+
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        B, T, F = obs.shape
+        obs = obs.view(B * T, F)
+        obs = self.mlp(obs)
+        obs = obs.view(B, T, -1)
+        return obs
+
 
 class FlowPolicy(nn.Module):
     """
@@ -650,6 +677,7 @@ class FlowPolicy(nn.Module):
         algo_config,
         global_config,
         device: str = "cpu",
+        obs_dim: int = 0,
     ):
         """
         Initialize the Flow Policy.
@@ -692,23 +720,29 @@ class FlowPolicy(nn.Module):
             attention_dropout=algo_config.gnn.attention_dropout,
         )
 
+        # Alternative MLP-based observation encoder
+        # self.obs_encoder = ObservationEncoder(
+        #     hidden_dim=hidden,
+        #     obs_dim=obs_dim
+        # )
+
         # Joint decoder for inferring joint angles
-        self.joint_decoder = JointDecoder(
-            algo_config=algo_config,
-            hidden_dim=hidden,
-            q_dim=algo_config.action_dim,
-        )
+        # self.joint_decoder = JointDecoder(
+        #     algo_config=algo_config,
+        #     hidden_dim=hidden,
+        #     q_dim=algo_config.action_dim,
+        # )
 
         # Forward kinematics encoder for end effector positions
-        self.fwd_kin_encoder = DiffFwdKinEncoder(
-            algo_config=algo_config,
-            q_dim=algo_config.action_dim,
-            hidden_dim=hidden,
-            device=device,
-        )
+        # self.fwd_kin_encoder = DiffFwdKinEncoder(
+        #     algo_config=algo_config,
+        #     q_dim=algo_config.action_dim,
+        #     hidden_dim=hidden,
+        #     device=device,
+        # )
 
         # Dynamics model for predicting next state
-        self.dynamics_model = DynamicsModel(hidden, action_dim)
+        # self.dynamics_model = DynamicsModel(hidden, action_dim)
 
         # Transformer-based action decoder
         self.decoder = TransformerDecoder(
@@ -725,6 +759,7 @@ class FlowPolicy(nn.Module):
         timestep,
         graph_data: dict,
         previous_unexecuted_actions: torch.Tensor,
+        obs: torch.Tensor = None
     ) -> torch.Tensor:
         """
         Forward pass through the policy.
@@ -739,12 +774,16 @@ class FlowPolicy(nn.Module):
             tuple: (output_actions, current_graph_embedding, next_graph_embedding)
         """
         # Encode the current state as a graph embedding
-        graph_emb = self.graph_encoder(graph_data).unsqueeze(1)  # [B, 1, H]
+        if obs is None:
+            graph_emb = self.graph_encoder(graph_data).unsqueeze(1)  # [B, 1, H]
+            obs_emb = graph_emb
+        else:
+            obs_emb = self.obs_encoder(obs)  # [B, T, H]
 
         # Early return during initialization
-        if action is None:
-            return None, None, graph_emb, None
-
+        if action is None and obs is None:
+            return None, None, obs_emb, None
+        
         # Extract dimensions
         B, T, A = action.shape
         H = self.hidden
@@ -759,14 +798,14 @@ class FlowPolicy(nn.Module):
         # fk_emb = fk_emb.unsqueeze(1)
         # 2. Encode actions
         action_emb = self.action_encoder(action)  # [B, T, H]
-        context = torch.cat([time_emb, graph_emb], dim=1)  # [B, T, H]
+        context = torch.cat([time_emb, obs_emb], dim=1)  # [B, T, H]
 
         # 5. Decode to output actions using TransformerDecoder
         out = self.decoder(tgt=action_emb, memory=context)  # [B, T, H]
 
         # 3. Predict next state embedding using dynamics model
-        next_graph_emb = self.dynamics_model(
-            torch.cat([graph_emb, out[:, 0, :].unsqueeze(1)], dim=2)
-        )
+        # next_graph_emb = self.dynamics_model(
+        #     torch.cat([graph_emb, out[:, 0, :].unsqueeze(1)], dim=2)
+        # )
 
-        return out, None, graph_emb, next_graph_emb
+        return out, None, obs_emb, None
