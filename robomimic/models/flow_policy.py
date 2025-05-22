@@ -242,15 +242,15 @@ class GATv2Backbone(nn.Module):
         # Adjacency matrix for the can task.
         adjacency_matrix = torch.tensor(
             [  # J0 J1 J2 J3 J4 J5 J6 EEF OBJ
-            [0, 1, 1, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 0],
-            [1, 1, 0, 1, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 1, 0, 1, 1, 0, 0],
-            [0, 0, 0, 0, 1, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 1, 0, 1, 1],
-            [0, 0, 0, 0, 0, 0, 1, 0, 1],
-            [0, 0, 0, 0, 0, 0, 1, 1, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0],  # joint_0 -> joint_1
+            [1, 0, 1, 0, 0, 0, 0, 0, 0],  # joint_1 -> joint_0, joint_2
+            [0, 1, 0, 1, 0, 0, 0, 0, 0],  # joint_2 -> joint_1, joint_3
+            [0, 0, 1, 0, 1, 0, 0, 0, 0],  # joint_3 -> joint_2, joint_4
+            [0, 0, 0, 1, 0, 1, 0, 0, 0],  # joint_4 -> joint_3, joint_5
+            [0, 0, 0, 0, 1, 0, 1, 0, 0],  # joint_5 -> joint_4, joint_6
+            [0, 0, 0, 0, 0, 1, 0, 1, 0],  # joint_6 -> joint_5, eef
+            [0, 0, 0, 0, 0, 0, 1, 0, 1],  # eef -> joint_6, object
+            [0, 0, 0, 0, 0, 0, 0, 1, 0],  # object -> eef
             ],
             dtype=torch.bool,
         ) 
