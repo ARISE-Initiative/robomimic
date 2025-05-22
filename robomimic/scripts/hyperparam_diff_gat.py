@@ -45,8 +45,8 @@ def make_generator_simple(config_file, script_file):
         key = "algo.graph_name",
         name = "graph_name",
         group=1,
-        values=["skip_graph"],
-        value_names=["skip_graph"]
+        values=["base_graph"],
+        value_names=["base_graph"]
     )
 
 
