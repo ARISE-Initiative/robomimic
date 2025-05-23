@@ -19,13 +19,7 @@ def make_generator_simple(config_file, script_file):
     # Parameters are placed in different groups because they have different numbers of values.
 
     # Group 1: Loss Tradeoff (3 Values) - Highest Priority
-    generator.add_param(
-        key="train.seed",
-        name="seed",
-        group=2,
-        values=[0,25,42],
-        value_names=["0", "25", "42"]
-    )
+    
     generator.add_param(
         key ="algo.optim_params.policy.learning_rate.scheduler_type",
         name="lr_scheduler_type",
@@ -49,13 +43,28 @@ def make_generator_simple(config_file, script_file):
         value_names=["base_graph"]
     )
 
-
     generator.add_param(
         key="algo.inference_euler_steps",
         name="inference_euler_steps",
         group=1,
         values=[5],
         value_names=["5"]
+    )
+    
+    generator.add_param(
+        key="train.seed",
+        name="seed",
+        group=2,
+        values=[0,25,42],
+        value_names=["0", "25", "42"]
+    )
+
+    generator.add_param(
+        key="train.data",
+        name="data",
+        group=3,
+        values=["datasets/lift/ph/low_dim_v15.hdf5", "datasets/can/ph/low_dim_v15.hdf5"],
+        value_names=["lift", "can"]
     )
 
     return generator
