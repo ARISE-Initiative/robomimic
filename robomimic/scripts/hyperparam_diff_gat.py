@@ -24,8 +24,8 @@ def make_generator_simple(config_file, script_file):
         key ="algo.optim_params.policy.learning_rate.scheduler_type",
         name="lr_scheduler_type",
         group=1,
-        values=["cosine_restart"],
-        value_names=["cosine_restart"]
+        values=["cosine_warmup"],
+        value_names=["cosine_warmup"]
     )
 
     generator.add_param(
