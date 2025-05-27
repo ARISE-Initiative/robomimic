@@ -32,7 +32,6 @@ setup(
         "huggingface_hub",
         "transformers",
         "diffusers==0.11.1",
-        "tianshou==0.4.10",
     ],
     eager_resources=['*'],
     include_package_data=True,
