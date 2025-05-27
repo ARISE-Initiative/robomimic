@@ -711,20 +711,20 @@ class FlowPolicy(nn.Module):
         self.action_encoder = nn.Sequential(nn.Linear(action_dim, hidden))
 
         # Graph encoding components
-        self.graph_encoder = GATv2Backbone(
-            input_feature_dim=algo_config.gnn.node_input_dim,
-            num_layers=algo_config.gnn.num_layers,
-            node_encode_dim=algo_config.gnn.node_dim,
-            hidden_dim=algo_config.gnn.hidden_dim,
-            num_heads=algo_config.gnn.num_heads,
-            attention_dropout=algo_config.gnn.attention_dropout,
-        )
+        # self.graph_encoder = GATv2Backbone(
+        #     input_feature_dim=algo_config.gnn.node_input_dim,
+        #     num_layers=algo_config.gnn.num_layers,
+        #     node_encode_dim=algo_config.gnn.node_dim,
+        #     hidden_dim=algo_config.gnn.hidden_dim,
+        #     num_heads=algo_config.gnn.num_heads,
+        #     attention_dropout=algo_config.gnn.attention_dropout,
+        # )
 
         # Alternative MLP-based observation encoder
-        # self.obs_encoder = ObservationEncoder(
-        #     hidden_dim=hidden,
-        #     obs_dim=obs_dim
-        # )
+        self.obs_encoder = ObservationEncoder(
+            hidden_dim=hidden,
+            obs_dim=obs_dim
+        )
 
         # Joint decoder for inferring joint angles
         # self.joint_decoder = JointDecoder(

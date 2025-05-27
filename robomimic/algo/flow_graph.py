@@ -293,20 +293,20 @@ class FLOW_GAT(PolicyAlgo):
         Called by the parent class's __init__.
         """
 
-        # observation_group_shapes = OrderedDict()
-        # observation_group_shapes["obs"] = OrderedDict(self.obs_shapes)
-        # encoder_kwargs = ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder)
+        observation_group_shapes = OrderedDict()
+        observation_group_shapes["obs"] = OrderedDict(self.obs_shapes)
+        encoder_kwargs = ObsUtils.obs_encoder_kwargs_from_config(self.obs_config.encoder)
         
-        # obs_encoder = ObsNets.ObservationGroupEncoder(
-        #     observation_group_shapes=observation_group_shapes,
-        #     encoder_kwargs=encoder_kwargs,
-        # )
+        obs_encoder = ObsNets.ObservationGroupEncoder(
+            observation_group_shapes=observation_group_shapes,
+            encoder_kwargs=encoder_kwargs,
+        )
         # # IMPORTANT!
         # # replace all BatchNorm with GroupNorm to work with EMA
         # # performance will tank if you forget to do this!
-        # obs_encoder = replace_bn_with_gn(obs_encoder)
+        obs_encoder = replace_bn_with_gn(obs_encoder)
         
-        # obs_dim = obs_encoder.output_shape()[0]
+        obs_dim = obs_encoder.output_shape()[0]
 
         self.nets = nn.ModuleDict()
 
@@ -314,6 +314,7 @@ class FLOW_GAT(PolicyAlgo):
             algo_config=self.algo_config,
             global_config=self.global_config,
             device=self.device,
+            obs_dim= obs_dim
         )
         # flow_model_target = FlowPolicy(
         #     algo_config=self.algo_config,
@@ -325,7 +326,7 @@ class FLOW_GAT(PolicyAlgo):
             {
                 "policy": nn.ModuleDict(
                     {
-                        # "obs_encoder": obs_encoder,
+                        "obs_encoder": obs_encoder,
                         "flow_model": flow_model,
                         # "flow_model_target": flow_model_target,
                     }
@@ -474,13 +475,13 @@ class FLOW_GAT(PolicyAlgo):
 
             # Predict the vector field using the Policy Network
             # Pass the derived feedback_actions from the batch here
-            # obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
+            obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
             predicted_flow,pred_q, _, pred_next_g_emb = self.nets["policy"]["flow_model"](
                 action=x_t,  # Interpolated state x_t
                 timestep=t,  # Sampled times t
                 graph_data=graph_data,  # Observation condition
                 previous_unexecuted_actions=feedback_actions,  # Feedback actions from batch
-                obs = None
+                obs = obs_feat
             )  # Shape [B, T, A]
 
             # with torch.no_grad():
@@ -688,14 +689,14 @@ class FLOW_GAT(PolicyAlgo):
             t_current = torch.full(
                 (B, T, 1), (i * dt), device=self.device, dtype=torch.float32
             )  # Time for current step [1, t_p, 1]
-            # obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
+            obs_feat = TensorUtils.time_distributed({'obs':obs}, self.nets['policy']['obs_encoder'], inputs_as_kwargs=True)
             # Predict flow v(x_t, t, cond, feedback)
             predicted_flow,_, _, _ = self.nets["policy"]["flow_model"](
                 action=x_t,
                 timestep=t_current,
                 graph_data=graph_data,  # Pass the dictionary
                 previous_unexecuted_actions=previous_unexecuted_actions,
-                obs=None,
+                obs=obs_feat,
             )  # Output shape [1, t_p, A]
 
             # Euler step: x_{t+dt} = x_t + dt * v(x_t, t, ...)
