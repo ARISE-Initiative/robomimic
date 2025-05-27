@@ -43,6 +43,7 @@ Welcome to robomimic's documentation!
    tutorials/reproducing_experiments
    tutorials/dataset_contents
    tutorials/training_transformers
+   tutorials/training_diffusion_policy
    tutorials/using_pretrained_models
    tutorials/observations
    tutorials/pretrained_representations
