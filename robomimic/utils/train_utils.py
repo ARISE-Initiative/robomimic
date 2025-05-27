@@ -26,7 +26,6 @@ from robomimic.utils.dataset import SequenceDataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
-from tianshou.env import SubprocVectorEnv
 
 
 def get_exp_dir(config, auto_remove_exp_dir=False, resume=False):
@@ -293,9 +292,7 @@ def run_rollout(
         results (dict): dictionary containing return, success rate, etc.
     """
     assert isinstance(policy, RolloutPolicy)
-    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper) or isinstance(env, SubprocVectorEnv)
-
-    batched = isinstance(env, SubprocVectorEnv)
+    assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper)
 
     policy.start_episode()
 
@@ -309,27 +306,17 @@ def run_rollout(
     video_count = 0  # video frame counter
 
     rews = []
-    success = None #{ k: False for k in env.is_success() } # success metrics
+    success = None # success metrics
 
-    if batched:
-        end_step = [None for _ in range(len(env))]
-    else:
-        end_step = None
+    end_step = None
 
-    if batched:
-        video_frames = [[] for _ in range(len(env))]
-    else:
-        video_frames = []
+    video_frames = []
     
     try:
         for step_i in range(horizon): #LogUtils.tqdm(range(horizon)):
             # get action from policy
-            if batched:
-                policy_ob = batchify_obs(ob_dict)
-                ac = policy(ob=policy_ob, goal=goal_dict, batched=True) #, return_ob=True)
-            else:
-                policy_ob = ob_dict
-                ac = policy(ob=policy_ob, goal=goal_dict) #, return_ob=True)
+            policy_ob = ob_dict
+            ac = policy(ob=policy_ob, goal=goal_dict) #, return_ob=True)
 
             # play action
             ob_dict, r, done, info = env.step(ac)
@@ -341,12 +328,7 @@ def run_rollout(
             # compute reward
             rews.append(r)
 
-            # cur_success_metrics = env.is_success()
-            if batched:
-                cur_success_metrics = TensorUtils.list_of_flat_dict_to_dict_of_list([info[i]["is_success"] for i in range(len(info))])
-                cur_success_metrics = {k: np.array(v) for (k, v) in cur_success_metrics.items()}
-            else:
-                cur_success_metrics = info["is_success"]
+            cur_success_metrics = info["is_success"]
 
             if success is None:
                 success = deepcopy(cur_success_metrics)
@@ -357,108 +339,35 @@ def run_rollout(
             # visualization
             if video_writer is not None:
                 if video_count % video_skip == 0:
-                    if batched:
-                        # frames = env.render(mode="rgb_array", height=video_height, width=video_width)
-                        
-                        frames = []
-                        policy_ob = deepcopy(policy_ob)
-                        for env_i in range(len(env)):
-                            cam_imgs = []
-                            for im_name in ["agentview_image", "robot0_eye_in_hand_image"]:
-                                im = TensorUtils.to_numpy(
-                                    policy_ob[im_name][env_i]
-                                )
-                                if len(im.shape) == 4: # stacked frames
-                                    im = im[-1]
-                                im = np.transpose(im, (1, 2, 0))
-                                if policy_ob.get("ret", None) is not None:
-                                    im_ret = TensorUtils.to_numpy(
-                                        policy_ob["ret"]["obs"][im_name][env_i,:,-1]
-                                    )
-                                    im_ret = np.transpose(im_ret, (0, 2, 3, 1))
-                                    im = np.concatenate((im, *im_ret), axis=0)
-                                cam_imgs.append(im)
-                            frame = np.concatenate(cam_imgs, axis=1)
-                            frame = (frame * 255.0).astype(np.uint8)
-                            frames.append(frame)
-                        
-                        for env_i in range(len(env)):
-                            frame = frames[env_i]
-                            video_frames[env_i].append(frame)
-                    else:
-                        frame = env.render(mode="rgb_array", height=512, width=512)
-                        
-                        # cam_imgs = []
-                        # for im_name in ["robot0_eye_in_hand_image", "robot0_agentview_right_image", "robot0_agentview_left_image"]:
-                        #     im_input = TensorUtils.to_numpy(
-                        #         policy_ob_dict[im_name][0,-1]
-                        #     )
-                        #     im_ret = TensorUtils.to_numpy(
-                        #         policy_ob_dict["ret"]["obs"][im_name][0,:,-1]
-                        #     )
-                        #     im_input = np.transpose(im_input, (1, 2, 0))
-                        #     im_input = add_border_to_frame(im_input, border_size=3, color="black")
-                        #     im_ret = np.transpose(im_ret, (0, 2, 3, 1))
-                        #     im = np.concatenate((im_input, *im_ret), axis=1)
-                        #     cam_imgs.append(im)
-
-                        # frame = np.concatenate(cam_imgs, axis=0)
-                        video_frames.append(frame)
+                    frame = env.render(mode="rgb_array", height=512, width=512)
+                    video_frames.append(frame)
 
                 video_count += 1
 
             # break if done
-            if batched:
-                for env_i in range(len(env)):
-                    if end_step[env_i] is not None:
-                        continue
-                    
-                    if done[env_i] or (terminate_on_success and success["task"][env_i]):
-                        end_step[env_i] = step_i
-            else:
-                if done or (terminate_on_success and success["task"]):
-                    end_step = step_i
-                    break
+            if done or (terminate_on_success and success["task"]):
+                end_step = step_i
+                break
 
     except Exception as e:
         print("WARNING: got rollout exception {}".format(e))
 
 
     if video_writer is not None:
-        if batched:
-            for env_i in range(len(video_frames)):
-                for frame in video_frames[env_i]:
-                    video_writer.append_data(frame)
-        else:
-            for frame in video_frames:
-                video_writer.append_data(frame)
+        for frame in video_frames:
+            video_writer.append_data(frame)
 
-    if batched:
-        total_reward = np.zeros(len(env))
-        rews = np.array(rews)
-        for env_i in range(len(env)):
-            end_step_env_i = end_step[env_i] or step_i
-            total_reward[env_i] = np.sum(rews[:end_step_env_i+1, env_i])
-            end_step[env_i] = end_step_env_i
-        
-        results["Return"] = total_reward
-        results["Horizon"] = np.array(end_step) + 1
-        results["Success_Rate"] = success["task"].astype(float)
-    else:
-        end_step = end_step or step_i
-        total_reward = np.sum(rews[:end_step + 1])
-        
-        results["Return"] = total_reward
-        results["Horizon"] = end_step + 1
-        results["Success_Rate"] = float(success["task"])
+    end_step = end_step or step_i
+    total_reward = np.sum(rews[:end_step + 1])
+    
+    results["Return"] = total_reward
+    results["Horizon"] = end_step + 1
+    results["Success_Rate"] = float(success["task"])
 
     # log additional success metrics
     for k in success:
         if k != "task":
-            if batched:
-                results["{}_Success_Rate".format(k)] = success[k].astype(float)
-            else:
-                results["{}_Success_Rate".format(k)] = float(success[k])
+            results["{}_Success_Rate".format(k)] = float(success[k])
 
     return results
 
@@ -542,21 +451,13 @@ def rollout_with_stats(
             print("video writes to " + video_paths[env_key])
             env_video_writer = video_writers[env_key]
 
-        batched = isinstance(env, SubprocVectorEnv)
-
-        if batched:
-            env_name = env.get_env_attr(key="name", id=0)[0]
-        else:
-            env_name = env.name
+        env_name = env.name
 
         print("rollout: env={}, horizon={}, use_goals={}, num_episodes={}".format(
             env_name, horizon, use_goals, num_episodes,
         ))
         rollout_logs = []
-        if batched:
-            iterator = range(0, num_episodes, len(env))
-        else:
-            iterator = range(num_episodes)
+        iterator = range(num_episodes)
         if not verbose:
             iterator = LogUtils.custom_tqdm(iterator, total=num_episodes)
 
@@ -573,21 +474,12 @@ def rollout_with_stats(
                 video_skip=video_skip,
                 terminate_on_success=terminate_on_success,
             )
-            if batched:
-                rollout_info["time"] = [(time.time() - rollout_timestamp) / len(env)] * len(env)
+            rollout_info["time"] = time.time() - rollout_timestamp
 
-                for env_i in range(len(env)):
-                    rollout_logs.append({k: rollout_info[k][env_i] for k in rollout_info})
-                num_success += np.sum(rollout_info["Success_Rate"])
-            else:
-                rollout_info["time"] = time.time() - rollout_timestamp
-
-                rollout_logs.append(rollout_info)
-                num_success += rollout_info["Success_Rate"]
+            rollout_logs.append(rollout_info)
+            num_success += rollout_info["Success_Rate"]
             
             if verbose:
-                if batched:
-                    raise NotImplementedError
                 print("Episode {}, horizon={}, num_success={}".format(ep_i + 1, horizon, num_success))
                 print(json.dumps(rollout_info, sort_keys=True, indent=4))
 

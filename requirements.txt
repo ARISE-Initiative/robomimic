@@ -13,4 +13,3 @@ torch
 torchvision
 diffusers==0.11.1
 pytorch3d==0.7.3
-tianshou==0.4.10
