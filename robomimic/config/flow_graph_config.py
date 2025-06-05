@@ -126,7 +126,6 @@ class FlowGATConfig(BaseConfig):
             "robot0_eef_quat",      # End-effector orientation (quaternion)
             "robot0_gripper_qpos",  # Gripper joint positions
             "object",
-            # "robot0_joint_se3",
         ]
         # obs_modalities.rgb = [
         #     "robot0_eye_in_hand_image", # RGB image from the robot's camera

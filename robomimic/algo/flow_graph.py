@@ -182,7 +182,7 @@ class FLOW_GAT(PolicyAlgo):
         )
 
         obs_tensor = torch.cat(
-            [v for k, v in obs_data.items() if k != "robot0_joint_se3"], dim=-1
+            [v for k, v in obs_data.items()], dim=-1
         )
         # Convert to float32
         obs_tensor = TensorUtils.to_float(obs_tensor)
@@ -214,7 +214,7 @@ class FLOW_GAT(PolicyAlgo):
         }
 
         obs_tensor = torch.cat(
-            [v for k, v in obs_data_filtered.items() if k != "robot0_joint_se3"], dim=-1
+            [v for k, v in obs_data_filtered.items()], dim=-1
         )
         # Convert to float32
         obs_tensor = TensorUtils.to_float(obs_tensor)
