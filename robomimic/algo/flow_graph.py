@@ -50,7 +50,7 @@ class FLOW_GAT(PolicyAlgo):
             algo_config, obs_config, global_config, obs_key_shapes, ac_dim, device
         )
         self.converter = JsonTemporalGraphConverter(
-            json_path="robomimic/algo/flow_gat_files/pickplace.json", device=self.device
+            json_path=global_config.train.graph_config, device=self.device
         )
         print(self.global_config.train.graph_config)
         print(device)
