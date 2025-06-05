@@ -1,0 +1,106 @@
+{
+    "urdf_path":"/home/nicolas/Documents/development/python/robomimic/robomimic/robomimic/algo/panda/robot.xml",
+    "urdf_end_link_name": "right_hand",
+    "robot_base_offset": [-0.5, 0.1, 0.912], 
+    "nodes":[
+        {"id": "joint_0", "type": "joint"}
+        ,{"id": "joint_1", "type": "joint"}
+        ,{"id": "joint_2", "type": "joint"}
+        ,{"id": "joint_3", "type": "joint"}
+        ,{"id": "joint_4", "type": "joint"}
+        ,{"id": "joint_5", "type": "joint"}
+        ,{"id": "joint_6", "type": "joint"}
+        ,{"id": "eef", "type": "end_effector"}
+        ,{"id": "can", "type": "grasp_object"}
+        ,{"id": "dummy", "type": "object"}
+        
+    ],
+    "edges": [
+        {"source_id": "joint_0", "target_id": "joint_1"},
+        {"source_id": "joint_1", "target_id": "joint_0"},
+        {"source_id": "joint_1", "target_id": "joint_2"},
+        {"source_id": "joint_2", "target_id": "joint_1"},
+        {"source_id": "joint_2", "target_id": "joint_3"},
+        {"source_id": "joint_3", "target_id": "joint_2"},
+        {"source_id": "joint_3", "target_id": "joint_4"},
+        {"source_id": "joint_4", "target_id": "joint_3"},
+        {"source_id": "joint_4", "target_id": "joint_5"},
+        {"source_id": "joint_5", "target_id": "joint_4"},
+        {"source_id": "joint_5", "target_id": "joint_6"},
+        {"source_id": "joint_6", "target_id": "joint_5"},
+        {"source_id": "joint_6", "target_id": "eef"},
+        {"source_id": "eef", "target_id": "joint_6"},
+
+        {"source_id": "joint_0", "target_id": "joint_3"},
+        {"source_id": "joint_3", "target_id": "joint_0"},
+        {"source_id": "joint_3", "target_id": "joint_6"},
+        {"source_id": "joint_6", "target_id": "joint_3"},
+
+        {"source_id": "eef", "target_id": "can"},
+        {"source_id": "can", "target_id": "eef"}
+        
+
+
+    ],
+    "node_feature_map": {
+        "joint_0": {
+            "type": "joint",
+            "joint_pos": [23],
+            "position": [],
+            "rotation": []
+        },
+        "joint_1": {
+            "type": "joint",
+            "joint_pos": [24],
+            "position": [],
+            "rotation": []
+        },
+        "joint_2": {
+            "type": "joint",
+            "joint_pos": [25],
+            "position": [],
+            "rotation": []
+        },
+        "joint_3": {
+            "type": "joint",
+            "joint_pos": [26],
+            "position": [],
+            "rotation": []
+        },
+        "joint_4": {
+            "type": "joint",
+            "joint_pos": [27],
+            "position": [],
+            "rotation": []
+        },
+        "joint_5": {
+            "type": "joint",
+            "joint_pos": [28],
+            "position": [],
+            "rotation": []
+        },
+        "joint_6": {
+            "type": "joint",
+            "joint_pos": [29],
+            "position": [],
+            "rotation": []
+        },
+        "eef": {
+            "type": "end_effector",
+            "joint_pos": [21, 22],
+            "position": [14, 15, 16],
+            "rotation": [17, 18, 19, 20]
+        },
+        "can": {
+            "type": "object",
+            "position": [7, 8, 9],
+            "rotation": [10, 11, 12, 13],
+            "pos_to_gripper": [0, 1, 2],
+            "rot_to_gripper": [3, 4, 5, 6]
+        }
+    }
+        
+    }
+
+
+

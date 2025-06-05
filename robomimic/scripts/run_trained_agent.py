@@ -217,7 +217,7 @@ def run_trained_agent(args):
     if args.seed is not None:
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-
+        
     # maybe create video writer
     video_writer = None
     if write_video:

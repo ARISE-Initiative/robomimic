@@ -1,0 +1,137 @@
+{
+    "urdf_path":"/home/nicolas/Documents/development/python/robomimic/robomimic/robomimic/algo/panda/robot.xml",
+    "urdf_end_link_name": "right_hand",
+    "robot_base_offset": [-0.5, 0.1, 0.912], 
+    "nodes":[
+        {"id": "joint_0", "type": "joint"}
+        ,{"id": "joint_1", "type": "joint"}
+        ,{"id": "joint_2", "type": "joint"}
+        ,{"id": "joint_3", "type": "joint"}
+        ,{"id": "joint_4", "type": "joint"}
+        ,{"id": "joint_5", "type": "joint"}
+        ,{"id": "joint_6", "type": "joint"}
+        ,{"id": "eef", "type": "end_effector"}
+        ,{"id": "can", "type": "grasp_object"}
+        ,{"id": "cereal", "type": "object"}
+        ,{"id": "bread", "type": "object"}
+        ,{"id": "milk", "type": "object"}
+        
+    ],
+    "edges": [
+        {"source_id": "joint_0", "target_id": "joint_1"},
+        {"source_id": "joint_1", "target_id": "joint_0"},
+        {"source_id": "joint_1", "target_id": "joint_2"},
+        {"source_id": "joint_2", "target_id": "joint_1"},
+        {"source_id": "joint_2", "target_id": "joint_3"},
+        {"source_id": "joint_3", "target_id": "joint_2"},
+        {"source_id": "joint_3", "target_id": "joint_4"},
+        {"source_id": "joint_4", "target_id": "joint_3"},
+        {"source_id": "joint_4", "target_id": "joint_5"},
+        {"source_id": "joint_5", "target_id": "joint_4"},
+        {"source_id": "joint_5", "target_id": "joint_6"},
+        {"source_id": "joint_6", "target_id": "joint_5"},
+        {"source_id": "joint_6", "target_id": "eef"},
+        {"source_id": "eef", "target_id": "joint_6"},
+
+        {"source_id": "joint_0", "target_id": "joint_3"},
+        {"source_id": "joint_3", "target_id": "joint_0"},
+        {"source_id": "joint_3", "target_id": "joint_6"},
+        {"source_id": "joint_6", "target_id": "joint_3"},
+
+        {"source_id": "eef", "target_id": "can"},
+        {"source_id": "can", "target_id": "eef"},
+
+
+        {"source_id": "cereal", "target_id": "bread"},
+        {"source_id": "bread", "target_id": "cereal"},
+        {"source_id": "cereal", "target_id": "milk"},
+        {"source_id": "milk", "target_id": "cereal"},
+        {"source_id": "bread", "target_id": "milk"},
+        {"source_id": "milk", "target_id": "bread"}    
+        
+
+
+    ],
+    "node_feature_map": {
+        "joint_0": {
+            "type": "joint",
+            "joint_pos": [65],
+            "position": [],
+            "rotation": []
+        },
+        "joint_1": {
+            "type": "joint",
+            "joint_pos": [66],
+            "position": [],
+            "rotation": []
+        },
+        "joint_2": {
+            "type": "joint",
+            "joint_pos": [67],
+            "position": [],
+            "rotation": []
+        },
+        "joint_3": {
+            "type": "joint",
+            "joint_pos": [68],
+            "position": [],
+            "rotation": []
+        },
+        "joint_4": {
+            "type": "joint",
+            "joint_pos": [69],
+            "position": [],
+            "rotation": []
+        },
+        "joint_5": {
+            "type": "joint",
+            "joint_pos": [70],
+            "position": [],
+            "rotation": []
+        },
+        "joint_6": {
+            "type": "joint",
+            "joint_pos": [71],
+            "position": [],
+            "rotation": []
+        },
+        "eef": {
+            "type": "end_effector",
+            "joint_pos": [63, 64],
+            "position": [56, 57, 58],
+            "rotation": [59, 60, 61, 62]
+        },
+        "can": {
+            "type": "object",
+            "position": [49, 50, 51],
+            "rotation": [52, 53, 54, 55],
+            "pos_to_gripper": [42, 43, 44],
+            "rot_to_gripper": [45, 46, 47, 48]
+        }
+        , "cereal": {
+            "type": "object",
+            "position": [35, 36, 37],
+            "rotation": [38, 39, 40, 41],
+            "pos_to_gripper": [28, 29, 30],
+            "rot_to_gripper": [31, 32, 33, 34]
+        }
+        , "bread": {
+            "type": "object",
+            "position": [21, 22, 23],
+            "rotation": [24, 25, 26, 27],
+            "pos_to_gripper": [14, 15, 16],
+            "rot_to_gripper": [17, 18, 19, 20]
+        }
+        , "milk": {
+            "type": "object",
+            "position": [7, 8, 9],
+            "rotation": [10, 11, 12, 13],
+            "pos_to_gripper": [0, 1, 2],
+            "rot_to_gripper": [3, 4, 5, 6]
+        }
+    }
+        
+    }
+
+
+

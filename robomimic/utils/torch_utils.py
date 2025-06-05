@@ -165,7 +165,7 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
             )
         elif lr_scheduler_type == "cosine_warmup":
             warmup = net_optim_params["learning_rate"]["warmup_steps"]
-            total = epoch_schedule[-1]
+            total = net_optim_params["learning_rate"]["cosine_max"]
             cosine_steps = total - warmup
             initial = net_optim_params["learning_rate"]["initial"]
             min_lr   = net_optim_params["learning_rate"]["decay_factor"] * initial

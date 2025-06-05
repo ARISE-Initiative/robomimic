@@ -32,8 +32,8 @@ class FlowGATConfig(BaseConfig):
 
         self.experiment.logging.log_wandb = True # Enable logging to Weights & Biases
         self.experiment.logging.wandb_proj_name = "thesis_evaluation_graph_structure"
-        self.experiment.render_video = False # Disable video rendering during rollouts
-        self.experiment.save.enabled = False
+        self.experiment.render_video = True # Disable video rendering during rollouts
+        self.experiment.save.enabled = True
 
     def train_config(self):
         """Configure training loop settings."""
@@ -42,7 +42,8 @@ class FlowGATConfig(BaseConfig):
         # Loading "next_obs" from HDF5 is usually not required, saving memory and I/O.
         self.train.hdf5_load_next_obs = True
 
-        self.train.data = "datasets/square/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
+        self.train.data = "datasets/can/ph/low_dim_v15.hdf5" # Path to the dataset (HDF5 file)s
+        self.train.graph_config = "robomimic/algo/flow_gat_files/pickplace.json"
 
         # Core training parameters
         self.train.seq_length = 2     # Length of action sequences predicted by the policy
@@ -73,8 +74,8 @@ class FlowGATConfig(BaseConfig):
         optim_params.learning_rate.initial = 1e-4     # Initial learning rate
         optim_params.learning_rate.decay_factor = 0.01 # Multiplicative factor for LR decay
         optim_params.learning_rate.epoch_schedule = [1000, 1500] # Epochs at which to decay LR (e.g., [1000, 1500]) - empty means no decay
-        optim_params.learning_rate.scheduler_type = "cosine_restart" # 'multistep' or 'cosine'
-        optim_params.learning_rate.cosine_max = 600
+        optim_params.learning_rate.scheduler_type = "cosine_warmup" # 'multistep' or 'cosine'
+        optim_params.learning_rate.cosine_max = 2000
         optim_params.learning_rate.warmup_steps = 5 # Number of warmup steps for learning rate
         optim_params.regularization.L2 = 1e-5       # L2 weight decay (0 means none)                  # Max norm for gradient clipping (helps stability)
 
@@ -82,24 +83,11 @@ class FlowGATConfig(BaseConfig):
         # GNN (GATv2 Backbone) parameters
         gnn = self.algo.gnn
         gnn.num_layers = 4         # Number of message-passing layers
-        gnn.node_dim = 32          # Dimension of node features (e.g., 64 for each joint)
+        gnn.node_dim = 64          # Dimension of node features (e.g., 64 for each joint)
         gnn.hidden_dim = 128       # Hidden dimension within GNN layers and output embedding size
         gnn.num_heads = 4          # Number of attention heads in GATv2 layers (hidden_dim must be divisible by num_heads)
         gnn.attention_dropout = 0.1 # Dropout rate specifically on attention weights
-        gnn.node_input_dim = {'joint_0': 3, 
-                              'joint_1': 3,
-                              'joint_2': 3,
-                              'joint_3': 3,
-                              'joint_4': 3,
-                              'joint_5': 3,
-                              'joint_6': 3,
-                              'eef': 9,
-                              'object': 14,
-                            #   'base_frame': 14,
-                            #   'insertion_hook': 14,
-                            #   'wrench': 14
-                              } # Node feature dimension for each joint
-
+        gnn.node_input_dim = 22
         # --- Cross Attention ---
         # Transformer parameters
         transformer = self.algo.transformer
@@ -138,7 +126,7 @@ class FlowGATConfig(BaseConfig):
             "robot0_eef_quat",      # End-effector orientation (quaternion)
             "robot0_gripper_qpos",  # Gripper joint positions
             "object",
-            "robot0_joint_se3",
+            # "robot0_joint_se3",
         ]
         # obs_modalities.rgb = [
         #     "robot0_eye_in_hand_image", # RGB image from the robot's camera

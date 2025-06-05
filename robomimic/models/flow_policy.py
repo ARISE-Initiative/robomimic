@@ -18,36 +18,6 @@ from robomimic.models.obs_core import CropRandomizer
 import robomimic.utils.obs_utils as ObsUtils
 import networkx as nx
 
-
-# Note: robomimic imports are kept for potential future use or integration,
-# but the core model here relies primarily on torch and torch_geometric.
-# from robomimic.models.obs_nets import ObservationGroupEncoder
-# from robomimic.models.base_nets import MLP
-# import robomimic.utils.obs_utils as ObsUtils
-def rot6d_to_matrix(ortho6d: torch.Tensor) -> torch.Tensor:
-    """
-    Convert 6D rotation representation to 3x3 rotation matrices via Gram-Schmidt.
-    """
-    a1, a2 = ortho6d[:, :3], ortho6d[:, 3:]
-    b1 = F.normalize(a1, dim=-1)
-    proj = (b1 * a2).sum(-1, keepdim=True) * b1
-    b2 = F.normalize(a2 - proj, dim=-1)
-    b3 = torch.cross(b1, b2, dim=-1)
-    return torch.stack([b1, b2, b3], dim=-1)  # [V,3,3]
-
-
-class RBF(torch.nn.Module):
-    def __init__(self, K=16, cutoff=2.0, device="cpu"):
-        super().__init__()
-        self.means = torch.linspace(0, cutoff, K, device=device)
-        self.width = (self.means[1] - self.means[0]).item()
-
-    def forward(self, dist):
-        # dist: [E,]
-        # returns [E, K]
-        return torch.exp(-((dist.unsqueeze(1) - self.means) ** 2) / self.width**2)
-
-
 class SinusoidalPositionEmbeddings(nn.Module):
     """
     Generates sinusoidal position embeddings for diffusion timesteps.
@@ -88,7 +58,6 @@ class SinusoidalPositionEmbeddings(nn.Module):
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
         return embeddings
 
-
 class GATv2Backbone(nn.Module):
     """
     Graph Attention Network v2 (GATv2) backbone using PyTorch Geometric.
@@ -100,13 +69,12 @@ class GATv2Backbone(nn.Module):
 
     def __init__(
         self,
-        input_feature_dim: dict,
+        input_feature_dim: int,
         num_layers: int,
         node_encode_dim: int,
         hidden_dim: int,
         num_heads: int,
         attention_dropout: float,
-        activation: str = "silu",
     ):
         """
         Initializes the GATv2 backbone.
@@ -118,7 +86,6 @@ class GATv2Backbone(nn.Module):
                               divisible by num_heads.
             num_heads (int): Number of attention heads in each GATv2 layer.
             attention_dropout (float): Dropout rate for attention weights.
-            activation (str): Activation function ('silu' or 'relu'). Defaults to 'silu'.
         """
         super().__init__()
         if hidden_dim % num_heads != 0:
@@ -140,276 +107,120 @@ class GATv2Backbone(nn.Module):
 
         out_channels_per_head = self.hidden_dim // self.heads
 
-        for i, (key, dim) in enumerate(input_feature_dim.items()):
-            # Create a linear layer for each node type
-            self.node_encoder[key] = nn.Linear(
-                dim + 3, node_encode_dim
-            )  # + 3 for static features
-            # Initialize the weights of the linear layer
-            nn.init.xavier_uniform_(self.node_encoder[key].weight)
-            nn.init.zeros_(self.node_encoder[key].bias)
+        # Node feature encoder - works regardless of number of nodes
+        self.node_encoder = nn.Sequential(
+            nn.Linear(input_feature_dim, hidden_dim),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, node_encode_dim)
+        )
 
         current_dim = node_encode_dim
         for i in range(self.num_layers):
-            # self.convs.append(
-            # GATv2Conv(
-
-            #     in_channels=current_dim,
-            #     out_channels=out_channels_per_head,
-            #     heads=self.heads,
-            #     concat=True,
-            #     dropout=self.attention_dropout,
-            #     add_self_loops=True,  # Recommended for GAT variants
-            #     residual=True,
-            #     edge_dim=3,  # Include relative distance edge features
-            # )
             self.convs.append(
-                GCNConv
-                (
-                    in_channels=current_dim if i == 0 else self.hidden_dim,
-                    out_channels=self.hidden_dim,
+                GATv2Conv(
+                    in_channels=current_dim,
+                    out_channels=out_channels_per_head,
+                    heads=self.heads,
+                    concat=True,
+                    dropout=self.attention_dropout,
+                    add_self_loops=True,  # Recommended for GAT variants
+                    residual=True,
+                    edge_dim=6,  # Include relative distance edge features
                 )
             )
             
-            
-            current_dim = self.hidden_dim  # Input for the next layer
+            current_dim = self.hidden_dim  # Input for the next layer 
             self.norms.append(nn.LayerNorm(current_dim))
+        
+        self.pool = self._masked_pooling
+        # Cross-attention layer to combine pooled node-type embeddings
+        self.cross_attn = nn.MultiheadAttention(embed_dim=self.hidden_dim, num_heads=self.heads, dropout=self.attention_dropout)
+
+    def _masked_pooling(self, x: torch.Tensor, batch: torch.Tensor, T: int, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Masked pooling per node‐type.  
+        x.flatten to [B*T*N,F], mask is [B,N] → expand to [B,T,N] → flat [B*T*N].
+        """
+        if mask is None:
+            return global_mean_pool(x, batch)
+
+        B = int(batch.max().item()) + 1
+        # infer N = total nodes per graph
+        N = x.size(0) // (B * T)
+        assert mask.shape == (B, N), f"mask should be [B, N], got {mask.shape}"
+
+        # [B, N] → [B, T, N]
+        mask_exp = mask.unsqueeze(1).expand(-1, T, -1)
+        # → [B*T*N]
+        mask_flat = mask_exp.reshape(-1)
+
+        x_masked = x[mask_flat]
+        batch_masked = batch[mask_flat]
+
+        return global_mean_pool(x_masked, batch_masked)  # [B, F]
 
 
-        if activation.lower() == "silu":
-            self.activation = nn.SiLU()
-        elif activation.lower() == "relu":
-            self.activation = nn.ReLU()
-        else:
-            raise ValueError(f"Unsupported activation: {activation}")
-
-        self.pool = global_mean_pool
-
-    def forward(self, graph_features: dict) -> torch.Tensor:
+    def forward(self, graph) -> torch.Tensor:
         """
         Processes the input graph batch.
-
-        Args:
-            graph (torch_geometric.data.Batch): A PyG Batch object containing graph data
-                (x: node features, edge_index: connectivity, batch: graph indices).
-
-        Returns:
-            torch.Tensor: Graph-level embeddings of shape (batch_size, hidden_dim).
         """
-        graph = self.build_graph(graph_features)
-        visualize = False
-        if visualize:
-            self.visualize_graph(graph, graph_idx=0, show_edge_weights=True, plot_3d=True)
-
-        x, edge_index, batch_indices = graph.x, graph.edge_index, graph.batch
-        # edge_attr = graph.edge_attr  # Relative distance edge features
+        x, edge_index, edge_attr, batch_indices = graph.x, graph.edge_index, graph.edge_attr, graph.batch
+        T = graph.t
         if x.dtype != torch.float32:
-            x = x.float()  # Ensure float32 for GNN layers
+            x = x.float()
 
+        # 1. GNN Message Passing
+        x = self.node_encoder(x)
         for i in range(self.num_layers):
-            x = self.convs[i](x, edge_index)
+            x = self.convs[i](x, edge_index, edge_attr)
             x = self.norms[i](x)
-            x = self.activation(x)
+            x = nn.SiLU()(x)
+        
 
-        # Pool node features to get a single embedding per graph
-        graph_embedding = self.pool(x, batch_indices)  # Shape: (batch_size, hidden_dim)
-        return graph_embedding
+        # 2. Vectorized Per-Type, Per-Timestep Pooling
+        B = int(batch_indices.max().item()) + 1
+        T_val = T if isinstance(T, int) else T.item()
 
-    def build_graph(self, node_dict: dict) -> Batch:
-        """
-        Fast spatio-temporal graph builder with full pairwise distances:
-         - Caches combined spatio-temporal edge_index per frame_stack
-         - Vectorizes node-feature stacking and flattening
-         - Keeps the full torch.cdist distance computation
-        """
-        device = node_dict[next(iter(node_dict))].device
-        # adjacency_matrix = torch.tensor(
-        #     [  # J0 J1 J2 J3 J4 J5 J6 EEF OBJ
-        #     [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # joint_0 -> joint_1
-        #     [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],  # joint_1 -> joint_0, joint_2
-        #     [0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0],  # joint_2 -> joint_1, joint_3
-        #     [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0],  # joint_3 -> joint_2, joint_4
-        #     [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0],  # joint_4 -> joint_3, joint_5
-        #     [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],  # joint_5 -> joint_4, joint_6
-        #     [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0],  # joint_6 -> joint_5, eef
-        #     [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1],  # eef -> joint_6, insertion_hook, wrench
-        #     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],  # base_frame -> insertion_hook, wrench
-        #     [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],  # insertion_hook -> eef, base_frame
-        #     [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],  # ratcheting_wrench -> eef, base_frame
-        #     ],
-        #     dtype=torch.bool,
-        # )
-        # Adjacency matrix for the can task.
-        adjacency_matrix = torch.tensor(
-            [  # J0 J1 J2 J3 J4 J5 J6 EEF OBJ
-            [0, 1, 0, 0, 0, 0, 0, 0, 0],  # joint_0 -> joint_1
-            [1, 0, 1, 0, 0, 0, 0, 0, 0],  # joint_1 -> joint_0, joint_2
-            [0, 1, 0, 1, 0, 0, 0, 0, 0],  # joint_2 -> joint_1, joint_3
-            [0, 0, 1, 0, 1, 0, 0, 0, 0],  # joint_3 -> joint_2, joint_4
-            [0, 0, 0, 1, 0, 1, 0, 0, 0],  # joint_4 -> joint_3, joint_5
-            [0, 0, 0, 0, 1, 0, 1, 0, 0],  # joint_5 -> joint_4, joint_6
-            [0, 0, 0, 0, 0, 1, 0, 1, 0],  # joint_6 -> joint_5, eef
-            [0, 0, 0, 0, 0, 0, 1, 0, 1],  # eef -> joint_6, object
-            [0, 0, 0, 0, 0, 0, 0, 1, 0],  # object -> eef
-            ],
-            dtype=torch.bool,
-        ) 
-        # Add self loops
-        adjacency_matrix = adjacency_matrix | torch.eye(adjacency_matrix.size(0), dtype=torch.bool)
+        node_type_expanded = graph.node_type.unsqueeze(1).expand(-1, T_val, -1)
+        
+        # Now, flatten all tensors for the pooling index calculation.
+        node_type_flat = node_type_expanded.reshape(-1)
+        temporal_mask_flat = graph.node_temporal_mask.reshape(-1)
+        
+        assert batch_indices.shape == node_type_flat.shape == temporal_mask_flat.shape, "Shape mismatch before pooling!"
 
-        B,T,_ = node_dict[next(iter(node_dict))].shape # (Batch, T, Features)
-        N = adjacency_matrix.size(0)  # Number of nodes
-        # Pre-compute static edge index from the adjacency matrix
-        static_edge_index = adjacency_matrix.nonzero(as_tuple=False).t().contiguous()
+        max_node_type = int(node_type_flat.max().item()) + 1
 
-        # === 1. NODE TYPE ENCODING (0=joint, 1=eef, 2=object, 3=base_frame)
-        node_types = torch.tensor([0, 0, 0, 0, 0, 0, 0, 1, 2], device=device)
-        node_type_onehot = F.one_hot(node_types, num_classes=3).float()  # (N, 4)
+        # Create a unique ID for each (batch, time, type) group.
+        pool_idx = (
+            batch_indices * T_val * max_node_type + 
+            temporal_mask_flat * max_node_type + 
+            node_type_flat
+        )
 
-        # === 2. SHORTEST PATH DISTANCE TO EEF
-        # import networkx as nx
-        # G = nx.from_numpy_array(adjacency_matrix.cpu().numpy(), create_using=nx.Graph)
-        # dist_to_eef = torch.tensor(
-        #     [nx.shortest_path_length(G, source=i, target=7) for i in range(N)],
-        #     dtype=torch.float32,
-        #     device=device
-        # ).unsqueeze(1)  # (N, 1)
+        pooled_x = global_mean_pool(x, pool_idx)
 
-        # === 3. COMBINE STATIC FEATURES
-        # static_features = torch.cat([node_type_onehot, dist_to_eef], dim=1)  # (N, 5)
+        dense_pooled_embeddings = torch.zeros(
+            B * T_val * max_node_type, self.hidden_dim, device=x.device
+        )
+        unique_ids = torch.unique(pool_idx, return_inverse=False)
+        dense_pooled_embeddings[unique_ids] = pooled_x
+        
+        per_type_temp_emb = dense_pooled_embeddings.view(
+            B, T_val, max_node_type, self.hidden_dim
+        )
 
-        node_order = [
-            'joint_0', 'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6',
-            'eef', 'object'#'base_frame', 'insertion_hook', 'wrench'
-        ]
-        if len(node_order) != N:
-            raise ValueError(f"Mismatch between node_order length ({len(node_order)}) and N ({N})")
+        # Vectorized Cross-Attention
+        reshaped_emb = per_type_temp_emb.view(
+            B * T_val, max_node_type, self.hidden_dim
+        )
+        query = reshaped_emb[:, :1, :].transpose(0, 1)
+        key_value = reshaped_emb.transpose(0, 1)
+        attn_output, _ = self.cross_attn(query, key_value, key_value)
+        final_embeddings = attn_output.squeeze(0).view(B, T_val, self.hidden_dim)
 
-        processed_features = {}
-        expected_node_encode_dim = -1 # To store and check consistency
-
-        for i, key in enumerate(node_order):
-            if key not in node_dict:
-                raise ValueError(f"Missing node feature in node_dict: {key}")
-            if key not in self.node_encoder:
-                raise ValueError(f"Missing encoder for node type: {key}")
-
-            dynamic_feats = node_dict[key] # Shape: (B, T, F_k)
-            node_static_feats = node_type_onehot[i] # Shape: (5,)
-
-            # Expand static features to match batch and time dimensions
-            B, T, F_k = dynamic_feats.shape
-            # Ensure static features are on the same device
-            expanded_static = node_static_feats.to(dynamic_feats.device).unsqueeze(0).unsqueeze(0).expand(B, T, -1) # Shape: (B, T, 5)
-
-            # Concatenate RAW dynamic features with the expanded static features
-            combined_raw_features = torch.cat([dynamic_feats, expanded_static], dim=-1) # Shape: (B, T, F_k + 5)
-            # Encode the combined features
-            encoded_combined = self.node_encoder[key](combined_raw_features) # Shape: (B, T, node_encode_dim)
-
-            processed_features[key] = encoded_combined
-
-        # Stack the processed (encoded) features for all nodes in the defined order
-        # Ensure all encoded features have the same final dimension (self.node_encode_dim)
-        node_feats = torch.stack([processed_features[k] for k in node_order], dim=1) # Shape: (B, N, T, node_encode_dim)
-
-        # 5) Flatten into one big x: (B*T*N, node_encode_dim)
-        # The dimension here should be the output dimension of the node encoders
-        x = node_feats.permute(0, 2, 1, 3).reshape(B * T * N, self.node_encode_dim)
-
-        # 6) Build & cache the single-sample combined edge_index if needed
-        static = static_edge_index
-        static = static.to(device)  # (2, E_static)
-        # spatial edges repeated per frame
-        spatial = static.repeat(1, T) + (
-            torch.arange(T, device=device).repeat_interleave(static.size(1)) * N
-        ).unsqueeze(0)
-        # temporal edges between frames
-        src = torch.arange(N * (T - 1), device=device)
-        tgt = src + N
-        temporal = torch.stack([src, tgt], dim=0)
-        # cache
-        self._cached_edge_index = torch.cat([spatial, temporal], dim=1)
-        self._cached_T = T
-
-        edge_single = self._cached_edge_index.to(device)  # (2, E_single)
-        E = edge_single.size(1)
-
-        # 7) Replicate for all B graphs, offsetting node indices
-        batch_offsets = torch.arange(B, device=device).repeat_interleave(E) * (T * N)
-        edge_index = edge_single.repeat(1, B) + batch_offsets.unsqueeze(0)  # (2, B*E)
-
-        # 8) Build the batch vector
-        batch_idx = torch.arange(B, device=device).repeat_interleave(T * N)  # (B*T*N,)
-
-        # Compute raw node positions for edge features
-        # node_pos = torch.stack([node_dict[k][..., :3] for k in node_order], dim=1)  # (B, N, T, 3)
-        # node_pos = node_pos.permute(0, 2, 1, 3).reshape(B * T * N, 3)  # (B*T*N, 3)
-        # src, dst = edge_index  # (E,), (E,)
-        # edge_attr = node_pos[dst] - node_pos[src]  # (E, 3)
-
-        batch = Batch(x=x, edge_index=edge_index, edge_attr=None, batch=batch_idx, pos = None)
-        return batch
-
-    def visualize_graph(self, graph: Batch, graph_idx: int = 0, show_edge_weights: bool = False, plot_3d: bool = False):
-        """Lightweight graph visualization for debugging (2D or 3D)."""
-        import numpy as np
-        import networkx as nx
-        import matplotlib.pyplot as plt
-
-        edge_index = graph.edge_index.cpu().numpy()
-        edge_attr = graph.edge_attr.cpu().numpy() if hasattr(graph, 'edge_attr') else None
-        batch_arr = graph.batch.cpu().numpy()
-        # select nodes belonging to one subgraph
-        idx = np.where(batch_arr == graph_idx)[0]
-        idx_map = {orig: i for i, orig in enumerate(idx)}
-        # build networkx graph
-        G = nx.Graph()
-        for orig in idx:
-            G.add_node(idx_map[orig])
-        for i, (u, v) in enumerate(edge_index.T):
-            if batch_arr[u] == graph_idx and batch_arr[v] == graph_idx:
-                u2, v2 = idx_map[u], idx_map[v]
-                if show_edge_weights and edge_attr is not None:
-                    weight = float(np.linalg.norm(edge_attr[i]))
-                    G.add_edge(u2, v2, weight=weight)
-                else:
-                    G.add_edge(u2, v2)
-        # Retrieve node positions
-        pos_attr = graph.pos.cpu().numpy() if hasattr(graph, 'pos') else None
-        # 3D plot if requested
-        if plot_3d and pos_attr is not None:
-            from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            # scatter and label nodes
-            for orig in idx:
-                p = pos_attr[orig]
-                ax.scatter(p[0], p[1], p[2], s=50)
-                ax.text(p[0], p[1], p[2], str(idx_map[orig]), size=8)
-            # draw edges in 3D
-            for i, (u, v) in enumerate(edge_index.T):
-                if batch_arr[u] == graph_idx and batch_arr[v] == graph_idx:
-                    p1, p2 = pos_attr[u], pos_attr[v]
-                    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], 'k-', linewidth=1)
-                    if show_edge_weights and edge_attr is not None:
-                        weight = float(np.linalg.norm(edge_attr[i]))
-                        mid = (p1 + p2) / 2
-                        ax.text(mid[0], mid[1], mid[2], f"{weight:.2f}", size=8)
-            ax.set_title(f"3D Graph visualization (index={graph_idx})")
-            plt.show()
-            return
-        # 2D fallback: use first two dims for layout
-        if pos_attr is not None:
-            pos = {idx_map[orig]: (pos_attr[orig, 0], pos_attr[orig, 1]) for orig in idx}
-        else:
-            pos = nx.spring_layout(G)
-        nx.draw(G, pos, with_labels=True, node_size=50)
-        if show_edge_weights:
-            labels = nx.get_edge_attributes(G, 'weight')
-            nx.draw_networkx_edge_labels(G, pos, edge_labels=labels, font_size=8)
-        plt.title(f"Graph visualization (index={graph_idx})")
-        plt.show()
+        return final_embeddings
 
 class PositionalEncoding(nn.Module):
     """
@@ -454,7 +265,6 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[: x.size(1)].squeeze(1)
         return self.dropout(x)
 
-
 class JointDecoder(nn.Module):
     """
     Joint decoder module for infering joint agnles from graph embedding.
@@ -494,7 +304,6 @@ class JointDecoder(nn.Module):
         # Project graph embedding to action dimension
         joint_angles = self.mlp(graph_embedding)  # Shape: (batch_size, q_dim)
         return joint_angles
-
 
 class DiffFwdKinEncoder(nn.Module):
     """
@@ -565,7 +374,6 @@ class DiffFwdKinEncoder(nn.Module):
         eef_pose_embedding = self.mlp(eef_pose)  # Shape: (batch_size, hidden_dim)
         return eef_pose_embedding
 
-
 class DynamicsModel(nn.Module):
     def __init__(self, hidden_dim: int, action_dim: int):
         super().__init__()
@@ -582,7 +390,6 @@ class DynamicsModel(nn.Module):
 
     def forward(self, x):
         return self.mlp(x)
-
 
 class TransformerDecoder(nn.Module):
     """
@@ -665,7 +472,6 @@ class ObservationEncoder(nn.Module):
         obs = obs.view(B, T, -1)
         return obs
 
-
 class FlowPolicy(nn.Module):
     """
     Flow-based policy that uses graph embeddings and attention to predict actions.
@@ -710,21 +516,28 @@ class FlowPolicy(nn.Module):
         # Action encoding components
         self.action_encoder = nn.Sequential(nn.Linear(action_dim, hidden))
 
-        # Graph encoding components
-        # self.graph_encoder = GATv2Backbone(
-        #     input_feature_dim=algo_config.gnn.node_input_dim,
-        #     num_layers=algo_config.gnn.num_layers,
-        #     node_encode_dim=algo_config.gnn.node_dim,
-        #     hidden_dim=algo_config.gnn.hidden_dim,
-        #     num_heads=algo_config.gnn.num_heads,
-        #     attention_dropout=algo_config.gnn.attention_dropout,
-        # )
-
-        # Alternative MLP-based observation encoder
-        self.obs_encoder = ObservationEncoder(
-            hidden_dim=hidden,
-            obs_dim=obs_dim
+        # Positional encoding for actions
+        self.positional_encoding = PositionalEncoding(
+            d_model=hidden,
+            dropout=algo_config.transformer.attention_dropout,
+            max_len=seq_len,
         )
+
+        # Graph encoding components
+        self.graph_encoder = GATv2Backbone(
+            input_feature_dim=algo_config.gnn.node_input_dim,
+            num_layers=algo_config.gnn.num_layers,
+            node_encode_dim=algo_config.gnn.node_dim,
+            hidden_dim=algo_config.gnn.hidden_dim,
+            num_heads=algo_config.gnn.num_heads,
+            attention_dropout=algo_config.gnn.attention_dropout,
+        )
+
+        # # Alternative MLP-based observation encoder
+        # self.obs_encoder = ObservationEncoder(
+        #     hidden_dim=hidden,
+        #     obs_dim=obs_dim
+        # )
 
         # Joint decoder for inferring joint angles
         # self.joint_decoder = JointDecoder(
@@ -757,9 +570,8 @@ class FlowPolicy(nn.Module):
         self,
         action,
         timestep,
-        graph_data: dict,
-        previous_unexecuted_actions: torch.Tensor,
-        obs: torch.Tensor = None
+        obs: torch.Tensor = None,
+        graph = None
     ) -> torch.Tensor:
         """
         Forward pass through the policy.
@@ -775,8 +587,9 @@ class FlowPolicy(nn.Module):
         """
         # Encode the current state as a graph embedding
         if obs is None:
-            graph_emb = self.graph_encoder(graph_data).unsqueeze(1)  # [B, 1, H]
+            graph_emb = self.graph_encoder(graph) # [B, T, H]
             obs_emb = graph_emb
+
         else:
             obs_emb = self.obs_encoder(obs)  # [B, T, H]
 
@@ -793,19 +606,14 @@ class FlowPolicy(nn.Module):
         te_flat = self.time_encoder(t_flat)  # [B*T, H]
         time_emb = te_flat.view(B, T, H)  # [B, T, H]
 
-        # pred_q = self.joint_decoder(graph_emb).squeeze()  # [B, 1, H]
-        # fk_emb = self.fwd_kin_encoder(pred_q)
-        # fk_emb = fk_emb.unsqueeze(1)
+
         # 2. Encode actions
         action_emb = self.action_encoder(action)  # [B, T, H]
-        context = torch.cat([time_emb, obs_emb], dim=1)  # [B, T, H]
+        action_emb = self.positional_encoding(action_emb)
+        context = time_emb + graph_emb 
 
         # 5. Decode to output actions using TransformerDecoder
         out = self.decoder(tgt=action_emb, memory=context)  # [B, T, H]
 
-        # 3. Predict next state embedding using dynamics model
-        # next_graph_emb = self.dynamics_model(
-        #     torch.cat([graph_emb, out[:, 0, :].unsqueeze(1)], dim=2)
-        # )
 
         return out, None, obs_emb, None
