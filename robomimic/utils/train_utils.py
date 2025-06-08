@@ -189,7 +189,7 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
     ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
-    ds_kwargs["demo_limit"] = [ds_cfg.get("demo_limit", config.train.demo_limit) for ds_cfg in config.train.data]
+    ds_kwargs["demo_limit"] = [ds_cfg.get("demo_limit", None) for ds_cfg in config.train.data]
     ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
 
     meta_ds_kwargs = dict()

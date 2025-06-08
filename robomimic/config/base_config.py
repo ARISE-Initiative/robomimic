@@ -136,7 +136,13 @@ class BaseConfig(Config):
         class has a default implementation that usually doesn't need to be overriden.
         """
 
-        # Path to hdf5 dataset to use for training
+        # List of hdf5 datasets to use for training
+        # Each dataset should be a dictionary with the following keys:
+        # - "path" (str)    :   path to the hdf5 file
+        # - "eval" (bool)   :   (optional) whether to evaluate policy on this dataset's env, defaults to True
+        # - "lang" (str)    :   (optional) language instruction to use for the dataset (e.g., "make coffee"), otherwise use "dummy"
+        # - "key" (str)     :   (optional) key to use for naming eval videos (e.g., "coffee"), defaults to hdf5 file name
+        # - "demo_limit"    :   (optional) limit the number of demos to use for training
         self.train.data = None                                      
 
         # Write all results to this directory. A new folder with the timestamp will be created
@@ -186,9 +192,6 @@ class BaseConfig(Config):
         self.train.pad_seq_length = True
         self.train.frame_stack = 1
         self.train.pad_frame_stack = True
-
-        # whether or not to limit the number of samples in the dataset
-        self.train.demo_limit = None
 
         # keys from hdf5 to load into each batch, besides "obs" and "next_obs". If algorithms
         # require additional keys from each trajectory in the hdf5, they should be specified here.

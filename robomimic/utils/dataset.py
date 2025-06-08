@@ -93,7 +93,9 @@ class SequenceDataset(torch.utils.data.Dataset):
 
             shuffled_obs_key_groups (list): TODO
 
-            lang: TODO documentation
+            lang: language instruction for this dataset
+
+            demo_limit (int): if provided, limit the number of demonstrations to load from the dataset.
         """
         super(SequenceDataset, self).__init__()
 

@@ -157,12 +157,7 @@ class EnvRobosuite(EB.EnvBase):
             # (this feature was set from robosuite v1.5 onwards)
             self.env.unset_ep_meta()
         di = self.env.reset()
-        return self.get_observation(di)
-    
-    #notifies the environment whether or not the next environemnt testing object should update its category
-    def update_env(self, attr, value):
-        self.env.attr = value
-        
+        return self.get_observation(di)        
 
     def reset_to(self, state):
         """

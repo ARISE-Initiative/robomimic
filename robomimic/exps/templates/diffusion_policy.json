@@ -32,9 +32,7 @@
             "horizon": 400,
             "rate": 50,
             "warmstart": 0,
-            "terminate_on_success": true,
-            "batched": false,
-            "num_batch_envs": 5
+            "terminate_on_success": true
         },
         "env_meta_update_dict": {},
         "ckpt_path": null
@@ -54,7 +52,6 @@
         "pad_seq_length": true,
         "frame_stack": 1,
         "pad_frame_stack": true,
-        "demo_limit": null,
         "dataset_keys": [
             "actions",
             "rewards",
