@@ -20,7 +20,7 @@ import imageio
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
-import robomimic.utils.action_utils as AcUtils
+import robomimic.utils.python_utils as PyUtils
 
 from torch.utils.data import DataLoader
 
@@ -571,7 +571,7 @@ class RolloutPolicy(object):
         if self.action_normalization_stats is not None:
             action_keys = self.policy.global_config.train.action_keys
             action_shapes = {k: self.action_normalization_stats[k]["offset"].shape[1:] for k in self.action_normalization_stats}
-            ac_dict = AcUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
+            ac_dict = PyUtils.vector_to_action_dict(ac, action_shapes=action_shapes, action_keys=action_keys)
             ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
             action_config = self.policy.global_config.train.action_config
             for key, value in ac_dict.items():
@@ -586,5 +586,5 @@ class RolloutPolicy(object):
                     else:
                         raise ValueError
                     ac_dict[key] = rot
-            ac = AcUtils.action_dict_to_vector(ac_dict, action_keys=action_keys)
+            ac = PyUtils.action_dict_to_vector(ac_dict, action_keys=action_keys)
         return ac

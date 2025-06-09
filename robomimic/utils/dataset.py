@@ -14,7 +14,7 @@ import torch.utils.data
 
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
-import robomimic.utils.action_utils as AcUtils
+import robomimic.utils.python_utils as PyUtils
 import robomimic.utils.log_utils as LogUtils
 import robomimic.utils.lang_utils as LangUtils
 
@@ -542,7 +542,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         ac_dict = ObsUtils.normalize_dict(ac_dict, normalization_stats=action_normalization_stats)
 
         # concatenate all action components
-        meta["actions"] = AcUtils.action_dict_to_vector(ac_dict)
+        meta["actions"] = PyUtils.action_dict_to_vector(ac_dict)
 
         # also return the sampled index
         meta["index"] = index
