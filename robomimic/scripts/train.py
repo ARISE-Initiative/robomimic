@@ -230,17 +230,18 @@ def train(config, device, resume=False):
         model.deserialize(ckpt_dict["model"])
         print("*" * 50)
     
-    # save the config as a json file
-    with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
-        json.dump(config, outfile, indent=4)
-
-    # if checkpoint is specified, load in model weights
+    # if checkpoint is specified, load in model weights;
+    # will not use ckpt_path if resuming training
     ckpt_path = config.experiment.ckpt_path
     if (ckpt_path is not None) and (not resume):
         print("LOADING MODEL WEIGHTS FROM " + ckpt_path)
         from robomimic.utils.file_utils import maybe_dict_from_checkpoint
         ckpt_dict = maybe_dict_from_checkpoint(ckpt_path=ckpt_path)
         model.deserialize(ckpt_dict["model"])
+
+    # save the config as a json file
+    with open(os.path.join(log_dir, '..', 'config.json'), 'w') as outfile:
+        json.dump(config, outfile, indent=4)
 
     print("\n============= Model Summary =============")
     print(model)  # print model summary
@@ -403,8 +404,8 @@ def train(config, device, resume=False):
             TrainUtils.save_model(
                 model=model,
                 config=config,
-                env_meta=env_meta,
-                shape_meta=shape_meta,
+                env_meta=env_meta_list[0] if len(env_meta_list)==1 else env_meta_list,
+                shape_meta=shape_meta_list[0] if len(shape_meta_list)==1 else shape_meta_list,
                 variable_state=variable_state,
                 ckpt_path=os.path.join(ckpt_dir, epoch_ckpt_name + ".pth"),
                 obs_normalization_stats=obs_normalization_stats,
@@ -416,8 +417,8 @@ def train(config, device, resume=False):
         TrainUtils.save_model(
             model=model,
             config=config,
-            env_meta=env_meta,
-            shape_meta=shape_meta,
+            env_meta=env_meta_list[0] if len(env_meta_list)==1 else env_meta_list,
+            shape_meta=shape_meta_list[0] if len(shape_meta_list)==1 else shape_meta_list,
             variable_state=variable_state,
             ckpt_path=latest_model_path,
             obs_normalization_stats=obs_normalization_stats,
