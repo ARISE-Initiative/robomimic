@@ -233,8 +233,6 @@ class BaseConfig(Config):
 
         self.train.max_grad_norm = None  # clip gradient norms (see `backprop_for_loss` function in torch_utils.py) 
 
-        self.train.data_format = "robomimic"
-
         # list of observation keys to shuffle randomly in the dataset.
         # must be list of tuples pairs, with each pair representing
         # the corresponding observation key groups to shuffle

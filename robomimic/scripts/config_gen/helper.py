@@ -173,16 +173,6 @@ def set_env_settings(generator, args):
                 None
             ],
         )
-
-        # specify dataset type is r2d2 rather than default robomimic
-        generator.add_param(
-            key="train.data_format",
-            name="",
-            group=-1,
-            values=[
-                "r2d2"
-            ],
-        )
         
         # here, we list how each action key should be treated (normalized etc)
         generator.add_param(

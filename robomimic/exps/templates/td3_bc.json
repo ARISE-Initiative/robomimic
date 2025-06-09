@@ -67,7 +67,6 @@
         "num_epochs": 200,
         "seed": 1,
         "max_grad_norm": null,
-        "data_format": "robomimic",
         "shuffled_obs_key_groups": null
     },
     "algo": {

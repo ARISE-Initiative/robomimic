@@ -76,13 +76,12 @@ def train(config, device, resume=False):
     shape_meta_list = []
     for dataset_cfg in config.train.data:
         dataset_path = os.path.expanduser(dataset_cfg["path"])
-        ds_format = config.train.data_format
         if not os.path.exists(dataset_path):
             raise Exception("Dataset at provided path {} not found!".format(dataset_path))
 
         # load basic metadata from training file
         print("\n============= Loaded Environment Metadata =============")
-        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path, ds_format=ds_format)
+        env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path)
 
         # populate language instruction for env in env_meta
         env_meta["lang"] = dataset_cfg.get("lang", "dummy")
@@ -96,7 +95,6 @@ def train(config, device, resume=False):
             dataset_config=dataset_cfg,
             action_keys=config.train.action_keys,
             all_obs_keys=config.all_obs_keys,
-            ds_format=ds_format,
             verbose=True
         )
         shape_meta_list.append(shape_meta)

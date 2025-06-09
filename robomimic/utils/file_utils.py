@@ -86,14 +86,12 @@ def get_demos_for_filter_key(hdf5_path, filter_key):
     return demo_keys
 
 
-def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_specific_obs_processors=True):
+def get_env_metadata_from_dataset(dataset_path, set_env_specific_obs_processors=True):
     """
     Retrieves env metadata from dataset.
 
     Args:
         dataset_path (str): path to dataset
-
-        ds_format (str): dataset format, defaults to "robomimic"
 
         set_env_specific_obs_processors (bool): environment might have custom rules for how to process
             observations - if this flag is true, make sure ObsUtils will use these custom settings. This
@@ -109,11 +107,9 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_s
     """
     dataset_path = os.path.expanduser(dataset_path)
     f = h5py.File(dataset_path, "r")
-    if ds_format == "robomimic":
-        env_meta = json.loads(f["data"].attrs["env_args"])
-        if "env_lang" in env_meta["env_kwargs"]: del env_meta["env_kwargs"]["env_lang"]
-    else:
-        raise ValueError
+    env_meta = json.loads(f["data"].attrs["env_args"])
+    if "env_lang" in env_meta["env_kwargs"]: del env_meta["env_kwargs"]["env_lang"]
+
     f.close()
     if set_env_specific_obs_processors:
         # handle env-specific custom observation processing logic
@@ -121,7 +117,7 @@ def get_env_metadata_from_dataset(dataset_path, ds_format="robomimic", set_env_s
     return env_meta
 
 
-def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=None, ds_format="robomimic", verbose=False):
+def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=None, verbose=False):
     """
     Retrieves shape metadata from dataset.
 
@@ -148,39 +144,36 @@ def get_shape_metadata_from_dataset(dataset_config, action_keys, all_obs_keys=No
     dataset_path = os.path.expanduser(dataset_config["path"])
     f = h5py.File(dataset_path, "r")
     
-    if ds_format == "robomimic":
-        demo_id = list(f["data"].keys())[0]
-        demo = f["data/{}".format(demo_id)]
-        
-        for key in action_keys:
-            assert len(demo[key].shape) == 2 # shape should be (B, D)
-        action_dim = sum([demo[key].shape[1] for key in action_keys])
-        shape_meta["ac_dim"] = action_dim
+    demo_id = list(f["data"].keys())[0]
+    demo = f["data/{}".format(demo_id)]
+    
+    for key in action_keys:
+        assert len(demo[key].shape) == 2 # shape should be (B, D)
+    action_dim = sum([demo[key].shape[1] for key in action_keys])
+    shape_meta["ac_dim"] = action_dim
 
-        # observation dimensions
-        all_shapes = OrderedDict()
+    # observation dimensions
+    all_shapes = OrderedDict()
 
-        if all_obs_keys is None:
-            # use all modalities present in the file
-            all_obs_keys = [k for k in demo["obs"]]
+    if all_obs_keys is None:
+        # use all modalities present in the file
+        all_obs_keys = [k for k in demo["obs"]]
 
-        for k in sorted(all_obs_keys):
-            if k == LangUtils.LANG_EMB_OBS_KEY:
-                # NOTE: currently supporting fixed language embedding per dataset
-                ## that is fetched from dataset config and not from file
-                assert "lang" in dataset_config, "Expected 'lang' key in dataset config."
-                initial_shape = LangUtils.get_lang_emb_shape()
-            else:
-                initial_shape = demo["obs/{}".format(k)].shape[1:]
-            if verbose:
-                print("obs key {} with shape {}".format(k, initial_shape))
-            # Store processed shape for each obs key
-            all_shapes[k] = ObsUtils.get_processed_shape(
-                obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
-                input_shape=initial_shape,
-            )
-    else:
-        raise ValueError
+    for k in sorted(all_obs_keys):
+        if k == LangUtils.LANG_EMB_OBS_KEY:
+            # NOTE: currently supporting fixed language embedding per dataset
+            ## that is fetched from dataset config and not from file
+            assert "lang" in dataset_config, "Expected 'lang' key in dataset config."
+            initial_shape = LangUtils.get_lang_emb_shape()
+        else:
+            initial_shape = demo["obs/{}".format(k)].shape[1:]
+        if verbose:
+            print("obs key {} with shape {}".format(k, initial_shape))
+        # Store processed shape for each obs key
+        all_shapes[k] = ObsUtils.get_processed_shape(
+            obs_modality=ObsUtils.OBS_KEYS_TO_MODALITIES[k],
+            input_shape=initial_shape,
+        )
 
     f.close()
 
