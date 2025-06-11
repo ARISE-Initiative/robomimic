@@ -60,7 +60,11 @@
         "action_keys": [
             "actions"
         ],
-        "action_config": {},
+        "action_config": {
+            "actions": {
+                "normalization": null
+            }
+        },
         "goal_mode": null,
         "cuda": true,
         "batch_size": 256,

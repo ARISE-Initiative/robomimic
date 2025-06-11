@@ -216,10 +216,11 @@ class BaseConfig(Config):
         #       "rot_conversion: "axis_angle_to_6d"
         #   }
         # }
-        # self.train.action_config.actions.normalization = None # "min_max"
-        # self.train.action_config.actions.rot_conversion = None # "axis_angle_to_6d"
-        self.train.action_config = {}
-        # self.train.action_config.do_not_lock_keys()
+        self.train.action_config = {
+            "actions": {
+                "normalization": None
+            }
+        }
 
         # one of [None, "last"] - set to "last" to include goal observations in each batch
         self.train.goal_mode = None
