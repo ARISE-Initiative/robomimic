@@ -74,6 +74,10 @@ def train(config, device, resume=False):
     # extract the metadata and shape metadata across all datasets
     env_meta_list = []
     shape_meta_list = []
+    if isinstance(config.train.data, str):
+        # if only a single dataset is provided, convert to list
+        with config.values_unlocked():
+            config.train.data = [{"path": config.train.data}]
     for dataset_cfg in config.train.data:
         dataset_path = os.path.expanduser(dataset_cfg["path"])
         if not os.path.exists(dataset_path):
@@ -452,7 +456,6 @@ def main(args):
         config = config_factory(args.algo)
 
     if args.dataset is not None:
-        # config.train.data = args.dataset
         config.train.data = [{"path": args.dataset}]
 
     if args.name is not None:
