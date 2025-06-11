@@ -184,7 +184,6 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_use_swmr=config.train.hdf5_use_swmr,
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
         filter_by_attribute=filter_by_attribute,
-        shuffled_obs_key_groups=config.train.shuffled_obs_key_groups,
     )
 
     ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
@@ -313,10 +312,10 @@ def run_rollout(
     video_frames = []
     
     try:
-        for step_i in range(horizon): #LogUtils.tqdm(range(horizon)):
+        for step_i in range(horizon):
             # get action from policy
             policy_ob = ob_dict
-            ac = policy(ob=policy_ob, goal=goal_dict) #, return_ob=True)
+            ac = policy(ob=policy_ob, goal=goal_dict)
 
             # play action
             ob_dict, r, done, info = env.step(ac)

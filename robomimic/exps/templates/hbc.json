@@ -70,8 +70,7 @@
         "batch_size": 100,
         "num_epochs": 2000,
         "seed": 1,
-        "max_grad_norm": null,
-        "shuffled_obs_key_groups": null
+        "max_grad_norm": null
     },
     "algo": {
         "mode": "separate",
