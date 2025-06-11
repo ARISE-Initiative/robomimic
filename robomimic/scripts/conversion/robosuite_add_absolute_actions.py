@@ -31,7 +31,10 @@ class RobomimicAbsoluteActionConverter:
 
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
         abs_env_meta = copy.deepcopy(env_meta)
-        abs_env_meta['env_kwargs']['controller_configs']['control_delta'] = False
+        if robosuite.__version__ < "1.5":
+            abs_env_meta['env_kwargs']['controller_configs']['control_delta'] = False
+        else:
+            abs_env_meta['env_kwargs']['controller_configs']['body_parts']['right']['control_delta'] = False
 
         env = EnvUtils.create_env_from_metadata(
             env_meta=env_meta,
@@ -47,7 +50,12 @@ class RobomimicAbsoluteActionConverter:
             render_offscreen=False,
             use_image_obs=False, 
         )
-        assert not abs_env.env.robots[0].controller.use_delta
+        if robosuite.__version__ < "1.5":
+            assert not abs_env.env.robots[0].controller.use_delta
+            self.controller_config = abs_env._init_kwargs['controller_configs']
+        else:
+            assert not abs_env._init_kwargs['controller_configs']['body_parts']['right']['control_delta']
+            self.controller_config = abs_env._init_kwargs['controller_configs']['body_parts']['right']
 
         self.env = env
         self.abs_env = abs_env
@@ -87,16 +95,26 @@ class RobomimicAbsoluteActionConverter:
             else:
                 _ = env.reset_to({'states': states[i]})
 
-            # taken from robot_env.py L#454
             for idx, robot in enumerate(env.env.robots):
-                # run controller goal generator
-                robot.control(stacked_actions[i,idx], policy_step=True)
-            
-                # read pos and ori from robots
-                controller = robot.controller
-                action_goal_pos[i,idx] = controller.goal_pos
-                action_goal_ori[i,idx] = Rotation.from_matrix(
-                    controller.goal_ori).as_rotvec()
+                if robosuite.__version__ < "1.5":
+                    # run controller goal generator
+                    robot.control(stacked_actions[i,idx], policy_step=True)
+                
+                    # read pos and ori from robots
+                    controller = robot.controller
+                    action_goal_pos[i,idx] = controller.goal_pos
+                    action_goal_ori[i,idx] = Rotation.from_matrix(
+                        controller.goal_ori).as_rotvec()
+                
+                else:
+                    # run controller goal generator
+                    robot.control(stacked_actions[i,idx], policy_step=True)
+
+                    # read pos and ori from robots
+                    controller = robot.part_controllers['right']
+                    action_goal_pos[i,idx] = controller.goal_pos
+                    action_goal_ori[i,idx] = Rotation.from_matrix(
+                        controller.goal_ori).as_rotvec()
 
         stacked_abs_actions = np.concatenate([
             action_goal_pos,
