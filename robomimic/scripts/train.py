@@ -388,12 +388,6 @@ def train(config, device, resume=False):
             should_save_ckpt = (config.experiment.save.enabled and updated_stats["should_save_ckpt"]) or should_save_ckpt
             if updated_stats["ckpt_reason"] is not None:
                 ckpt_reason = updated_stats["ckpt_reason"]
-        
-        # # Only keep saved videos if the ckpt should be saved (but not because of validation score)
-        # should_save_video = (should_save_ckpt and (ckpt_reason != "valid")) or config.experiment.keep_all_videos
-        # if video_paths is not None and not should_save_video:
-        #     for env_name in video_paths:
-        #         os.remove(video_paths[env_name])
 
         # get variable state for saving model
         variable_state = dict(
