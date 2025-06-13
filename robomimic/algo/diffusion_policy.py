@@ -27,6 +27,7 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
 
+
 @register_algo_factory_func("diffusion_policy")
 def algo_config_to_class(algo_config):
     """
@@ -46,6 +47,7 @@ def algo_config_to_class(algo_config):
         raise NotImplementedError()
     else:
         raise RuntimeError()
+
 
 class DiffusionPolicyUNet(PolicyAlgo):
     def _create_networks(self):
@@ -449,6 +451,7 @@ def replace_submodules(
         if predicate(m)]
     assert len(bn_list) == 0
     return root_module
+
 
 def replace_bn_with_gn(
     root_module: nn.Module, 
