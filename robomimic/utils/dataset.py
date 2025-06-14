@@ -677,8 +677,17 @@ class SequenceDataset(torch.utils.data.Dataset):
 
 
 class CustomWeightedRandomSampler(torch.utils.data.WeightedRandomSampler):
-    """WeightedRandomSampler except allows for more than 2^24 categories"""
     def __init__(self, *args, **kwargs):
+        """
+        This class wraps the torch.utils.data.WeightedRandomSampler and allows for sampling
+        from a larger number of categories. The original torch.utils.data.WeightedRandomSampler
+        only allows for 2^24 categories, which is a limitation for multi-dataset training.
+
+        This class inherits from torch.utils.data.WeightedRandomSampler and implements the
+        same functionality, but uses numpy's random choice to sample indices based on the
+        provided weights. This allows for sampling from a larger number of categories, as
+        numpy's random choice does not have the same limitation as torch's WeightedRandomSampler.
+        """
         super().__init__(*args, **kwargs)
 
     def __iter__(self):
@@ -697,6 +706,21 @@ class MetaDataset(torch.utils.data.Dataset):
         ds_weights,
         normalize_weights_by_ds_size=False,
     ):
+        """
+        A meta-dataset that combines multiple datasets into one, allowing for weighted sampling
+        from each dataset. This is useful for training models on multiple datasets
+        simultaneously, while controlling the contribution of each dataset to the training process.
+
+        Args:
+            datasets (list): list of datasets to combine. Each dataset should be an instance of a
+                SequenceDataset.
+
+            ds_weights (list): list of weights for each dataset. If normalize_weights_by_ds_size is True, 
+                the weights will be normalized by the size of each dataset.
+
+            normalize_weights_by_ds_size (bool): whether to normalize the weights by the size of each dataset.
+                If True, the weights will be divided by the size of each dataset.
+        """
         super(MetaDataset, self).__init__()
         self.datasets = datasets
         ds_lens = np.array([len(ds) for ds in self.datasets])
@@ -711,7 +735,6 @@ class MetaDataset(torch.utils.data.Dataset):
         for ds in self.datasets:
             assert ds.hdf5_cache_mode != "all"
 
-        # TODO: comment
         action_stats = self.get_action_stats()
         self.action_normalization_stats = action_stats_to_normalization_stats(
             action_stats, self.datasets[0].action_config)
