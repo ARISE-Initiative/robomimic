@@ -11,43 +11,34 @@
         ,{"id": "joint_5", "type": "joint"}
         ,{"id": "joint_6", "type": "joint"}
         ,{"id": "eef", "type": "end_effector"}
-        ,{"id": "can", "type": "grasp_object"}
+        ,{"id": "can", "type": "object"}
         ,{"id": "cereal", "type": "object"}
-        ,{"id": "bread", "type": "object"}
+        ,{"id": "bread", "type": "grasp_object"}
         ,{"id": "milk", "type": "object"}
         
     ],
     "edges": [
         {"source_id": "joint_0", "target_id": "joint_1"},
-        {"source_id": "joint_1", "target_id": "joint_0"},
         {"source_id": "joint_1", "target_id": "joint_2"},
-        {"source_id": "joint_2", "target_id": "joint_1"},
         {"source_id": "joint_2", "target_id": "joint_3"},
-        {"source_id": "joint_3", "target_id": "joint_2"},
         {"source_id": "joint_3", "target_id": "joint_4"},
-        {"source_id": "joint_4", "target_id": "joint_3"},
         {"source_id": "joint_4", "target_id": "joint_5"},
-        {"source_id": "joint_5", "target_id": "joint_4"},
         {"source_id": "joint_5", "target_id": "joint_6"},
-        {"source_id": "joint_6", "target_id": "joint_5"},
         {"source_id": "joint_6", "target_id": "eef"},
-        {"source_id": "eef", "target_id": "joint_6"},
 
         {"source_id": "joint_0", "target_id": "joint_3"},
-        {"source_id": "joint_3", "target_id": "joint_0"},
         {"source_id": "joint_3", "target_id": "joint_6"},
-        {"source_id": "joint_6", "target_id": "joint_3"},
 
-        {"source_id": "eef", "target_id": "can"},
-        {"source_id": "can", "target_id": "eef"},
+        {"source_id": "eef", "target_id": "bread"},
+        {"source_id": "bread", "target_id": "eef"},
 
 
-        {"source_id": "cereal", "target_id": "bread"},
-        {"source_id": "bread", "target_id": "cereal"},
+        {"source_id": "cereal", "target_id": "can"},
+        {"source_id": "can", "target_id": "cereal"},
         {"source_id": "cereal", "target_id": "milk"},
         {"source_id": "milk", "target_id": "cereal"},
-        {"source_id": "bread", "target_id": "milk"},
-        {"source_id": "milk", "target_id": "bread"}    
+        {"source_id": "can", "target_id": "milk"},
+        {"source_id": "milk", "target_id": "can"}    
         
 
 

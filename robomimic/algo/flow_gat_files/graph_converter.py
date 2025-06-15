@@ -6,13 +6,13 @@ from torch_geometric.transforms import (
 )  # Not used directly in visualize
 from typing import List, Dict, Union, Optional, Any, Tuple  # Add Tuple
 import json
-import networkx as nx
+# import networkx as nx
 import matplotlib.pyplot as plt  # Ensure this is at the top of your file
 import matplotlib.colors as mcolors  # For more color options
 from collections import defaultdict
 import pytorch_kinematics as pk
 from typing import Callable, Optional
-
+import numpy as np
 
 class JsonTemporalGraphConverter:
     def __init__(self, json_path: str, device: str = "cpu"):
@@ -29,6 +29,7 @@ class JsonTemporalGraphConverter:
         self.node_id_to_idx = {v["id"]: i for i, v in enumerate(self.nodes)}
         self.unique_node_types = {t: i for i, t in enumerate(sorted(list(set(self.node_types))))}
 
+        # self.jax_kin = JaxKinematics(config=self.config)
 
     def convert(
         self,
@@ -231,10 +232,9 @@ class JsonTemporalGraphConverter:
         joint_se3_pose = self._compute_se3_from_qpos(
             joint_pos
         )  # Shape: (B, num_joints, 9)
-        # joint_rel_pose = self._compute_relative_se3(joint_se3_pose)
 
-        # Fill the SE(3) pose for joints
-        se3_pose[:, joint_node_idx, :] = joint_se3_pose  
+        # 3) Fill the SE(3) pose for joints
+        se3_pose[:, joint_node_idx, :] = joint_se3_pose[:,3:10,:]
 
         # ----------------------------------------------------------------------------
         # Gather remaining SE(3) transformations (EEF, object, etc.)
@@ -242,13 +242,13 @@ class JsonTemporalGraphConverter:
         positions_idx = [
             (self.node_id_to_idx[k], v["position"])
             for k, v in self.config["node_feature_map"].items()
-            if v.get("type") != "joint"
+            if v.get("type") != "joint" and v.get("position") is not None
         ]
         # Get rotations
         rotations_idx = [
             (self.node_id_to_idx[k], v["rotation"])
             for k, v in self.config["node_feature_map"].items()
-            if v.get("type") != "joint"
+            if v.get("type") != "joint" and v.get("rotation") is not None
         ]
         positions_node_idx, positions_idx = zip(*positions_idx)
         rotations_node_idx, rotations_idx = zip(*rotations_idx)
@@ -366,13 +366,50 @@ class JsonTemporalGraphConverter:
         if not urdf_path:
             raise ValueError("URDF path is not specified in the configuration.")
         try:
-            end_link = self.config.get("urdf_end_link_name", "panda_hand")
+            end_link = self.config.get("urdf_end_link_name", "panda_hand_tcp")
             chain = chain = pk.build_serial_chain_from_mjcf(
                 open(urdf_path).read(), end_link_name=end_link
             ).to(dtype=torch.float32, device=self.device)
             return chain
         except Exception as e:
             raise ValueError(f"Failed to load kinematic chain from URDF: {e}")
+        
+    def _load_pk_chain2(self) -> pk.SerialChain:
+        """
+        Load the kinematic chain from the configuration.
+        """
+        urdf_path = "robomimic/algo/panda_urdf/panda_v2.urdf"
+        if not urdf_path:
+            raise ValueError("URDF path is not specified in the configuration.")
+        try:
+            end_link = "panda_hand_tcp"
+            chain = pk.build_serial_chain_from_urdf(
+                open(urdf_path).read(), end_link_name=end_link
+            ).to(dtype=torch.float32, device=self.device)
+            return chain
+        except Exception as e:
+            raise ValueError(f"Failed to load kinematic chain from URDF: {e}")
+        
+    def _compute_se3_from_qpos2(self, q_pos: torch.Tensor) -> torch.Tensor:
+        """
+        Compute the SE(3) transformations from joint for all joints in the kinematic chain.
+        Rotation is converted to 6D representation.
+        """
+        transformation: Dict = self.chain2.forward_kinematics(q_pos, end_only=False)
+        se3_transforms = []
+        for key in transformation:
+            m = transformation[key].get_matrix()
+            pos = m[:, :3, 3]
+            rot = pk.matrix_to_rotation_6d(m[:, :3, :3])
+            orthonormalized_rot = self._get_orthonormalized_rotation(rot)
+            se3_transforms.append(torch.cat([pos, orthonormalized_rot], dim=1))
+        se3_transforms = torch.stack(
+            se3_transforms, dim=1
+        )  # Shape: (B * T, num_joints, 9)
+        # Only return the transforms for link 1 to 7 as they correspond to joint 0 to 6
+        se3_transforms = se3_transforms
+        return se3_transforms
+
 
     def _compute_se3_from_qpos(self, q_pos: torch.Tensor) -> torch.Tensor:
         """
@@ -391,7 +428,7 @@ class JsonTemporalGraphConverter:
             se3_transforms, dim=1
         )  # Shape: (B * T, num_joints, 9)
         # Only return the transforms for link 1 to 7 as they correspond to joint 0 to 6
-        se3_transforms = se3_transforms[:, 1:8, :]
+        se3_transforms = se3_transforms
         return se3_transforms
 
     def _get_orthonormalized_rotation(
@@ -578,7 +615,7 @@ def stack_cube_gripper_extra_features(
     se3_pose,  # (B, N, 9)
     one_hot_node_types,  # (B, N, C)
     remaining_feat,  # (B, N, R)
-):
+    ):
     B, N, _ = se3_pose.shape
     device = feat_vec.device
 
@@ -599,3 +636,6 @@ def stack_cube_gripper_extra_features(
     extra[:, eef_idx, 1] = is_grasp.squeeze(-1)
 
     return extra
+
+
+

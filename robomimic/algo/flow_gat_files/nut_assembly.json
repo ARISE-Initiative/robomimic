@@ -1,17 +1,20 @@
 {
     "urdf_path":"/home/nicolas/Documents/development/python/robomimic/robomimic/robomimic/algo/panda/robot.xml",
     "urdf_end_link_name": "right_hand",
-    "robot_base_offset": [-0.56, 0, 1],
+    "robot_base_offset": [-0.56, 0, 0.912],
     "nodes":[
-        {"id": "joint_0", "type": "joint"}
+        {"id": "base", "type": "base"}
+        ,{"id": "joint_0", "type": "joint"}
         ,{"id": "joint_1", "type": "joint"}
         ,{"id": "joint_2", "type": "joint"}
         ,{"id": "joint_3", "type": "joint"}
         ,{"id": "joint_4", "type": "joint"}
         ,{"id": "joint_5", "type": "joint"}
         ,{"id": "joint_6", "type": "joint"}
-        ,{"id": "eef", "type": "end_effector"}
-        ,{"id": "can", "type": "object"}
+        ,{"id": "eef", "type": "eef"}
+        ,{"id": "nut", "type": "object"}
+
+
         
     ],
     "edges": [
@@ -23,16 +26,19 @@
         {"source_id": "joint_5", "target_id": "joint_6"},
         {"source_id": "joint_6", "target_id": "eef"},
 
-        {"source_id": "joint_0", "target_id": "joint_3"},
-        {"source_id": "joint_3", "target_id": "joint_6"},
+        {"source_id": "eef", "target_id": "nut"},
+        {"source_id": "nut", "target_id": "eef"},
 
-        {"source_id": "eef", "target_id": "can"},
-        {"source_id": "can", "target_id": "eef"}
+        {"source_id": "nut", "target_id": "joint_6"},
+        {"source_id": "nut", "target_id": "joint_5"}
         
 
 
     ],
     "node_feature_map": {
+        "base": {
+            "type": "base"
+        },
         "joint_0": {
             "type": "joint",
             "joint_pos": [23],
@@ -81,7 +87,7 @@
             "position": [14, 15, 16],
             "rotation": [17, 18, 19, 20]
         },
-        "can": {
+        "nut": {
             "type": "object",
             "position": [7, 8, 9],
             "rotation": [10, 11, 12, 13],

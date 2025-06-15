@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple
 from packaging.version import parse as parse_version
 
 import matplotlib.pyplot as plt
-import networkx as nx
+# import networkx as nx
 import numpy as np
 import pytorch_kinematics as pk
 import torch
@@ -139,8 +139,8 @@ class FLOW_GAT(PolicyAlgo):
         if self.algo_config.ema.enabled:
             ema = EMAModel(
                 parameters=nets["policy"]["flow_model"].parameters(),
-                decay=self.algo_config.ema.power,
-            )
+                decay=self.algo_config.ema.power
+            ).to(self.device)
 
         self.nets = nets
         self.ema = ema
@@ -186,7 +186,7 @@ class FLOW_GAT(PolicyAlgo):
         )
         # Convert to float32
         obs_tensor = TensorUtils.to_float(obs_tensor)
-        processed_batch["graph"] = self.converter.convert(obs_tensor, temporal_edges=False)
+        processed_batch["graph"] = self.converter.convert(obs_tensor, temporal_edges=True)
 
         return processed_batch
 
@@ -218,7 +218,7 @@ class FLOW_GAT(PolicyAlgo):
         )
         # Convert to float32
         obs_tensor = TensorUtils.to_float(obs_tensor)
-        processed_batch["graph"] = self.converter.convert(obs_tensor, temporal_edges=False)
+        processed_batch["graph"] = self.converter.convert(obs_tensor, temporal_edges=True)
 
         return processed_batch
 
@@ -235,7 +235,7 @@ class FLOW_GAT(PolicyAlgo):
             B, T, A = actions.shape  # T is t_p (prediction horizon)
 
             # --- CFM Implementation ---
-            t = torch.rand(B, T, 1, device=self.device)  # Sample time [B, T, 1]
+            t = torch.rand(B, 1, 1, device=self.device)  # Sample time [B, T, 1]
             eps = torch.randn_like(actions)  # Sample noise [B, T, A]
             x_t = t * actions + (1.0 - t) * eps  # Interpolated state [B, T, A]
             u_t = actions - eps  # Target vector field [B, T, A]
@@ -255,6 +255,8 @@ class FLOW_GAT(PolicyAlgo):
             # Compute loss
             flow_loss = F.huber_loss(predicted_flow, u_t, delta=1.0)
 
+
+
             losses = OrderedDict()
             losses["flow_loss"] = flow_loss
 
@@ -263,7 +265,35 @@ class FLOW_GAT(PolicyAlgo):
             losses["total_loss"] = total_loss
             info = {"losses": TensorUtils.detach(losses)}
 
-            # Backpropagation and Optimization Step (if training)
+            # fusion_gates = self.nets["policy"].flow_model.graph_encoder.fusion.last_gates
+            # info.update({"fusion_gates": fusion_gates})
+
+            # # --- dump gates every N steps (existing) ----------------------------
+            # if not hasattr(self, "_fusion_dump_counter"):
+            #     self._fusion_dump_counter = 0
+            #     self._fusion_dump_every   = 10
+            # self._fusion_dump_counter += 1
+            # if self._fusion_dump_counter % self._fusion_dump_every == 0:
+            #     import json
+            #     # --- dump fusion gates ---
+            #     with open("fusion_gates_log.jsonl", "a") as f:
+            #         rec = {"epoch": epoch, "gates": fusion_gates.tolist()}
+            #         f.write(json.dumps(rec) + "\n")
+
+            #     # --- dump attention pooling weights ---
+            #     pool = self.nets["policy"].flow_model.graph_encoder.pooling
+            #     attn_w = pool.last_attn_weights        # [num_nodes,1]
+            #     batch_i = pool.last_attn_batch_idx     # [num_nodes]
+            #     with open("attention_pool_log.jsonl", "a") as f2:
+            #         rec2 = {
+            #             "epoch": epoch,
+            #             "attn_weights": attn_w.flatten().tolist(),
+            #             "batch_idx":    batch_i.tolist()
+            #         }
+            #         f2.write(json.dumps(rec2) + "\n")
+            # --------------------------------------------------------------------
+
+         # Backpropagation and Optimization Step (if training)
             if not validate:
                 step_info = {}
                 policy_grad_norm = TorchUtils.backprop_for_loss(
@@ -359,7 +389,7 @@ class FLOW_GAT(PolicyAlgo):
         # 3. Perform Euler integration from t=0 to t=1
         for i in range(K):
             t_current = torch.full(
-                (B, T, 1), (i * dt), device=self.device, dtype=torch.float32
+                (B, 1, 1), (i * dt), device=self.device, dtype=torch.float32
             )  # Time for current step [1, t_p, 1]
             # Predict flow v(x_t, t, cond, feedback)
             predicted_flow, _, _, _ = self.nets["policy"]["flow_model"](
