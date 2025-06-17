@@ -258,8 +258,6 @@ def playback_dataset(args):
     
     # maybe reduce the number of demonstrations to playback
     if args.n is not None:
-        # if not args.dont_shuffle_demos:
-        #     random.shuffle(demos)
         random.shuffle(demos)
         demos = demos[:args.n]
 

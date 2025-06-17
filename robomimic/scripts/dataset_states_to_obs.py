@@ -89,10 +89,6 @@ def extract_trajectory(
     assert states.shape[0] == actions.shape[0]
 
     # load the initial state
-    ## this reset call doesn't seem necessary.
-    ## seems ok to remove but haven't fully tested it.
-    ## removing for now
-    # env.reset()
     obs = env.reset_to(initial_state)
 
     # maybe add in intrinsics and extrinsics for all cameras

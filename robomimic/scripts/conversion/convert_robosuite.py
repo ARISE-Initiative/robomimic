@@ -40,6 +40,12 @@ if __name__ == "__main__":
         nargs='+',
         help="Num demos to filter by (can be list)",
     )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=10,
+        help="Num workers to use for parallel processing when adding absolute actions",
+    )
     args = parser.parse_args()
 
     f = h5py.File(args.dataset, "a") # edit mode
@@ -91,8 +97,7 @@ if __name__ == "__main__":
     # add absolute actions to dataset
     add_absolute_actions_to_dataset(
         dataset=args.dataset,
-        eval_dir=None,
-        num_workers=10,
+        num_workers=args.num_workers,
     )
 
     # extract corresponding action keys into action_dict
