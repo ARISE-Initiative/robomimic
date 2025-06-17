@@ -6,8 +6,12 @@ We would like to thank members of the [Stanford PAIR Group](http://pair.stanford
 
 - [Rohun Kulkarni](https://www.linkedin.com/in/rohunkulkarni/) (assistance with collecting real robot datasets and running real robot experiments)
 - [Albert Tung](https://www.linkedin.com/in/albert-tung3/) (assistance with collecting simulation datasets using the [RoboTurk](https://roboturk.stanford.edu/) system)
-- [Fei Xia](http://fxia.me/) ([egl_probe](https://github.com/StanfordVL/egl_probe) library, which helped us run experiments on lab clusters)
+- [Fei Xia](https://fxia22.github.io/) ([egl_probe](https://github.com/StanfordVL/egl_probe) library, which helped us run experiments on lab clusters)
 - [Jim Fan](https://twitter.com/drjimfan?lang=en) (providing support for running experiments on lab clusters)
+
+We would also like to thank:
+
+- [Cheng Chi](https://cheng-chi.github.io/) (implementing Diffusion Policy in this repository)
 
 ### Codebases
 
