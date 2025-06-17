@@ -15,6 +15,8 @@ import robomimic.utils.file_utils as FileUtils
 import robomimic.utils.env_utils as EnvUtils
 from scipy.spatial.transform import Rotation
 
+import robosuite
+
 from robomimic.config import config_factory
 
 """
@@ -22,6 +24,12 @@ copied/adapted from https://github.com/columbia-ai-robotics/diffusion_policy/blo
 """
 class RobomimicAbsoluteActionConverter:
     def __init__(self, dataset_path, algo_name='bc'):
+        """
+        Class to convert robomimic dataset with delta actions to absolute actions.
+        Args:
+            dataset_path (str): path to the robomimic dataset
+            algo_name (str): name of the algorithm to use for config
+        """
         # default BC config
         config = config_factory(algo_name=algo_name)
 
@@ -138,114 +146,37 @@ class RobomimicAbsoluteActionConverter:
         abs_actions = self.convert_actions(states, actions, initial_state=initial_state)
         return abs_actions
 
-    def convert_and_eval_demo(self, demo_key):
-        raise NotImplementedError
-        env = self.env
-        abs_env = self.abs_env
-        file = self.file
-        # first step have high error for some reason, not representative
-        eval_skip_steps = 1
-
-        demo = file["data/{}".format(demo_key)]
-        # input
-        states = demo['states'][:]
-        actions = demo['actions'][:]
-
-        # generate abs actions
-        abs_actions = self.convert_actions(states, actions)
-
-        # verify
-        robot0_eef_pos = demo['obs']['robot0_eef_pos'][:]
-        robot0_eef_quat = demo['obs']['robot0_eef_quat'][:]
-
-        delta_error_info = self.evaluate_rollout_error(
-            env, states, actions, robot0_eef_pos, robot0_eef_quat, 
-            metric_skip_steps=eval_skip_steps)
-        abs_error_info = self.evaluate_rollout_error(
-            abs_env, states, abs_actions, robot0_eef_pos, robot0_eef_quat,
-            metric_skip_steps=eval_skip_steps)
-
-        info = {
-            'delta_max_error': delta_error_info,
-            'abs_max_error': abs_error_info
-        }
-        return abs_actions, info
-
-    @staticmethod
-    def evaluate_rollout_error(env, 
-            states, actions, 
-            robot0_eef_pos, 
-            robot0_eef_quat, 
-            metric_skip_steps=1):
-        # first step have high error for some reason, not representative
-
-        # evaluate abs actions
-        rollout_next_states = list()
-        rollout_next_eef_pos = list()
-        rollout_next_eef_quat = list()
-        obs = env.reset_to({'states': states[0]})
-        for i in range(len(states)):
-            obs = env.reset_to({'states': states[i]})
-            obs, reward, done, info = env.step(actions[i])
-            obs = env.get_observation()
-            rollout_next_states.append(env.get_state()['states'])
-            rollout_next_eef_pos.append(obs['robot0_eef_pos'])
-            rollout_next_eef_quat.append(obs['robot0_eef_quat'])
-        rollout_next_states = np.array(rollout_next_states)
-        rollout_next_eef_pos = np.array(rollout_next_eef_pos)
-        rollout_next_eef_quat = np.array(rollout_next_eef_quat)
-
-        next_state_diff = states[1:] - rollout_next_states[:-1]
-        max_next_state_diff = np.max(np.abs(next_state_diff[metric_skip_steps:]))
-
-        next_eef_pos_diff = robot0_eef_pos[1:] - rollout_next_eef_pos[:-1]
-        next_eef_pos_dist = np.linalg.norm(next_eef_pos_diff, axis=-1)
-        max_next_eef_pos_dist = next_eef_pos_dist[metric_skip_steps:].max()
-
-        next_eef_rot_diff = Rotation.from_quat(robot0_eef_quat[1:]) \
-            * Rotation.from_quat(rollout_next_eef_quat[:-1]).inv()
-        next_eef_rot_dist = next_eef_rot_diff.magnitude()
-        max_next_eef_rot_dist = next_eef_rot_dist[metric_skip_steps:].max()
-
-        info = {
-            'state': max_next_state_diff,
-            'pos': max_next_eef_pos_dist,
-            'rot': max_next_eef_rot_dist
-        }
-        return info
 
 """
 copied/adapted from https://github.com/columbia-ai-robotics/diffusion_policy/blob/main/diffusion_policy/scripts/robomimic_dataset_conversion.py
 """
 def worker(x):
-    path, demo_key, do_eval = x
+    path, demo_key = x
     converter = RobomimicAbsoluteActionConverter(path)
-    if do_eval:
-        abs_actions, info = converter.convert_and_eval_demo(demo_key)
-    else:
-        abs_actions = converter.convert_demo(demo_key)
-        info = dict()
+    abs_actions = converter.convert_demo(demo_key)
+    info = dict()
     return abs_actions, info
 
 
-def add_absolute_actions_to_dataset(dataset, eval_dir, num_workers):
+def add_absolute_actions_to_dataset(dataset, num_workers):
+    """
+    Entry-point for adding absolute actions to robomimic dataset.
+    Args:
+        dataset (str): path to the robomimic dataset
+        num_workers (int): number of workers to use for parallel processing
+    """
     # process inputs
     dataset = pathlib.Path(dataset).expanduser()
     assert dataset.is_file()
 
-    do_eval = False
-    if eval_dir is not None:
-        eval_dir = pathlib.Path(eval_dir).expanduser()
-        assert eval_dir.parent.exists()
-        do_eval = True
-    
+    # initialize converter
     converter = RobomimicAbsoluteActionConverter(dataset)
     demo_keys = converter.get_demo_keys()
     del converter
     
     # run
     with multiprocessing.Pool(num_workers) as pool:
-        results = pool.map(worker, [(dataset, demo_key, do_eval) for demo_key in demo_keys])
+        results = pool.map(worker, [(dataset, demo_key) for demo_key in demo_keys])
 
     # modify action
     with h5py.File(dataset, 'r+') as out_file:
@@ -255,42 +186,7 @@ def add_absolute_actions_to_dataset(dataset, eval_dir, num_workers):
             if "actions_abs" not in demo:
                 demo.create_dataset("actions_abs", data=np.array(abs_actions))
             else:
-                demo['actions_abs'][:] = abs_actions
-    
-    # save eval
-    if do_eval:
-        eval_dir.mkdir(parents=False, exist_ok=True)
-
-        print("Writing error_stats.pkl")
-        infos = [info for _, info in results]
-        pickle.dump(infos, eval_dir.joinpath('error_stats.pkl').open('wb'))
-
-        print("Generating visualization")
-        metrics = ['pos', 'rot']
-        metrics_dicts = dict()
-        for m in metrics:
-            metrics_dicts[m] = collections.defaultdict(list)
-
-        for i in range(len(infos)):
-            info = infos[i]
-            for k, v in info.items():
-                for m in metrics:
-                    metrics_dicts[m][k].append(v[m])
-
-        from matplotlib import pyplot as plt
-        plt.switch_backend('PDF')
-
-        fig, ax = plt.subplots(1, len(metrics))
-        for i in range(len(metrics)):
-            axis = ax[i]
-            data = metrics_dicts[metrics[i]]
-            for key, value in data.items():
-                axis.plot(value, label=key)
-            axis.legend()
-            axis.set_title(metrics[i])
-        fig.set_size_inches(10,4)
-        fig.savefig(str(eval_dir.joinpath('error_stats.pdf')))
-        fig.savefig(str(eval_dir.joinpath('error_stats.png')))
+                demo['actions_abs'][:] = abs_actions    
 
 
 if __name__ == "__main__":
@@ -303,22 +199,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--eval_dir",
-        type=str,
-        help="directory to output evaluation metrics",
-    )
-
-    parser.add_argument(
         "--num_workers",
         type=int,
         default=10,
     )
     
     args = parser.parse_args()
-    
-    
+
     add_absolute_actions_to_dataset(
         dataset=args.dataset,
-        eval_dir=args.eval_dir,
         num_workers=args.num_workers,
     )
