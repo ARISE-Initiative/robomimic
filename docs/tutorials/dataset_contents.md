@@ -36,7 +36,7 @@ Any user wishing to write custom code that works with robomimic datasets should 
 <div class="admonition note">
 <p class="admonition-title">Note: These examples are compatible with any robomimic dataset.</p>
 
-The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test_v15.hdf5` (which requires robosuite v1.4.1), but you can run these examples with any robomimic hdf5 dataset.
+The examples in this section use the small hdf5 dataset packaged with the repository in `tests/assets/test_v15.hdf5` (which requires robosuite v1.5.1), but you can run these examples with any robomimic hdf5 dataset.
 
 </div>
 
