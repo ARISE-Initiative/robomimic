@@ -1,3 +1,16 @@
+"""
+This script converts robosuite dataset with delta actions to absolute actions.
+It reads the robomimic dataset, processes each demo to convert delta actions (`actions`) to 
+absolute actions, and saves the results back to the dataset under a new key `actions_abs`.
+
+Arguments:
+    dataset (str): path to the robomimic dataset
+    num_workers (int): number of workers to use for parallel processing
+
+Example usage:
+    python scripts/conversion/robosuite_add_absolute_actions.py --dataset /path/to/your/demo.hdf5 --num_workers 10
+"""
+
 import multiprocessing
 import os
 import pathlib
