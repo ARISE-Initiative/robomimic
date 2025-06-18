@@ -1,5 +1,9 @@
 # robomimic
 
+### Warning: This is a feature branch and not officially supported!
+
+This is a feature branch created for the [DexMimicGen](https://dexmimicgen.github.io/) code release. For the most stable release of robomimic please use the `master` branch.
+
 <p align="center">
   <img width="24.0%" src="docs/images/task_lift.gif">
   <img width="24.0%" src="docs/images/task_can.gif">
