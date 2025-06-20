@@ -1,5 +1,16 @@
 # robomimic
 
+<p align="center">
+  <img width="24.0%" src="docs/images/task_lift.gif">
+  <img width="24.0%" src="docs/images/task_can.gif">
+  <img width="24.0%" src="docs/images/task_tool_hang.gif">
+  <img width="24.0%" src="docs/images/task_square.gif">
+  <img width="24.0%" src="docs/images/task_lift_real.gif">
+  <img width="24.0%" src="docs/images/task_can_real.gif">
+  <img width="24.0%" src="docs/images/task_tool_hang_real.gif">
+  <img width="24.0%" src="docs/images/task_transport.gif">
+ </p>
+
 [**[Homepage]**](https://robomimic.github.io/) &ensp; [**[Documentation]**](https://robomimic.github.io/docs/introduction/overview.html) &ensp; [**[Study Paper]**](https://arxiv.org/abs/2108.03298) &ensp; [**[Study Website]**](https://robomimic.github.io/study/) &ensp; [**[ARISE Initiative]**](https://github.com/ARISE-Initiative)
 
 -------
