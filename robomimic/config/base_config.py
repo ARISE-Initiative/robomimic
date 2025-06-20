@@ -143,6 +143,7 @@ class BaseConfig(Config):
         # - "lang" (str)    :   (optional) language instruction to use for the dataset (e.g., "make coffee"), otherwise use "dummy"
         # - "key" (str)     :   (optional) key to use for naming eval videos (e.g., "coffee"), defaults to hdf5 file name
         # - "demo_limit"    :   (optional) limit the number of demos to use for training
+        # - "weight"        :   (optional) weight for the dataset, defaults to 1.0
         self.train.data = None                                      
 
         # Write all results to this directory. A new folder with the timestamp will be created
@@ -201,6 +202,8 @@ class BaseConfig(Config):
             "dones",
         )
 
+        # list of action keys to use for prediction - each should correspond to a key in self.train.action_config.
+        # Importantly, the order matters - these keys will be concatenated into a single action vector.
         self.train.action_keys = ["actions"]
 
         # specifing each action keys to load and their corresponding normalization/conversion requirement
