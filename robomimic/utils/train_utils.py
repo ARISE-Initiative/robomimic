@@ -318,7 +318,7 @@ def run_rollout(
             ac = policy(ob=policy_ob, goal=goal_dict)
 
             # play action
-            ob_dict, r, done, info = env.step(ac)
+            ob_dict, r, done, _ = env.step(ac)
 
             # render to screen
             if render:
@@ -327,7 +327,7 @@ def run_rollout(
             # compute reward
             rews.append(r)
 
-            cur_success_metrics = info["is_success"]
+            cur_success_metrics = env.is_success()
 
             if success is None:
                 success = deepcopy(cur_success_metrics)
@@ -348,7 +348,7 @@ def run_rollout(
                 end_step = step_i
                 break
 
-    except Exception as e:
+    except env.rollout_exceptions as e:
         print("WARNING: got rollout exception {}".format(e))
 
 
