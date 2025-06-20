@@ -187,8 +187,7 @@
                 "activation": "gelu",
                 "supervise_all_steps": false,
                 "nn_parameter_for_timesteps": true,
-                "pred_future_acs": false,
-                "causal": true
+                "pred_future_acs": false
             }
         }
     },
