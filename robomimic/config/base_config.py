@@ -102,8 +102,8 @@ class BaseConfig(Config):
         self.experiment.validation_epoch_every_n_steps = 10         # number of gradient steps in valid epoch (None for full dataset pass)
 
         # envs to evaluate model on (assuming rollouts are enabled), to override the metadata stored in dataset
-        self.experiment.env = None                                  # no need to set this (unless you want to override)
-        self.experiment.additional_envs = None                      # additional environments that should get evaluated
+        self.experiment.env = None                                  # no need to set this (unless you want to override); if set, uses env metadata from the first dataset in self.train.data
+        self.experiment.additional_envs = None                      # additional environments that should get evaluated; uses env metadata from the first dataset in self.train.data
 
 
         ## rendering config ##

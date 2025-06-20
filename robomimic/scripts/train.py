@@ -104,49 +104,54 @@ def train(config, device, resume=False):
         shape_meta_list.append(shape_meta)
 
     if config.experiment.env is not None:
+        # if an environment name is specified, just use this env using the first dataset's metadata
+        # and ignore envs from all datasets
+        env_meta = env_meta_list[0].copy()
         env_meta["env_name"] = config.experiment.env
+        env_meta_list = [env_meta]
         print("=" * 30 + "\n" + "Replacing Env to {}\n".format(env_meta["env_name"]) + "=" * 30)
 
     # create environment
     envs = OrderedDict()
     if config.experiment.rollout.enabled:
         # create environments for validation runs
-        # env_names = [env_meta["env_name"]]
-
-        # # disable this feature for now
-        # if config.experiment.additional_envs is not None:
-        #     raise NotImplementedError
-        #     for name in config.experiment.additional_envs:
-        #         env_names.append(name)
-
-        for (dataset_i, dataset_cfg) in enumerate(config.train.data):
+        for env_i in range(len(env_meta_list)):
+            # check if this env should be evaluated
+            dataset_cfg = config.train.data[env_i]
             do_eval = dataset_cfg.get("eval", True)
-            if do_eval is not True:
+            if not do_eval:
                 continue
-            env_meta = env_meta_list[dataset_i]
-            shape_meta = shape_meta_list[dataset_i]
-            env_name = env_meta["env_name"]
-            
-            def create_env():
-                env_kwargs = dict(
-                    env_meta=env_meta,
-                    env_name=env_name,
-                    render=False,
-                    render_offscreen=config.experiment.render_video,
-                    use_image_obs=shape_meta["use_images"],
-                )
-                env = EnvUtils.create_env_from_metadata(**env_kwargs)
-                # handle environment wrappers
-                env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
 
-                return env
+            env_meta = env_meta_list[env_i]
+            shape_meta = shape_meta_list[env_i]
 
-            env = create_env()
-            env_name = env.name
-            
-            env_key = os.path.splitext(os.path.basename(dataset_cfg["path"]))[0] if not dataset_cfg.get("key", None) else dataset_cfg["key"]
-            envs[env_key] = env
-            print(env)
+            env_names = [env_meta["env_name"]]
+            if (env_i == 0) and (config.experiment.additional_envs is not None):
+                # if additional environments are specified, add them to the list
+                # all additional environments use env_meta from the first dataset
+                for name in config.experiment.additional_envs:
+                    env_names.append(name)
+
+            # create environment for each env_name
+            for env_name in env_names:
+                def create_env(env_name):
+                    env_kwargs = dict(
+                        env_meta=env_meta,
+                        env_name=env_name,
+                        render=False,
+                        render_offscreen=config.experiment.render_video,
+                        use_image_obs=shape_meta["use_images"],
+                    )
+                    env = EnvUtils.create_env_from_metadata(**env_kwargs)
+                    # handle environment wrappers
+                    env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
+                    return env
+
+                env = create_env(env_name)
+                
+                env_key = os.path.splitext(os.path.basename(dataset_cfg["path"]))[0] if not dataset_cfg.get("key", None) else dataset_cfg["key"]
+                envs[env_key] = env
+                print(env)
 
     print("")
 
