@@ -41,6 +41,11 @@ if __name__ == "__main__":
         help="Num demos to filter by (can be list)",
     )
     parser.add_argument(
+        "--add_absolute_actions",
+        action='store_true',
+        help="Set this flag to add absolute actions to the dataset",
+    )
+    parser.add_argument(
         "--num_workers",
         type=int,
         default=10,
@@ -95,10 +100,11 @@ if __name__ == "__main__":
     split_train_val_from_hdf5(hdf5_path=args.dataset, val_ratio=0.1)
 
     # add absolute actions to dataset
-    add_absolute_actions_to_dataset(
-        dataset=args.dataset,
-        num_workers=args.num_workers,
-    )
+    if args.add_absolute_actions:
+        add_absolute_actions_to_dataset(
+            dataset=args.dataset,
+            num_workers=args.num_workers,
+        )
 
     # extract corresponding action keys into action_dict
     extract_action_dict(dataset=args.dataset)
