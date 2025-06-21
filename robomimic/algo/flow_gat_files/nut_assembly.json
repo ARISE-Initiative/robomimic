@@ -30,7 +30,17 @@
         {"source_id": "nut", "target_id": "eef"},
 
         {"source_id": "nut", "target_id": "joint_6"},
-        {"source_id": "nut", "target_id": "joint_5"}
+        {"source_id": "nut", "target_id": "joint_5"},
+
+        {"source_id": "base", "target_id": "joint_0"}, {"source_id": "joint_0", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_1"}, {"source_id": "joint_1", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_2"}, {"source_id": "joint_2", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_3"}, {"source_id": "joint_3", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_4"}, {"source_id": "joint_4", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_5"}, {"source_id": "joint_5", "target_id": "base"},
+        {"source_id": "base", "target_id": "joint_6"}, {"source_id": "joint_6", "target_id": "base"},
+        {"source_id": "base", "target_id": "eef"},     {"source_id": "eef", "target_id": "base"},
+        {"source_id": "base", "target_id": "nut"},     {"source_id": "nut", "target_id": "base"}
         
 
 

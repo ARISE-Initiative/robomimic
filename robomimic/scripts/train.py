@@ -83,6 +83,9 @@ def train(config, device):
         verbose=True
     )
 
+    # Set to absolute position control
+    # env_meta['env_kwargs']['controller_configs']['body_parts']['right']['input_type'] = 'absolute'
+
     if config.experiment.env is not None:
         env_meta["env_name"] = config.experiment.env
         print("=" * 30 + "\n" + "Replacing Env to {}\n".format(env_meta["env_name"]) + "=" * 30)
