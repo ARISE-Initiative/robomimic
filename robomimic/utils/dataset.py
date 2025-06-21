@@ -892,8 +892,8 @@ def action_stats_to_normalization_stats(action_stats, action_config):
             input_std[ignore_dim] = 1.0
 
             action_normalization_stats[action_key] = {
-                "scale": input_mean,
-                "offset": input_std
+                "scale": input_std,
+                "offset": input_mean
             }
         else:
             raise NotImplementedError(
