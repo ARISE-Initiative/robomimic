@@ -174,11 +174,13 @@ def process_demo_batch(process_id, args, env_meta, work_queue, result_queue, pro
 
             # extract obs, rewards, dones
             actions = f["data/{}/actions".format(ep)][()]
+            actions_abs = f["data/{}/actions_abs".format(ep)][()]
             traj, is_success, camera_info = extract_trajectory(
                 env=env, 
                 initial_state=initial_state, 
                 states=states, 
                 actions=actions,
+                actions_abs=actions_abs,
                 done_mode=args.done_mode,
                 use_actions=args.use_actions,
                 camera_names=args.camera_names, 
@@ -198,6 +200,7 @@ def process_demo_batch(process_id, args, env_meta, work_queue, result_queue, pro
             #            consistent as well
             ep_data_grp = data_grp.create_group(ep)
             ep_data_grp.create_dataset("actions", data=np.array(traj["actions"]))
+            ep_data_grp.create_dataset("actions_abs", data=np.array(traj["actions_abs"]))
             if is_simpler_env or is_factory_env:
                 for k in traj["states"]:
                     ep_data_grp.create_dataset("states/{}".format(k), data=np.array(traj["states"][k]))
