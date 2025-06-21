@@ -855,7 +855,7 @@ def action_stats_to_normalization_stats(action_stats, action_config):
             output_min = -0.999999
             output_max = 0.999999
             
-            # ignore input dimentions that is too small to prevent division by zero
+            # ignore input dimensions that is too small to prevent division by zero
             input_range = input_max - input_min
             ignore_dim = input_range < range_eps
             input_range[ignore_dim] = output_max - output_min    
@@ -886,7 +886,7 @@ def action_stats_to_normalization_stats(action_stats, action_config):
             input_mean = action_stats[action_key]["mean"].astype(np.float32)
             input_std = np.sqrt(action_stats[action_key]["sqdiff"] / action_stats[action_key]["n"]).astype(np.float32)
 
-            # ignore input dimentions that is too small to prevent division by zero
+            # ignore input dimensions that is too small to prevent division by zero
             std_eps = 1e-6
             ignore_dim = input_std < std_eps
             input_std[ignore_dim] = 1.0
