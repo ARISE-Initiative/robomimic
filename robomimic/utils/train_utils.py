@@ -215,6 +215,21 @@ def get_dataset(
     meta_ds_class=MetaDataset,
     meta_ds_kwargs=None,
 ):
+    """
+    Create a dataset object from the provided class and parameters.
+
+    Args:
+        ds_class (class): class of the dataset to create (e.g. SequenceDataset)
+        ds_kwargs (dict): keyword arguments to pass to the dataset class constructor
+        ds_weights (list): list of weights for each dataset instance, used in MetaDataset
+        ds_langs (list): list of language embeddings for each dataset instance
+        normalize_weights_by_ds_size (bool): if True, normalize dataset weights by the size of each dataset
+        meta_ds_class (class): class of the meta dataset to create (e.g. MetaDataset)
+        meta_ds_kwargs (dict): keyword arguments to pass to the meta dataset class constructor
+    
+    Returns:
+        ds (SequenceDataset or MetaDataset instance): dataset object created from the provided class and parameters
+    """
     ds_list = []
     for i in range(len(ds_weights)):
         
@@ -246,7 +261,7 @@ def get_dataset(
 
 def batchify_obs(obs_list):
     """
-    TODO: add comments
+    Converts a list of observation dictionaries into a single dictionary.
     """
     keys = list(obs_list[0].keys())
     obs = {
@@ -592,7 +607,10 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, variable_state=No
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
 
-        action_normalization_stats (dict): TODO
+        action_normalization_stats (dict): optionally pass a dictionary for action
+            normalization. This should map action keys to dicts
+            with a "mean" and "std" of shape (1, ...) where ... is the default
+            shape for the action.
     """
     env_meta = deepcopy(env_meta)
     shape_meta = deepcopy(shape_meta)
