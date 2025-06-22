@@ -224,7 +224,7 @@ class ObservationEncoder(Module):
 
     def _get_vis_lang_info(self):
         """
-        Helper function to extract information on vision and langauge keys.
+        Helper function to extract information on vision and language keys.
         """
 
         # get the indices that correspond to RGB and lang
@@ -237,7 +237,6 @@ class ObservationEncoder(Module):
                 rgb_inds.append(ind)
                 if (self.obs_nets[k] is not None) and isinstance(self.obs_nets[k], VisualCoreLanguageConditioned):
                     rgb_inds_need_lang_cond.append(ind)
-            # elif ObsUtils.key_is_obs_modality(key=k, obs_modality="lang"):
             elif k == LangUtils.LANG_EMB_OBS_KEY:
                 lang_inds.append(ind)
                 lang_keys.append(k)

@@ -133,22 +133,20 @@ def train(config, device, resume=False):
                     env_names.append(name)
 
             # create environment for each env_name
+            def create_env(env_name):
+                env_kwargs = dict(
+                    env_meta=env_meta,
+                    env_name=env_name,
+                    render=False,
+                    render_offscreen=config.experiment.render_video,
+                    use_image_obs=shape_meta["use_images"],
+                )
+                env = EnvUtils.create_env_from_metadata(**env_kwargs)
+                # handle environment wrappers
+                env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
+                return env
             for env_name in env_names:
-                def create_env(env_name):
-                    env_kwargs = dict(
-                        env_meta=env_meta,
-                        env_name=env_name,
-                        render=False,
-                        render_offscreen=config.experiment.render_video,
-                        use_image_obs=shape_meta["use_images"],
-                    )
-                    env = EnvUtils.create_env_from_metadata(**env_kwargs)
-                    # handle environment wrappers
-                    env = EnvUtils.wrap_env_from_config(env, config=config)  # apply environment warpper, if applicable
-                    return env
-
                 env = create_env(env_name)
-                
                 env_key = os.path.splitext(os.path.basename(dataset_cfg["path"]))[0] if not dataset_cfg.get("key", None) else dataset_cfg["key"]
                 envs[env_key] = env
                 print(env)

@@ -836,6 +836,19 @@ def _aggregate_traj_stats(traj_stats_a, traj_stats_b):
     return merged_stats
 
 def action_stats_to_normalization_stats(action_stats, action_config):
+    """
+    Converts action statistics (min, max, mean, sqdiff, n) to normalization stats
+    (scale, offset) for each action key based on the normalization method specified in the action_config.
+
+    Args:
+        action_stats (dict): a dictionary of action statistics, where each key is an action key
+            and the value is a dictionary with keys "min", "max", "mean", "sqdiff", and "n".
+        action_config (dict): a dictionary of action configurations, where each key is an action key
+            and the value is a dictionary with a "normalization" key that specifies the normalization method.
+    Returns:
+        action_normalization_stats (dict): a dictionary of action normalization statistics, where each key is an action key
+            and the value is a dictionary with keys "scale" and "offset".
+    """
     action_normalization_stats = OrderedDict()
     for action_key in action_stats.keys():
         # get how this action should be normalized from config, default to None
