@@ -36,6 +36,13 @@ Make sure to add the `--debug` flag to your experiments as a sanity check that y
 
 </div>
 
+<div class="admonition note">
+<p class="admonition-title">Resuming a training job</p>
+
+If your training job fails due to any reason, you can re-launch your job with the additional `--resume` flag. This will resume training from the checkpoint saved as `last.pth` under your save directory.
+
+</div>
+
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
 
