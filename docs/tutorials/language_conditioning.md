@@ -5,16 +5,12 @@ This tutorial will guide you through setting up language-conditioned policy lear
 <div class="admonition note">
 <p class="admonition-title">Note: Understand how to launch training runs and view results first!</p>
 
-Before trying to train a Diffusion Policy, it might be useful to read the following tutorials:
+Before trying to train a language-conditioned policy, it might be useful to read the following tutorials:
 - [how to launch training runs](./configs.html)
 - [how to view training results](./viewing_results.html)
 - [how to launch multiple training runs efficiently](./hyperparam_scan.html) 
 
 </div>
-
-## Prerequisites
-
-- An .hdf5 dataset, with a language instruction that holds for each demo in this dataset.
 
 ## 1. Creating a Dataset Config
 
@@ -43,7 +39,7 @@ Example:
 We support CLIP embeddings for encoding language. The pre-defined key for language embeddings is `lang_emb` (specified in `robomimic/utils/lang_utils.py`). You can condition your policy on `lang_emb` using 2 ways:
 
 1. As feature input to action head
-2. FiLM over vision encoder
+2. [FiLM](https://arxiv.org/pdf/1709.07871) over vision encoder
 
 ### Feature input to action head
 

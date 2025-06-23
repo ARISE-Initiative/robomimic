@@ -1,6 +1,6 @@
 # Training Diffusion Policy
 
-This tutorial shows how to train a Diffusion Policy model.
+This tutorial shows how to train a Diffusion Policy model (introduced in [this paper](https://arxiv.org/pdf/2303.04137v4)).
 
 <div class="admonition note">
 <p class="admonition-title">Note: Understand how to launch training runs and view results first!</p>
