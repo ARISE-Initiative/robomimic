@@ -146,7 +146,24 @@ $ python robomimic/scripts/get_dataset_info.py --dataset path/to/the/dataset.hdf
 
 ```
 
-
+When training a policy using `robomimic/scripts/train.py`, this environment metadata is extracted to instantiate an environment for policy evaluation (if rollout is enabled). Additionally, you can specify a dictionary to update environment metadata in the training config under `config.experiment.env_meta_update_dict`. For example, if you wish to evaluate your model using absolute actions, you can update your training config as follows to override a specific controller setting:
+```json
+{
+  ...
+  "experiment": {
+    ...
+    "env_meta_update_dict": {
+      "env_kwargs": {
+          "controller_configs": {
+              "control_delta": false
+          },
+      }
+    },
+    ...
+  },
+  ...
+}
+```
 
 ## Implement an Environment Wrapper
 
