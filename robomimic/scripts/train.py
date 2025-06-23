@@ -234,7 +234,7 @@ def train(config, device, resume=False):
             print("trying backup path {}".format(latest_model_backup_path))
             ckpt_dict = FileUtils.load_dict_from_checkpoint(ckpt_path=latest_model_backup_path)
         # load model weights and optimizer state
-        model.deserialize(ckpt_dict["model"])
+        model.deserialize(ckpt_dict["model"], load_optimizers=True)
         print("*" * 50)
     
     # if checkpoint is specified, load in model weights;

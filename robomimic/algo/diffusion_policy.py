@@ -387,13 +387,15 @@ class DiffusionPolicyUNet(PolicyAlgo):
             "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
         }
 
-    def deserialize(self, model_dict):
+    def deserialize(self, model_dict, load_optimizers=False):
         """
         Load model from a checkpoint.
 
         Args:
             model_dict (dict): a dictionary saved by self.serialize() that contains
                 the same keys as @self.network_classes
+            load_optimizers (bool): whether to load optimizers and lr_schedulers from the model_dict;
+                used when resuming training from a checkpoint
         """
         self.nets.load_state_dict(model_dict["nets"])
 
@@ -405,11 +407,13 @@ class DiffusionPolicyUNet(PolicyAlgo):
 
         if model_dict.get("ema", None) is not None:
             self.ema.averaged_model.load_state_dict(model_dict["ema"])
-        for k in model_dict["optimizers"]:
-            self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
-        for k in model_dict["lr_schedulers"]:
-            if model_dict["lr_schedulers"][k] is not None:
-                self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
+
+        if load_optimizers:
+            for k in model_dict["optimizers"]:
+                self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
+            for k in model_dict["lr_schedulers"]:
+                if model_dict["lr_schedulers"][k] is not None:
+                    self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
 
 
 def replace_submodules(

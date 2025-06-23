@@ -335,12 +335,14 @@ class Algo(object):
             lr_schedulers={ k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
         )
 
-    def deserialize(self, model_dict):
+    def deserialize(self, model_dict, load_optimizers=False):
         """
         Load model from a checkpoint.
 
         Args:
             model_dict (dict): a dictionary saved by self.serialize()
+            load_optimizers (bool): whether to load optimizers and lr_schedulers from the model_dict;
+                used when resuming training from a checkpoint
         """
         if "nets" not in model_dict:
             # for backwards compatibility
@@ -348,11 +350,12 @@ class Algo(object):
             model_dict["optimizers"] = {}
             model_dict["lr_schedulers"] = {}
         self.nets.load_state_dict(model_dict["nets"])
-        for k in model_dict["optimizers"]:
-            self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
-        for k in model_dict["lr_schedulers"]:
-            if model_dict["lr_schedulers"][k] is not None:
-                self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
+        if load_optimizers:
+            for k in model_dict["optimizers"]:
+                self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
+            for k in model_dict["lr_schedulers"]:
+                if model_dict["lr_schedulers"][k] is not None:
+                    self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
 
     def __repr__(self):
         """
