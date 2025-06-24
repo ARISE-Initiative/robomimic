@@ -115,7 +115,7 @@ OR
 $ pip install robosuite
 ```
 
-**(Optional)** to use our released datasets and reproduce our experiments, switch to our `v1.5.1` branch (requires installing robosuite from source):
+**(Optional)** to use our released datasets and reproduce our experiments, switch to the `v1.5.1` branch (requires installing robosuite from source):
 
 ```sh
 git checkout v1.5.1
