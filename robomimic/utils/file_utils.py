@@ -197,9 +197,9 @@ def load_dict_from_checkpoint(ckpt_path):
     """
     ckpt_path = os.path.expanduser(ckpt_path)
     if not torch.cuda.is_available():
-        ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage)
+        ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage, weights_only=False)
     else:
-        ckpt_dict = torch.load(ckpt_path)
+        ckpt_dict = torch.load(ckpt_path, weights_only=False)
     return ckpt_dict
 
 
