@@ -202,11 +202,26 @@ def train(config, device, resume=False):
     train_num_steps = config.experiment.epoch_every_n_steps
     valid_num_steps = config.experiment.validation_epoch_every_n_steps
 
-    # add info to config.algo.optim_params of each net
+    # add info to optim_params
     with config.values_unlocked():
-        for k in config.algo.optim_params:
-            config.algo.optim_params[k]["num_train_batches"] = len(trainset) if train_num_steps is None else train_num_steps
-            config.algo.optim_params[k]["num_epochs"] = config.train.num_epochs
+        if "optim_params" in config.algo:
+            # add info to optim_params of each net
+            for k in config.algo.optim_params:
+                config.algo.optim_params[k]["num_train_batches"] = len(trainset) if train_num_steps is None else train_num_steps
+                config.algo.optim_params[k]["num_epochs"] = config.train.num_epochs
+        # handling for "hbc" and "iris" algorithms
+        if config.algo_name == "hbc":
+            for sub_algo in ["planner", "actor"]:
+                # add info to optim_params of each net
+                for k in config.algo[sub_algo].optim_params:
+                    config.algo[sub_algo].optim_params[k]["num_train_batches"] = len(trainset) if train_num_steps is None else train_num_steps
+                    config.algo[sub_algo].optim_params[k]["num_epochs"] = config.train.num_epochs
+        if config.algo_name == "iris":
+            for sub_algo in ["planner", "value"]:
+                # add info to optim_params of each net
+                for k in config.algo["value_planner"][sub_algo].optim_params:
+                    config.algo["value_planner"][sub_algo].optim_params[k]["num_train_batches"] = len(trainset) if train_num_steps is None else train_num_steps
+                    config.algo["value_planner"][sub_algo].optim_params[k]["num_epochs"] = config.train.num_epochs
 
     # setup for a new training run
     data_logger = DataLogger(

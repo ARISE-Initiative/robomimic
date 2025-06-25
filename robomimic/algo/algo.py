@@ -280,9 +280,10 @@ class Algo(object):
         Called after each gradient step.
         """
         # LR scheduling updates
-        for k, v in self.step_lr_schedulers_every_batch.items():
-            if v and self.lr_schedulers[k] is not None: 
-                self.lr_schedulers[k].step()
+        if hasattr(self, 'step_lr_schedulers_every_batch'):
+            for k, v in self.step_lr_schedulers_every_batch.items():
+                if v and self.lr_schedulers[k] is not None: 
+                    self.lr_schedulers[k].step()
 
     def log_info(self, info):
         """
@@ -329,10 +330,19 @@ class Algo(object):
         """
         Get dictionary of current model parameters.
         """
+        optimizers = {}
+        lr_schedulers = {}
+        for k in self.optimizers:
+            if isinstance(self.nets[k], nn.ModuleList):
+                optimizers[k] = [self.optimizers[k][ii].state_dict() for ii in range(len(self.optimizers[k]))]
+                lr_schedulers[k] = [self.lr_schedulers[k][ii].state_dict() if self.lr_schedulers[k][ii] is not None else None for ii in range(len(self.lr_schedulers[k]))]
+            else:
+                optimizers[k] = self.optimizers[k].state_dict()
+                lr_schedulers[k] = self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None
         return dict(
             nets=self.nets.state_dict(),
-            optimizers={ k : self.optimizers[k].state_dict() for k in self.optimizers },
-            lr_schedulers={ k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
+            optimizers=optimizers,
+            lr_schedulers=lr_schedulers,
         )
 
     def deserialize(self, model_dict, load_optimizers=False):
@@ -352,10 +362,19 @@ class Algo(object):
         self.nets.load_state_dict(model_dict["nets"])
         if load_optimizers:
             for k in model_dict["optimizers"]:
-                self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
+                if isinstance(self.nets[k], nn.ModuleList):
+                    for ii in range(len(self.nets[k])):
+                        self.optimizers[ii].load_state_dict(model_dict["optimizers"][k][ii])   
+                else:
+                    self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
             for k in model_dict["lr_schedulers"]:
-                if model_dict["lr_schedulers"][k] is not None:
-                    self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
+                if isinstance(self.nets[k], nn.ModuleList):
+                    for ii in range(len(self.nets[k])):
+                        if model_dict["lr_schedulers"][k][ii] is not None:
+                            self.lr_schedulers[k][ii].load_state_dict(model_dict["lr_schedulers"][k][ii])
+                else:
+                    if model_dict["lr_schedulers"][k] is not None:
+                        self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
 
     def __repr__(self):
         """
