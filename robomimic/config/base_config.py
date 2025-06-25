@@ -138,12 +138,13 @@ class BaseConfig(Config):
 
         # List of hdf5 datasets to use for training
         # Each dataset should be a dictionary with the following keys:
-        # - "path" (str)    :   path to the hdf5 file
-        # - "eval" (bool)   :   (optional) whether to evaluate policy on this dataset's env, defaults to True
-        # - "lang" (str)    :   (optional) language instruction to use for the dataset (e.g., "make coffee"), otherwise use "dummy"
-        # - "key" (str)     :   (optional) key to use for naming eval videos (e.g., "coffee"), defaults to hdf5 file name
-        # - "demo_limit"    :   (optional) limit the number of demos to use for training
-        # - "weight"        :   (optional) weight for the dataset, defaults to 1.0
+        # - "path" (str)        :   path to the hdf5 file
+        # - "eval" (bool)       :   (optional) whether to evaluate policy on this dataset's env, defaults to True
+        # - "lang" (str)        :   (optional) language instruction to use for the dataset (e.g., "make coffee"), otherwise use "dummy"
+        # - "key" (str)         :   (optional) key to use for naming eval videos (e.g., "coffee"), defaults to hdf5 file name
+        # - "filter_key" (str)  : (optional) key to use for filtering the dataset, defaults to None
+        # - "demo_limit" (int)  :   (optional) limit the number of demos to use for training
+        # - "weight" (float)    :   (optional) weight for the dataset, defaults to 1.0
         self.train.data = None                                      
 
         # Write all results to this directory. A new folder with the timestamp will be created
