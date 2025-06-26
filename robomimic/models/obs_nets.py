@@ -181,6 +181,9 @@ class ObservationEncoder(Module):
             assert share_net_from in self.obs_shapes
 
         net_kwargs = deepcopy(net_kwargs) if net_kwargs is not None else {}
+        randomizers = [] if randomizers is None else randomizers # handles None
+        if not isinstance(randomizers, list): # handle single randomizer
+            randomizers = [randomizers]
         rand_output_shape = shape
         for rand in randomizers:
             if rand is not None:
