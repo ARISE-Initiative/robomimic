@@ -182,6 +182,54 @@ def lr_scheduler_from_optim_params(net_optim_params, net, optimizer):
     return lr_scheduler
 
 
+def get_state_dict(obj):
+    """
+    Returns a state dict for an input of objects. This is useful for
+    saving the state of of networks, optimizers, etc.
+
+    Args:
+        obj (dict, list, torch.Module): input to convert to state dict
+
+    Returns:
+        state_dict (dict): state dict with keys as the names of the objects
+            in the input and values as their state dicts
+    """
+    if isinstance(obj, list):
+        state_dict = [get_state_dict(v) for v in obj]
+    elif isinstance(obj, dict):
+        state_dict = {k: get_state_dict(v) for k, v in obj.items()}
+    elif hasattr(obj, "state_dict"):
+        state_dict = obj.state_dict()
+    elif obj is None:
+        state_dict = None
+    else:
+        raise ValueError("Cannot extract state dict.")
+    return state_dict
+
+
+def load_state_dict(obj, state_dict):
+    """
+    Returns a state dict for an input of objects. This is useful for
+    saving the state of of networks, optimizers, etc.
+
+    Args:
+        obj (dict, list, torch.Module): input to load state dict into
+        state_dict (dict): state dict with keys as the names of the objects
+    """
+    if isinstance(obj, list):
+        for i in range(len(obj)):
+            load_state_dict(obj[i], state_dict[i])
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            load_state_dict(v, state_dict[k])
+    elif hasattr(obj, "load_state_dict"):
+        obj.load_state_dict(state_dict)
+    elif obj is None:
+        return
+    else:
+        raise ValueError("Cannot load state dict.")
+
+
 def backprop_for_loss(net, optim, loss, max_grad_norm=None, retain_graph=False):
     """
     Backpropagate loss and update parameters for network with

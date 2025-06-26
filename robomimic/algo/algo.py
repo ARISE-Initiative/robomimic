@@ -330,19 +330,10 @@ class Algo(object):
         """
         Get dictionary of current model parameters.
         """
-        optimizers = {}
-        lr_schedulers = {}
-        for k in self.optimizers:
-            if isinstance(self.nets[k], nn.ModuleList):
-                optimizers[k] = [self.optimizers[k][ii].state_dict() for ii in range(len(self.optimizers[k]))]
-                lr_schedulers[k] = [self.lr_schedulers[k][ii].state_dict() if self.lr_schedulers[k][ii] is not None else None for ii in range(len(self.lr_schedulers[k]))]
-            else:
-                optimizers[k] = self.optimizers[k].state_dict()
-                lr_schedulers[k] = self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None
         return dict(
             nets=self.nets.state_dict(),
-            optimizers=optimizers,
-            lr_schedulers=lr_schedulers,
+            optimizers=TorchUtils.get_state_dict(self.optimizers),
+            lr_schedulers=TorchUtils.get_state_dict(self.lr_schedulers),
         )
 
     def deserialize(self, model_dict, load_optimizers=False):
@@ -361,20 +352,8 @@ class Algo(object):
             model_dict["lr_schedulers"] = {}
         self.nets.load_state_dict(model_dict["nets"])
         if load_optimizers:
-            for k in model_dict["optimizers"]:
-                if isinstance(self.nets[k], nn.ModuleList):
-                    for ii in range(len(self.nets[k])):
-                        self.optimizers[ii].load_state_dict(model_dict["optimizers"][k][ii])   
-                else:
-                    self.optimizers[k].load_state_dict(model_dict["optimizers"][k])
-            for k in model_dict["lr_schedulers"]:
-                if isinstance(self.nets[k], nn.ModuleList):
-                    for ii in range(len(self.nets[k])):
-                        if model_dict["lr_schedulers"][k][ii] is not None:
-                            self.lr_schedulers[k][ii].load_state_dict(model_dict["lr_schedulers"][k][ii])
-                else:
-                    if model_dict["lr_schedulers"][k] is not None:
-                        self.lr_schedulers[k].load_state_dict(model_dict["lr_schedulers"][k])
+            TorchUtils.load_state_dict(self.optimizers, model_dict["optimizers"])
+            TorchUtils.load_state_dict(self.lr_schedulers, model_dict["lr_schedulers"])
 
     def __repr__(self):
         """
