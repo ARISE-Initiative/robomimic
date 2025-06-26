@@ -255,7 +255,7 @@ class EnvRobosuite(EB.EnvBase):
                 ret[k] = di[k][::-1].copy()
             elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
                 # by default depth images from mujoco are flipped in height
-                ret[k] = di[k][::-1]
+                ret[k] = di[k][::-1].copy()
                 if len(ret[k].shape) == 2:
                     ret[k] = ret[k][..., None] # (H, W, 1)
                 assert len(ret[k].shape) == 3 
