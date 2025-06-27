@@ -78,6 +78,8 @@ class EnvGibsonMOMART(EB.EnvBase):
 
             kwargs (unrolled dict): Any args to substitute in the ig_configuration
         """
+        raise Exception("EnvGibsonMOMART is no longer supported.")
+
         self._env_name = env_name
         self.ig_config = deepcopy(ig_config)
         self.postprocess_visual_obs = postprocess_visual_obs

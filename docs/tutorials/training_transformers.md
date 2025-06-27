@@ -37,6 +37,7 @@ config.algo.transformer.embed_dim = 512                       # dimension for em
 config.algo.transformer.num_layers = 6                        # number of transformer blocks to stack
 config.algo.transformer.num_heads = 8                         # number of attention heads for each transformer block (should divide embed_dim evenly)
 config.algo.transformer.context_length = 10                   # length of (s, a) sub-seqeunces to feed to transformer
+config.algo.transformer.pred_future_acs = False               # shift action prediction forward to predict future actions instead of past actions
 config.train.frame_stack = 10                                 # length of sub-sequence to observe: (s_{t-1}, a_{t-1}), (s_{t-2}, a_{t-2}), ..., (s_{t-9}, a_{t-9})
 config.train.seq_length = 1                                   # length of sub-seqeunce to predict: (s_{t}, a_{t})
 ```

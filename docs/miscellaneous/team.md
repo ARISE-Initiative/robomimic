@@ -10,6 +10,7 @@ These people contributed directly to the codebase and helped build it.
 - [Soroush Nasiriany](http://snasiriany.me/)
 - [Chen Wang](http://www.chenwangjeremy.net/)
 - [Matthew Bronars](https://bronars.github.io/)
+- [Vaibhav Saxena](https://sites.google.com/view/vaibhavsaxena)
 
 ## Mentors
 

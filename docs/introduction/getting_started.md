@@ -36,10 +36,14 @@ Make sure to add the `--debug` flag to your experiments as a sanity check that y
 
 </div>
 
+**Resume functionality**: If your training job fails due to any reason, you can re-launch your job with the additional `--resume` flag to resume training from the last saved epoch. This will resume training from the `last.pth` checkpoint in your output directory. Some points to note:
+1. While fine-tuning from a specified checkpoint (in `config.experiment.ckpt_path`) would load model weights from the checkpoint, resume functionality also loads the optimizer state.
+2. `config.experiment.ckpt_path` will be ignored if you are resuming a training job, i.e. `last.pth` will take precedence if `--resume` is passed.
+
 <div class="admonition warning">
 <p class="admonition-title">Warning!</p>
 
-This example [requires robosuite](./installation.html#install-simulators) to be installed (under the `v1.4.1` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
+This example [requires robosuite](./installation.html#install-simulators) to be installed (under the `v1.5.1` branch), but it can be run without robosuite by disabling rollouts in `robomimic/exps/templates/bc.json`: simply change the `experiment.rollout.enabled` flag to `false`.
 
 </div>
 

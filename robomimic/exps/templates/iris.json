@@ -33,11 +33,14 @@
             "rate": 50,
             "warmstart": 0,
             "terminate_on_success": true
-        }
+        },
+        "env_meta_update_dict": {},
+        "ckpt_path": null
     },
     "train": {
         "data": null,
         "output_dir": "../iris_trained_models",
+        "normalize_weights_by_ds_size": false,
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",
         "hdf5_use_swmr": true,
@@ -54,11 +57,20 @@
             "rewards",
             "dones"
         ],
+        "action_keys": [
+            "actions"
+        ],
+        "action_config": {
+            "actions": {
+                "normalization": null
+            }
+        },
         "goal_mode": null,
         "cuda": true,
         "batch_size": 100,
         "num_epochs": 2000,
-        "seed": 1
+        "seed": 1,
+        "max_grad_norm": null
     },
     "algo": {
         "mode": "separate",
@@ -297,7 +309,8 @@
                 "sinusoidal_embedding": false,
                 "activation": "gelu",
                 "supervise_all_steps": false,
-                "nn_parameter_for_timesteps": true
+                "nn_parameter_for_timesteps": true,
+                "pred_future_acs": false
             }
         }
     },
