@@ -9,7 +9,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, global_add_pool
+from torch_geometric.nn import MessagePassing, global_add_pool, GATConv
 from torch_geometric.utils import softmax
 
 # =====================
@@ -195,6 +195,95 @@ class GCNBackbone(nn.Module):
         final_emb = self.fusion(per_type)
         return final_emb
 
+
+class GATBackbone(nn.Module):
+    """
+    A time-conditional GAT-based graph encoder. It injects the diffusion time
+    embedding into the node features before message passing.
+    """
+    def __init__(
+        self,
+        input_feature_dim: int,
+        edge_feature_dim: int,
+        time_emb_dim: int,
+        num_layers: int,
+        num_heads: int,
+        node_encode_dim: int,
+        hidden_dim: int,
+        noise_std_dev: float = 0.01,
+    ):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.noise_std_dev = noise_std_dev
+        self.node_encoder = nn.Sequential(
+            nn.Linear(input_feature_dim, hidden_dim),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, node_encode_dim),
+        )
+        self.convs = nn.ModuleList()
+        self.norms = nn.ModuleList()
+        
+        first_layer_dim = node_encode_dim + time_emb_dim
+        self.convs.append(
+            GATConv(in_channels=first_layer_dim, out_channels=hidden_dim // num_heads, heads=num_heads, edge_dim=edge_feature_dim)
+        )
+        self.norms.append(nn.LayerNorm(hidden_dim))
+
+        for _ in range(num_layers - 1):
+            self.convs.append(
+                GATConv(in_channels=hidden_dim, out_channels=hidden_dim // num_heads, heads=num_heads, edge_dim=edge_feature_dim)
+            )
+            self.norms.append(nn.LayerNorm(hidden_dim))
+            
+        self.pooling = GlobalAttentionPool(hidden_dim)
+        self.fusion = GatedFusion(hidden_dim)
+
+    def forward(self, graph, time_emb) -> torch.Tensor:
+        x, edge_index, edge_attr, batch_idx = graph.x, graph.edge_index, graph.edge_attr, graph.batch
+        num_timesteps = graph.t
+        x = x.float()
+
+        x = self.node_encoder(x)
+        time_emb_expanded = time_emb[batch_idx]
+        x = torch.cat([x, time_emb_expanded], dim=-1)
+
+        if self.training and self.noise_std_dev > 0:
+            x = x + torch.randn_like(x) * self.noise_std_dev
+
+        for i, (conv, norm) in enumerate(zip(self.convs, self.norms)):
+            if i > 0:
+                x_res = x
+                x = conv(x, edge_index, edge_attr.float())
+                x = norm(x)
+                x = nn.SiLU()(x)
+                x = x + x_res
+            else:
+                x = conv(x, edge_index, edge_attr.float())
+                x = norm(x)
+                x = nn.SiLU()(x)
+            
+        batch_size = int(batch_idx.max().item()) + 1
+        t_val = num_timesteps if isinstance(num_timesteps, int) else num_timesteps.item()
+        node_type_expanded = graph.node_type.unsqueeze(1).expand(-1, t_val, -1)
+        type_flat = node_type_expanded.reshape(-1)
+        temp_flat = graph.node_temporal_mask.reshape(-1)
+        pool_idx = (
+            batch_idx * t_val * (type_flat.max().item() + 1)
+            + temp_flat * (type_flat.max().item() + 1)
+            + type_flat
+        )
+        pooled = self.pooling(x, pool_idx)
+        num_types = int(type_flat.max().item()) + 1
+        total = batch_size * t_val * num_types
+        dense = x.new_zeros(total, self.hidden_dim)
+        ids = torch.unique(pool_idx)
+        dense[ids] = pooled
+        per_type = dense.view(batch_size, t_val, num_types, self.hidden_dim)
+        final_emb = self.fusion(per_type)
+        return final_emb
+    
 # =====================
 # Main Policy
 # =====================
@@ -210,7 +299,7 @@ class FlowPolicy(nn.Module):
         algo_config,
         global_config,
         device: str = "cpu",
-        obs_dim: int = 30,
+        obs_dim: int = 23,
     ):
         super().__init__()
         seq_len = global_config.train.seq_length
@@ -289,7 +378,9 @@ class FlowPolicy(nn.Module):
         else:
             obs_emb = self.obs_encoder(obs)
             if self.training:
-                 obs_emb = obs_emb + torch.randn_like(obs_emb) * 0.01
+                 obs_emb = obs_emb + torch.randn_like(obs_emb) * 0
+            time_emb = time_emb.unsqueeze(1) # Expand time embedding
+            obs_emb = torch.cat([time_emb,obs_emb], dim=1)  # Concatenate time embedding
 
         # 2. Apply positional embedding to the time-aware observation sequence
         context_sequence = self.dropout(obs_emb + self.obs_pos_emb.to(obs_emb.device))
