@@ -61,8 +61,7 @@ def get_exp_dir(config, auto_remove_exp_dir=False, resume=False):
     if resume:
         assert os.path.exists(base_output_dir), "Resuming training run, but output dir {} does not exist".format(base_output_dir)
         subdir_lst = os.listdir(base_output_dir)
-        assert len(subdir_lst) == 1, "Found more than one subdir {} in output dir {}".format(subdir_lst, base_output_dir)
-        time_str = subdir_lst[0]
+        time_str = sorted(subdir_lst)[-1]  # get the most recent subdirectory
         assert os.path.isdir(os.path.join(base_output_dir, time_str)), "Found item {} that is not a subdirectory in {}".format(time_str, base_output_dir)
     elif os.path.exists(base_output_dir):
         if not auto_remove_exp_dir:
