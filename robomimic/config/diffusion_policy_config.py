@@ -6,6 +6,22 @@ from robomimic.config.base_config import BaseConfig
 
 class DiffusionPolicyConfig(BaseConfig):
     ALGO_NAME = "diffusion_policy"
+
+    def train_config(self):
+        """
+        Setting up training parameters for Diffusion Policy.
+
+        - don't need "next_obs" from hdf5 - so save on storage and compute by disabling it
+        - set compatible data loading parameters
+        """
+        super(DiffusionPolicyConfig, self).train_config()
+        
+        # disable next_obs loading from hdf5
+        self.train.hdf5_load_next_obs = False
+
+        # set compatible data loading parameters
+        self.train.seq_length = 16 # should match self.algo.horizon.prediction_horizon
+        self.train.frame_stack = 2 # should match self.algo.horizon.observation_horizon
     
     def algo_config(self):
         """
