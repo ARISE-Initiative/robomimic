@@ -1,3 +1,11 @@
+"""
+This script extracts action dictionaries from a dataset in HDF5 format.
+It reads the actions from the dataset, processes them to extract position,
+rotation (both as axis-angle and 6D representation), and gripper state,
+and saves these as new datasets within the HDF5 file under the "action_dict"
+group for each demonstration.
+"""
+
 import argparse
 import pathlib
 import sys
@@ -10,7 +18,6 @@ import os
 import robomimic.utils.torch_utils as TorchUtils
 
 def extract_action_dict(dataset):
-    # find files
     f = h5py.File(os.path.expanduser(dataset), mode="r+")
 
     SPECS = [

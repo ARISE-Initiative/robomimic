@@ -1,3 +1,10 @@
+"""
+This script filters a dataset in HDF5 format to create subsets of a specified number of demonstrations.
+It reads the dataset, randomly selects a specified number of demonstrations, and creates a new filter key
+for the subset. The script can also take an input filter key to filter a specific subset of demonstrations
+and can output the results with a custom filter key name.
+"""
+
 import argparse
 import h5py
 import numpy as np
