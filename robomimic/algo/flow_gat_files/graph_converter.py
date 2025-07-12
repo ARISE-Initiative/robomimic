@@ -29,6 +29,8 @@ class JsonTemporalGraphConverter:
         self.node_id_to_idx = {v["id"]: i for i, v in enumerate(self.nodes)}
         self.unique_node_types = {t: i for i, t in enumerate(sorted(list(set(self.node_types))))}
 
+        self.global_features_indices = self.config.get("global_features", [])
+
         # self.jax_kin = JaxKinematics(config=self.config)
 
     def convert(
@@ -55,6 +57,12 @@ class JsonTemporalGraphConverter:
         feat_vec = feat_vec.to(self.device)
         new_feat_vec = self.preprocess(feat_vec, extra_fn=extra_fn) # (B * T, N, F)
         _, _, F = new_feat_vec.shape  # Get the number of features after preprocessing
+
+        global_features = None
+        if self.global_features_indices:
+            global_features = feat_vec[:, :, self.global_features_indices]
+            global_features = global_features.view(B * T, -1)
+
         node_type_map = {v["id"]: v["type"] for v in self.nodes}
         graph_edge_index = [
             [self.node_id_map[e["source_id"]], self.node_id_map[e["target_id"]]]
@@ -175,6 +183,8 @@ class JsonTemporalGraphConverter:
             t = T, # Shape: (B, num_nodes_per_graph)
             node_temporal_mask=node_temporal_mask
         )
+        if global_features is not None:
+            data.global_features = global_features
         # Make undirected and add self-loops
         # data = ToUndirected()(data)
 

@@ -304,6 +304,8 @@ class FlowPolicy(nn.Module):
         super().__init__()
         seq_len = global_config.train.seq_length
         obs_len = global_config.train.frame_stack
+        batch_size = global_config.train.batch_size
+        global_feature_size = global_config.train.global_feature_size
         action_dim = algo_config.action_dim
         hidden_dim = algo_config.transformer.hidden_dim
         emb_dropout = algo_config.network.emb_dropout
@@ -311,7 +313,10 @@ class FlowPolicy(nn.Module):
         num_heads = algo_config.transformer.num_heads
         num_layers = algo_config.transformer.num_layers
 
+        self.batch_size = batch_size
+
         self.obs_encoder = nn.Linear(obs_dim, hidden_dim)
+        self.global_feature_encoder = nn.Linear(global_feature_size, hidden_dim)
         self.time_encoder = SinusoidalPositionEmbeddings(hidden_dim)
         # Positional embedding is now only for the observation sequence
         self.obs_pos_emb = nn.Parameter(torch.zeros(1, obs_len, hidden_dim)) 
@@ -387,12 +392,19 @@ class FlowPolicy(nn.Module):
             # GNN is now time-conditional
             obs_emb = self.graph_encoder(graph, time_emb)
             obs_emb = self.graph_emb_projection(obs_emb)
+            g_features = graph.global_features if hasattr(graph, 'global_features') else None
+            if g_features is not None:
+                g_features= g_features.view(self.batch_size, -1, g_features.size(-1))
+                g_features = self.global_feature_encoder(g_features)
+                obs_emb = obs_emb + g_features
         else:
             obs_emb = self.obs_encoder(obs)
             if self.training:
                  obs_emb = obs_emb + torch.randn_like(obs_emb) * 0
             time_emb = time_emb.unsqueeze(1) # Expand time embedding
             obs_emb = torch.cat([time_emb,obs_emb], dim=1)  # Concatenate time embedding
+
+
 
         # 2. Apply positional embedding to the time-aware observation sequence
         context_sequence = self.dropout(obs_emb + self.obs_pos_emb.to(obs_emb.device))
