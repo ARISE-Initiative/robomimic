@@ -45,8 +45,7 @@ class FLOW_GAT(PolicyAlgo):
         self.obs_window = global_config.train.frame_stack
         self.pred_horizon = algo_config.t_p
         self.exec_horizon = algo_config.t_a
-        self.graph_obs_window = algo_config.graph_frame_stack
-        assert self.graph_obs_window <= self.obs_window, "graph_frame_stack cannot exceed frame_stack"
+        self.temp_edges = algo_config.temp_edges
         assert self.exec_horizon <= self.pred_horizon, "t_a cannot be greater than t_p"
 
         self.chain = None
@@ -103,7 +102,7 @@ class FLOW_GAT(PolicyAlgo):
         processed_batch = {
             "obs_tensor": obs_tensor,
             "actions": action_data,
-            "graph": self.converter.convert(obs_tensor, temporal_edges=False)
+            "graph": self.converter.convert(obs_tensor, temporal_edges=self.temp_edges)
         }
         return processed_batch
 
@@ -117,7 +116,7 @@ class FLOW_GAT(PolicyAlgo):
         obs_tensor = TensorUtils.to_float(TensorUtils.to_device(obs_tensor, self.device))
         return {
             "obs_tensor": obs_tensor,
-            "graph": self.converter.convert(obs_tensor, temporal_edges=False)
+            "graph": self.converter.convert(obs_tensor, temporal_edges=self.temp_edges)
         }
 
     def train_on_batch(self, batch, epoch, validate=False):

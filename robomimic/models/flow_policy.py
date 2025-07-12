@@ -317,15 +317,27 @@ class FlowPolicy(nn.Module):
         self.obs_pos_emb = nn.Parameter(torch.zeros(1, obs_len, hidden_dim)) 
         nn.init.normal_(self.obs_pos_emb, mean=0.0, std=0.02)
 
-        self.graph_encoder = GCNBackbone(
-            input_feature_dim=algo_config.gnn.node_input_dim,
-            edge_feature_dim=6,
-            time_emb_dim=hidden_dim,
-            num_layers=algo_config.gnn.num_layers,
-            node_encode_dim=algo_config.gnn.node_dim,
-            hidden_dim=algo_config.gnn.hidden_dim,
-            noise_std_dev=algo_config.gnn.get("noise_std_dev", 0.01)
-        )
+        if algo_config.name == 'flow_gcn': 
+            self.graph_encoder = GCNBackbone(
+                 input_feature_dim=algo_config.gnn.node_input_dim,
+                 edge_feature_dim=6,
+                 time_emb_dim=hidden_dim,
+                 num_layers=algo_config.gnn.num_layers,
+                 node_encode_dim=algo_config.gnn.node_dim,
+                 hidden_dim=algo_config.gnn.hidden_dim,
+                 noise_std_dev=algo_config.gnn.get("noise_std_dev", 0.01)
+             )
+        elif algo_config.name == 'flow_gat':
+            self.graph_encoder = GATBackbone(
+                input_feature_dim=algo_config.gnn.node_input_dim,
+                edge_feature_dim=6,
+                time_emb_dim=hidden_dim,
+                num_layers=algo_config.gnn.num_layers,
+                num_heads=algo_config.gnn.num_heads,
+                node_encode_dim=algo_config.gnn.node_dim,
+                hidden_dim=algo_config.gnn.hidden_dim,
+                noise_std_dev=algo_config.gnn.get("noise_std_dev", 0.01)
+            )
         self.graph_emb_projection = nn.Linear(algo_config.gnn.hidden_dim, hidden_dim)
         self.dropout = nn.Dropout(p=emb_dropout)
 

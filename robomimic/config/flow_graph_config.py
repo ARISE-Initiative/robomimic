@@ -14,7 +14,7 @@ class FlowGATConfig(BaseConfig):
 
     def experiment_config(self):
         super().experiment_config()
-        self.experiment.name = "graph_structure_experiment"
+        self.experiment.name = "GNN_Backbone"
         self.experiment.rollout.n = 25
         self.experiment.rollout.horizon = 400
         self.experiment.rollout.rate = 100
@@ -35,7 +35,7 @@ class FlowGATConfig(BaseConfig):
         self.train.graph_config = "robomimic/algo/flow_gat_files/nut_assembly.json"
         self.train.seq_length = 10
         self.train.frame_stack = 2
-        self.train.batch_size = 256
+        self.train.batch_size = 512
         self.train.num_epochs = 4000
         self.train.num_data_workers = 0
         self.train.seed = 0
@@ -45,42 +45,44 @@ class FlowGATConfig(BaseConfig):
 
     def algo_config(self):
         super().algo_config()
-        self.algo.name = "flow_gat"
+        self.algo.name = "flow_gcn"
         self.algo.graph_name = "skip_graph"
         self.algo.action_dim = 7
         self.algo.num_joints = 7
         self.algo.grad_clip = 1.0
-        self.algo.t_a = 8
+        self.algo.t_a = 5
         self.algo.t_p = self.train.seq_length
         self.algo.graph_frame_stack = 2
         self.algo.inference_euler_steps = 5
+        self.algo.temp_edges = False
         # Optimization
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adamw"
-        optim_params.learning_rate.initial = 1e-4 #1e-4 optimal
+        optim_params.learning_rate.initial = 2e-4 
         optim_params.learning_rate.decay_factor = 0.001
         optim_params.learning_rate.epoch_schedule = [1000, 1500]
         optim_params.learning_rate.scheduler_type = "cosine_warmup"
         optim_params.learning_rate.cosine_max = 4000
         optim_params.learning_rate.warmup_steps = 50
-        optim_params.regularization.L2 = 5e-3 #5e-3 optimal
+        optim_params.regularization.L2 = 1e-3 
         # GNN Backbone
         gnn = self.algo.gnn
         gnn.num_layers = 3
         gnn.node_dim = 64
         gnn.hidden_dim = 64
         gnn.num_heads = 2
-        gnn.attention_dropout = 0.4
+        gnn.attention_dropout = 0.2
         gnn.node_input_dim = 22
+        gnn.noise_std_dev = 0.02
         # Transformer
         transformer = self.algo.transformer
         transformer.num_layers = 2
         transformer.num_heads = 1
-        transformer.hidden_dim = 128
+        transformer.hidden_dim = 256
         transformer.attention_dropout = gnn.attention_dropout
         # General Network
         network = self.algo.network
-        network.emb_dropout = 0.2
+        network.emb_dropout = 0
         # EMA
         ema = self.algo.ema
         ema.enabled = True

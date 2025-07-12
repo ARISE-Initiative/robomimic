@@ -1,70 +1,48 @@
 import argparse
-import robomimic
 import robomimic.utils.hyperparam_utils as HyperparamUtils
 
-# Define the corrected function for the small sweep
-def make_generator_simple(config_file, script_file):
+def make_gat_sweep_generator_final(config_file, script_file):
     """
-    Sets up a *simplified* hyperparameter scan (~12 configs) for DiffGAT,
-    focusing on tradeoff, learning rate, and model size, respecting group rules.
+    Sets up a final, syntactically correct hyperparameter scan for FlowGAT.
+
+    This version uses explicit parameter values for all generated names,
+    as requested.
     """
     generator = HyperparamUtils.ConfigGenerator(
         base_config_file=config_file,
         script_file=script_file,
     )
-
-    # --- Base Settings ---
-
-    # --- Simplified Hyperparameter Sweep ---
-    # Parameters are placed in different groups because they have different numbers of values.
-
-    # Group 1: Loss Tradeoff (3 Values) - Highest Priority
-    
     generator.add_param(
-        key ="algo.optim_params.policy.learning_rate.scheduler_type",
-        name="lr_scheduler_type",
-        group=1,
-        values=["cosine_warmup"],
-        value_names=["cosine_warmup"]
-    )
-
-    generator.add_param(
-        key="algo.name",
-        name="algo_name",
-        group=1,
-        values=["flow_gnn"],
-        value_names=["flow_gnn"]
-    )
-    generator.add_param(
-        key = "algo.graph_name",
-        name = "graph_name",
-        group=1,
-        values=["base_graph"],
-        value_names=["base_graph"]
-    )
-
-    generator.add_param(
-        key="algo.inference_euler_steps",
-        name="inference_euler_steps",
-        group=1,
-        values=[5],
-        value_names=["5"]
+        key="experiment.logging.wandb_proj_name",
+        name="wandb_name",
+        group="1",
+        values=["General_Model_Obs_Hist"],
+        value_names=["General_Model_Obs_Hist"]
     )
     
+    generator.add_param(
+        key="train.frame_stack",
+        name="obs_hist",
+        group="2",
+        values=[1, 2, 5, 10],
+        value_names=["1", "2", "5", "10"]
+    )
+    
+    generator.add_param(
+        key="algo.temp_edges",
+        name="temp_edges",
+        group="3",
+        values=[True, False],
+        value_names=["True", "False"]
+    )
+    
+    # --- Group 5: Seed ---
     generator.add_param(
         key="train.seed",
         name="seed",
-        group=2,
-        values=[0,25,42],
-        value_names=["0", "25", "42"]
-    )
-
-    generator.add_param(
-        key="train.data",
-        name="data",
-        group=3,
-        values=["datasets/lift/ph/low_dim_v15.hdf5", "datasets/can/ph/low_dim_v15.hdf5"],
-        value_names=["lift", "can"]
+        group=4,
+        values=[0, 25, 42],
+        value_names=["0", "25", "42"] # Use values directly
     )
 
     return generator
@@ -73,36 +51,26 @@ def make_generator_simple(config_file, script_file):
 def main(args):
     """
     Generates the configuration files and the execution script.
-    Uses the corrected simplified generator.
     """
-    # Use the simplified generator function
-    generator = make_generator_simple(config_file=args.config, script_file=args.script)
-
-    # Generate the json files and the shell script
+    generator = make_gat_sweep_generator_final(config_file=args.config, script_file=args.script)
     generator.generate()
 
     print(f"Generated script file: {args.script}")
-    print("\nInstructions:")
-    print(f"1. Ensure your base config ('{args.config}') is correct.")
-    print(f"2. Check the generated configs in the same directory as '{args.config}'.")
-    print(f"3. Execute the generated script to run the hyperparameter scan: bash {args.script}")
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate simplified hyperparameter scan configs and script for DiffGAT."
+        description="Generate a final, correct hyperparameter sweep script for FlowGAT with explicit naming."
     )
     parser.add_argument(
         "--config",
         type=str,
         required=True,
-        help="Path to the base DiffGAT JSON config file. New configs will be generated in the same directory.",
+        help="Path to the base FlowGAT JSON config file.",
     )
     parser.add_argument(
         "--script",
         type=str,
-        required=True,
-        help="Path to the output shell script that will contain commands to run all generated training runs.",
+        default="run_sweep_explicit.sh",
+        help="Path to the output shell script.",
     )
     args = parser.parse_args()
     main(args)

@@ -1,5 +1,5 @@
 {
-    "urdf_path":"/home/nicolas/Documents/development/python/robomimic/robomimic/robomimic/algo/panda/robot.xml",
+    "urdf_path":"robomimic/algo/panda/robot.xml",
     "urdf_end_link_name": "right_hand",
     "robot_base_offset": [-0.56, 0, 0.912],
     "nodes":[
