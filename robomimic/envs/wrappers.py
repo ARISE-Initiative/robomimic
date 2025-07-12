@@ -108,7 +108,7 @@ class FrameStackWrapper(EnvWrapper):
                 to stack together. Must be greater than 1 (otherwise this wrapper would
                 be a no-op).
         """
-        assert num_frames > 0, "error: FrameStackWrapper must have num_frames > 1 but got num_frames of {}".format(num_frames)
+        assert num_frames > 0, "error: FrameStackWrapper must have num_frames > 0 but got num_frames of {}".format(num_frames)
 
         super(FrameStackWrapper, self).__init__(env=env)
         self.num_frames = num_frames
