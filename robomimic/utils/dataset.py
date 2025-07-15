@@ -911,5 +911,12 @@ def action_stats_to_normalization_stats(action_stats, action_config):
         else:
             raise NotImplementedError(
                 'action_config.actions.normalization: "{}" is not supported'.format(norm_method))
-    
+
+    if (
+        action_key in action_config
+        and isinstance(action_config[action_key], dict)
+        and action_config[action_key].get("rot_conversion") is not None
+    ):
+        action_normalization_stats[action_key]["rot_conversion"] = action_config[action_key]["rot_conversion"]
+        
     return action_normalization_stats

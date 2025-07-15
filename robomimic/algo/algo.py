@@ -577,8 +577,8 @@ class RolloutPolicy(object):
             ac_dict = ObsUtils.unnormalize_dict(ac_dict, normalization_stats=self.action_normalization_stats)
             action_config = self.policy.global_config.train.action_config
             for key, value in ac_dict.items():
-                this_format = action_config[key].get("format", None)
-                if this_format == "rot_6d":
+                rot_conversion = action_config[key].get("rot_conversion", None)
+                if rot_conversion == "axis_angle_to_6d":
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
                     conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
                     if conversion_format == "rot_axis_angle":

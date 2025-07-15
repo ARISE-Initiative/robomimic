@@ -629,6 +629,9 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, variable_state=No
         params["obs_normalization_stats"] = TensorUtils.to_list(obs_normalization_stats)
     if action_normalization_stats is not None:
         action_normalization_stats = deepcopy(action_normalization_stats)
+        for k in action_normalization_stats:
+            if 'rot_conversion' in action_normalization_stats[k]:
+                action_normalization_stats[k].pop('rot_conversion')
         params["action_normalization_stats"] = TensorUtils.to_list(action_normalization_stats)
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
