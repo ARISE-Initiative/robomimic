@@ -107,7 +107,8 @@ class JsonTemporalGraphConverter:
         etype = etype.unsqueeze(0).repeat(B * T, 1, 1)  # (B * T, E, 2)
 
         # final edge_attr
-        edge_attr = torch.cat([dp, dist, etype], dim=2)  # (B * T, E, 6)
+        # edge_attr = torch.cat([dp, dist, etype], dim=2)  # (B * T, E, 6)
+        edge_attr = None
 
         # Create Batched PyTorch Geometric Data object
         num_nodes_per_graph = len(self.node_ids)  # Number of nodes in a single graph example
@@ -161,7 +162,10 @@ class JsonTemporalGraphConverter:
         else:
             # No temporal edges, just use the spatial edges
             final_edge_index = batched_edge_index
-            final_edge_attr = edge_attr.contiguous().view(-1, edge_attr.shape[-1])
+            if edge_attr is not None:
+                final_edge_attr = edge_attr.contiguous().view(-1, edge_attr.shape[-1])
+            else:
+                final_edge_attr = None
 
         node_type_mask = torch.tensor(
             [self.unique_node_types[v["type"]] for v in self.nodes], device=self.device

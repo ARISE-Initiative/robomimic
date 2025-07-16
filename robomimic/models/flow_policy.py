@@ -101,10 +101,17 @@ class EdgeGCNConv(MessagePassing):
         self.message_proj = nn.Linear(node_in_dim + edge_in_dim, out_dim)
 
     def forward(self, x, edge_index, edge_attr):
-        return self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        if edge_attr is not None:
+            msg = self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        else:
+            msg = self.propagate(edge_index, x=x, edge_attr=None)
+        return msg
 
     def message(self, x_j, edge_attr):
-        msg = torch.cat([x_j, edge_attr], dim=1)
+        if edge_attr is not None:
+            msg = torch.cat([x_j, edge_attr], dim=1)
+        else:
+            msg = x_j
         return self.message_proj(msg)
 
 
@@ -166,12 +173,18 @@ class GCNBackbone(nn.Module):
         for i, (conv, norm) in enumerate(zip(self.convs, self.norms)):
             if i > 0:
                 x_res = x
-                x = conv(x, edge_index, edge_attr.float())
+                if edge_attr is not None:
+                    x = conv(x, edge_index, edge_attr.float())
+                else:
+                    x = conv(x, edge_index, None)
                 x = norm(x)
                 x = nn.SiLU()(x)
                 x = x + x_res
             else:
-                x = conv(x, edge_index, edge_attr.float())
+                if edge_attr is not None:
+                    x = conv(x, edge_index, edge_attr.float())
+                else:
+                    x = conv(x, edge_index, None)
                 x = norm(x)
                 x = nn.SiLU()(x)
             
@@ -313,7 +326,7 @@ class FlowPolicy(nn.Module):
         num_heads = algo_config.transformer.num_heads
         num_layers = algo_config.transformer.num_layers
 
-        self.batch_size = batch_size
+        self.obs_len = obs_len
 
         self.obs_encoder = nn.Linear(obs_dim, hidden_dim)
         self.global_feature_encoder = nn.Linear(global_feature_size, hidden_dim)
@@ -325,7 +338,7 @@ class FlowPolicy(nn.Module):
         if algo_config.name == 'flow_gcn': 
             self.graph_encoder = GCNBackbone(
                  input_feature_dim=algo_config.gnn.node_input_dim,
-                 edge_feature_dim=6,
+                 edge_feature_dim=0,
                  time_emb_dim=hidden_dim,
                  num_layers=algo_config.gnn.num_layers,
                  node_encode_dim=algo_config.gnn.node_dim,
@@ -335,7 +348,7 @@ class FlowPolicy(nn.Module):
         elif algo_config.name == 'flow_gat':
             self.graph_encoder = GATBackbone(
                 input_feature_dim=algo_config.gnn.node_input_dim,
-                edge_feature_dim=6,
+                edge_feature_dim=0,
                 time_emb_dim=hidden_dim,
                 num_layers=algo_config.gnn.num_layers,
                 num_heads=algo_config.gnn.num_heads,
@@ -394,7 +407,7 @@ class FlowPolicy(nn.Module):
             obs_emb = self.graph_emb_projection(obs_emb)
             g_features = graph.global_features if hasattr(graph, 'global_features') else None
             if g_features is not None:
-                g_features= g_features.view(self.batch_size, -1, g_features.size(-1))
+                g_features= g_features.view(-1, self.obs_len, g_features.size(-1))
                 g_features = self.global_feature_encoder(g_features)
                 obs_emb = obs_emb + g_features
         else:
