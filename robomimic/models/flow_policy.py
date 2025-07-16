@@ -313,7 +313,7 @@ class FlowPolicy(nn.Module):
         num_heads = algo_config.transformer.num_heads
         num_layers = algo_config.transformer.num_layers
 
-        self.batch_size = batch_size
+        self.obs_len = obs_len
 
         self.obs_encoder = nn.Linear(obs_dim, hidden_dim)
         self.global_feature_encoder = nn.Linear(global_feature_size, hidden_dim)
@@ -394,7 +394,7 @@ class FlowPolicy(nn.Module):
             obs_emb = self.graph_emb_projection(obs_emb)
             g_features = graph.global_features if hasattr(graph, 'global_features') else None
             if g_features is not None:
-                g_features= g_features.view(self.batch_size, -1, g_features.size(-1))
+                g_features= g_features.view(-1, self.obs_len, g_features.size(-1))
                 g_features = self.global_feature_encoder(g_features)
                 obs_emb = obs_emb + g_features
         else:
