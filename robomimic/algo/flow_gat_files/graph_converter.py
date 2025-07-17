@@ -49,7 +49,8 @@ class JsonTemporalGraphConverter:
             ]
         ] = None,
         temporal_edges: bool = True,
-        has_edge_attr: bool = True
+        has_edge_attr: bool = True,
+        edge_features: Optional[List[str]] = None
     ) -> Data:
         """
         Convert the feature vector to a PyTorch Geometric Data object.
@@ -109,7 +110,25 @@ class JsonTemporalGraphConverter:
 
         # final edge_attr
         if has_edge_attr:
-            edge_attr = torch.cat([dp, dist, etype], dim=2)  # (B * T, E, 6)
+            # Default edge features if not specified
+            if edge_features is None:
+                edge_features = ['relative_position', 'distance', 'edge_type']
+            
+            edge_attr_components = []
+            
+            # Add features based on the list
+            if 'relative_position' in edge_features:
+                edge_attr_components.append(dp)
+            if 'distance' in edge_features:
+                edge_attr_components.append(dist)
+            if 'edge_type' in edge_features:
+                edge_attr_components.append(etype)
+            
+            # Concatenate enabled features
+            if edge_attr_components:
+                edge_attr = torch.cat(edge_attr_components, dim=2)
+            else:
+                edge_attr = None
         else:
             edge_attr = None
 

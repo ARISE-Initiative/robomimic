@@ -103,7 +103,12 @@ class FLOW_GAT(PolicyAlgo):
         processed_batch = {
             "obs_tensor": obs_tensor,
             "actions": action_data,
-            "graph": self.converter.convert(obs_tensor, temporal_edges=self.temp_edges, has_edge_attr=self.has_edge_attr)
+            "graph": self.converter.convert(
+                obs_tensor, 
+                temporal_edges=self.temp_edges, 
+                has_edge_attr=self.has_edge_attr,
+                edge_features=self.algo_config.edge_features
+            )
         }
         return processed_batch
 
@@ -117,7 +122,12 @@ class FLOW_GAT(PolicyAlgo):
         obs_tensor = TensorUtils.to_float(TensorUtils.to_device(obs_tensor, self.device))
         return {
             "obs_tensor": obs_tensor,
-            "graph": self.converter.convert(obs_tensor, temporal_edges=self.temp_edges, has_edge_attr=self.has_edge_attr)
+            "graph": self.converter.convert(
+                obs_tensor, 
+                temporal_edges=self.temp_edges, 
+                has_edge_attr=self.has_edge_attr,
+                edge_features=self.algo_config.edge_features
+            )
         }
 
     def train_on_batch(self, batch, epoch, validate=False):

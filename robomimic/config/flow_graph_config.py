@@ -58,6 +58,9 @@ class FlowGATConfig(BaseConfig):
         self.algo.temp_edges = False
         self.algo.has_edge_attr = False
         self.algo.num_edge_attr = 6
+        # Edge feature configuration for ablation studies
+        # Available features: 'relative_position', 'distance', 'edge_type'
+        self.algo.edge_features = ['relative_position', 'distance', 'edge_type']
         # Optimization
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adamw"
