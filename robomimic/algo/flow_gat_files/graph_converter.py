@@ -49,6 +49,7 @@ class JsonTemporalGraphConverter:
             ]
         ] = None,
         temporal_edges: bool = True,
+        has_edge_attr: bool = True
     ) -> Data:
         """
         Convert the feature vector to a PyTorch Geometric Data object.
@@ -107,8 +108,10 @@ class JsonTemporalGraphConverter:
         etype = etype.unsqueeze(0).repeat(B * T, 1, 1)  # (B * T, E, 2)
 
         # final edge_attr
-        # edge_attr = torch.cat([dp, dist, etype], dim=2)  # (B * T, E, 6)
-        edge_attr = None
+        if has_edge_attr:
+            edge_attr = torch.cat([dp, dist, etype], dim=2)  # (B * T, E, 6)
+        else:
+            edge_attr = None
 
         # Create Batched PyTorch Geometric Data object
         num_nodes_per_graph = len(self.node_ids)  # Number of nodes in a single graph example

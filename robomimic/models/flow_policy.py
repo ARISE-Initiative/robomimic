@@ -325,7 +325,9 @@ class FlowPolicy(nn.Module):
         attn_dropout = algo_config.transformer.attention_dropout
         num_heads = algo_config.transformer.num_heads
         num_layers = algo_config.transformer.num_layers
-
+        has_edge_attr = algo_config.has_edge_attr
+        num_edge_attr = algo_config.num_edge_attr
+        
         self.obs_len = obs_len
 
         self.obs_encoder = nn.Linear(obs_dim, hidden_dim)
@@ -338,7 +340,7 @@ class FlowPolicy(nn.Module):
         if algo_config.name == 'flow_gcn': 
             self.graph_encoder = GCNBackbone(
                  input_feature_dim=algo_config.gnn.node_input_dim,
-                 edge_feature_dim=0,
+                 edge_feature_dim= num_edge_attr if has_edge_attr else 0,
                  time_emb_dim=hidden_dim,
                  num_layers=algo_config.gnn.num_layers,
                  node_encode_dim=algo_config.gnn.node_dim,
@@ -348,7 +350,7 @@ class FlowPolicy(nn.Module):
         elif algo_config.name == 'flow_gat':
             self.graph_encoder = GATBackbone(
                 input_feature_dim=algo_config.gnn.node_input_dim,
-                edge_feature_dim=0,
+                edge_feature_dim= num_edge_attr if has_edge_attr else 0,
                 time_emb_dim=hidden_dim,
                 num_layers=algo_config.gnn.num_layers,
                 num_heads=algo_config.gnn.num_heads,

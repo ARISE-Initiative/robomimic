@@ -42,7 +42,7 @@ class FlowGATConfig(BaseConfig):
         self.train.hdf5_filter_key = "train"
         self.train.hdf5_validation_filter_key = "valid"
         self.train.hdf5_normalize_obs = False
-        self.train.global_feature_size = 23
+        self.train.global_feature_size = 14
 
     def algo_config(self):
         super().algo_config()
@@ -56,6 +56,8 @@ class FlowGATConfig(BaseConfig):
         self.algo.graph_frame_stack = 2
         self.algo.inference_euler_steps = 5
         self.algo.temp_edges = False
+        self.algo.has_edge_attr = False
+        self.algo.num_edge_attr = 6
         # Optimization
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adamw"
