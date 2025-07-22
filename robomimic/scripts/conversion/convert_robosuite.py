@@ -107,7 +107,10 @@ if __name__ == "__main__":
         )
 
     # extract corresponding action keys into action_dict
-    extract_action_dict(dataset=args.dataset)
+    extract_action_dict(
+        dataset=args.dataset, 
+        add_absolute_actions=args.add_absolute_actions
+    )
 
     # create filter keys according to number of demos
     if args.filter_num_demos is not None:
