@@ -2,10 +2,9 @@
 Implementation of Diffusion Policy https://diffusion-policy.cs.columbia.edu/ by Cheng Chi
 """
 from typing import Callable, Union
-import math
+from copy import deepcopy
 from collections import OrderedDict, deque
 from packaging.version import parse as parse_version
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
