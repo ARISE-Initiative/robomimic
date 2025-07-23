@@ -212,12 +212,12 @@ class BaseConfig(Config):
         # the desired value of self.train.action_config is: 
         # {
         #   "action/eef_pos": {
-        #       "normalization": "min_max",
-        #       "rot_conversion: None  
+        #       "normalization": "min_max"
         #   },
         #   "action/eef_rot": {
         #       "normalization": None,
-        #       "rot_conversion: "axis_angle_to_6d"
+        #       "format": "rot_6d",
+        #       "convert_at_runtime": "rot_euler"
         #   }
         # }
         self.train.action_config = {
