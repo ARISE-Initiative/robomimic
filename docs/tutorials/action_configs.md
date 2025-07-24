@@ -33,11 +33,11 @@ config.train.action_keys = ["action/eef_pos", "action/eef_rot"]  # order matters
 config.train.action_config = {
     "action/eef_pos": {
         "normalization": "min_max",    # normalize to [-1, 1]
-        "rot_conversion": None         # no rotation conversion
     },
     "action/eef_rot": {
-        "normalization": None,         # no normalization
-        "rot_conversion": "axis_angle_to_6d"  # convert rotation format
+        "normalization": None,                  # no normalization
+        "format": "rot_6d",                     # rotation format in dataset / prediction
+        "convert_at_runtime": "rot_axis_angle"  # convert rotation format at runtime
     }
 }
 ```
@@ -65,11 +65,39 @@ Robomimic supports several normalization methods for action components:
    "normalization": "gaussian"
    ```
 
-#### 4. Example Configurations
+#### 4. Supported Rotation Conversions
+
+Currently, robomimic supports converting 6D rotations (as proposed in [this paper](https://arxiv.org/abs/1812.07035)) to either axis-angle or Euler formats during rollouts. Below are example action configurations that convert the action key `action/eef_rot` from 6D to each format:
+
+1. 6D to axis-angle
+```python
+config.train.action_config = {
+    "action/eef_rot": {
+        "normalization": None,                  # no normalization
+        "format": "rot_6d",                     # 6D rotation format in dataset / prediction
+        "convert_at_runtime": "rot_axis_angle"  # convert rotation format to axis-angle at runtime
+    }
+}
+```
+
+2. 6D to axis-angle
+```python
+config.train.action_config = {
+    "action/eef_rot": {
+        "normalization": None,                  # no normalization
+        "format": "rot_6d",                     # 6D rotation format in dataset / prediction
+        "convert_at_runtime": "rot_euler"       # convert rotation format to Euler at runtime
+    }
+}
+```
+
+If `"convert_at_runtime"` is not provided, 6D actions are converted to axis-angle format by default.
+
+#### 5. Example Configurations
 
 Here are some common use cases:
 
-##### 4.1 Robot End-Effector Control
+##### 5.1 Robot End-Effector Control
 
 ```python
 # Configure end-effector position and rotation actions
@@ -84,7 +112,7 @@ config.train.action_config = {
 }
 ```
 
-##### 4.2 Mixed Action Spaces
+##### 5.2 Mixed Action Spaces
 
 ```python
 # Configure position, rotation, and gripper actions
@@ -102,7 +130,7 @@ config.train.action_config = {
 }
 ```
 
-#### 5. Best Practices
+#### 6. Best Practices
 
 1. **Action Component Order**:
    - Order in `action_keys` determines concatenation order
@@ -123,7 +151,7 @@ config.train.action_config = {
    - Use `min_max` normalization or pre-normalize your data
    - The policy will check if actions are in the correct range
 
-#### 6. Implementation Details
+#### 7. Implementation Details
 
 The normalization process:
 1. Computes statistics (min, max, mean, std) across the entire dataset
