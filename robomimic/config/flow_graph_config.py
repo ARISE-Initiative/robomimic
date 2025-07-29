@@ -32,7 +32,7 @@ class FlowGATConfig(BaseConfig):
         super().train_config()
         self.train.hdf5_load_next_obs = True
         self.train.data = "datasets/square/ph/low_dim_v15.hdf5"
-        self.train.graph_config = "robomimic/algo/flow_gat_files/nut_assembly.json"
+        self.train.graph_config = "robomimic/algo/flow_gat_files/nut_assembly_fc_robot_sparse_env.json"
         self.train.seq_length = 10
         self.train.frame_stack = 2
         self.train.batch_size = 512
@@ -56,11 +56,11 @@ class FlowGATConfig(BaseConfig):
         self.algo.graph_frame_stack = 2
         self.algo.inference_euler_steps = 5
         self.algo.temp_edges = False
-        self.algo.has_edge_attr = False
-        self.algo.num_edge_attr = 6
+        self.algo.has_edge_attr = True
+        self.algo.num_edge_attr = 5
         # Edge feature configuration for ablation studies
         # Available features: 'relative_position', 'distance', 'edge_type'
-        self.algo.edge_features = ['relative_position', 'distance', 'edge_type']
+        self.algo.edge_features = ['relative_position', 'edge_type']
         # Optimization
         optim_params = self.algo.optim_params.policy
         optim_params.optimizer_type = "adamw"
