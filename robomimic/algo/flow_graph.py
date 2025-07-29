@@ -149,6 +149,7 @@ class FLOW_GAT(PolicyAlgo):
                 action=x_t,
                 timestep=t,
                 graph=graph,
+                obs = batch["obs_tensor"]
             )
 
             flow_loss = F.huber_loss(predicted_flow, u_t, delta=1.0)
@@ -248,6 +249,7 @@ class FLOW_GAT(PolicyAlgo):
                 action=x_t,
                 timestep=t_current,
                 graph=graph,
+                obs = obs
             )
             x_t = x_t + dt * predicted_flow
 

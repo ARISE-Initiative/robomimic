@@ -312,7 +312,7 @@ class FlowPolicy(nn.Module):
         algo_config,
         global_config,
         device: str = "cpu",
-        obs_dim: int = 23,
+        obs_dim: int = 30,
     ):
         super().__init__()
         seq_len = global_config.train.seq_length
@@ -334,7 +334,8 @@ class FlowPolicy(nn.Module):
         self.global_feature_encoder = nn.Linear(global_feature_size, hidden_dim)
         self.time_encoder = SinusoidalPositionEmbeddings(hidden_dim)
         # Positional embedding is now only for the observation sequence
-        self.obs_pos_emb = nn.Parameter(torch.zeros(1, obs_len, hidden_dim)) 
+
+        self.obs_pos_emb = nn.Parameter(torch.zeros(1, obs_len + 1, hidden_dim))  # +1 for temporal token.
         nn.init.normal_(self.obs_pos_emb, mean=0.0, std=0.02)
 
         if algo_config.name == 'flow_gcn': 
@@ -420,9 +421,9 @@ class FlowPolicy(nn.Module):
             obs_emb = torch.cat([time_emb,obs_emb], dim=1)  # Concatenate time embedding
 
 
-
+        obs_pos_emb = self.obs_pos_emb.to(obs_emb.device)[:, :obs_emb.size(1), :]
         # 2. Apply positional embedding to the time-aware observation sequence
-        context_sequence = self.dropout(obs_emb + self.obs_pos_emb.to(obs_emb.device))
+        context_sequence = self.dropout(obs_emb + obs_pos_emb)
 
         # 3. Process context sequence with the encoder to create memory
         # The separate time token has been removed.
