@@ -103,12 +103,12 @@ class FLOW_GAT(PolicyAlgo):
         processed_batch = {
             "obs_tensor": obs_tensor,
             "actions": action_data,
-            "graph": self.converter.convert(
-                obs_tensor, 
-                temporal_edges=self.temp_edges, 
-                has_edge_attr=self.has_edge_attr,
-                edge_features=self.algo_config.edge_features
-            )
+            #"graph": self.converter.convert(
+            #    obs_tensor, 
+            #    temporal_edges=self.temp_edges, 
+            #    has_edge_attr=self.has_edge_attr,
+            #    edge_features=self.algo_config.edge_features
+            #)
         }
         return processed_batch
 
@@ -122,12 +122,12 @@ class FLOW_GAT(PolicyAlgo):
         obs_tensor = TensorUtils.to_float(TensorUtils.to_device(obs_tensor, self.device))
         return {
             "obs_tensor": obs_tensor,
-            "graph": self.converter.convert(
-                obs_tensor, 
-                temporal_edges=self.temp_edges, 
-                has_edge_attr=self.has_edge_attr,
-                edge_features=self.algo_config.edge_features
-            )
+            # "graph": self.converter.convert(
+            #    obs_tensor, 
+            #    temporal_edges=self.temp_edges, 
+            #    has_edge_attr=self.has_edge_attr,
+            #    edge_features=self.algo_config.edge_features
+            #)
         }
 
     def train_on_batch(self, batch, epoch, validate=False):
@@ -136,7 +136,7 @@ class FLOW_GAT(PolicyAlgo):
         """
         with TorchUtils.maybe_no_grad(no_grad=validate):
             actions = batch["actions"]
-            graph = batch["graph"]
+            #graph = batch["graph"]
             batch_size, seq_len, action_dim = actions.shape
 
             # CFM: sample time and noise, interpolate state, compute target vector field
@@ -148,7 +148,7 @@ class FLOW_GAT(PolicyAlgo):
             predicted_flow = self.nets["policy"]["flow_model"](
                 action=x_t,
                 timestep=t,
-                graph=graph,
+                #graph=graph,
                 obs = batch["obs_tensor"]
             )
 
@@ -195,7 +195,8 @@ class FLOW_GAT(PolicyAlgo):
         # If no actions queued, sample a new sequence
         if not self._actions_to_execute:
             batch = self.process_batch_for_inference(obs_dict)
-            graph = batch['graph']
+            #graph = batch['graph']
+            graph = None
 
             # [1, t_p, A] → [t_p, A]
             seq = self.sample(
@@ -248,7 +249,7 @@ class FLOW_GAT(PolicyAlgo):
             predicted_flow = self.nets["policy"]["flow_model"](
                 action=x_t,
                 timestep=t_current,
-                graph=graph,
+                #graph=graph,
                 obs = obs
             )
             x_t = x_t + dt * predicted_flow

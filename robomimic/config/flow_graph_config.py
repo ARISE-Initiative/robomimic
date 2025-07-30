@@ -43,6 +43,7 @@ class FlowGATConfig(BaseConfig):
         self.train.hdf5_validation_filter_key = "valid"
         self.train.hdf5_normalize_obs = False
         self.train.global_feature_size = 14
+        self.train.obs_dim = 30
 
     def algo_config(self):
         super().algo_config()

@@ -329,7 +329,7 @@ class FlowPolicy(nn.Module):
         num_edge_attr = algo_config.num_edge_attr
         
         self.obs_len = obs_len
-
+        obs_dim = global_config.train.obs_dim
         self.obs_encoder = nn.Linear(obs_dim, hidden_dim)
         self.global_feature_encoder = nn.Linear(global_feature_size, hidden_dim)
         self.time_encoder = SinusoidalPositionEmbeddings(hidden_dim)
