@@ -11,8 +11,6 @@ import random
 
 import torch
 import torch.nn as nn
-from torchvision.transforms import Lambda, Compose
-import torchvision.transforms.functional as TVF
 
 import robomimic.models.base_nets as BaseNets
 import robomimic.utils.tensor_utils as TensorUtils
@@ -24,6 +22,8 @@ from robomimic.models.base_nets import *
 from robomimic.utils.vis_utils import visualize_image_randomizer
 from robomimic.macros import VISUALIZE_RANDOMIZER
 
+import torchvision.transforms.functional as TVF
+from torchvision.transforms import Lambda, Compose
 
 """
 ================================================
@@ -34,7 +34,6 @@ class EncoderCore(BaseNets.Module):
     """
     Abstract class used to categorize all cores used to encode observations
     """
-
     def __init__(self, input_shape):
         self.input_shape = input_shape
         super(EncoderCore, self).__init__()
@@ -185,6 +184,52 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
         msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
         msg = header + '(' + msg + '\n)'
         return msg
+
+
+class VisualCoreLanguageConditioned(VisualCore):
+    """
+    Variant of VisualCore that expects language embedding during forward pass.
+    """
+    def __init__(
+        self,
+        input_shape,
+        backbone_class="ResNet18ConvFiLM",
+        pool_class="SpatialSoftmax",
+        backbone_kwargs=None,
+        pool_kwargs=None,
+        flatten=True,
+        feature_dimension=64,
+    ):
+        """
+        Update default backbone class.
+        """
+        super(VisualCoreLanguageConditioned, self).__init__(
+            input_shape=input_shape,
+            backbone_class=backbone_class,
+            pool_class=pool_class,
+            backbone_kwargs=backbone_kwargs,
+            pool_kwargs=pool_kwargs,
+            flatten=flatten,
+            feature_dimension=feature_dimension,
+        )
+
+    def forward(self, inputs, lang_emb=None):
+        """
+        Update forward pass to pass language embedding through ResNet18ConvFiLM.
+        """
+        assert lang_emb is not None
+        ndim = len(self.input_shape)
+        assert tuple(inputs.shape)[-ndim:] == tuple(self.input_shape)
+
+        # feed lang_emb through backbone explicitly, and then feed through rest of network
+        assert self.backbone is not None
+        x = self.backbone(inputs, lang_emb)
+        x = self.nets[1:](x)
+        if list(self.output_shape(list(inputs.shape)[1:])) != list(x.shape)[1:]:
+            raise ValueError('Size mismatch: expect size %s, but got size %s' % (
+                str(self.output_shape(list(inputs.shape)[1:])), str(list(x.shape)[1:]))
+            )
+        return x
 
 
 """

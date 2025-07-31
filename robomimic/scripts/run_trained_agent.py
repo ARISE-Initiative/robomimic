@@ -93,7 +93,6 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
         stats (dict): some statistics for the rollout - such as return, horizon, and task success
         traj (dict): dictionary that corresponds to the rollout trajectory
     """
-
     assert isinstance(env, EnvBase) or isinstance(env, EnvWrapper)
     assert isinstance(policy, RolloutPolicy)
     assert not (render and (video_writer is not None))
@@ -143,11 +142,8 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
             traj["dones"].append(done)
             traj["states"].append(state_dict["states"])
             if return_obs:
-                # Note: We need to "unprocess" the observations to prepare to write them to dataset.
-                #       This includes operations like channel swapping and float to uint8 conversion
-                #       for saving disk space.
-                traj["obs"].append(ObsUtils.unprocess_obs_dict(obs))
-                traj["next_obs"].append(ObsUtils.unprocess_obs_dict(next_obs))
+                traj["obs"].append(obs)
+                traj["next_obs"].append(next_obs)
 
             # break if done or if success
             if done or success:

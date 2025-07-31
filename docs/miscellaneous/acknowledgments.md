@@ -6,8 +6,12 @@ We would like to thank members of the [Stanford PAIR Group](http://pair.stanford
 
 - [Rohun Kulkarni](https://www.linkedin.com/in/rohunkulkarni/) (assistance with collecting real robot datasets and running real robot experiments)
 - [Albert Tung](https://www.linkedin.com/in/albert-tung3/) (assistance with collecting simulation datasets using the [RoboTurk](https://roboturk.stanford.edu/) system)
-- [Fei Xia](http://fxia.me/) ([egl_probe](https://github.com/StanfordVL/egl_probe) library, which helped us run experiments on lab clusters)
+- [Fei Xia](https://fxia22.github.io/) ([egl_probe](https://github.com/StanfordVL/egl_probe) library, which helped us run experiments on lab clusters)
 - [Jim Fan](https://twitter.com/drjimfan?lang=en) (providing support for running experiments on lab clusters)
+
+We would also like to thank:
+
+- [Cheng Chi](https://cheng-chi.github.io/) (implementing Diffusion Policy in this repository)
 
 ### Codebases
 
@@ -16,6 +20,7 @@ We would like to thank members of the [Stanford PAIR Group](http://pair.stanford
 - The `TanhWrappedDistribution` class in `models/distributions.py` was adapted from [rlkit](TanhWrappedDistribution).
 - Support for training distributional critics (see `BCQ_Distributional` in `algos/bcq.py`) was adapted from [Acme](https://github.com/deepmind/acme). It also served as a useful reference for implementing Gaussian Mixture Model (GMM) policies.
 - Our transformer implementation was adapted from the excellent [minGPT](https://github.com/karpathy/minGPT) codebase.
+- Utilities for rotation transformations in `utils/torch_utils.py` were adapted from Facebook Research's [pytorch3d](https://github.com/facebookresearch/pytorch3d/) codebase.
 
 We wholeheartedly welcome the community to contribute to our project through issues and pull requests. New contributors will be added to the list above.
 

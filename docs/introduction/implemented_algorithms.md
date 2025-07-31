@@ -15,6 +15,10 @@
 
 - Behavioral Cloning with an Transformer network. Implemented in the `BC_Transformer` and `BC_Transformer_GMM` (transformer GMM policy) classes in `algo/bc.py`.
 
+### Diffusion Policy
+
+- Behavior cloning with a diffusion action head (see [this paper](https://arxiv.org/pdf/2303.04137v5)). Implemented in the `DiffusionPolicyUNet` class in `algo/diffusion_policy.py`.
+
 ### HBC
 
 - Hierarchical Behavioral Cloning - the implementation is largely based off of [this paper](https://arxiv.org/abs/2003.06085). Implemented in the `HBC` class in `algo/hbc.py`.

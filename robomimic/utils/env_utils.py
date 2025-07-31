@@ -144,6 +144,7 @@ def create_env(
     render_offscreen=False, 
     use_image_obs=False, 
     use_depth_obs=False, 
+    lang=None,
     **kwargs,
 ):
     """
@@ -167,9 +168,10 @@ def create_env(
         use_depth_obs (bool): if True, environment is expected to render depth image observations
             on every env.step call. Set this to False for efficiency reasons, if depth
             observations are not required.
+
+        lang: language instruction for the environment
     """
 
-    # note: pass @postprocess_visual_obs True, to make sure images are processed for network inputs
     env_class = get_env_class(env_type=env_type)
     env = env_class(
         env_name=env_name, 
@@ -177,7 +179,7 @@ def create_env(
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs,
         use_depth_obs=use_depth_obs,
-        postprocess_visual_obs=True,
+        lang=lang,
         **kwargs,
     )
     print("Created environment with name {}".format(env_name))
@@ -225,14 +227,16 @@ def create_env_from_metadata(
         env_name = env_meta["env_name"]
     env_type = get_env_type(env_meta=env_meta)
     env_kwargs = env_meta["env_kwargs"]
+    env_kwargs["env_name"] = env_name
+    lang = env_meta.get("lang", None)
 
     env = create_env(
         env_type=env_type,
-        env_name=env_name,  
         render=render, 
         render_offscreen=render_offscreen, 
         use_image_obs=use_image_obs, 
         use_depth_obs=use_depth_obs, 
+        lang=lang,
         **env_kwargs,
     )
     check_env_version(env, env_meta)

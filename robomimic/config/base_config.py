@@ -87,8 +87,7 @@ class BaseConfig(Config):
         self.experiment.logging.log_tb = True                       # enable tensorboard logging
         self.experiment.logging.log_wandb = False                   # enable wandb logging
         self.experiment.logging.wandb_proj_name = "debug"           # project name if using wandb
-
-
+                
         ## save config - if and when to save model checkpoints ##
         self.experiment.save.enabled = True                         # whether model saving should be enabled or disabled
         self.experiment.save.every_n_seconds = None                 # save model every n seconds (set to None to disable)
@@ -103,8 +102,8 @@ class BaseConfig(Config):
         self.experiment.validation_epoch_every_n_steps = 10         # number of gradient steps in valid epoch (None for full dataset pass)
 
         # envs to evaluate model on (assuming rollouts are enabled), to override the metadata stored in dataset
-        self.experiment.env = None                                  # no need to set this (unless you want to override)
-        self.experiment.additional_envs = None                      # additional environments that should get evaluated
+        self.experiment.env = None                                  # no need to set this (unless you want to override); if set, uses env metadata from the first dataset in self.train.data
+        self.experiment.additional_envs = None                      # additional environments that should get evaluated; uses env metadata from the first dataset in self.train.data
 
 
         ## rendering config ##
@@ -122,6 +121,13 @@ class BaseConfig(Config):
         self.experiment.rollout.warmstart = 0                       # number of epochs to wait before starting rollouts
         self.experiment.rollout.terminate_on_success = True         # end rollout early after task success
 
+        # for updating the evaluation env meta data
+        self.experiment.env_meta_update_dict = Config()
+        self.experiment.env_meta_update_dict.do_not_lock_keys()
+
+        # whether to load in a previously trained model checkpoint
+        self.experiment.ckpt_path = None
+
     def train_config(self):
         """
         This function populates the `config.train` attribute of the config, which 
@@ -130,7 +136,15 @@ class BaseConfig(Config):
         class has a default implementation that usually doesn't need to be overriden.
         """
 
-        # Path to hdf5 dataset to use for training
+        # List of hdf5 datasets to use for training
+        # Each dataset should be a dictionary with the following keys:
+        # - "path" (str)        :   path to the hdf5 file
+        # - "eval" (bool)       :   (optional) whether to evaluate policy on this dataset's env, defaults to True
+        # - "lang" (str)        :   (optional) language instruction to use for the dataset (e.g., "make coffee"), otherwise use "dummy"
+        # - "key" (str)         :   (optional) key to use for naming eval videos (e.g., "coffee"), defaults to hdf5 file name
+        # - "filter_key" (str)  : (optional) key to use for filtering the dataset, defaults to None
+        # - "demo_limit" (int)  :   (optional) limit the number of demos to use for training
+        # - "weight" (float)    :   (optional) weight for the dataset, defaults to 1.0
         self.train.data = None                                      
 
         # Write all results to this directory. A new folder with the timestamp will be created
@@ -142,6 +156,9 @@ class BaseConfig(Config):
 
 
         ## dataset loader config ##
+
+        # whether or not to normalize dataset weights by size
+        self.train.normalize_weights_by_ds_size = False
 
         # num workers for loading data - generally set to 0 for low-dim datasets, and 2 for image datasets
         self.train.num_data_workers = 0  
@@ -186,6 +203,29 @@ class BaseConfig(Config):
             "dones",
         )
 
+        # list of action keys to use for prediction - each should correspond to a key in self.train.action_config.
+        # Importantly, the order matters - these keys will be concatenated into a single action vector.
+        self.train.action_keys = ["actions"]
+
+        # specifing each action keys to load and their corresponding normalization/conversion requirement
+        # e.g. for dataset keys "action/eef_pos" and "action/eef_rot"
+        # the desired value of self.train.action_config is: 
+        # {
+        #   "action/eef_pos": {
+        #       "normalization": "min_max"
+        #   },
+        #   "action/eef_rot": {
+        #       "normalization": None,
+        #       "format": "rot_6d",
+        #       "convert_at_runtime": "rot_euler"
+        #   }
+        # }
+        self.train.action_config = {
+            "actions": {
+                "normalization": None
+            }
+        }
+
         # one of [None, "last"] - set to "last" to include goal observations in each batch
         self.train.goal_mode = None
 
@@ -195,6 +235,8 @@ class BaseConfig(Config):
         self.train.batch_size = 100     # batch size
         self.train.num_epochs = 2000    # number of training epochs
         self.train.seed = 1             # seed for training (for reproducibility)
+
+        self.train.max_grad_norm = None  # clip gradient norms (see `backprop_for_loss` function in torch_utils.py) 
 
     def algo_config(self):
         """

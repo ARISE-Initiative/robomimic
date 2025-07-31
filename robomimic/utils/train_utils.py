@@ -20,14 +20,15 @@ import robomimic
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.log_utils as LogUtils
 import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.lang_utils as LangUtils
 
-from robomimic.utils.dataset import SequenceDataset
+from robomimic.utils.dataset import SequenceDataset, MetaDataset
 from robomimic.envs.env_base import EnvBase
 from robomimic.envs.wrappers import EnvWrapper
 from robomimic.algo import RolloutPolicy
 
 
-def get_exp_dir(config, auto_remove_exp_dir=False):
+def get_exp_dir(config, auto_remove_exp_dir=False, resume=False):
     """
     Create experiment directory from config. If an identical experiment directory
     exists and @auto_remove_exp_dir is False (default), the function will prompt 
@@ -37,6 +38,8 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     Args:
         auto_remove_exp_dir (bool): if True, automatically remove the existing experiment
             folder if it exists at the same path.
+        resume (bool): if True, resume an existing training run instead of creating a 
+            new experiment directory
     
     Returns:
         log_dir (str): path to created log directory (sub-folder in experiment directory)
@@ -55,7 +58,12 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
         # relative paths are specified relative to robomimic module location
         base_output_dir = os.path.join(robomimic.__path__[0], base_output_dir)
     base_output_dir = os.path.join(base_output_dir, config.experiment.name)
-    if os.path.exists(base_output_dir):
+    if resume:
+        assert os.path.exists(base_output_dir), "Resuming training run, but output dir {} does not exist".format(base_output_dir)
+        subdir_lst = os.listdir(base_output_dir)
+        time_str = sorted(subdir_lst)[-1]  # get the most recent subdirectory
+        assert os.path.isdir(os.path.join(base_output_dir, time_str)), "Found item {} that is not a subdirectory in {}".format(time_str, base_output_dir)
+    elif os.path.exists(base_output_dir):
         if not auto_remove_exp_dir:
             ans = input("WARNING: model directory ({}) already exists! \noverwrite? (y/n)\n".format(base_output_dir))
         else:
@@ -68,16 +76,19 @@ def get_exp_dir(config, auto_remove_exp_dir=False):
     output_dir = None
     if config.experiment.save.enabled:
         output_dir = os.path.join(base_output_dir, time_str, "models")
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=resume)
 
     # tensorboard directory
     log_dir = os.path.join(base_output_dir, time_str, "logs")
-    os.makedirs(log_dir)
+    os.makedirs(log_dir, exist_ok=resume)
 
     # video directory
     video_dir = os.path.join(base_output_dir, time_str, "videos")
-    os.makedirs(video_dir)
-    return log_dir, output_dir, video_dir
+    os.makedirs(video_dir, exist_ok=resume)
+
+    time_dir = os.path.join(base_output_dir, time_str)
+    
+    return log_dir, output_dir, video_dir, time_dir
 
 
 def load_data_for_training(config, obs_keys):
@@ -106,16 +117,18 @@ def load_data_for_training(config, obs_keys):
         assert (train_filter_by_attribute is not None) and (valid_filter_by_attribute is not None), \
             "did not specify filter keys corresponding to train and valid split in dataset" \
             " - please fill config.train.hdf5_filter_key and config.train.hdf5_validation_filter_key"
-        train_demo_keys = FileUtils.get_demos_for_filter_key(
-            hdf5_path=os.path.expanduser(config.train.data),
-            filter_key=train_filter_by_attribute,
-        )
-        valid_demo_keys = FileUtils.get_demos_for_filter_key(
-            hdf5_path=os.path.expanduser(config.train.data),
-            filter_key=valid_filter_by_attribute,
-        )
-        assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
-            "validation demonstrations!"
+        assert isinstance(config.train.data, list), "config.train.data should be a list of datasets, not a single dataset"
+        for dataset_cfg in config.train.data:
+            train_demo_keys = FileUtils.get_demos_for_filter_key(
+                hdf5_path=os.path.expanduser(dataset_cfg["path"]),
+                filter_key=train_filter_by_attribute,
+            )
+            valid_demo_keys = FileUtils.get_demos_for_filter_key(
+                hdf5_path=os.path.expanduser(dataset_cfg["path"]),
+                filter_key=valid_filter_by_attribute,
+            )
+            assert set(train_demo_keys).isdisjoint(set(valid_demo_keys)), "training demonstrations overlap with " \
+                "validation demonstrations!"
         train_dataset = dataset_factory(config, obs_keys, filter_by_attribute=train_filter_by_attribute)
         valid_dataset = dataset_factory(config, obs_keys, filter_by_attribute=valid_filter_by_attribute)
     else:
@@ -147,10 +160,20 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     if dataset_path is None:
         dataset_path = config.train.data
 
+    # NOTE: currently supporting fixed language embedding per dataset
+    ## that is fetched from dataset config and not from file
+    if LangUtils.LANG_EMB_OBS_KEY in obs_keys:
+        obs_keys.remove(LangUtils.LANG_EMB_OBS_KEY)
+        ds_langs = [ds_cfg.get("lang", "dummy") for ds_cfg in config.train.data]
+    else:
+        ds_langs = [None for _ in config.train.data]
+
     ds_kwargs = dict(
         hdf5_path=dataset_path,
         obs_keys=obs_keys,
+        action_keys=config.train.action_keys,
         dataset_keys=config.train.dataset_keys,
+        action_config=config.train.action_config,
         load_next_obs=config.train.hdf5_load_next_obs, # whether to load next observations (s') from dataset
         frame_stack=config.train.frame_stack,
         seq_length=config.train.seq_length,
@@ -161,11 +184,92 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
         hdf5_cache_mode=config.train.hdf5_cache_mode,
         hdf5_use_swmr=config.train.hdf5_use_swmr,
         hdf5_normalize_obs=config.train.hdf5_normalize_obs,
-        filter_by_attribute=filter_by_attribute
+        filter_by_attribute=filter_by_attribute,
     )
-    dataset = SequenceDataset(**ds_kwargs)
+
+    ds_kwargs["hdf5_path"] = [ds_cfg["path"] for ds_cfg in config.train.data]
+    ds_kwargs["filter_by_attribute"] = [ds_cfg.get("filter_key", filter_by_attribute) for ds_cfg in config.train.data]
+    ds_kwargs["demo_limit"] = [ds_cfg.get("demo_limit", None) for ds_cfg in config.train.data]
+    ds_weights = [ds_cfg.get("weight", 1.0) for ds_cfg in config.train.data]
+
+    meta_ds_kwargs = dict()
+
+    dataset = get_dataset(
+        ds_class=SequenceDataset,
+        ds_kwargs=ds_kwargs,
+        ds_weights=ds_weights,
+        ds_langs=ds_langs,
+        normalize_weights_by_ds_size=config.train.normalize_weights_by_ds_size,
+        meta_ds_class=MetaDataset,
+        meta_ds_kwargs=meta_ds_kwargs,
+    )
 
     return dataset
+
+
+def get_dataset(
+    ds_class,
+    ds_kwargs,
+    ds_weights,
+    ds_langs,
+    normalize_weights_by_ds_size,
+    meta_ds_class=MetaDataset,
+    meta_ds_kwargs=None,
+):
+    """
+    Create a dataset object from the provided class and parameters.
+
+    Args:
+        ds_class (class): class of the dataset to create (e.g. SequenceDataset)
+        ds_kwargs (dict): keyword arguments to pass to the dataset class constructor
+        ds_weights (list): list of weights for each dataset instance, used in MetaDataset
+        ds_langs (list): list of language embeddings for each dataset instance
+        normalize_weights_by_ds_size (bool): if True, normalize dataset weights by the size of each dataset
+        meta_ds_class (class): class of the meta dataset to create (e.g. MetaDataset)
+        meta_ds_kwargs (dict): keyword arguments to pass to the meta dataset class constructor
+    
+    Returns:
+        ds (SequenceDataset or MetaDataset instance): dataset object created from the provided class and parameters
+    """
+    ds_list = []
+    for i in range(len(ds_weights)):
+        
+        ds_kwargs_copy = deepcopy(ds_kwargs)
+
+        keys = ["hdf5_path", "filter_by_attribute", "demo_limit"]
+
+        for k in keys:
+            ds_kwargs_copy[k] = ds_kwargs[k][i]
+
+        ds_kwargs_copy["lang"] = ds_langs[i]
+        
+        ds_list.append(ds_class(**ds_kwargs_copy))
+    
+    if len(ds_weights) == 1:
+        ds = ds_list[0]
+    else:
+        if meta_ds_kwargs is None:
+            meta_ds_kwargs = dict()
+        ds = meta_ds_class(
+            datasets=ds_list,
+            ds_weights=ds_weights,
+            normalize_weights_by_ds_size=normalize_weights_by_ds_size,
+            **meta_ds_kwargs
+        )
+
+    return ds
+
+
+def batchify_obs(obs_list):
+    """
+    Converts a list of observation dictionaries into a single dictionary.
+    """
+    keys = list(obs_list[0].keys())
+    obs = {
+        k: np.stack([obs_list[i][k] for i in range(len(obs_list))]) for k in keys
+    }
+    
+    return obs
 
 
 def run_rollout(
@@ -216,14 +320,18 @@ def run_rollout(
     results = {}
     video_count = 0  # video frame counter
 
-    total_reward = 0.
-    success = { k: False for k in env.is_success() } # success metrics
+    rews = []
+    success = None # success metrics
 
+    end_step = None
+
+    video_frames = []
+    
     try:
         for step_i in range(horizon):
-
             # get action from policy
-            ac = policy(ob=ob_dict, goal=goal_dict)
+            policy_ob = ob_dict
+            ac = policy(ob=policy_ob, goal=goal_dict)
 
             # play action
             ob_dict, r, done, _ = env.step(ac)
@@ -233,29 +341,42 @@ def run_rollout(
                 env.render(mode="human")
 
             # compute reward
-            total_reward += r
+            rews.append(r)
 
             cur_success_metrics = env.is_success()
-            for k in success:
-                success[k] = success[k] or cur_success_metrics[k]
+
+            if success is None:
+                success = deepcopy(cur_success_metrics)
+            else:
+                for k in success:
+                    success[k] = success[k] | cur_success_metrics[k]
 
             # visualization
             if video_writer is not None:
                 if video_count % video_skip == 0:
-                    video_img = env.render(mode="rgb_array", height=512, width=512)
-                    video_writer.append_data(video_img)
+                    frame = env.render(mode="rgb_array", height=512, width=512)
+                    video_frames.append(frame)
 
                 video_count += 1
 
             # break if done
             if done or (terminate_on_success and success["task"]):
+                end_step = step_i
                 break
 
     except env.rollout_exceptions as e:
         print("WARNING: got rollout exception {}".format(e))
 
+
+    if video_writer is not None:
+        for frame in video_frames:
+            video_writer.append_data(frame)
+
+    end_step = end_step or step_i
+    total_reward = np.sum(rews[:end_step + 1])
+    
     results["Return"] = total_reward
-    results["Horizon"] = step_i + 1
+    results["Horizon"] = end_step + 1
     results["Success_Rate"] = float(success["task"])
 
     # log additional success metrics
@@ -339,14 +460,16 @@ def rollout_with_stats(
         video_paths = { k : os.path.join(video_dir, "{}{}".format(k, video_str)) for k in envs }
         video_writers = { k : imageio.get_writer(video_paths[k], fps=20) for k in envs }
 
-    for env_name, env in envs.items():
+    for env_key, env in envs.items():
         env_video_writer = None
         if write_video:
-            print("video writes to " + video_paths[env_name])
-            env_video_writer = video_writers[env_name]
+            print("video writes to " + video_paths[env_key])
+            env_video_writer = video_writers[env_key]
+
+        env_name = env.name
 
         print("rollout: env={}, horizon={}, use_goals={}, num_episodes={}".format(
-            env.name, horizon, use_goals, num_episodes,
+            env_name, horizon, use_goals, num_episodes,
         ))
         rollout_logs = []
         iterator = range(num_episodes)
@@ -367,8 +490,10 @@ def rollout_with_stats(
                 terminate_on_success=terminate_on_success,
             )
             rollout_info["time"] = time.time() - rollout_timestamp
+
             rollout_logs.append(rollout_info)
             num_success += rollout_info["Success_Rate"]
+            
             if verbose:
                 print("Episode {}, horizon={}, num_success={}".format(ep_i + 1, horizon, num_success))
                 print(json.dumps(rollout_info, sort_keys=True, indent=4))
@@ -381,7 +506,7 @@ def rollout_with_stats(
         rollout_logs = dict((k, [rollout_logs[i][k] for i in range(len(rollout_logs))]) for k in rollout_logs[0])
         rollout_logs_mean = dict((k, np.mean(v)) for k, v in rollout_logs.items())
         rollout_logs_mean["Time_Episode"] = np.sum(rollout_logs["time"]) / 60. # total time taken for rollouts in minutes
-        all_rollout_logs[env_name] = rollout_logs_mean
+        all_rollout_logs[env_key] = rollout_logs_mean
 
     if video_path is not None:
         # close video writer that was used for all envs
@@ -460,7 +585,7 @@ def should_save_from_rollout_logs(
     )
 
 
-def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization_stats=None):
+def save_model(model, config, env_meta, shape_meta, ckpt_path, variable_state=None, obs_normalization_stats=None, action_normalization_stats=None):
     """
     Save model to a torch pth file.
 
@@ -475,10 +600,18 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
 
         ckpt_path (str): writes model checkpoint to this path
 
+        variable_state (dict): internal variable state in main train loop, used for restoring training process
+            from ckpt
+
         obs_normalization_stats (dict): optionally pass a dictionary for observation
             normalization. This should map observation keys to dicts
             with a "mean" and "std" of shape (1, ...) where ... is the default
             shape for the observation.
+
+        action_normalization_stats (dict): optionally pass a dictionary for action
+            normalization. This should map action keys to dicts
+            with a "mean" and "std" of shape (1, ...) where ... is the default
+            shape for the action.
     """
     env_meta = deepcopy(env_meta)
     shape_meta = deepcopy(shape_meta)
@@ -488,11 +621,15 @@ def save_model(model, config, env_meta, shape_meta, ckpt_path, obs_normalization
         algo_name=config.algo_name,
         env_metadata=env_meta,
         shape_metadata=shape_meta,
+        variable_state=variable_state,
     )
     if obs_normalization_stats is not None:
         assert config.train.hdf5_normalize_obs
         obs_normalization_stats = deepcopy(obs_normalization_stats)
         params["obs_normalization_stats"] = TensorUtils.to_list(obs_normalization_stats)
+    if action_normalization_stats is not None:
+        action_normalization_stats = deepcopy(action_normalization_stats)
+        params["action_normalization_stats"] = TensorUtils.to_list(action_normalization_stats)
     torch.save(params, ckpt_path)
     print("save checkpoint to {}".format(ckpt_path))
 
@@ -558,6 +695,7 @@ def run_epoch(model, data_loader, epoch, validate=False, num_steps=None, obs_nor
         t = time.time()
         info = model.train_on_batch(input_batch, epoch, validate=validate)
         timing_stats["Train_Batch"].append(time.time() - t)
+        model.on_gradient_step()
 
         # tensorboard logging
         t = time.time()

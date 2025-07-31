@@ -3,6 +3,10 @@ Set of general purpose utility functions for easier interfacing with Python API
 """
 import inspect
 from copy import deepcopy
+from typing import Union, Sequence, Dict, Optional, Tuple
+
+import numpy as np
+
 import robomimic.macros as Macros
 
 
@@ -71,3 +75,45 @@ def extract_class_init_kwargs_from_dict(cls, dic, copy=False, verbose=False):
             print(f"Warning: For class {cls.__name__}, got missing keys: {keys_not_in_dic} ")
 
     return subdic
+
+
+def deep_update(d, u):
+    """
+    Deeply update dictionary @d with values from dictionary @u.
+
+    Copied from https://stackoverflow.com/a/3233356
+    """
+    import collections
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+def action_dict_to_vector(
+        action_dict: Dict[str, np.ndarray], 
+        action_keys: Optional[Sequence[str]]=None) -> np.ndarray:
+    if action_keys is None:
+        action_keys = list(action_dict.keys())
+    actions = [action_dict[k] for k in action_keys]
+
+    action_vec = np.concatenate(actions, axis=-1)
+    return action_vec
+
+
+def vector_to_action_dict(
+        action: np.ndarray, 
+        action_shapes: Dict[str, Tuple[int]],
+        action_keys: Sequence[str]) -> Dict[str, np.ndarray]:
+    action_dict = dict()
+    start_idx = 0
+    for key in action_keys:
+        this_act_shape = action_shapes[key]
+        this_act_dim = np.prod(this_act_shape)
+        end_idx = start_idx + this_act_dim
+        action_dict[key] = action[...,start_idx:end_idx].reshape(
+            action.shape[:-1]+this_act_shape)
+        start_idx = end_idx
+    return action_dict

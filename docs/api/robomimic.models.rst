@@ -12,6 +12,14 @@ robomimic.models.base\_nets module
    :undoc-members:
    :show-inheritance:
 
+robomimic.models.diffusion\_policy\_nets module
+-----------------------------------------------
+
+.. automodule:: robomimic.models.diffusion_policy_nets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 robomimic.models.distributions module
 -------------------------------------
 

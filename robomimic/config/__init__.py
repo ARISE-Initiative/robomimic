@@ -16,3 +16,4 @@ from robomimic.config.graph_config import GATConfig
 from robomimic.config.diff_graph_config import DiffGATConfig
 from robomimic.config.flow_graph_config import FlowGATConfig
 from robomimic.config.diffusion_policy_config import DiffusionPolicyConfig
+from robomimic.config.diffusion_policy_config import DiffusionPolicyConfig

@@ -6,6 +6,22 @@ from robomimic.config.base_config import BaseConfig
 
 class DiffusionPolicyConfig(BaseConfig):
     ALGO_NAME = "diffusion_policy"
+
+    def train_config(self):
+        """
+        Setting up training parameters for Diffusion Policy.
+
+        - don't need "next_obs" from hdf5 - so save on storage and compute by disabling it
+        - set compatible data loading parameters
+        """
+        super(DiffusionPolicyConfig, self).train_config()
+        
+        # disable next_obs loading from hdf5
+        self.train.hdf5_load_next_obs = False
+
+        # set compatible data loading parameters
+        self.train.seq_length = 16 # should match self.algo.horizon.prediction_horizon
+        self.train.frame_stack = 2 # should match self.algo.horizon.observation_horizon
     
     def algo_config(self):
         """
@@ -16,11 +32,16 @@ class DiffusionPolicyConfig(BaseConfig):
         """
         
         # optimization parameters
+        self.algo.optim_params.policy.optimizer_type = "adamw"
         self.algo.optim_params.policy.learning_rate.initial = 1e-4      # policy learning rate
         self.algo.optim_params.policy.learning_rate.decay_factor = 0.1  # factor to decay LR by (if epoch schedule non-empty)
-        self.algo.optim_params.policy.learning_rate.epoch_schedule = [] # epochs where LR decay occurs
-        self.algo.optim_params.policy.learning_rate.scheduler_type = "constant"
-        self.algo.optim_params.policy.regularization.L2 = 0.00          # L2 regularization strength
+        self.algo.optim_params.policy.learning_rate.step_every_batch = True
+        self.algo.optim_params.policy.learning_rate.scheduler_type = "cosine"
+        self.algo.optim_params.policy.learning_rate.num_cycles = 0.5 # number of cosine cycles (used by "cosine" scheduler)
+        self.algo.optim_params.policy.learning_rate.warmup_steps = 500 # number of warmup steps (used by "cosine" scheduler)
+        self.algo.optim_params.policy.learning_rate.epoch_schedule = [] # epochs where LR decay occurs (used by "linear" and "multistep" schedulers)
+        self.algo.optim_params.policy.learning_rate.do_not_lock_keys()
+        self.algo.optim_params.policy.regularization.L2 = 1e-6          # L2 regularization strength
 
         # horizon parameters
         self.algo.horizon.observation_horizon = 2
@@ -37,8 +58,6 @@ class DiffusionPolicyConfig(BaseConfig):
         # EMA parameters
         self.algo.ema.enabled = True
         self.algo.ema.power = 0.75
-
-        self.algo.language_conditioned = False
         
         # Noise Scheduler
         ## DDPM

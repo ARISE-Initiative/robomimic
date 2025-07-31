@@ -1,9 +1,6 @@
 # pip distribution folder
 dist/
 
-# datasets folder at top-level (leading slash)
-/datasets/
-
 # local test dataset that is lazily downloaded by example scripts
 tests/assets/test.hdf5
 tests/assets/test_v141.hdf5
