@@ -31,8 +31,8 @@ class FlowGATConfig(BaseConfig):
     def train_config(self):
         super().train_config()
         self.train.hdf5_load_next_obs = True
-        self.train.data = "datasets/square/ph/low_dim_v15.hdf5"
-        self.train.graph_config = "robomimic/algo/flow_gat_files/nut_assembly_fc_robot_sparse_env.json"
+        self.train.data = "datasets/can/ph/low_dim_v15.hdf5"
+        self.train.graph_config = "robomimic/algo/flow_gat_files/pickplace_fc_robot_sparse_env.json"
         self.train.seq_length = 10
         self.train.frame_stack = 2
         self.train.batch_size = 512
@@ -43,7 +43,7 @@ class FlowGATConfig(BaseConfig):
         self.train.hdf5_validation_filter_key = "valid"
         self.train.hdf5_normalize_obs = False
         self.train.global_feature_size = 14
-        self.train.obs_dim = 30
+        self.train.obs_dim = 21
 
     def algo_config(self):
         super().algo_config()
@@ -79,7 +79,7 @@ class FlowGATConfig(BaseConfig):
         gnn.hidden_dim = 64
         gnn.num_heads = 2
         gnn.attention_dropout = 0.2
-        gnn.node_input_dim = 22
+        gnn.node_input_dim = 21
         gnn.noise_std_dev = 0.02
         # Transformer
         transformer = self.algo.transformer

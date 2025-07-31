@@ -312,7 +312,7 @@ class FlowPolicy(nn.Module):
         algo_config,
         global_config,
         device: str = "cpu",
-        obs_dim: int = 30,
+        obs_dim: int = 23,
     ):
         super().__init__()
         seq_len = global_config.train.seq_length

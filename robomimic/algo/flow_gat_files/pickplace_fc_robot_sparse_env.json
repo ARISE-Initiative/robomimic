@@ -10,7 +10,7 @@
         ,{"id": "joint_5", "type": "joint"}
         ,{"id": "joint_6", "type": "joint"}
         ,{"id": "eef", "type": "eef"}
-        ,{"id": "nut", "type": "object"}
+        ,{"id": "can", "type": "object"}
 
 
         
@@ -65,10 +65,10 @@
           {"source_id": "joint_6", "target_id": "joint_4"},
           {"source_id": "joint_6", "target_id": "joint_5"},
 
-          {"source_id": "eef",     "target_id": "nut"},
-          {"source_id": "nut",     "target_id": "eef"},
-          {"source_id": "nut",     "target_id": "joint_6"},
-          {"source_id": "nut",     "target_id": "joint_5"}
+          {"source_id": "eef",     "target_id": "can"},
+          {"source_id": "can",     "target_id": "eef"},
+          {"source_id": "can",     "target_id": "joint_6"},
+          {"source_id": "can",     "target_id": "joint_5"}
      ],
     "global_features": [],
     "node_feature_map": {
@@ -120,7 +120,7 @@
             "position": [14, 15, 16],
             "rotation": [17, 18, 19, 20]
         },
-        "nut": {
+        "can": {
             "type": "object",
             "position": [7, 8, 9],
             "rotation": [10, 11, 12, 13],

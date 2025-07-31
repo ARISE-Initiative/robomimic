@@ -10,7 +10,7 @@
         ,{"id": "joint_5", "type": "joint"}
         ,{"id": "joint_6", "type": "joint"}
         ,{"id": "eef", "type": "eef"}
-        ,{"id": "nut", "type": "object"}
+        ,{"id": "cube", "type": "object"}
 
 
         
@@ -65,67 +65,66 @@
           {"source_id": "joint_6", "target_id": "joint_4"},
           {"source_id": "joint_6", "target_id": "joint_5"},
 
-          {"source_id": "eef",     "target_id": "nut"},
-          {"source_id": "nut",     "target_id": "eef"},
-          {"source_id": "nut",     "target_id": "joint_6"},
-          {"source_id": "nut",     "target_id": "joint_5"}
+          {"source_id": "eef",     "target_id": "cube"},
+          {"source_id": "cube",     "target_id": "eef"},
+          {"source_id": "cube",     "target_id": "joint_6"},
+          {"source_id": "cube",     "target_id": "joint_5"}
      ],
     "global_features": [],
     "node_feature_map": {
         "joint_0": {
             "type": "joint",
-            "joint_pos": [23],
+            "joint_pos": [19],
             "position": [],
             "rotation": []
         },
         "joint_1": {
             "type": "joint",
-            "joint_pos": [24],
+            "joint_pos": [20],
             "position": [],
             "rotation": []
         },
         "joint_2": {
             "type": "joint",
-            "joint_pos": [25],
+            "joint_pos": [21],
             "position": [],
             "rotation": []
         },
         "joint_3": {
             "type": "joint",
-            "joint_pos": [26],
+            "joint_pos": [22],
             "position": [],
             "rotation": []
         },
         "joint_4": {
             "type": "joint",
-            "joint_pos": [27],
+            "joint_pos": [23],
             "position": [],
             "rotation": []
         },
         "joint_5": {
             "type": "joint",
-            "joint_pos": [28],
+            "joint_pos": [24],
             "position": [],
             "rotation": []
         },
         "joint_6": {
             "type": "joint",
-            "joint_pos": [29],
+            "joint_pos": [25],
             "position": [],
             "rotation": []
         },
         "eef": {
             "type": "end_effector",
-            "joint_pos": [21, 22],
-            "position": [14, 15, 16],
-            "rotation": [17, 18, 19, 20]
+            "joint_pos": [17, 18],
+            "position": [10, 11, 12],
+            "rotation": [13, 14, 15, 16]
         },
-        "nut": {
+        "cube": {
             "type": "object",
-            "position": [7, 8, 9],
-            "rotation": [10, 11, 12, 13],
-            "pos_to_gripper": [0, 1, 2],
-            "rot_to_gripper": [3, 4, 5, 6]
+            "position": [0, 1, 2],
+            "rotation": [3, 4, 5, 6],
+            "pos_to_gripper": [7, 8, 9]
         }
     }
         

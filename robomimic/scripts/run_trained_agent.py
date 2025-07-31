@@ -57,6 +57,7 @@ import h5py
 import imageio
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
 
 import torch
 
@@ -214,7 +215,9 @@ def run_trained_agent(args):
     )
 
     # maybe set seed
+
     if args.seed is not None:
+        print(f"Setting seed for rollouts to {args.seed}")
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
         
@@ -231,7 +234,7 @@ def run_trained_agent(args):
         total_samples = 0
 
     rollout_stats = []
-    for i in range(rollout_num_episodes):
+    for i in tqdm(range(rollout_num_episodes), desc="Running rollouts", unit="episode"):
         stats, traj = rollout(
             policy=policy, 
             env=env, 
@@ -367,7 +370,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed",
         type=int,
-        default=None,
+        default=np.random.randint(0, 10000),
         help="(optional) set seed for rollouts",
     )
 
