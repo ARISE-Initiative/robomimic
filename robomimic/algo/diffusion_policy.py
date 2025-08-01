@@ -20,7 +20,6 @@ import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
-import random
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
@@ -117,6 +116,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         self.noise_scheduler = noise_scheduler
         self.ema = ema
         self.ema_nets = ema_nets
+        self.ema_nets.eval()
         self.action_check_done = False
         self.obs_queue = None
         self.action_queue = None
