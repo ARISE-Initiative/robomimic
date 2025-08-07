@@ -45,7 +45,7 @@ class ConfigGenerator(object):
         assert (wandb_proj_name is None) or isinstance(wandb_proj_name, str)
         self.wandb_proj_name = wandb_proj_name
 
-    def add_param(self, key, name, group, values, value_names=None):
+    def add_param(self, key, name, group, values, value_names=None, hidename=False, prepend=False):
         """
         Add parameter to the hyperparameter sweep.
 
