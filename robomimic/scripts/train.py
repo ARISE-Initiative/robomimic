@@ -139,7 +139,7 @@ def train(config, device, resume=False):
                     env_name=env_name,
                     render=False,
                     render_offscreen=config.experiment.render_video,
-                    use_image_obs=shape_meta["use_images"],
+                    use_image_obs=shape_meta["use_images"] or shape_meta["use_depths"],
                 )
                 env = EnvUtils.create_env_from_metadata(**env_kwargs)
                 # handle environment wrappers
