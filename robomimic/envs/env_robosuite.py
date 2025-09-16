@@ -263,7 +263,8 @@ class EnvRobosuite(EB.EnvBase):
                 ret[k] = self.get_real_depth_map(ret[k])
 
         # "object" key contains object information
-        ret["object"] = np.array(di["object-state"])
+        if "object-state" in di:
+            ret["object"] = np.array(di["object-state"])
 
         if self._is_v1:
             for robot in self.env.robots:
