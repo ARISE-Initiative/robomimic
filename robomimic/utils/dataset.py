@@ -382,7 +382,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         ep = self.demos[0]
         action_traj = self.get_action_traj(ep)
         action_stats = _compute_traj_stats(action_traj)
-        print("SequenceDataset: normalizing actions...")
+        print("SequenceDataset: computing action statistics...")
         for ep in LogUtils.custom_tqdm(self.demos[1:]):
             action_traj = self.get_action_traj(ep)
             traj_stats = _compute_traj_stats(action_traj)
