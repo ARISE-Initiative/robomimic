@@ -207,7 +207,7 @@ class JsonTemporalGraphConverter:
                 B, 1
             ), 
             t = T, # Shape: (B, num_nodes_per_graph)
-            node_temporal_mask=node_temporal_mask
+            time_index=node_temporal_mask
         )
         if global_features is not None:
             data.global_features = global_features

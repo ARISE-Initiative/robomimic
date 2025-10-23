@@ -344,6 +344,7 @@ class BC_Gaussian(BC):
         log["Log_Likelihood"] = info["losses"]["log_probs"].item() 
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
+        log["NumParams"] = sum(p.numel() for p in self.nets.parameters() if p.requires_grad)
         return log
 
 

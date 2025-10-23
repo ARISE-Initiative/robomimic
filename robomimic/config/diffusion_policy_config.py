@@ -22,6 +22,8 @@ class DiffusionPolicyConfig(BaseConfig):
         # set compatible data loading parameters
         self.train.seq_length = 16 # should match self.algo.horizon.prediction_horizon
         self.train.frame_stack = 2 # should match self.algo.horizon.observation_horizon
+
+        self.train.seed = 0
     
     def algo_config(self):
         """
@@ -61,7 +63,7 @@ class DiffusionPolicyConfig(BaseConfig):
         
         # Noise Scheduler
         ## DDPM
-        self.algo.ddpm.enabled = True
+        self.algo.ddpm.enabled = False
         self.algo.ddpm.num_train_timesteps = 100
         self.algo.ddpm.num_inference_timesteps = 100
         self.algo.ddpm.beta_schedule = 'squaredcos_cap_v2'
@@ -69,7 +71,7 @@ class DiffusionPolicyConfig(BaseConfig):
         self.algo.ddpm.prediction_type = 'epsilon'
 
         ## DDIM
-        self.algo.ddim.enabled = False
+        self.algo.ddim.enabled = True
         self.algo.ddim.num_train_timesteps = 100
         self.algo.ddim.num_inference_timesteps = 10
         self.algo.ddim.beta_schedule = 'squaredcos_cap_v2'

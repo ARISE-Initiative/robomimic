@@ -2,14 +2,12 @@
 Implementation of Diffusion Policy https://diffusion-policy.cs.columbia.edu/ by Cheng Chi
 """
 from typing import Callable, Union
-import math
+from copy import deepcopy
 from collections import OrderedDict, deque
 from packaging.version import parse as parse_version
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# requires diffusers==0.11.1
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.training_utils import EMAModel
@@ -22,7 +20,6 @@ import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
-import random
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.obs_utils as ObsUtils
@@ -109,13 +106,17 @@ class DiffusionPolicyUNet(PolicyAlgo):
         
         # setup EMA
         ema = None
+        ema_nets = None
         if self.algo_config.ema.enabled:
-            ema = EMAModel(model=nets, power=self.algo_config.ema.power)
+            ema = EMAModel(parameters=nets.parameters(), power=self.algo_config.ema.power)
+            ema_nets = deepcopy(nets)
                 
         # set attrs
         self.nets = nets
         self.noise_scheduler = noise_scheduler
         self.ema = ema
+        self.ema_nets = ema_nets
+        self.ema_nets.eval()
         self.action_check_done = False
         self.obs_queue = None
         self.action_queue = None
@@ -232,7 +233,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
                 
                 # update Exponential Moving Average of the model weights
                 if self.ema is not None:
-                    self.ema.step(self.nets)
+                    self.ema.step(self.nets.parameters())
                 
                 step_info = {
                     "policy_grad_norms": policy_grad_norms
@@ -256,6 +257,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         log["Loss"] = info["losses"]["l2_loss"].item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
+        log["NumParams"] = sum(p.numel() for p in self.nets.parameters() if p.requires_grad)
         return log
     
     def reset(self):
@@ -284,9 +286,22 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # obs_dict: key: [1,D]
         To = self.algo_config.horizon.observation_horizon
         Ta = self.algo_config.horizon.action_horizon
+
+        # TODO: obs_queue already handled by frame_stack
+        # make sure we have at least To observations in obs_queue
+        # if not enough, repeat
+        # if already full, append one to the obs_queue
+        # n_repeats = max(To - len(self.obs_queue), 1)
+        # self.obs_queue.extend([obs_dict] * n_repeats)
         
         if len(self.action_queue) == 0:
             # no actions left, run inference
+            # turn obs_queue into dict of tensors (concat at T dim)
+            # import pdb; pdb.set_trace()
+            # obs_dict_list = TensorUtils.list_of_flat_dict_to_dict_of_list(list(self.obs_queue))
+            # obs_dict_tensor = dict((k, torch.cat(v, dim=0).unsqueeze(0)) for k,v in obs_dict_list.items())
+            
+            # run inference
             # [1,T,Da]
             action_sequence = self._get_action_trajectory(obs_dict=obs_dict)
             
@@ -317,7 +332,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # select network
         nets = self.nets
         if self.ema is not None:
-            nets = self.ema.averaged_model
+            nets = self.ema_nets
         
         # encode obs
         inputs = {
@@ -327,8 +342,6 @@ class DiffusionPolicyUNet(PolicyAlgo):
         for k in self.obs_shapes:
             # first two dimensions should be [B, T] for inputs
             if inputs["obs"][k].ndim - 1 == len(self.obs_shapes[k]):
-                # adding time dimension if not present -- this is required as
-                # frame stacking is not invoked when sequence length is 1
                 inputs["obs"][k] = inputs["obs"][k].unsqueeze(1)
             assert inputs["obs"][k].ndim - 2 == len(self.obs_shapes[k])
         obs_features = TensorUtils.time_distributed(inputs, nets["policy"]["obs_encoder"], inputs_as_kwargs=True)
@@ -371,11 +384,13 @@ class DiffusionPolicyUNet(PolicyAlgo):
         """
         Get dictionary of current model parameters.
         """
+        if self.ema is not None:
+            self.ema.copy_to(self.ema_nets.parameters())
         return {
             "nets": self.nets.state_dict(),
             "optimizers": { k : self.optimizers[k].state_dict() for k in self.optimizers },
             "lr_schedulers": { k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
-            "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
+            "ema": self.ema.state_dict() if self.ema is not None else None,
         }
 
     def deserialize(self, model_dict, load_optimizers=False):
@@ -397,7 +412,8 @@ class DiffusionPolicyUNet(PolicyAlgo):
             model_dict["lr_schedulers"] = {}
 
         if model_dict.get("ema", None) is not None:
-            self.ema.averaged_model.load_state_dict(model_dict["ema"])
+            self.ema.load_state_dict(model_dict["ema"])
+            self.ema_nets.load_state_dict(model_dict["nets"])
 
         if load_optimizers:
             for k in model_dict["optimizers"]:

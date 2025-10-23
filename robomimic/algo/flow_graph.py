@@ -22,6 +22,7 @@ from robomimic.models.flow_policy import FlowPolicy
 from robomimic.algo.flow_gat_files.graph_converter import JsonTemporalGraphConverter
 
 
+
 @register_algo_factory_func("flow_gat")
 def algo_config_to_class(algo_config):
     """Factory function for FLOWGAT algorithm."""
@@ -37,8 +38,11 @@ class FLOW_GAT(PolicyAlgo):
             algo_config, obs_config, global_config, obs_key_shapes, ac_dim, device
         )
         self.converter = JsonTemporalGraphConverter(
-            json_path=global_config.train.graph_config, device=self.device
+            json_path=global_config.train.graph_config2, device=self.device
         )
+
+
+
         torch.backends.cudnn.benchmark = True
         torch.set_float32_matmul_precision("high")
         self.batch_size = global_config.train.batch_size

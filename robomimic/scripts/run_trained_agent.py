@@ -58,6 +58,7 @@ import imageio
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
+import time
 
 import torch
 
@@ -111,11 +112,17 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
     if return_obs:
         # store observations too
         traj.update(dict(obs=[], next_obs=[]))
+    
+    # Timing for inference
+    inference_times = []
+    
     try:
         for step_i in range(horizon):
-
-            # get action from policy
+            # get action from policy with timing
+            start_time = time.time()
             act = policy(ob=obs)
+            inference_time = time.time() - start_time
+            inference_times.append(inference_time)
 
             # play action
             next_obs, r, done, _ = env.step(act)
@@ -172,6 +179,12 @@ def rollout(policy, env, horizon, render=False, video_writer=None, video_skip=5,
                 traj[k][kp] = np.array(traj[k][kp])
         else:
             traj[k] = np.array(traj[k])
+
+    # Print inference timing statistics
+    if inference_times:
+        avg_inference_time = np.mean(inference_times)
+        avg_hz = 1.0 / avg_inference_time
+        print(f"Rollout complete - Average inference time: {avg_inference_time:.4f}s, Average Hz: {avg_hz:.2f}")
 
     return stats, traj
 

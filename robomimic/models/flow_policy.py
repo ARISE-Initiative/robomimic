@@ -160,9 +160,8 @@ class GCNBackbone(nn.Module):
 
     def forward(self, graph, time_emb) -> torch.Tensor:
         x, edge_index, edge_attr, batch_idx = graph.x, graph.edge_index, graph.edge_attr, graph.batch
-        num_timesteps = graph.t
+        num_timesteps = int(graph.time_index.max().item()) + 1
         x = x.float()
-
         x = self.node_encoder(x)
         time_emb_expanded = time_emb[batch_idx]
         x = torch.cat([x, time_emb_expanded], dim=-1)
@@ -190,9 +189,9 @@ class GCNBackbone(nn.Module):
             
         batch_size = int(batch_idx.max().item()) + 1
         t_val = num_timesteps if isinstance(num_timesteps, int) else num_timesteps.item()
-        node_type_expanded = graph.node_type.unsqueeze(1).expand(-1, t_val, -1)
+        node_type_expanded = graph.node_type.unsqueeze(1).expand(-1, t_val, -1) 
         type_flat = node_type_expanded.reshape(-1)
-        temp_flat = graph.node_temporal_mask.reshape(-1)
+        temp_flat = graph.time_index.reshape(-1)
         pool_idx = (
             batch_idx * t_val * (type_flat.max().item() + 1)
             + temp_flat * (type_flat.max().item() + 1)
@@ -255,7 +254,7 @@ class GATBackbone(nn.Module):
 
     def forward(self, graph, time_emb) -> torch.Tensor:
         x, edge_index, edge_attr, batch_idx = graph.x, graph.edge_index, graph.edge_attr, graph.batch
-        num_timesteps = graph.t
+        num_timesteps = int(graph.time_index.max().item()) + 1
         x = x.float()
 
         x = self.node_encoder(x)
@@ -281,7 +280,7 @@ class GATBackbone(nn.Module):
         t_val = num_timesteps if isinstance(num_timesteps, int) else num_timesteps.item()
         node_type_expanded = graph.node_type.unsqueeze(1).expand(-1, t_val, -1)
         type_flat = node_type_expanded.reshape(-1)
-        temp_flat = graph.node_temporal_mask.reshape(-1)
+        temp_flat = graph.time_index.reshape(-1)
         pool_idx = (
             batch_idx * t_val * (type_flat.max().item() + 1)
             + temp_flat * (type_flat.max().item() + 1)
@@ -409,7 +408,7 @@ class FlowPolicy(nn.Module):
             obs_emb = self.graph_encoder(graph, time_emb)
             obs_emb = self.graph_emb_projection(obs_emb)
             g_features = graph.global_features if hasattr(graph, 'global_features') else None
-            if g_features is not None:
+            if g_features is not None and g_features.numel() != 0:
                 g_features= g_features.view(-1, self.obs_len, g_features.size(-1))
                 g_features = self.global_feature_encoder(g_features)
                 obs_emb = obs_emb + g_features
@@ -426,7 +425,6 @@ class FlowPolicy(nn.Module):
         context_sequence = self.dropout(obs_emb + obs_pos_emb)
 
         # 3. Process context sequence with the encoder to create memory
-        # The separate time token has been removed.
         memory = self.context_encoder(context_sequence)
         
         # 4. Prepare action sequence for the decoder
@@ -438,6 +436,6 @@ class FlowPolicy(nn.Module):
             tgt=tgt, memory=memory, tgt_mask=self.tgt_mask
         )
         
-        # 6. Project to action dimension
+        # 6. Project to output dimension
         predicted_vector_field = self.output_head(output_embedding)
         return predicted_vector_field

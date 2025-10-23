@@ -83,7 +83,7 @@ class BCConfig(BaseConfig):
         self.algo.vae.prior_layer_dims = (300, 400)                         # prior MLP layer dimensions (if learning conditioned prior)
 
         # RNN policy settings
-        self.algo.rnn.enabled = False                               # whether to train RNN policy
+        self.algo.rnn.enabled = True                               # whether to train RNN policy
         self.algo.rnn.horizon = 10                                  # unroll length for RNN - should usually match train.seq_length
         self.algo.rnn.hidden_dim = 400                              # hidden dimension size    
         self.algo.rnn.rnn_type = "LSTM"                             # rnn type - one of "LSTM" or "GRU"
