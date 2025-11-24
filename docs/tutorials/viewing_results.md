@@ -28,7 +28,7 @@ Configured under `experiment.save`:
     
     # controlling frequency of checkpoints
     "every_n_seconds": null,
-    "every_n_epochs": 50,
+    "every_n_epochs": 200,
     "epochs": [],
     
     # saving the best checkpoints
@@ -46,7 +46,7 @@ Configured under `experiment.rollout`:
     "enabled": true,              # enable evaluation rollouts
     "n": 50,                      # number of rollouts per evaluation
     "horizon": 400,               # number of timesteps per rollout
-    "rate": 50,                   # frequency of evaluation (in epochs)
+    "rate": 200,                  # frequency of evaluation (in epochs)
     "terminate_on_success": true  # terminating rollouts upon task success
 }
 ```

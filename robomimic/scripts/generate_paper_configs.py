@@ -37,7 +37,7 @@ def modify_config_for_default_low_dim_exp(config):
     with config.experiment.values_unlocked():
         # save model during every evaluation (every 50 epochs)
         config.experiment.save.enabled = True
-        config.experiment.save.every_n_epochs = 50
+        config.experiment.save.every_n_epochs = 200
 
         # every epoch is 100 gradient steps, and validation epoch is 10 gradient steps
         config.experiment.epoch_every_n_steps = 100
@@ -48,7 +48,7 @@ def modify_config_for_default_low_dim_exp(config):
         config.experiment.rollout.enabled = True
         config.experiment.rollout.n = 50
         config.experiment.rollout.horizon = 400
-        config.experiment.rollout.rate = 50
+        config.experiment.rollout.rate = 200
         config.experiment.rollout.warmstart = 0
         config.experiment.rollout.terminate_on_success = True
 
