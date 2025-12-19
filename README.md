@@ -91,6 +91,20 @@ Now it is actively maintained and used for robotics research projects across mul
 We welcome community contributions to this project.
 For details please check our [contributing guidelines](https://robomimic.github.io/docs/miscellaneous/contributing.html).
 
+## LL4MA Additional Stuff
+
+To run docker connected to the local files using Bind Mount (for editing with vs code, etc.), run:
+
+`docker run -it 
+  --gpus all 
+  --net=host 
+  --env="DISPLAY" 
+  --env="QT_X11_NO_MITSHM=1" 
+  --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" 
+  --volume="$(pwd):/app/robomimic" 
+  --shm-size=16g 
+  robomimic /bin/bash`
+
 ## Citation
 
 Please cite [this paper](https://arxiv.org/abs/2108.03298) if you use this framework in your work:
