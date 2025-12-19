@@ -103,7 +103,7 @@ To run docker connected to the local files using Bind Mount (for editing with vs
   --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" 
   --volume="$(pwd):/app/robomimic" 
   --shm-size=16g 
-  robomimic /bin/bash`
+  robomimic`
 
 ## Citation
 
