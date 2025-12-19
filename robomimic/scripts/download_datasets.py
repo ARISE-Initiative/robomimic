@@ -110,7 +110,11 @@ if __name__ == "__main__":
     # set default base directory for downloads
     default_base_dir = args.download_dir
     if default_base_dir is None:
-        default_base_dir = os.path.join(robomimic.__path__[0], "../datasets")
+        # Use the script's location to determine the repo root (for development mode)
+        # This ensures datasets are saved in the git repo when running from source
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.abspath(os.path.join(script_dir, "../.."))
+        default_base_dir = os.path.join(repo_root, "datasets")
 
     # load args
     download_tasks = args.tasks
