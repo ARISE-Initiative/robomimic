@@ -24,10 +24,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install Miniconda
-RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh && \
-    bash /tmp/miniconda.sh -b -p /opt/conda && \
-    rm /tmp/miniconda.sh && \
-    conda clean -afy
+# RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh && \
+#     bash /tmp/miniconda.sh -b -p /opt/conda && \
+#     rm /tmp/miniconda.sh && \
+#     conda clean -afy
+
+RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-py39_23.5.2-0-Linux-x86_64.sh -o /tmp/miniconda.sh \
+    && bash /tmp/miniconda.sh -bf -p /opt/conda \
+    && rm /tmp/miniconda.sh \
+    && /opt/conda/bin/conda clean -ya
 
 # Create and activate robomimic conda environment with Python 3.9
 RUN /opt/conda/bin/conda create -n robomimic_venv python=3.9 -y
@@ -41,7 +46,17 @@ WORKDIR /opt
 RUN git clone https://github.com/ARISE-Initiative/robomimic.git && \
     /opt/conda/bin/conda run -n robomimic_venv pip install -e ./robomimic
 
-# Install robosuite
+# 1. Upgrade pip/setuptools (Critical to find the binary wheel)
+RUN /opt/conda/bin/conda run -n robomimic_venv pip install --upgrade pip setuptools wheel
+
+# 2. Pin Numpy < 2.0 (Pro tip: Numpy 2.0 just released and breaks many robotics libraries)
+RUN /opt/conda/bin/conda run -n robomimic_venv pip install "numpy<2.0"
+
+# 2.5 FORCE install MuJoCo binary (This fixes the build error!)
+# We use --only-binary to tell pip: "Do not try to compile this, if you can't find a wheel, fail."
+RUN /opt/conda/bin/conda run -n robomimic_venv pip install --only-binary=mujoco "mujoco>=3.3.0"
+
+# 3. NOW install robosuite
 RUN git clone https://github.com/ARISE-Initiative/robosuite.git && \
     cd robosuite && \
     /opt/conda/bin/conda run -n robomimic_venv pip install -r requirements.txt
