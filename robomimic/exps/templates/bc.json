@@ -39,7 +39,7 @@
     },
     "train": {
         "data": null,
-        "output_dir": "../bc_trained_models",
+        "output_dir": "/app/robomimic/robomimic/exps/results/bc_trained_models",
         "normalize_weights_by_ds_size": false,
         "num_data_workers": 0,
         "hdf5_cache_mode": "all",

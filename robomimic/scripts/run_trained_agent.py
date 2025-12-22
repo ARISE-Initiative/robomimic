@@ -57,6 +57,7 @@ import h5py
 import imageio
 import numpy as np
 from copy import deepcopy
+import os
 
 import torch
 
@@ -263,6 +264,12 @@ def run_trained_agent(args):
     avg_rollout_stats["Num_Success"] = np.sum(rollout_stats["Success_Rate"])
     print("Average Rollout Stats")
     print(json.dumps(avg_rollout_stats, indent=4))
+
+    if args.dataset_path is not None:
+        stats_path = os.path.splitext(args.dataset_path)[0] + "_stats.json"
+        with open(stats_path, "w") as f:
+            json.dump(avg_rollout_stats, f, indent=4)
+        print("Saved stats to {}".format(stats_path))
 
     if write_video:
         video_writer.close()
