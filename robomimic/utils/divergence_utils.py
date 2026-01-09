@@ -2,9 +2,14 @@ import h5py
 import numpy as np
 import torch_utils
 import torch
+import warnings
 from robomimic.utils.dataset import SequenceDataset
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+import argparse
+from tf_utils import compute_action_stats
+
+warnings.filterwarnings('ignore', message='logm result may be inaccurate')
 
 # GMM UTILS
 def _fit_gmm_single_timestep(args):
@@ -72,7 +77,6 @@ def _fit_gmm_single_timestep(args):
         counts_t[0] = time_step_data.shape[0]
     
     return means_t, sigmas_t, weights_t, counts_t
-
 
 def fit_gmm(data, num_components=5, n_jobs=-1):
     """
@@ -178,7 +182,6 @@ def _construct_state_graph(data):
     
     return graphs
 
-
 def _compute_divergence_via_neighbors(graphs, dt, k=4):
     """
     Estimates divergence by tracking the distance to the k-th neighbor.
@@ -218,7 +221,6 @@ def _compute_divergence_via_neighbors(graphs, dt, k=4):
 
     return div_est * dim
 
-
 def compute_divergence(data, dphase, k=4):
     """
     Method for computing approx. divergence at each time step using nearest neighbors
@@ -232,6 +234,81 @@ def compute_divergence(data, dphase, k=4):
     graphs = _construct_state_graph(data)
 
     return _compute_divergence_via_neighbors(graphs, dphase, k)
+
+
+def _add_phase(data):
+    """
+    Add phase information to each demonstration trajectory.
+    Phase goes from 0 to 1 linearly over the course of each trajectory.
+    
+    Args:
+        data: Dictionary returned by load_training_data() containing HDF5 file handle
+    
+    Returns:
+        data: Updated data dictionary where each demo now has 'phase' accessible via data[demo_key]['phase']
+    """
+    demos = data['demos']
+    
+    # Store phase data in the data dictionary indexed by demo key
+    for demo_key in demos:
+        # get the number of trajectory steps
+        actions = data['get_actions'](demo_key)
+        n_steps = len(actions)
+        
+        # make a linspace vector that goes from 0 to 1 (inclusive) with the number of trajectory steps
+        phase = torch.linspace(0, 1, n_steps)
+        
+        # Store the phase directly in data[demo_key]
+        if demo_key not in data:
+            data[demo_key] = {}
+        data[demo_key]['phase'] = phase
+    
+    return data
+
+def _bin_data(data, n_bins=100):
+    """
+    Create a phase tensor with fixed number of bins for all demonstrations.
+    Each demo's phase values are placed in their nearest bins, with NaN elsewhere.
+    
+    Args:
+        data: Dictionary returned by load_training_data() with phase added via _add_phase()
+        n_bins: int, number of phase bins (default 100)
+    
+    Returns:
+        phase_tensor: torch.tensor [n_demos, n_bins, 1], phase values binned with NaNs in empty bins
+        action_tensor: torch.tensor [n_demos, n_bins, 7], action values binned with NaNs in empty bins
+        demo_keys: list of demo keys corresponding to each row
+    """
+    demos = data['demos']
+    n_demos = len(demos)
+    
+    # Get action dimension from first demo
+    first_actions = data['get_actions'](demos[0])
+    action_dim = first_actions.shape[1]
+    
+    # Initialize phase and action tensors with NaNs
+    phase_tensor = torch.full((n_demos, n_bins, 1), float('nan'))
+    action_tensor = torch.full((n_demos, n_bins, action_dim), float('nan'))
+    
+    # Create bin centers from 0 to 1
+    bin_centers = torch.linspace(0, 1, n_bins)
+    
+    for i, demo_key in enumerate(demos):
+        # Get phase and actions for this demo
+        phase = data[demo_key]['phase']  # [n_steps]
+        actions = torch.from_numpy(data['get_actions'](demo_key))  # [n_steps, action_dim]
+        
+        # For each timestep, find nearest bin and place both phase and action
+        for t, phase_val in enumerate(phase):
+            # Find the closest bin center
+            distances = torch.abs(bin_centers - phase_val)
+            nearest_bin = torch.argmin(distances).item()
+            
+            # Place the phase value and action in the nearest bin
+            phase_tensor[i, nearest_bin, 0] = phase_val
+            action_tensor[i, nearest_bin, :] = actions[t, :]
+    
+    return phase_tensor, action_tensor, demos
 
 
 # MISC. UTILS
@@ -288,6 +365,7 @@ def load_training_data(hdf5_path, demo_keys=None, verbose=True):
             'rewards': demo['rewards'][()] if 'rewards' in demo else None,
             'dones': demo['dones'][()] if 'dones' in demo else None,
             'states': demo['states'][()] if 'states' in demo else None,
+            'phase': None,  # Placeholder, will be filled by _add_phase
         }
     
     def get_obs(demo_key, obs_key=None):
@@ -318,7 +396,6 @@ def load_training_data(hdf5_path, demo_keys=None, verbose=True):
         'get_rewards': get_rewards,
     }
 
-
 def visualize_observation_trajectories():
     """
     Method for visualizing trajectories to help understand what number of gmms should be fit to the traj's
@@ -332,9 +409,7 @@ if __name__ == "__main__":
     
     Usage:
         python robomimic/utils/divergence_utils.py --dataset /path/to/dataset.hdf5
-    """
-    import argparse
-    
+    """    
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True, help="Path to HDF5 dataset")
     parser.add_argument("--demo", type=str, default="demo_0", help="Demo key to inspect")
@@ -350,6 +425,9 @@ if __name__ == "__main__":
     
     # Show available demos
     print(f"\n2. Available demos: {data['demos'][:]}...")  # Show all
+
+    print(f"\n2.1 Adding phases...")
+    data = _add_phase(data)
     
     # Get full demo data
     print(f"\n3. Loading demo '{args.demo}'...")
@@ -357,6 +435,11 @@ if __name__ == "__main__":
     
     print(f"\n   Actions shape: {demo_data['actions'].shape}")
     print(f"   Actions range: [{demo_data['actions'].min():.3f}, {demo_data['actions'].max():.3f}]")
+
+    # Access phase from the data dictionary
+    phase = data[args.demo]['phase']
+    print(f"\n   Phase shape: {phase.shape}")
+    print(f"   Phase range: [{phase.min():.3f}, {phase.max():.3f}]")
     
     if demo_data['rewards'] is not None:
         print(f"   Total reward: {demo_data['rewards'].sum():.3f}")
@@ -403,7 +486,36 @@ if __name__ == "__main__":
     print(f"   Std:  {std_n_actions:.1f} timesteps")
     print(f"   Min:  {min_n_actions} timesteps")
     print(f"   Max:  {max_n_actions} timesteps")
+
+    print(f"\n9. Binning data:")
+    phase_tensor, action_tensor, _, = _bin_data(data, n_bins=max_n_actions)
+    print(f"    Phase tensor shape: {phase_tensor.shape}")
+    print(f"    Action tensor shape: {action_tensor.shape}")
     
+    # Count NaNs per bin
+    nan_counts = torch.isnan(action_tensor).any(dim=2).sum(dim=0)
+    print(f"    NaNs per bin (min/mean/max): {nan_counts.min()}/{nan_counts.float().mean():.1f}/{nan_counts.max()}")
+
+    print(f"\n10. Computing action stats:")
+    # Compute statistics along the demo dimension (dim=0)
+    T_mean, T_cov, gripper_mean, gripper_sd = compute_action_stats(action_tensor, dim=0)
+    print(f"    Mean transformation shape: {T_mean.shape}")
+    print(f"    Covariance shape: {T_cov.shape}")
+    print(f"    Gripper mean shape: {gripper_mean.shape}")
+    print(f"    Gripper std dev shape: {gripper_sd.shape}")
+    print(f"    Sample mean transformation (first bin):")
+    print(f"      {T_mean[0, 0, :, :]}")
+    print(f"    Sample covariance (first bin, first 3x3 block):")
+    print(f"      {T_cov[0, 0, :3, :3]}")
+    print(f"    Sample gripper stats (first bin): mean={gripper_mean[0, 0]:.4f}, sd={gripper_sd[0, 0]:.4f}")
+    
+    # Check for NaN handling
+    non_nan_bins = ~torch.isnan(T_mean).any(dim=3).any(dim=2).squeeze(1)
+    print(f"    Valid bins (non-NaN): {non_nan_bins.sum()}/{len(non_nan_bins)}")
+    non_nan_gripper_bins = ~torch.isnan(gripper_mean).squeeze(0)
+    print(f"    Valid gripper bins (non-NaN): {non_nan_gripper_bins.sum()}/{len(non_nan_gripper_bins)}")
+
+
     print("\n" + "="*60)
     print("Done! Remember to close the file when finished:")
     print("  data['data'].close()")
