@@ -319,6 +319,43 @@ def _ortho6d_to_rot_mat(ortho6d, w_first=True):
 
     return rotation_matrices
 
+def _axis_angle_to_quat(axis_angle, w_first=True):
+    """
+    Convert axis-angle representation to quaternion.
+    
+    Args:
+        axis_angle (torch.Tensor): A tensor of shape (..., 3) representing axis-angle rotation (axis * angle).
+        w_first (bool): Whether to return quaternion in (qw, qx, qy, qz) format.
+    Returns:
+        torch.Tensor: A tensor of shape (..., 4) representing quaternions.
+    """
+    # Compute rotation angle from axis-angle vector
+    angle = torch.norm(axis_angle, dim=-1, keepdim=True)
+    
+    # Compute rotation axis (handling zero angle case)
+    # When angle is near zero, use a default axis and the result will have sin(angle/2) ≈ 0 anyway
+    safe_angle = torch.where(angle > 1e-6, angle, torch.ones_like(angle))
+    axis = axis_angle / safe_angle
+    
+    # Convert axis-angle to quaternion
+    half_angle = angle * 0.5
+    sin_half = torch.sin(half_angle)
+    cos_half = torch.cos(half_angle)
+    
+    quaternion = torch.cat([
+        cos_half,           # qw
+        axis * sin_half     # qx, qy, qz
+    ], dim=-1)
+    
+    # Normalize quaternion
+    quaternion = quaternion / torch.norm(quaternion, dim=-1, keepdim=True)
+    
+    if not w_first:
+        # Rearrange to (qx, qy, qz, qw)
+        quaternion = torch.cat([quaternion[..., 1:], quaternion[..., 0:1]], dim=-1)
+    
+    return quaternion
+
 # transformation conversions
 def _pose_quat_to_T(pose_quat, w_first=True):
     """
@@ -466,6 +503,69 @@ def _pose_ortho6d_to_pose_quat(pose_ortho6d, w_first=True):
 
     return pose_quat
 
+def _pose_axis_angle_to_pose_quat(pose_axis_angle, w_first=True):
+    """
+    Convert a batch of position and axis-angle tensors to position and quaternion representation.
+    
+    Args:
+        pose_axis_angle (torch.Tensor): A tensor of shape (..., 6) where the first 3 elements are position (xyz)
+                                         and the last 3 elements are the axis-angle rotation (axis * angle).
+    Returns:
+        torch.Tensor: A tensor of shape (..., 7) representing the pose in position and quaternion representation.
+    """
+    position = pose_axis_angle[..., :3]  # First three elements are position
+    axis_angle = pose_axis_angle[..., 3:]  # Last three elements are axis-angle
+
+    # Convert axis-angle to quaternion
+    quaternion = _axis_angle_to_quat(axis_angle, w_first=w_first)
+
+    # Concatenate position and quaternion
+    pose_quat = torch.cat([position, quaternion], dim=-1)
+
+    return pose_quat
+
+def _pose_quat_to_pose_axis_angle(pose_quat, w_first=True):
+    """
+    Convert a batch of position and quaternion tensors to position and axis-angle representation.
+    
+    Args:
+        pose_quat (torch.Tensor): A tensor of shape (..., 7) where the first 3 elements are position (x, y, z)
+                                     and the last 4 elements are the quaternion (qw, qx, qy, qz).
+        
+    Returns:
+        torch.Tensor: A tensor of shape (..., 6) where the first 3 elements are position (x, y, z)
+                      and the last 3 elements are the axis-angle rotation (axis * angle).
+    """
+    position = pose_quat[..., :3]  # First three elements are position
+    quaternion = pose_quat[..., 3:]  # Last four elements are quaternion
+
+    # Convert quaternion to rotation matrix
+    rotation_matrix = _quat_to_rot_mat(quaternion, w_first=w_first)
+
+    # Convert rotation matrix to axis-angle
+    batch_shape = rotation_matrix.shape[:-2]
+    R = rotation_matrix.view(-1, 3, 3)
+    batch_size = R.shape[0]
+
+    angle = torch.acos(torch.clamp((torch.diagonal(R, dim1=-2, dim2=-1).sum(dim=-1) - 1) / 2, -1.0, 1.0))
+    sin_angle = torch.sin(angle)
+
+    axis = torch.zeros((batch_size, 3), dtype=rotation_matrix.dtype, device=rotation_matrix.device)
+
+    mask = sin_angle > 1e-6
+    if mask.any():
+        axis[mask, 0] = (R[mask, 2, 1] - R[mask, 1, 2]) / (2 * sin_angle[mask])
+        axis[mask, 1] = (R[mask, 0, 2] - R[mask, 2, 0]) / (2 * sin_angle[mask])
+        axis[mask, 2] = (R[mask, 1, 0] - R[mask, 0, 1]) / (2 * sin_angle[mask])
+
+    axis_angle = axis * angle.unsqueeze(-1)
+
+    axis_angle = axis_angle.view(*batch_shape, 3)
+
+    # Concatenate position and axis-angle
+    pose_axis_angle = torch.cat([position, axis_angle], dim=-1)
+    return pose_axis_angle
+
 def _convert_pose_any_to_pose_quat(pose, w_first=True):
     """
     Convert a batch of poses from any supported representation to position and quaternion representation.
@@ -477,16 +577,28 @@ def _convert_pose_any_to_pose_quat(pose, w_first=True):
     Returns:
         torch.Tensor: A tensor of shape (..., 9) representing the pose in position and 6-DOF rotation representation.
     """
-    representation_from = 'quat' if pose.shape[-1] == 7 else 'ortho6d' if pose.shape[-1] == 9 else 'T_mat' if (pose.shape[-1] == 4) and (pose.shape[-2] == 4) else None
+    representation_from = 'quat' if pose.shape[-1] == 7 \
+        else 'ortho6d' if pose.shape[-1] == 9 \
+            else 'T_mat' if (pose.shape[-1] == 4) and (pose.shape[-2] == 4) \
+                else 'axis_angle' if pose.shape[-1] == 6 \
+                    else None
 
     if representation_from == 'ortho6d':
         return _pose_ortho6d_to_pose_quat(pose, w_first=w_first), representation_from
     elif representation_from == 'T_mat':
         return _T_to_pose_quat(pose, w_first=w_first), representation_from
+    elif representation_from == 'axis_angle':
+        return _pose_axis_angle_to_pose_quat(pose, w_first=w_first), representation_from
     elif representation_from == 'quat':
+        if not w_first:
+            # Rearrange to (qw, qx, qy, qz)
+            position = pose[..., :3]
+            quaternion = pose[..., 3:]
+            quaternion = torch.cat([quaternion[..., 3:4], quaternion[..., :3]], dim=-1)
+            pose = torch.cat([position, quaternion], dim=-1)
         return pose, representation_from
     else:
-        raise ValueError(f"Unsupported representation_from. Supported: 'quat', 'T_matrix', 'ortho6d'.")
+        raise ValueError(f"Unsupported representation_from. Supported: 'quat', 'T_matrix', 'ortho6d', 'axis_angle'.")
 
 def _convert_pose_quat_to_pose_any(pose_quat, representation_to, w_first=True):
     """
@@ -494,17 +606,25 @@ def _convert_pose_quat_to_pose_any(pose_quat, representation_to, w_first=True):
     
     Args:
         pose_quat (torch.Tensor): A tensor of shape (..., 9) representing the pose in position and 6-DOF rotation representation.
-        representation_to (str): The target representation: 'quat', 'ortho6d', or 'T_mat'.
+        representation_to (str): The target representation: 'quat', 'ortho6d', 'axis_angle', or 'T_mat'.
         w_first (bool): Whether the quaternion representation uses (qw, qx, qy, qz) format.
 
     Returns:
-        torch.Tensor: A tensor of shape (..., D) where D is 7 for 'quat', 9 for 'ortho6d', or (4,4) for 'T_mat'.
+        torch.Tensor: A tensor of shape (..., D) where D is 7 for 'quat', 9 for 'ortho6d', 6 for 'axis_angle', or (4,4) for 'T_mat'.
     """
     if representation_to == 'ortho6d':
         return _pose_quat_to_pose_ortho6d(pose_quat, w_first=w_first)
     elif representation_to == 'T_mat':
         return _pose_quat_to_T(pose_quat, w_first=w_first)
+    elif representation_to == 'axis_angle':
+        return _pose_quat_to_pose_axis_angle(pose_quat, w_first=w_first)
     elif representation_to == 'quat':
+        if not w_first:
+            # Rearrange to (qx, qy, qz, qw)
+            position = pose_quat[..., :3]
+            quaternion = pose_quat[..., 3:]
+            quaternion = torch.cat([quaternion[..., 1:], quaternion[..., 0:1]], dim=-1)
+            pose_quat = torch.cat([position, quaternion], dim=-1)
         return pose_quat
     else:
         raise ValueError(f"Unsupported representation_to. Supported: 'quat', 'T_matrix', 'ortho6d'.")
@@ -931,39 +1051,75 @@ def _compute_transform_stats(T, dim=-1):
 # --- PUBLIC METHODS --- #
 ##########################
 # twist math ops
-def compute_twist_between_poses(pose1, pose2, dt=1.0):
+def compute_twist_between_poses(pose1, pose2=None, dt=1.0, relative_pose=None, w_first=True):
     """
-    Compute the twist (spatial velocity) between two sets of poses.
+    Compute the twist (spatial velocity) between two sets of poses. Handles NaN entries by replacing NaNs with zeros during computation
+    and then restoring NaNs in the output twist where either input pose had NaNs.
     
     Args:
         pose1: First pose as tensor of shape [..., 7], [..., 9], or [..., 4, 4]
-        pose2: Second pose as tensor of shape [..., 7], [..., 9], or [..., 4, 4]
+        pose2: Second pose as tensor of shape [..., 7], [..., 9], or [..., 4, 4] or None. If None, 
+                convert pose1 into a twist relative to the world frame (identity).
         dt: Time difference between poses (default=1.0)
+        relative_pose: pose that the twist is relative to (default: None) of 
+                shape [..., 7], [..., 9], or [..., 4, 4]. If None, twist is relative
+                to world frame
+        w_first: Whether the input quaternion representation uses (qw, qx, qy, qz) format (default: True)
         
     Returns:
         Twist vector of shape [..., 6] containing [vx, vy, vz, ωx, ωy, ωz]
     """
-    
+
+    # Handle case where pose2 is None (convert pose1 to twist from identity)
+    if pose2 is None:
+        # Create identity pose with same shape as pose1
+        batch_shape = pose1.shape[:-1]
+        identity_pose = torch.zeros((*batch_shape, 7), device=pose1.device, dtype=pose1.dtype)
+        identity_pose[..., 3] = 1.0  # Set qw = 1 for identity quaternion
+        pose2 = pose1
+        pose1 = identity_pose
+
+    # Set up relative_pose (default to identity/world frame)
+    if relative_pose is None:
+        # Create identity pose with same shape as pose1
+        batch_shape = pose1.shape[:-1]
+        relative_pose = torch.zeros((*batch_shape, 7), device=pose1.device, dtype=pose1.dtype)
+        relative_pose[..., 3] = 1.0  # Set qw = 1 for identity quaternion
+    else:
+        # put the relative pose on the correct device and dtype
+        relative_pose = relative_pose.to(pose1.device).to(pose1.dtype)
+
     # convert poses to position and quaternion (x, y, z, qw, qx, qy, qz)
-    pose1, = _convert_pose_any_to_pose_quat(pose1)
-    pose2, _ = _convert_pose_any_to_pose_quat(pose2)
+    pose1, _ = _convert_pose_any_to_pose_quat(pose1, w_first=w_first)
+    pose2, _ = _convert_pose_any_to_pose_quat(pose2, w_first=w_first)
+    relative_pose, _ = _convert_pose_any_to_pose_quat(relative_pose, w_first=w_first)
 
     # check that pose1 and pose2 batch dimensions are compatible
     if pose1.shape[:-1] != pose2.shape[:-1]:
         raise ValueError(f"Pose1 batch dim {pose1.shape[:-1]} and Pose2 batch dim {pose2.shape[:-1]} are not compatible.")
 
+    # Track NaN entries in input poses for later restoration
+    nan_mask_pose1 = torch.isnan(pose1).any(dim=-1)  # [...] True where any component is NaN
+    nan_mask_pose2 = torch.isnan(pose2).any(dim=-1)  # [...] True where any component is NaN
+    nan_mask = nan_mask_pose1 | nan_mask_pose2  # Combined mask
+    
+    # Replace NaNs with safe default values for computation
+    # For positions: use 0, for quaternions: use identity (1, 0, 0, 0) for w,x,y,z
+    pose1_safe = torch.where(torch.isnan(pose1), torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device=pose1.device, dtype=pose1.dtype), pose1)
+    pose2_safe = torch.where(torch.isnan(pose2), torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device=pose2.device, dtype=pose2.dtype), pose2)
 
     # Extract positions and quaternions
-    pos1, quat1 = pose1[..., :3], pose1[..., 3:7]
-    pos2, quat2 = pose2[..., :3], pose2[..., 3:7]
+    pos1, quat1 = pose1_safe[..., :3], pose1_safe[..., 3:7]
+    pos2, quat2 = pose2_safe[..., :3], pose2_safe[..., 3:7]
+    rel_pos, rel_quat = relative_pose[..., :3], relative_pose[..., 3:7]
     
-    # Compute linear velocity (position difference)
-    linear_vel = (pos2 - pos1) / dt
+    # Compute linear velocity in world frame (position difference)
+    linear_vel_world = (pos2 - pos1) / dt
     
     # Compute quaternion difference (relative rotation)
     quat_diff = _quaternion_difference(quat1, quat2)
     
-    # Convert quaternion difference to angular velocity
+    # Convert quaternion difference to angular velocity in world frame
     qw = quat_diff[..., 0]
     qxyz = quat_diff[..., 1:4]
     
@@ -975,29 +1131,42 @@ def compute_twist_between_poses(pose1, pose2, dt=1.0):
     safe_norm_qxyz = torch.where(norm_qxyz > 1e-6, norm_qxyz, torch.ones_like(norm_qxyz))
     axis = qxyz / safe_norm_qxyz
     
-    # Angular velocity = axis * angle / dt
-    angular_vel = axis * angle.unsqueeze(-1) / dt
+    # Angular velocity = axis * angle / dt (in world frame)
+    angular_vel_world = axis * angle.unsqueeze(-1) / dt
+    
+    # Transform twist to relative frame using inverse rotation of relative_pose
+    # Get conjugate (inverse) of relative quaternion
+    rel_quat_inv = torch.cat([rel_quat[..., 0:1], -rel_quat[..., 1:4]], dim=-1)
+    rel_rot_mat = _quat_to_rot_mat(rel_quat_inv, w_first=True)
+    
+    # Rotate velocities into relative frame
+    linear_vel = torch.matmul(rel_rot_mat, linear_vel_world.unsqueeze(-1)).squeeze(-1)
+    angular_vel = torch.matmul(rel_rot_mat, angular_vel_world.unsqueeze(-1)).squeeze(-1)
     
     # Combine linear and angular velocity into twist
     twist = torch.cat([linear_vel, angular_vel], dim=-1)
     
+    # Restore NaNs in output where either input pose had NaNs
+    twist = torch.where(nan_mask.unsqueeze(-1), torch.tensor(float('nan'), device=twist.device, dtype=twist.dtype), twist)
+    
     return twist
 
-def add_twist_to_pose(pose, twist, dt):
+def add_twist_to_pose(pose, twist, dt, w_first=True):
     """
     Add a twist over time dt to a pose
     
     Args:
-        pose: Tensor of shape [..., 7] (x, y, z, qw, qx, qy, qz)
+        pose: Tensor of shape [..., 7], [..., 9], or [..., 4, 4] depending on representation
         twist: Tensor of shape [..., 6] (vx, vy, vz, ωx, ωy, ωz)
         dt: Tensor of shape [..., 1] Time period to apply twist for
+        w_first: Whether the input quaternion representation uses (qw, qx, qy, qz) format (default: True)
         
     Returns:
         Updated pose of shape [..., 7]
     """
    
     # convert pose to position and quaternion (x, y, z, qw, qx, qy, qz)
-    pose, pose_rep = _convert_pose_any_to_pose_quat(pose)
+    pose, pose_rep = _convert_pose_any_to_pose_quat(pose, w_first=w_first)
 
     # Ensure dt has the correct shape [..., 1]
     if dt.dim() == 0:  # scalar tensor
@@ -1048,8 +1217,8 @@ def add_twist_to_pose(pose, twist, dt):
     # Combine into new pose
     new_pose = torch.cat([new_position, new_quaternion], dim=-1)
 
-    # convert pose back to original representation
-    new_pose = _convert_pose_quat_to_pose_any(new_pose, representation_to=pose_rep)
+    # convert pose back to original representation (and match the quat order to the input if needed)
+    new_pose = _convert_pose_quat_to_pose_any(new_pose, representation_to=pose_rep, w_first=w_first)
     
     return new_pose
 
@@ -1107,3 +1276,4 @@ def compute_action_stats(actions, dim=-1):
     
     return T_mean, T_cov, gripper_mean, gripper_sd
     
+
