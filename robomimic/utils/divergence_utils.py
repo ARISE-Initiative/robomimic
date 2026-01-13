@@ -138,66 +138,11 @@ def fit_gmm(data, num_components=5, n_jobs=-1):
     
     return means, sigmas, weights, counts
 
-# testing
-def compute_policy_divergence_during_training(model, batch, n_samples=3):
-    """
-    Convenience wrapper to compute policy divergence during BC training.
-    This function can be called directly from train_on_batch() methods.
-    
-    Works with all BC model architectures:
-    - BC (MLP): ActorNetwork
-    - BC_RNN: RNN_MIMO_MLP  
-    - BC_Transformer: MIMO_Transformer
-    - BC_Gaussian: GaussianActorNetwork
-    - BC_GMM: GMMActorNetwork
-    - BC_VAE: VAE
-    
-    Args:
-        model: The BC policy network (self.nets["policy"] from BC algo)
-        batch: Training batch from process_batch_for_training() containing:
-            - batch['obs']: observation dictionary with EE pose keys
-            - batch['goal_obs']: optional goal observations
-        n_samples: Number of samples for Hutchinson estimator (default: 3, increase for accuracy)
-    
-    Returns:
-        divergence: Tensor [batch_size] with divergence values, or None if EE pose not available
-        
-    Example usage in BC.train_on_batch():
-        ```python
-        # After forward pass
-        predictions = self._forward_training(batch)
-        
-        # Compute divergence (optional)
-        try:
-            divergence = compute_policy_divergence_during_training(
-                self.nets["policy"], 
-                batch, 
-                n_samples=1
-            )
-            info["divergence"] = divergence.mean().item()  # Log average divergence
-        except Exception as e:
-            # Divergence computation failed (e.g., no EE pose in obs)
-            pass
-        ```
-    """
-    try:
-        # Get goal observations if present
-        goal_dict = batch.get('goal_obs', None)
-        
-        # Compute divergence using JVP method
-        divergence = estimate_divergence_jvp(
-            model=model,
-            batch=batch,
-            goal_dict=goal_dict,
-            n_samples=n_samples
-        )
-        return divergence
-        
-    except (KeyError, ValueError) as e:
-        # EE pose keys not in observations, cannot compute divergence
-        return None
-
-def estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key_quat='robot0_eef_quat', 
+############################
+# Private methods
+############################
+# model divergence enstimation
+def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key_quat='robot0_eef_quat', 
                             goal_dict=None, n_samples=1):
     """
     Estimates the exact local divergence of the policy's action field with respect to 
@@ -330,8 +275,8 @@ def estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key_
     
     return divergence
 
-# Working
-def load_training_data(hdf5_path, demo_keys=None, verbose=True):
+# training data divergence estimation
+def _load_training_data(hdf5_path, demo_keys=None, verbose=True):
     """
     Load training data from an HDF5 dataset with flexible access to different parts.
     
@@ -510,7 +455,7 @@ def _compute_divergence_via_neighbors(graphs, dt, k=4, window_length=9, polyorde
     
     return div_est * manifold_dim
 
-def compute_divergence(data, dphase, k=4):
+def _compute_divergence(data, dphase, k=4):
     """
     Method for computing approx. divergence at each time step using nearest neighbors
     Args:
@@ -532,7 +477,7 @@ def _add_phase(data):
     Phase goes from 0 to 1 linearly over the course of each trajectory.
     
     Args:
-        data: Dictionary returned by load_training_data() containing HDF5 file handle
+        data: Dictionary returned by _load_training_data() containing HDF5 file handle
     
     Returns:
         data: Updated data dictionary where each demo now has 'phase' accessible via data[demo_key]['phase']
@@ -561,7 +506,7 @@ def _bin_data(data, n_bins=100):
     in twist space used to fill in the missing states.
     
     Args:
-        data: Dictionary returned by load_training_data() with phase added via _add_phase()
+        data: Dictionary returned by _load_training_data() with phase added via _add_phase()
         n_bins: int, number of phase bins (default 100)
     
     Returns:
@@ -672,12 +617,12 @@ def _unbin_data(data, demo_keys, divergence, nan_mask):
     Take the twist divergence data that has been binned and map it back to the original
     time steps of each demonstration in data.
     Args:
-        data: Dictionary returned by load_training_data() with phase added via _add_phase()
+        data: Dictionary returned by _load_training_data() with phase added via _add_phase()
         demo_keys: list of demo keys corresponding to each row in div_twists
         divergence: tensor [n_demos, n_bins], divergence values in binned format
         nan_mask: tensor [n_demos, n_bins], boolean mask indicating which bins were originally NaN before interpolation
     Returns:
-        data: the data dictionary updated so that each demo now has 'div_twists' accessible via data[demo_key]['div_twists']
+        data: the data dictionary updated so that each demo now has 'divergence' accessible via data[demo_key]['divergence']
     """
         
     for i, demo_key in enumerate(demo_keys):
@@ -688,6 +633,166 @@ def _unbin_data(data, demo_keys, divergence, nan_mask):
     
     return data
 
+def _save_data_structure(data, save_path):
+    """
+    Save the data structure to a HDF5 file for later use.
+    
+    Args:
+        data: Dictionary returned by _load_training_data().
+        save_path: str, path to save the data file.
+    """
+    import shutil
+    
+    # Get the original file path
+    original_file = data['data'].filename
+    
+    # Close the original file handle to allow copying
+    data['data'].close()
+    
+    # Copy the entire HDF5 file to the new location
+    shutil.copy2(original_file, save_path)
+    
+    # Open the new file in read-write mode
+    with h5py.File(save_path, 'r+') as f:
+        # Add divergence and phase data to each demo
+        for demo_key in data['demos']:
+            demo_group = f['data'][demo_key]
+            
+            # Add phase if it exists
+            if demo_key in data and 'phase' in data[demo_key]:
+                phase = data[demo_key]['phase']
+                if isinstance(phase, torch.Tensor):
+                    phase = phase.cpu().numpy()
+                
+                # Delete if already exists (for overwriting)
+                if 'phase' in demo_group:
+                    del demo_group['phase']
+                demo_group.create_dataset('phase', data=phase)
+            
+            # Add divergence if it exists
+            if demo_key in data and 'divergence' in data[demo_key]:
+                divergence = data[demo_key]['divergence']
+                if isinstance(divergence, torch.Tensor):
+                    divergence = divergence.cpu().numpy()
+                
+                # Delete if already exists (for overwriting)
+                if 'divergence' in demo_group:
+                    del demo_group['divergence']
+                demo_group.create_dataset('divergence', data=divergence)
+    
+    # Reopen the original file for continued use
+    data['data'] = h5py.File(original_file, 'r')
+
+############################
+# Public methods
+############################
+# training data divergence estimation
+def add_divergence_to_training_data(load_path, save_path=None, verbose=True, nn_k=4):
+    """
+    Compute and add divergence information to each demonstration in the HDF5 dataset.
+    
+    Args:
+        hdf5_path: str, path to the HDF5 dataset file.
+        save_path: str, path to save the updated HDF5 dataset (if None, overwrites with load_path).
+        verbose: bool, whether to print progress information.
+        nn_k: int, number of nearest neighbors to use for divergence computation.
+    """
+    if save_path is None:
+        save_path = load_path
+        # add "_w_div" suffix to filename before the extension
+        if '.' in load_path:
+            save_path = load_path.rsplit('.', 1)[0] + "_w_div." + load_path.rsplit('.', 1)[1]
+        else:
+            save_path = load_path + "_w_div"
+
+    # Load the dataset
+    data = _load_training_data(load_path)
+    
+    # Add phase information
+    data = _add_phase(data)
+    
+    # Bin data for divergence computation
+    if verbose:
+        print("Binning data for divergence computation...")
+    phase_tensor, ee_state_tensor, demo_tensor_keys, nan_mask, dphase = _bin_data(data)
+    
+    if verbose:
+        print("Computing divergence...")
+    div_ee = _compute_divergence(ee_state_tensor, dphase, k=nn_k)
+    
+    # Unbin divergence back to original demos
+    if verbose:
+        print("Unbinning divergence back to original demos...")
+    data = _unbin_data(data, demo_tensor_keys, div_ee, nan_mask)
+    
+    # Save updated data structure back to HDF5
+    if verbose:
+        print(f"Saving updated data with divergence back to {save_path}...")
+    _save_data_structure(data, save_path)
+    
+    if verbose:
+        print("Divergence computation and saving complete.")
+    
+# model divergence enstimation
+def compute_policy_divergence_during_training(model, batch, n_samples=3):
+    """
+    Convenience wrapper to compute policy divergence during BC training.
+    This function can be called directly from train_on_batch() methods.
+    
+    Works with all BC model architectures:
+    - BC (MLP): ActorNetwork
+    - BC_RNN: RNN_MIMO_MLP  
+    - BC_Transformer: MIMO_Transformer
+    - BC_Gaussian: GaussianActorNetwork
+    - BC_GMM: GMMActorNetwork
+    - BC_VAE: VAE
+    
+    Args:
+        model: The BC policy network (self.nets["policy"] from BC algo)
+        batch: Training batch from process_batch_for_training() containing:
+            - batch['obs']: observation dictionary with EE pose keys
+            - batch['goal_obs']: optional goal observations
+        n_samples: Number of samples for Hutchinson estimator (default: 3, increase for accuracy)
+    
+    Returns:
+        divergence: Tensor [batch_size] with divergence values, or None if EE pose not available
+        
+    Example usage in BC.train_on_batch():
+        ```python
+        # After forward pass
+        predictions = self._forward_training(batch)
+        
+        # Compute divergence (optional)
+        try:
+            divergence = compute_policy_divergence_during_training(
+                self.nets["policy"], 
+                batch, 
+                n_samples=1
+            )
+            info["divergence"] = divergence.mean().item()  # Log average divergence
+        except Exception as e:
+            # Divergence computation failed (e.g., no EE pose in obs)
+            pass
+        ```
+    """
+    try:
+        # Get goal observations if present
+        goal_dict = batch.get('goal_obs', None)
+        
+        # Compute divergence using JVP method
+        divergence = _estimate_divergence_jvp(
+            model=model,
+            batch=batch,
+            goal_dict=goal_dict,
+            n_samples=n_samples
+        )
+        return divergence
+        
+    except (KeyError, ValueError) as e:
+        # EE pose keys not in observations, cannot compute divergence
+        return None
+
+# visualization
 def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None, 
                                        divergence=None, phase_tensor=None,
                                        frame_skip=10, demo_indices=None, 
@@ -868,19 +973,24 @@ def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None
         yaw_sin = np.sin(yaw)
         yaw_cos = np.cos(yaw)
         
+        # Extract phase values for plotting
+        if phase_tensor is not None:
+            phase_values = phase_tensor[demo_idx, valid_indices, 0].cpu().numpy()
+        else:
+            phase_values = valid_indices  # Fall back to time steps if no phase
+        
         # Plot translation components
-        time_steps = valid_indices
-        ax_x.plot(time_steps, positions[:, 0], color=color, alpha=line_alpha, linewidth=1.5)
-        ax_y.plot(time_steps, positions[:, 1], color=color, alpha=line_alpha, linewidth=1.5)
-        ax_z.plot(time_steps, positions[:, 2], color=color, alpha=line_alpha, linewidth=1.5)
+        ax_x.plot(phase_values, positions[:, 0], color=color, alpha=line_alpha, linewidth=1.5)
+        ax_y.plot(phase_values, positions[:, 1], color=color, alpha=line_alpha, linewidth=1.5)
+        ax_z.plot(phase_values, positions[:, 2], color=color, alpha=line_alpha, linewidth=1.5)
         
         # Plot rotation components (sine and cosine to avoid discontinuities)
-        ax_roll_sin.plot(time_steps, roll_sin, color=color, alpha=line_alpha, linewidth=1.5)
-        ax_roll_cos.plot(time_steps, roll_cos, color=color, alpha=line_alpha, linewidth=1.5)
-        ax_pitch_sin.plot(time_steps, pitch_sin, color=color, alpha=line_alpha, linewidth=1.5)
-        ax_pitch_cos.plot(time_steps, pitch_cos, color=color, alpha=line_alpha, linewidth=1.5)
-        ax_yaw_sin.plot(time_steps, yaw_sin, color=color, alpha=line_alpha, linewidth=1.5)
-        ax_yaw_cos.plot(time_steps, yaw_cos, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_roll_sin.plot(phase_values, roll_sin, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_roll_cos.plot(phase_values, roll_cos, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_pitch_sin.plot(phase_values, pitch_sin, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_pitch_cos.plot(phase_values, pitch_cos, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_yaw_sin.plot(phase_values, yaw_sin, color=color, alpha=line_alpha, linewidth=1.5)
+        ax_yaw_cos.plot(phase_values, yaw_cos, color=color, alpha=line_alpha, linewidth=1.5)
         
         # Plot divergence if provided
         if divergence is not None:
@@ -920,7 +1030,7 @@ def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None
     ax_y.set_title('Translation - Y', fontsize=10, fontweight='bold')
     ax_y.grid(True, alpha=0.3)
     
-    ax_z.set_xlabel('Time Step')
+    ax_z.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
     ax_z.set_ylabel('Z Position (m)')
     ax_z.set_title('Translation - Z', fontsize=10, fontweight='bold')
     ax_z.grid(True, alpha=0.3)
@@ -946,13 +1056,13 @@ def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None
     ax_pitch_cos.grid(True, alpha=0.3)
     ax_pitch_cos.set_ylim([-1.1, 1.1])
     
-    ax_yaw_sin.set_xlabel('Time Step')
+    ax_yaw_sin.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
     ax_yaw_sin.set_ylabel('sin(Yaw)')
     ax_yaw_sin.set_title('Yaw - Sine', fontsize=10, fontweight='bold')
     ax_yaw_sin.grid(True, alpha=0.3)
     ax_yaw_sin.set_ylim([-1.1, 1.1])
     
-    ax_yaw_cos.set_xlabel('Time Step')
+    ax_yaw_cos.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
     ax_yaw_cos.set_ylabel('cos(Yaw)')
     ax_yaw_cos.set_title('Yaw - Cosine', fontsize=10, fontweight='bold')
     ax_yaw_cos.grid(True, alpha=0.3)
@@ -986,9 +1096,11 @@ def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None
     
     return fig
 
+
+
 if __name__ == "__main__":
     """
-    Demo code showing how to use load_training_data() to explore a dataset.
+    Demo code showing how to use _load_training_data() to explore a dataset.
     
     Usage:
         python robomimic/utils/divergence_utils.py --dataset /path/to/dataset.hdf5
@@ -1007,7 +1119,7 @@ if __name__ == "__main__":
     
     # Load the dataset
     print("\n0.1. Loading dataset...")
-    data = load_training_data(args.dataset)
+    data = _load_training_data(args.dataset)
     
     # Show available demos
     print(f"\n0.2. Available demos: {data['demos'][:]}...")  # Show all
@@ -1090,7 +1202,7 @@ if __name__ == "__main__":
 
     print(f"\n1.2. Computing divergence of ee_states:")\
     # compute divergence for each non-NaN point in the twists_tensorusing the phases to calcualte dphase
-    div_ee = compute_divergence(
+    div_ee = _compute_divergence(
         ee_state_tensor,
         dphase,
         k=4
