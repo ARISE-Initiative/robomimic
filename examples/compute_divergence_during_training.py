@@ -1,4 +1,5 @@
 """
+TODO: EXAMPLE ADDED
 Example showing how to compute policy divergence during BC training.
 
 This example demonstrates:

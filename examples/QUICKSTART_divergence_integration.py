@@ -1,4 +1,5 @@
 """
+TODO: EXAMPLE ADDED
 Quick Integration Guide: Adding Divergence to BC Training
 
 This file shows the exact code changes needed to add divergence computation

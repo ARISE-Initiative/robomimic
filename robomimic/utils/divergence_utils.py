@@ -12,131 +12,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from torch.func import jvp
 
-
 warnings.filterwarnings('ignore', message='logm result may be inaccurate')
-
-
-
-
-# TODO: remove maybe
-def _fit_gmm_single_timestep(args):
-    """
-    Helper function to fit GMM for a single time step (for parallel processing).
-    
-    Args:
-        args: tuple of (time_step_data, num_components, max_components)
-    
-    Returns:
-        tuple: (means, sigmas, weights) for this timestep
-    """
-    time_step_data, num_components, max_components = args
-    
-    # Find best number of components using BIC
-    best_n_components = 1
-    best_bic = np.inf
-    best_gmm = None
-    
-    for n in range(1, max_components + 1):
-        try:
-            gmm = GaussianMixture(
-                n_components=n,
-                covariance_type='diag',
-                random_state=42,
-                max_iter=200
-            )
-            gmm.fit(time_step_data)
-            bic = gmm.bic(time_step_data)
-            
-            if bic < best_bic:
-                best_bic = bic
-                best_n_components = n
-                best_gmm = gmm
-        except:
-            # Skip if fitting fails (e.g., singular covariance)
-            continue
-    
-    # Initialize output arrays
-    means_t = np.zeros((num_components, time_step_data.shape[1]))
-    sigmas_t = np.zeros((num_components, time_step_data.shape[1]))
-    weights_t = np.zeros(num_components)
-    counts_t = np.zeros(num_components, dtype=np.int64)
-    
-    # Extract parameters from best GMM
-    if best_gmm is not None:
-        # Get cluster assignments
-        assignments = best_gmm.predict(time_step_data)
-        
-        # Fill in the components that were fit
-        for i in range(best_n_components):
-            means_t[i] = best_gmm.means_[i]
-            sigmas_t[i] = np.sqrt(best_gmm.covariances_[i])
-            weights_t[i] = best_gmm.weights_[i]
-            counts_t[i] = np.sum(assignments == i)
-        
-        # Normalize weights to sum to 1
-        if weights_t.sum() > 0:
-            weights_t = weights_t / weights_t.sum()
-    else:
-        # Fallback: single component with mean and std of data
-        means_t[0] = time_step_data.mean(axis=0)
-        sigmas_t[0] = time_step_data.std(axis=0) + 1e-6
-        weights_t[0] = 1.0
-        counts_t[0] = time_step_data.shape[0]
-    
-    return means_t, sigmas_t, weights_t, counts_t
-
-def fit_gmm(data, num_components=5, n_jobs=-1):
-    """
-    Method for fitting a gmm to data. Fits the gmm with the best number of components to explain the data 
-    at each time step up to the max number of components. Uses parallel processing for speed.
-    
-    Args:
-        data: torch.tensor [batch, steps, dims], the data
-        num_components: int, maximum number of gaussians to allow
-        n_jobs: int, number of parallel jobs (-1 for all CPUs, 1 for sequential)
-    
-    Returns:
-        means: torch.tensor [steps, num_components, dims], the means of each gaussian
-        sigmas: torch.tensor [steps, num_components, dims], the std dev of each gaussian
-        weights: torch.tensor [steps, num_components], the mixture weights
-        counts: torch.tensor [steps, num_components], number of samples assigned to each cluster
-    """
-    from multiprocessing import Pool, cpu_count
-    
-    batch_size, n_steps, n_dims = data.shape
-    
-    # Convert to numpy for sklearn
-    data_np = data.cpu().numpy()
-    
-    # Prepare arguments for parallel processing
-    max_components = min(num_components, batch_size)
-    args_list = [
-        (data_np[:, t, :], num_components, max_components) 
-        for t in range(n_steps)
-    ]
-    
-    # Fit GMMs in parallel
-    if n_jobs == 1:
-        # Sequential processing
-        results = [_fit_gmm_single_timestep(args) for args in args_list]
-    else:
-        # Parallel processing
-        n_processes = cpu_count() if n_jobs == -1 else n_jobs
-        with Pool(processes=n_processes) as pool:
-            results = pool.map(_fit_gmm_single_timestep, args_list)
-    # Stack results into tensors
-    means = torch.zeros(n_steps, num_components, n_dims)
-    sigmas = torch.zeros(n_steps, num_components, n_dims)
-    weights = torch.zeros(n_steps, num_components)
-    counts = torch.zeros(n_steps, num_components, dtype=torch.int64)
-    
-    for t, (means_t, sigmas_t, weights_t, counts_t) in enumerate(results):
-        means[t] = torch.from_numpy(means_t)
-        sigmas[t] = torch.from_numpy(sigmas_t)
-        weights[t] = torch.from_numpy(weights_t)
-        counts[t] = torch.from_numpy(counts_t)
-    
-    return means, sigmas, weights, counts
 
 ############################
 # Private methods
@@ -156,6 +32,13 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
     3. Computing action sensitivity via JVP
     4. Estimating divergence using Hutchinson's trace estimator
     
+    **Handles Sequence Outputs:** For RNN/Transformer models that output action sequences
+    [batch, time, action_dim], automatically extracts the last timestep action (the one
+    that would be executed at the current state).
+    
+    **Handles Action Dimension Mismatch:** If action_dim ≠ 6, computes divergence on the
+    overlapping subspace and scales appropriately.
+    
     Algorithm Steps:
     ----------------
     1.  **Tangent Space Sampling**:
@@ -170,7 +53,11 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
             # Apply twist to EE pose in obs_dict
             perturbed_obs_dict = obs_dict with EE pose perturbed by twist
             # Run BC model (any architecture)
-            return model(perturbed_obs_dict, goal_dict)
+            actions = model(perturbed_obs_dict, goal_dict)
+            # Extract last timestep if sequence output
+            if actions.dim() == 3:
+                actions = actions[:, -1, :]
+            return actions
 
     3.  **Jacobian-Vector Product (JVP)**:
         Compute the directional derivative of model output w.r.t. twist perturbation
@@ -193,6 +80,11 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
 
     Returns:
         divergence: Tensor [batch] representing the estimated divergence scalar at each state.
+        
+    Note:
+        - For sequence models (RNN/Transformer): Uses the last timestep action
+        - For action_dim < 6: Scales divergence to account for subspace
+        - For action_dim > 6: Uses first 6 dimensions (typically EE control)
     """
     
     # Extract observations and end-effector pose
@@ -250,11 +142,22 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
             output = model(obs_dict=perturbed_obs_dict, goal_dict=goal_dict)
             
             # Handle different output types:
-            # - Deterministic policies (ActorNetwork): return actions directly
+            # - Deterministic policies (ActorNetwork): return actions directly [batch, action_dim]
+            # - RNN/Transformer: return action sequences [batch, time, action_dim]
             # - Stochastic policies in eval mode (GaussianActorNetwork, GMMActorNetwork): return actions
             # - VAE: returns actions
             # For stochastic policies using forward_train(), they return distributions,
             # but here we use forward() which returns deterministic actions (means)
+            
+            # Handle sequence outputs (RNN/Transformer): take last timestep action
+            # This is the action that would actually be executed at the current state
+            if output.dim() == 3:
+                # Output is [batch, time, action_dim], take last timestep
+                output = output[:, -1, :]
+            
+            # Ensure output is 2D [batch, action_dim]
+            if output.dim() == 1:
+                output = output.unsqueeze(0)
             
             return output
         
@@ -263,11 +166,33 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
         zero_twist = torch.zeros(batch_size, 6, device=device, dtype=dtype)
         
         # jvp returns (f(zero_twist), J @ epsilon)
+        # Note: J is [action_dim, 6], so J @ epsilon is [action_dim]
         output, jvp_val = jvp(f, (zero_twist,), (epsilon,))
         
         # Step 4: Trace estimation using Hutchinson's estimator
         # Divergence = Trace(J) ≈ E[epsilon^T @ (J @ epsilon)]
-        divergence_sample = torch.sum(epsilon * jvp_val, dim=-1)  # [batch]
+        # 
+        # If action_dim != 6, we need to handle the mismatch:
+        # - If action_dim > 6: Take first 6 dimensions (typically EE pose control)
+        # - If action_dim < 6: Pad or only use available dimensions
+        # 
+        # For robustness, we compute divergence on the minimum of the two dimensions
+        action_dim = jvp_val.shape[-1]
+        effective_dim = min(action_dim, 6)
+        
+        # Slice both vectors to effective dimension
+        epsilon_slice = epsilon[:, :effective_dim]
+        jvp_slice = jvp_val[:, :effective_dim]
+        
+        # Trace estimate: epsilon^T @ (J @ epsilon)
+        # For the full 6x6 block of J, we use effective_dim
+        divergence_sample = torch.sum(epsilon_slice * jvp_slice, dim=-1)  # [batch]
+        
+        # Scale by dimension to get proper divergence estimate
+        # (since we're only measuring divergence in a subspace)
+        if effective_dim < 6:
+            divergence_sample = divergence_sample * (6.0 / effective_dim)
+        
         divergence_samples.append(divergence_sample)
     
     # Average over samples for better estimate
@@ -275,7 +200,7 @@ def _estimate_divergence_jvp(model, batch, obs_key_pos='robot0_eef_pos', obs_key
     
     return divergence
 
-# training data divergence estimation
+# training data divergence and score estimation
 def _load_training_data(hdf5_path, demo_keys=None, verbose=True):
     """
     Load training data from an HDF5 dataset with flexible access to different parts.
@@ -612,7 +537,7 @@ def _bin_data(data, n_bins=100):
     
     return phase_tensor, ee_state_tensor, demo_keys, nan_mask, dphase
 
-def _unbin_data(data, demo_keys, divergence, nan_mask):
+def _unbin_data(data, demo_keys, divergence, score, nan_mask):
     """
     Take the twist divergence data that has been binned and map it back to the original
     time steps of each demonstration in data.
@@ -620,6 +545,7 @@ def _unbin_data(data, demo_keys, divergence, nan_mask):
         data: Dictionary returned by _load_training_data() with phase added via _add_phase()
         demo_keys: list of demo keys corresponding to each row in div_twists
         divergence: tensor [n_demos, n_bins], divergence values in binned format
+        score: tensor [n_demos, n_bins, 6], score values in binned format
         nan_mask: tensor [n_demos, n_bins], boolean mask indicating which bins were originally NaN before interpolation
     Returns:
         data: the data dictionary updated so that each demo now has 'divergence' accessible via data[demo_key]['divergence']
@@ -628,8 +554,10 @@ def _unbin_data(data, demo_keys, divergence, nan_mask):
     for i, demo_key in enumerate(demo_keys):
         # get diveregence for this demo where there were no NaNs originally
         demo_div = divergence[i][~nan_mask[i]]  # [n_valid_bins]
+        demo_score = score[i][~nan_mask[i]]  # [n_valid_bins, 6]
         # print(f"Unbinned divergence for {demo_key}: shape={demo_div.shape}")
         data[demo_key]['divergence'] = demo_div
+        data[demo_key]['score'] = demo_score
     
     return data
 
@@ -683,56 +611,85 @@ def _save_data_structure(data, save_path):
     # Reopen the original file for continued use
     data['data'] = h5py.File(original_file, 'r')
 
+    print(f"Data structure saved to {save_path}")
+
+def _compute_score_via_neighbors(graphs, bandwidth=0.1):
+    """
+    Estimates the Stein Score (grad log p) of the state distribution
+    using a Riemannian Gaussian Kernel (Mean Shift).
+    
+    Args:
+        graphs: List of state graphs (from _construct_state_graph)
+        bandwidth (float): The 'sigma' of the kernel. Controls smoothness.
+                           Too small = noisy score pointing to nearest single neighbor.
+                           Too large = score points to global mean (oversmoothed).
+    
+    Returns:
+        scores: Tensor [batch, n_steps, 6] - The score vector (twist) at each state.
+    """
+    batch_size = graphs[0]['nodes'].shape[0]
+    n_steps = len(graphs)
+    scores = []
+
+    for graph in graphs:
+        # nodes: [batch, 7] (Poses)
+        current_poses = graph['nodes']
+        
+        # 1. Compute pairwise twists between ALL particles at this step
+        # (Reusing your efficient batch expansion logic)
+        # start_poses (The reference points x_i): [batch, 1, 7]
+        start_poses = current_poses.unsqueeze(1)
+        # end_poses (The neighbors x_j): [1, batch, 7]
+        end_poses = current_poses.unsqueeze(0)
+        
+        start_flat = start_poses.expand(batch_size, batch_size, 7).reshape(-1, 7)
+        end_flat = end_poses.expand(batch_size, batch_size, 7).reshape(-1, 7)
+        
+        # twists_flat: Vectors pointing FROM row_i TO col_j
+        twists_flat = compute_twist_between_poses(start_flat, end_flat) 
+        twists = twists_flat.reshape(batch_size, batch_size, 6) # [batch, batch, 6]
+        
+        # 2. Compute Distances and Weights (Gaussian Kernel)
+        # dist_sq: [batch, batch]
+        dist_sq = (twists ** 2).sum(dim=2) 
+        weights = torch.exp(-dist_sq / (2 * bandwidth**2))
+        
+        # Mask self-loops (optional, but usually good to avoid bias from self-weight 1.0)
+        # However, for KDE, including self is mathematically valid (it adds 0 vector).
+        
+        # 3. Compute Mean Shift Vector
+        # weighted_sum: [batch, 6] -> sum over dimension 1 (neighbors)
+        # weights must be reshaped to [batch, batch, 1] for broadcasting
+        weighted_sum = (weights.unsqueeze(-1) * twists).sum(dim=1)
+        sum_of_weights = weights.sum(dim=1, keepdim=True)
+        
+        # The Score Estimate
+        mean_shift = weighted_sum / (sum_of_weights + 1e-8)
+        score_t = mean_shift / (bandwidth**2)
+        
+        scores.append(score_t)
+
+    scores = torch.stack(scores, dim=1) # [batch, n_steps, 6]
+    return scores
+
+def _compute_score(data, bandwidth=0.1):
+    """
+    Method for computing approx. score at each time step using nearest neighbors
+    Args:
+        data: tensor [batch, n_steps, dim], the data we are calculating the score of (can contain NaN values)
+        k: int, number of neighbors to consider when calculating the score
+        bandwidth: float, bandwidth parameter for the Gaussian kernel
+    Returns:
+        score: tensor [batch_size, n_steps, 6], the score of the flow at each datapoint (NaN where input is NaN)
+    """
+    
+    graphs = _construct_state_graph(data)
+
+    return _compute_score_via_neighbors(graphs, bandwidth)
+
 ############################
 # Public methods
 ############################
-# training data divergence estimation
-def add_divergence_to_training_data(load_path, save_path=None, verbose=True, nn_k=4):
-    """
-    Compute and add divergence information to each demonstration in the HDF5 dataset.
-    
-    Args:
-        hdf5_path: str, path to the HDF5 dataset file.
-        save_path: str, path to save the updated HDF5 dataset (if None, overwrites with load_path).
-        verbose: bool, whether to print progress information.
-        nn_k: int, number of nearest neighbors to use for divergence computation.
-    """
-    if save_path is None:
-        save_path = load_path
-        # add "_w_div" suffix to filename before the extension
-        if '.' in load_path:
-            save_path = load_path.rsplit('.', 1)[0] + "_w_div." + load_path.rsplit('.', 1)[1]
-        else:
-            save_path = load_path + "_w_div"
-
-    # Load the dataset
-    data = _load_training_data(load_path)
-    
-    # Add phase information
-    data = _add_phase(data)
-    
-    # Bin data for divergence computation
-    if verbose:
-        print("Binning data for divergence computation...")
-    phase_tensor, ee_state_tensor, demo_tensor_keys, nan_mask, dphase = _bin_data(data)
-    
-    if verbose:
-        print("Computing divergence...")
-    div_ee = _compute_divergence(ee_state_tensor, dphase, k=nn_k)
-    
-    # Unbin divergence back to original demos
-    if verbose:
-        print("Unbinning divergence back to original demos...")
-    data = _unbin_data(data, demo_tensor_keys, div_ee, nan_mask)
-    
-    # Save updated data structure back to HDF5
-    if verbose:
-        print(f"Saving updated data with divergence back to {save_path}...")
-    _save_data_structure(data, save_path)
-    
-    if verbose:
-        print("Divergence computation and saving complete.")
-    
 # model divergence enstimation
 def compute_policy_divergence_during_training(model, batch, n_samples=3):
     """
@@ -792,6 +749,99 @@ def compute_policy_divergence_during_training(model, batch, n_samples=3):
         # EE pose keys not in observations, cannot compute divergence
         return None
 
+# training data divergence and score estimation
+def add_div_and_score_to_training_data(load_path, save_path=None, verbose=True, k=4, bandwidth=0.1):
+    """
+    Compute and add divergence information to each demonstration in the HDF5 dataset.
+    
+    Args:
+        hdf5_path: str, path to the HDF5 dataset file.
+        save_path: str, path to save the updated HDF5 dataset (if None, overwrites with load_path).
+        verbose: bool, whether to print progress information.
+        nn_k: int, number of nearest neighbors to use for divergence computation.
+    """
+    if save_path is None:
+        save_path = load_path
+        # add "_w_div" suffix to filename before the extension
+        if '.' in load_path:
+            save_path = load_path.rsplit('.', 1)[0] + "_w_cdm." + load_path.rsplit('.', 1)[1]
+        else:
+            save_path = load_path + "_w_cdm"
+
+    if verbose:
+        print(f"Loading training data from: {load_path}")
+    data = _load_training_data(load_path)
+    
+    if verbose:
+        print(f"Adding phase information to data...")
+    data = _add_phase(data)
+    
+    # calculate trajectory length stats
+    n_actions = []
+    for demo_key in data['demos']:
+        actions = data['get_actions'](demo_key)
+        n_actions.append(len(actions))
+    max_n_actions = np.max(n_actions)
+    
+    if verbose:
+        print(f"Training data contains {len(data['demos'])} demos")
+        print(f"Trajectory length stats (actions): min={np.min(n_actions)}, mean={np.mean(n_actions):.1f}, max={np.max(n_actions)}")
+        print(f"\nComputing divergence of ee_states binned into {max_n_actions} bins:")
+    phase_tensor, ee_state_tensor, demo_tensor_keys, nan_mask, dphase = _bin_data(data, n_bins=max_n_actions)
+    
+    # Count NaNs per bin
+    nan_counts = torch.isnan(ee_state_tensor).any(dim=2).sum(dim=0)
+    if verbose:
+        print(f"NaNs per bin (min/mean/max): {nan_counts.min()}/{nan_counts.float().mean():.1f}/{nan_counts.max()}")
+        print(f"\nComputing divergence and score of ee_states:")
+    state_graphs = _construct_state_graph(ee_state_tensor)
+    div_ee = _compute_divergence_via_neighbors(state_graphs, dphase,  k=k)
+    score_ee = _compute_score_via_neighbors(state_graphs, bandwidth=bandwidth)
+
+    if verbose:
+        print(f"    Divergence tensor shape: {div_ee.shape}")
+        valid_div = div_ee[~torch.isnan(div_ee)]
+        print(f"    Divergence valid count: {valid_div.shape[0]}/{div_ee.numel()}")
+        print(f"    Divergence stats (min/mean/max): {valid_div.min():.4f}/{valid_div.mean():.4f}/{valid_div.max():.4f}")
+        print(f"    Score tensor shape: {score_ee.shape}")
+        valid_score = score_ee[~torch.isnan(score_ee).any(dim=2)]
+        print(f"    Score valid count: {valid_score.shape[0]}/{score_ee.shape[0] * score_ee.shape[1]}")
+
+    if verbose:
+        print(f"\nMapping divergence and score back to original demo time steps:")
+    data = _unbin_data(data, demo_tensor_keys, div_ee, score_ee, nan_mask)
+    
+    # Verify unbinning by checking a few demos
+    for demo_key in data['demos'][:3]:
+        print("\n" + "-"*40)
+        print(f"\n    Divergence stats for demo '{demo_key}':")
+        if 'divergence' in data[demo_key]:
+            div_twist_demo = data[demo_key]['divergence']
+            valid_div_demo = div_twist_demo[~torch.isnan(div_twist_demo)]
+            print(f"    {demo_key}: shape={div_twist_demo.shape}, valid={valid_div_demo.shape[0]}/{div_twist_demo.numel()}")
+            if valid_div_demo.numel() > 0:
+                print(f"      stats (min/mean/max): {valid_div_demo.min():.4f}/{valid_div_demo.mean():.4f}/{valid_div_demo.max():.4f}")
+        
+        print(f"\n    Score stats per component:")
+        if 'score' in data[demo_key]:
+            score_twist_demo = data[demo_key]['score']
+            valid_score_demo = score_twist_demo[~torch.isnan(score_twist_demo).any(dim=1)]
+            print(f"    {demo_key}: shape={score_twist_demo.shape}, valid={valid_score_demo.shape[0]}/{score_twist_demo.shape[0]}")
+            if valid_score_demo.numel() > 0:
+                print(f"      stats (min/mean/max) per component:")
+                for i in range(score_twist_demo.shape[1]):
+                    comp = valid_score_demo[:, i]
+                    print(f"        Component {i}: {comp.min():.4f}/{comp.mean():.4f}/{comp.max():.4f}")
+
+    if verbose:
+        print(f"\nFinished computing divergence and score for all demos.")
+        # print new dictionary structure keys
+        print(f"Data dictionary keys: {list(data.keys())}")
+
+    if verbose:
+        print(f"\nSaving updated data structure to: {save_path}")
+    _save_data_structure(data, save_path)
+    
 # visualization
 def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None, 
                                        divergence=None, phase_tensor=None,
@@ -1096,20 +1146,405 @@ def visualize_observation_trajectories(ee_state_tensor, demo_keys, nan_mask=None
     
     return fig
 
-
-
-if __name__ == "__main__":
+def visualize_score_for_trajectories(
+    ee_state_tensor,
+    score_tensor,
+    selected_demo_idx,
+    demo_keys,
+    nan_mask=None,
+    phase_tensor=None,
+    frame_skip=10,
+    demo_indices=None,
+    figsize=(24, 14),
+    title="Trajectory Score Visualization"
+):
     """
-    Demo code showing how to use _load_training_data() to explore a dataset.
+    Visualize a single trajectory with its score overlaid on all other trajectories.
+    Shows the selected trajectory as a solid black line on top of all others to understand
+    how it sits within the data distribution.
     
-    Usage:
-        python robomimic/utils/divergence_utils.py --dataset /path/to/dataset.hdf5
-    """    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, required=True, help="Path to HDF5 dataset")
-    parser.add_argument("--demo", type=str, default="demo_0", help="Demo key to inspect")
-    args = parser.parse_args()
+    Args:
+        ee_state_tensor: torch.tensor [n_demos, n_bins, 7], end-effector poses (pos + quat)
+        score_tensor: torch.tensor [n_bins, 6], score values (twist: linear xyz, angular xyz) for selected demo
+        selected_demo_idx: int, index of the demo to highlight and show score for
+        demo_keys: list of demo keys corresponding to each trajectory
+        nan_mask: torch.tensor [n_demos, n_bins], boolean mask for NaN values (optional)
+        phase_tensor: torch.tensor [n_demos, n_bins, 1], phase values (optional)
+        frame_skip: int, plot coordinate frames every N steps (default 10)
+        demo_indices: list of indices to visualize (if None, visualizes all demos)
+        figsize: tuple, figure size (default (24, 14))
+        title: str, overall figure title
     
+    Returns:
+        fig: matplotlib figure object
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib.patches import FancyArrowPatch
+    from mpl_toolkits.mplot3d.proj3d import proj_transform
+    from tf_utils import _quat_to_rot_mat
+    import torch
+    import numpy as np
+    
+    class Arrow3D(FancyArrowPatch):
+        def __init__(self, x, y, z, dx, dy, dz, *args, **kwargs):
+            super().__init__((0, 0), (0, 0), *args, **kwargs)
+            self._xyz = (x, y, z)
+            self._dxdydz = (dx, dy, dz)
+
+        def do_3d_projection(self, renderer=None):
+            x1, y1, z1 = self._xyz
+            dx, dy, dz = self._dxdydz
+            x2, y2, z2 = (x1 + dx, y1 + dy, z1 + dz)
+
+            xs, ys, zs = proj_transform((x1, x2), (y1, y2), (z1, z2), self.axes.M)
+            self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+            
+            return np.min(zs)
+    
+    # Select demos to visualize
+    n_demos, n_bins, _ = ee_state_tensor.shape
+    if demo_indices is None:
+        demo_indices = list(range(n_demos))
+    
+    # Convert to numpy for plotting
+    ee_state_np = ee_state_tensor.cpu().numpy()
+    score_np = score_tensor.cpu().numpy()  # [n_bins, 6]
+    
+    # Create figure with subplots
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(5, 6, hspace=0.4, wspace=0.4, height_ratios=[1, 1, 1, 0.8, 0.8])
+    
+    # 3D trajectory plot (spans left 3 columns, all 3 top rows)
+    ax_3d = fig.add_subplot(gs[:3, :3], projection='3d')
+    
+    # Translation subplots (column 3)
+    ax_x = fig.add_subplot(gs[0, 3])
+    ax_y = fig.add_subplot(gs[1, 3])
+    ax_z = fig.add_subplot(gs[2, 3])
+    
+    # Rotation subplots (columns 4-5, sin and cos for each angle)
+    ax_roll_sin = fig.add_subplot(gs[0, 4])
+    ax_roll_cos = fig.add_subplot(gs[0, 5])
+    ax_pitch_sin = fig.add_subplot(gs[1, 4])
+    ax_pitch_cos = fig.add_subplot(gs[1, 5])
+    ax_yaw_sin = fig.add_subplot(gs[2, 4])
+    ax_yaw_cos = fig.add_subplot(gs[2, 5])
+    
+    # Score subplots (4th row: linear components)
+    ax_score_lin_x = fig.add_subplot(gs[3, 0:2])
+    ax_score_lin_y = fig.add_subplot(gs[3, 2:4])
+    ax_score_lin_z = fig.add_subplot(gs[3, 4:6])
+    
+    # Score subplots (5th row: angular components)
+    ax_score_ang_x = fig.add_subplot(gs[4, 0:2])
+    ax_score_ang_y = fig.add_subplot(gs[4, 2:4])
+    ax_score_ang_z = fig.add_subplot(gs[4, 4:6])
+    
+    # Color map for different demos
+    colors = plt.cm.tab20(np.linspace(0, 1, len(demo_indices)))
+    
+    # All demos shown with low transparency for context
+    line_alpha = 0.15 if len(demo_indices) > 20 else 0.3
+    
+    # First pass: Plot all trajectories except the selected one
+    for idx, demo_idx in enumerate(demo_indices):
+        # Skip the selected demo - we'll plot it last on top
+        if demo_idx == selected_demo_idx:
+            continue
+            
+        demo_key = demo_keys[demo_idx]
+        color = colors[idx]
+        
+        # Get trajectory for this demo
+        traj = ee_state_np[demo_idx]  # [n_bins, 7]
+        
+        # Get valid indices (non-NaN)
+        if nan_mask is not None:
+            valid_mask = ~nan_mask[demo_idx].cpu().numpy()
+        else:
+            valid_mask = ~np.isnan(traj).any(axis=1)
+        
+        valid_indices = np.where(valid_mask)[0]
+        if len(valid_indices) == 0:
+            continue
+        
+        # Extract position and quaternion
+        positions = traj[valid_indices, :3]  # [n_valid, 3]
+        quaternions = traj[valid_indices, 3:]  # [n_valid, 4]
+        
+        # Plot 3D trajectory with low alpha
+        ax_3d.plot(positions[:, 0], positions[:, 1], positions[:, 2], 
+                   color=color, alpha=line_alpha, linewidth=1.0)
+        
+        # Convert quaternions to Euler angles (roll, pitch, yaw) for rotation plots
+        rot_mats = _quat_to_rot_mat(torch.from_numpy(quaternions), w_first=False).numpy()
+        
+        # Extract roll, pitch, yaw from rotation matrices (ZYX Euler convention)
+        roll = np.arctan2(rot_mats[:, 2, 1], rot_mats[:, 2, 2])
+        pitch = np.arctan2(-rot_mats[:, 2, 0], 
+                          np.sqrt(rot_mats[:, 2, 1]**2 + rot_mats[:, 2, 2]**2))
+        yaw = np.arctan2(rot_mats[:, 1, 0], rot_mats[:, 0, 0])
+        
+        # Compute sine and cosine of angles to avoid discontinuities at ±π
+        roll_sin = np.sin(roll)
+        roll_cos = np.cos(roll)
+        pitch_sin = np.sin(pitch)
+        pitch_cos = np.cos(pitch)
+        yaw_sin = np.sin(yaw)
+        yaw_cos = np.cos(yaw)
+        
+        # Extract phase values for plotting
+        if phase_tensor is not None:
+            phase_values = phase_tensor[demo_idx, valid_indices, 0].cpu().numpy()
+        else:
+            phase_values = valid_indices  # Fall back to time steps if no phase
+        
+        # Plot translation components
+        ax_x.plot(phase_values, positions[:, 0], color=color, alpha=line_alpha, linewidth=1.0)
+        ax_y.plot(phase_values, positions[:, 1], color=color, alpha=line_alpha, linewidth=1.0)
+        ax_z.plot(phase_values, positions[:, 2], color=color, alpha=line_alpha, linewidth=1.0)
+        
+        # Plot rotation components (sine and cosine to avoid discontinuities)
+        ax_roll_sin.plot(phase_values, roll_sin, color=color, alpha=line_alpha, linewidth=1.0)
+        ax_roll_cos.plot(phase_values, roll_cos, color=color, alpha=line_alpha, linewidth=1.0)
+        ax_pitch_sin.plot(phase_values, pitch_sin, color=color, alpha=line_alpha, linewidth=1.0)
+        ax_pitch_cos.plot(phase_values, pitch_cos, color=color, alpha=line_alpha, linewidth=1.0)
+        ax_yaw_sin.plot(phase_values, yaw_sin, color=color, alpha=line_alpha, linewidth=1.0)
+        ax_yaw_cos.plot(phase_values, yaw_cos, color=color, alpha=line_alpha, linewidth=1.0)
+    
+    # Second pass: Plot the selected trajectory on top with solid black line
+    selected_traj = ee_state_np[selected_demo_idx]  # [n_bins, 7]
+    selected_demo_key = demo_keys[selected_demo_idx]
+    
+    # Get valid indices for selected demo
+    if nan_mask is not None:
+        selected_valid_mask = ~nan_mask[selected_demo_idx].cpu().numpy()
+    else:
+        selected_valid_mask = ~np.isnan(selected_traj).any(axis=1)
+    
+    selected_valid_indices = np.where(selected_valid_mask)[0]
+    
+    if len(selected_valid_indices) > 0:
+        # Extract position and quaternion for selected demo
+        selected_positions = selected_traj[selected_valid_indices, :3]  # [n_valid, 3]
+        selected_quaternions = selected_traj[selected_valid_indices, 3:]  # [n_valid, 4]
+        
+        # Plot selected trajectory in 3D with solid black line
+        ax_3d.plot(selected_positions[:, 0], selected_positions[:, 1], selected_positions[:, 2], 
+                   color='black', alpha=1.0, linewidth=2.5, 
+                   label=f"Selected: {selected_demo_key}", zorder=100)
+        
+        # Plot coordinate frames for selected trajectory
+        frame_indices = selected_valid_indices[::frame_skip]
+        for frame_idx in frame_indices:
+            pos = selected_traj[frame_idx, :3]
+            quat = torch.from_numpy(selected_traj[frame_idx, 3:]).unsqueeze(0)
+            
+            # Convert quaternion to rotation matrix
+            rot_mat = _quat_to_rot_mat(quat, w_first=False).squeeze(0).numpy()
+        
+            # Draw coordinate frame axes
+            axis_length = 0.025  # Slightly larger for visibility
+            
+            # Extract each axis from rotation matrix columns
+            x_axis = rot_mat[:, 0]
+            y_axis = rot_mat[:, 1]
+            z_axis = rot_mat[:, 2]
+            
+            # Normalize to ensure unit length
+            x_axis = x_axis / (np.linalg.norm(x_axis) + 1e-8)
+            y_axis = y_axis / (np.linalg.norm(y_axis) + 1e-8)
+            z_axis = z_axis / (np.linalg.norm(z_axis) + 1e-8)
+            
+            # X-axis (red)
+            ax_3d.add_artist(Arrow3D(
+                pos[0], pos[1], pos[2],
+                x_axis[0] * axis_length,
+                x_axis[1] * axis_length,
+                x_axis[2] * axis_length,
+                mutation_scale=12, lw=2, arrowstyle='-|>', color='red', alpha=0.8
+            ))
+            
+            # Y-axis (green)
+            ax_3d.add_artist(Arrow3D(
+                pos[0], pos[1], pos[2],
+                y_axis[0] * axis_length,
+                y_axis[1] * axis_length,
+                y_axis[2] * axis_length,
+                mutation_scale=12, lw=2, arrowstyle='-|>', color='green', alpha=0.8
+            ))
+            
+            # Z-axis (blue)
+            ax_3d.add_artist(Arrow3D(
+                pos[0], pos[1], pos[2],
+                z_axis[0] * axis_length,
+                z_axis[1] * axis_length,
+                z_axis[2] * axis_length,
+                mutation_scale=12, lw=2, arrowstyle='-|>', color='blue', alpha=0.8
+            ))
+        
+        # Convert quaternions to Euler angles for selected trajectory
+        selected_rot_mats = _quat_to_rot_mat(torch.from_numpy(selected_quaternions), w_first=False).numpy()
+        
+        # Extract roll, pitch, yaw (ZYX Euler convention)
+        selected_roll = np.arctan2(selected_rot_mats[:, 2, 1], selected_rot_mats[:, 2, 2])
+        selected_pitch = np.arctan2(-selected_rot_mats[:, 2, 0], 
+                                    np.sqrt(selected_rot_mats[:, 2, 1]**2 + selected_rot_mats[:, 2, 2]**2))
+        selected_yaw = np.arctan2(selected_rot_mats[:, 1, 0], selected_rot_mats[:, 0, 0])
+        
+        # Compute sine and cosine
+        selected_roll_sin = np.sin(selected_roll)
+        selected_roll_cos = np.cos(selected_roll)
+        selected_pitch_sin = np.sin(selected_pitch)
+        selected_pitch_cos = np.cos(selected_pitch)
+        selected_yaw_sin = np.sin(selected_yaw)
+        selected_yaw_cos = np.cos(selected_yaw)
+        
+        # Extract phase values for selected trajectory
+        if phase_tensor is not None:
+            selected_phase_values = phase_tensor[selected_demo_idx, selected_valid_indices, 0].cpu().numpy()
+        else:
+            selected_phase_values = selected_valid_indices
+        
+        # Plot selected trajectory translation components with solid black line
+        ax_x.plot(selected_phase_values, selected_positions[:, 0], color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_y.plot(selected_phase_values, selected_positions[:, 1], color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_z.plot(selected_phase_values, selected_positions[:, 2], color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        
+        # Plot selected trajectory rotation components with solid black line
+        ax_roll_sin.plot(selected_phase_values, selected_roll_sin, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_roll_cos.plot(selected_phase_values, selected_roll_cos, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_pitch_sin.plot(selected_phase_values, selected_pitch_sin, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_pitch_cos.plot(selected_phase_values, selected_pitch_cos, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_yaw_sin.plot(selected_phase_values, selected_yaw_sin, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        ax_yaw_cos.plot(selected_phase_values, selected_yaw_cos, color='black', alpha=1.0, linewidth=2.5, zorder=100)
+        
+        # Plot score components
+        # Get valid score indices
+        valid_score_mask = ~np.isnan(score_np).any(axis=1)
+        valid_score_indices = np.where(valid_score_mask)[0]
+        
+        if len(valid_score_indices) > 0:
+            if phase_tensor is not None:
+                score_phase_values = phase_tensor[selected_demo_idx, valid_score_indices, 0].cpu().numpy()
+            else:
+                score_phase_values = valid_score_indices
+            
+            # Linear (translation) score components
+            ax_score_lin_x.plot(score_phase_values, score_np[valid_score_indices, 0], 
+                               color='darkred', linewidth=2)
+            ax_score_lin_x.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_lin_x.grid(True, alpha=0.3)
+            ax_score_lin_x.set_ylabel('Score (m/s)', fontsize=9)
+            ax_score_lin_x.set_title('Score: Linear X', fontsize=10, fontweight='bold')
+            
+            ax_score_lin_y.plot(score_phase_values, score_np[valid_score_indices, 1], 
+                               color='darkgreen', linewidth=2)
+            ax_score_lin_y.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_lin_y.grid(True, alpha=0.3)
+            ax_score_lin_y.set_ylabel('Score (m/s)', fontsize=9)
+            ax_score_lin_y.set_title('Score: Linear Y', fontsize=10, fontweight='bold')
+            
+            ax_score_lin_z.plot(score_phase_values, score_np[valid_score_indices, 2], 
+                               color='darkblue', linewidth=2)
+            ax_score_lin_z.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_lin_z.grid(True, alpha=0.3)
+            ax_score_lin_z.set_ylabel('Score (m/s)', fontsize=9)
+            ax_score_lin_z.set_title('Score: Linear Z', fontsize=10, fontweight='bold')
+            
+            # Angular (rotation) score components
+            ax_score_ang_x.plot(score_phase_values, score_np[valid_score_indices, 3], 
+                               color='darkred', linewidth=2)
+            ax_score_ang_x.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_ang_x.grid(True, alpha=0.3)
+            ax_score_ang_x.set_xlabel('Phase' if phase_tensor is not None else 'Time Step', fontsize=9)
+            ax_score_ang_x.set_ylabel('Score (rad/s)', fontsize=9)
+            ax_score_ang_x.set_title('Score: Angular X', fontsize=10, fontweight='bold')
+            
+            ax_score_ang_y.plot(score_phase_values, score_np[valid_score_indices, 4], 
+                               color='darkgreen', linewidth=2)
+            ax_score_ang_y.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_ang_y.grid(True, alpha=0.3)
+            ax_score_ang_y.set_xlabel('Phase' if phase_tensor is not None else 'Time Step', fontsize=9)
+            ax_score_ang_y.set_ylabel('Score (rad/s)', fontsize=9)
+            ax_score_ang_y.set_title('Score: Angular Y', fontsize=10, fontweight='bold')
+            
+            ax_score_ang_z.plot(score_phase_values, score_np[valid_score_indices, 5], 
+                               color='darkblue', linewidth=2)
+            ax_score_ang_z.axhline(y=0, color='k', linestyle='--', alpha=0.3, linewidth=1)
+            ax_score_ang_z.grid(True, alpha=0.3)
+            ax_score_ang_z.set_xlabel('Phase' if phase_tensor is not None else 'Time Step', fontsize=9)
+            ax_score_ang_z.set_ylabel('Score (rad/s)', fontsize=9)
+            ax_score_ang_z.set_title('Score: Angular Z', fontsize=10, fontweight='bold')
+    
+    # Configure 3D plot
+    ax_3d.set_xlabel('X Position (m)')
+    ax_3d.set_ylabel('Y Position (m)')
+    ax_3d.set_zlabel('Z Position (m)')
+    ax_3d.set_title('3D Trajectories (Selected in Black)', fontsize=12, fontweight='bold')
+    ax_3d.legend(loc='upper right', fontsize=8)
+    ax_3d.grid(True, alpha=0.3)
+    
+    # Configure translation subplots
+    ax_x.set_ylabel('X Position (m)')
+    ax_x.set_title('Translation - X', fontsize=10, fontweight='bold')
+    ax_x.grid(True, alpha=0.3)
+    
+    ax_y.set_ylabel('Y Position (m)')
+    ax_y.set_title('Translation - Y', fontsize=10, fontweight='bold')
+    ax_y.grid(True, alpha=0.3)
+    
+    ax_z.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
+    ax_z.set_ylabel('Z Position (m)')
+    ax_z.set_title('Translation - Z', fontsize=10, fontweight='bold')
+    ax_z.grid(True, alpha=0.3)
+    
+    # Configure rotation subplots
+    ax_roll_sin.set_ylabel('sin(Roll)')
+    ax_roll_sin.set_title('Roll - Sine', fontsize=10, fontweight='bold')
+    ax_roll_sin.grid(True, alpha=0.3)
+    ax_roll_sin.set_ylim([-1.1, 1.1])
+    
+    ax_roll_cos.set_ylabel('cos(Roll)')
+    ax_roll_cos.set_title('Roll - Cosine', fontsize=10, fontweight='bold')
+    ax_roll_cos.grid(True, alpha=0.3)
+    ax_roll_cos.set_ylim([-1.1, 1.1])
+    
+    ax_pitch_sin.set_ylabel('sin(Pitch)')
+    ax_pitch_sin.set_title('Pitch - Sine', fontsize=10, fontweight='bold')
+    ax_pitch_sin.grid(True, alpha=0.3)
+    ax_pitch_sin.set_ylim([-1.1, 1.1])
+    
+    ax_pitch_cos.set_ylabel('cos(Pitch)')
+    ax_pitch_cos.set_title('Pitch - Cosine', fontsize=10, fontweight='bold')
+    ax_pitch_cos.grid(True, alpha=0.3)
+    ax_pitch_cos.set_ylim([-1.1, 1.1])
+    
+    ax_yaw_sin.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
+    ax_yaw_sin.set_ylabel('sin(Yaw)')
+    ax_yaw_sin.set_title('Yaw - Sine', fontsize=10, fontweight='bold')
+    ax_yaw_sin.grid(True, alpha=0.3)
+    ax_yaw_sin.set_ylim([-1.1, 1.1])
+    
+    ax_yaw_cos.set_xlabel('Phase' if phase_tensor is not None else 'Time Step')
+    ax_yaw_cos.set_ylabel('cos(Yaw)')
+    ax_yaw_cos.set_title('Yaw - Cosine', fontsize=10, fontweight='bold')
+    ax_yaw_cos.grid(True, alpha=0.3)
+    ax_yaw_cos.set_ylim([-1.1, 1.1])
+    
+    # Overall title
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.98)
+    
+    # Use tight_layout with rect to avoid overlap with suptitle
+    try:
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+    except:
+        pass  # Ignore tight_layout issues with 3D plots
+    
+    return fig
+
+def test_and_visualize(args):
     ################################################################
     # Loading and exploring training data demo
     ################################################################
@@ -1200,32 +1635,19 @@ if __name__ == "__main__":
     nan_counts = torch.isnan(ee_state_tensor).any(dim=2).sum(dim=0)
     print(f"    NaNs per bin (min/mean/max): {nan_counts.min()}/{nan_counts.float().mean():.1f}/{nan_counts.max()}")
 
-    print(f"\n1.2. Computing divergence of ee_states:")\
-    # compute divergence for each non-NaN point in the twists_tensorusing the phases to calcualte dphase
-    div_ee = _compute_divergence(
-        ee_state_tensor,
-        dphase,
-        k=4
-    )  # [n_demos, n_bins]
+    print(f"\n1.2. Computing divergence of ee_states:")
+    
+    # compute the state graphs
+    state_graphs = _construct_state_graph(ee_state_tensor)
+
+    # compute divergence via neighbors
+    div_ee = _compute_divergence_via_neighbors(state_graphs, dphase,  k=4)
     print(f"    Divergence tensor shape: {div_ee.shape}")
     valid_div = div_ee[~torch.isnan(div_ee)]
     print(f"    Divergence valid count: {valid_div.shape[0]}/{div_ee.numel()}")
     print(f"    Divergence stats (min/mean/max): {valid_div.min():.4f}/{valid_div.mean():.4f}/{valid_div.max():.4f}")
 
-    print(f"\n1.3. Unbinning divergence data:")
-    data = _unbin_data(data, demo_tensor_keys, div_ee, nan_mask)
-    
-    # Verify unbinning by checking a few demos
-    for demo_key in data['demos'][:3]:
-        if 'divergence' in data[demo_key]:
-            div_twist_demo = data[demo_key]['divergence']
-            valid_div_demo = div_twist_demo[~torch.isnan(div_twist_demo)]
-            print(f"    {demo_key}: shape={div_twist_demo.shape}, valid={valid_div_demo.shape[0]}/{div_twist_demo.numel()}")
-            if valid_div_demo.numel() > 0:
-                print(f"      stats (min/mean/max): {valid_div_demo.min():.4f}/{valid_div_demo.mean():.4f}/{valid_div_demo.max():.4f}")
-
-
-    # Or visualize just a few demos
+    # Visualize just a few demos
     fig = visualize_observation_trajectories(
         ee_state_tensor, demo_tensor_keys, nan_mask,
         divergence=div_ee, phase_tensor=phase_tensor,
@@ -1234,8 +1656,64 @@ if __name__ == "__main__":
     )
     plt.show()
 
-    print("\n" + "="*60)
-    print("Done! Remember to close the file when finished:")
-    print("  data['data'].close()")
-    print("="*60)
+    #################################################################
+    # True training distribution score estimation demo
+    #################################################################
+    print(f"\n" + "="*60)
+    print("2. Estimating score function for ee poses across all demos")
+    print(f"\n2.1. Estimating score via nearest neighbors:")
+    score_ee = _compute_score_via_neighbors(state_graphs, bandwidth=0.1)
+    print(f"    Score tensor shape: {score_ee.shape}")
+    valid_score = score_ee[~torch.isnan(score_ee).any(dim=2)]
+    print(f"    Score valid count: {valid_score.shape[0]}/{score_ee.shape[0] * score_ee.shape[1]}")
+
+    # Visualize score for a few demos
+    for demo_idx in range(3):
+        fig = visualize_score_for_trajectories(
+            ee_state_tensor, score_ee[demo_idx], demo_idx, demo_tensor_keys,
+            nan_mask=nan_mask, phase_tensor=phase_tensor,
+            frame_skip=5
+        )
+        plt.show()
+
+    print(f"\n2.2. Unbinning divergence and score data:")
+    data = _unbin_data(data, demo_tensor_keys, div_ee, score_ee, nan_mask)
+    
+    # Verify unbinning by checking a few demos
+    for demo_key in data['demos'][:3]:
+        print("\n" + "-"*40)
+        print(f"\n    Divergence stats for demo '{demo_key}':")
+        if 'divergence' in data[demo_key]:
+            div_twist_demo = data[demo_key]['divergence']
+            valid_div_demo = div_twist_demo[~torch.isnan(div_twist_demo)]
+            print(f"    {demo_key}: shape={div_twist_demo.shape}, valid={valid_div_demo.shape[0]}/{div_twist_demo.numel()}")
+            if valid_div_demo.numel() > 0:
+                print(f"      stats (min/mean/max): {valid_div_demo.min():.4f}/{valid_div_demo.mean():.4f}/{valid_div_demo.max():.4f}")
+        
+        print(f"\n    Score stats per component:")
+        if 'score' in data[demo_key]:
+            score_twist_demo = data[demo_key]['score']
+            valid_score_demo = score_twist_demo[~torch.isnan(score_twist_demo).any(dim=1)]
+            print(f"    {demo_key}: shape={score_twist_demo.shape}, valid={valid_score_demo.shape[0]}/{score_twist_demo.shape[0]}")
+            if valid_score_demo.numel() > 0:
+                print(f"      stats (min/mean/max) per component:")
+                for i in range(score_twist_demo.shape[1]):
+                    comp = valid_score_demo[:, i]
+                    print(f"        Component {i}: {comp.min():.4f}/{comp.mean():.4f}/{comp.max():.4f}")
+
+if __name__ == "__main__":
+    """
+    Demo code showing how to use _load_training_data() to explore a dataset.
+    
+    Usage:
+        python robomimic/utils/divergence_utils.py --dataset /path/to/dataset.hdf5
+    """    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, required=True, help="Path to HDF5 dataset")
+    parser.add_argument("--demo", type=str, default="demo_0", help="Demo key to inspect")
+    args = parser.parse_args()
+    
+    # test_and_visualize(args)
+
+    add_div_and_score_to_training_data(args.dataset)
 

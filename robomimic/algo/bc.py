@@ -17,6 +17,11 @@ import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 
+# TODO: import divergence utils
+# vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+from robomimic.utils.divergence_utils import compute_policy_divergence_during_training
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
 
@@ -110,6 +115,16 @@ class BC(PolicyAlgo):
         input_batch["obs"] = {k: batch["obs"][k][:, 0, :] for k in batch["obs"]}
         input_batch["goal_obs"] = batch.get("goal_obs", None) # goals may not be present
         input_batch["actions"] = batch["actions"][:, 0, :]
+
+        # TODO: digervence loss related changes
+        # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        # Extract divergence and score if present in batch
+        if "divergence" in batch:
+             input_batch["divergence"] = batch["divergence"][:, 0] # [B]
+        if "score" in batch:
+             input_batch["score"] = batch["score"][:, 0, :] # [B, D]
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
         return TensorUtils.to_float(TensorUtils.to_device(input_batch, self.device))
@@ -191,6 +206,35 @@ class BC(PolicyAlgo):
         ]
         action_loss = sum(action_losses)
         losses["action_loss"] = action_loss
+
+        # TODO: divergence loss related changes
+        # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        # CDM (Divergence) Loss
+        if "divergence" in batch and "score" in batch:
+            # Predict divergence of the model policy
+            # Note: This requires 'robot0_eef_pos' and 'robot0_eef_quat' to be in batch["obs"]
+            div_v_t = compute_policy_divergence_during_training(
+                model=self.nets["policy"], 
+                batch=batch, 
+                n_samples=3
+            )
+            
+            if div_v_t is not None:
+                div_u_t = batch["divergence"]
+                score_t = batch["score"]
+                
+                cdm_loss = LossUtils.divergence_loss(
+                    preds=actions, 
+                    labels=a_target, 
+                    div_v_t=div_v_t, 
+                    div_u_t=div_u_t, 
+                    score_t=score_t
+                )
+                
+                losses["cdm_loss"] = cdm_loss
+                losses["action_loss"] += self.algo_config.loss.cdm_weight * cdm_loss
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
         return losses
 
     def _train_step(self, losses):
@@ -232,6 +276,8 @@ class BC(PolicyAlgo):
             log["L1_Loss"] = info["losses"]["l1_loss"].item()
         if "cos_loss" in info["losses"]:
             log["Cosine_Loss"] = info["losses"]["cos_loss"].item()
+        if "cdm_loss" in info["losses"]:
+            log["CDM_Loss"] = info["losses"]["cdm_loss"].item()
         if "policy_grad_norms" in info:
             log["Policy_Grad_Norms"] = info["policy_grad_norms"]
         return log

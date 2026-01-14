@@ -7,126 +7,36 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-def gmm_score(x, means, sigmas, weights):
-    """
-    Compute the score function (gradient of log probability) for a Gaussian Mixture Model.
-    Assumes diagonal covariance matrices (independent dimensions).
-    
-    ∇ log p(x) = ∑_k π_k N(x|μ_k,Σ_k) ∇ log N(x|μ_k,Σ_k) / p(x)
-               = ∑_k w_k(x) Σ_k^{-1} (μ_k - x)
-    
-    where w_k(x) = π_k N(x|μ_k,Σ_k) / p(x) is the responsibility of component k.
-    
-    Args:
-        x: Input samples [batch, dim]
-        means: Component means [batch, num_components, dim]
-        sigmas: Component standard deviations [batch, num_components, dim] (diagonal covariance)
-        weights: Component weights (mixing coefficients) [batch, num_components]
-              Should sum to 1.
-    
-    Returns:
-        score: ∇ log p(x) [batch, dim]
-    """
-    batch_size, dim = x.shape
-    num_components = means.shape[1]
-    
-    # Normalize weights to ensure they sum to 1 along component dimension
-    weights = weights / weights.sum(dim=1, keepdim=True)  # [batch, num_components]
-    
-    # Vectorized computation for all components at once
-    # Expand x to [batch, num_components, dim] for broadcasting
-    x_expanded = x.unsqueeze(1)  # [batch, 1, dim]
-    
-    # Difference from all means: [batch, num_components, dim]
-    diff = x_expanded - means  # means is already [batch, num_components, dim]
-    
-    # For diagonal covariance: Σ^{-1} = diag(1/σ²)
-    # sigmas: [batch, num_components, dim]
-    sigma_sq = sigmas ** 2  # [batch, num_components, dim]
-    sigma_sq_inv = 1.0 / sigma_sq  # [batch, num_components, dim]
-    
-    # Determinant for diagonal covariance: |Σ| = ∏_i σ_i²
-    log_det = torch.sum(torch.log(sigma_sq), dim=2)  # [batch, num_components]
-    
-    # Mahalanobis distance for diagonal covariance
-    # (x - μ)^T Σ^{-1} (x - μ) = ∑_i (x_i - μ_i)² / σ_i²
-    mahal = torch.sum(diff ** 2 * sigma_sq_inv, dim=2)  # [batch, num_components]
-    
-    # Log probabilities for all components
-    # log N(x|μ_k,Σ_k) = -0.5 * [(x-μ_k)^T Σ_k^{-1} (x-μ_k) + log|Σ_k| + d*log(2π)]
-    log_probs = -0.5 * (mahal + log_det + dim * np.log(2 * np.pi))  # [batch, num_components]
-    
-    # Score for each component: Σ_k^{-1} (μ_k - x) = -(x - μ_k) / σ²
-    component_scores = -diff * sigma_sq_inv  # [batch, num_components, dim]
-    
-    # Add log weights
-    log_weights = torch.log(weights)  # [batch, num_components]
-    log_weighted_probs = log_probs + log_weights  # [batch, num_components]
-    
-    # Compute log p(x) using log-sum-exp trick for numerical stability
-    log_p_x = torch.logsumexp(log_weighted_probs, dim=1, keepdim=True)  # [batch, 1]
-    
-    # Compute responsibilities: w_k(x) = π_k N(x|μ_k,Σ_k) / p(x)
-    log_responsibilities = log_weighted_probs - log_p_x  # [batch, num_components]
-    responsibilities = torch.exp(log_responsibilities)  # [batch, num_components]
-    
-    # Weighted sum of component scores
-    # score = ∑_k w_k(x) * score_k(x)
-    score = torch.sum(responsibilities.unsqueeze(2) * component_scores, dim=1)  # [batch, dim]
-    
-    return score
 
-
-def divergence_loss(dx_t_pred, dx_t, x_t, div_u_t, mean_t, sigma_t, weights_t=None):
+def divergence_loss(preds, labels, div_v_t, div_u_t, score_t):
     """
     Compute flow matching loss with divergence regularization
     
     L_CDM(θ) = E[ |(∇·u_t - ∇·v_t) + (u_t - v_t)·∇log p_t| ]
     
     Args:
-        dx_t_pred: Prediected flow field sampels
-        dx_t: Target flow field samples [batch, dim]
-        x_t: Interpolated samples [batch, dim]
-        div_u_t: Divergence of target flow field [batch]
-        mean_t: Mean of p_t at x_t [batch, n_components, dim]
-        sigma_t: Stddev of p_t at x_t [batch, n_components, dim]
-        weights_t: the weights of the gmm [batch, n_components]
+        preds: Prediected flow field sampels (robot actions) [B,D]
+        labels: Target flow field samples (robot actions) [B,D]
+        div_v_t: Divergence of predicted flow field [B]
+        div_u_t: Divergence of target flow field [B]
+        score_t: Score function samples [B,D]
+
+    Returns:
+        loss (torch.Tensor): divergence loss scalar
     """
-    x_t.requires_grad_(True)
-        
-    # CONDITIONAL DIVERGENCE MATCHING LOSS
-    # Sample random vector ε ~ N(0, I) for Hutchinson's estimator
-    epsilon = torch.randn_like(x_t)
     
     # TERM 1: (∇·u_t - ∇·v_t)
-    # ---------------------------
-    # Divergence of predicted velocity v_t using Hutchinson's estimator
-    v_dot_eps = (dx_t_pred * epsilon).sum()
-    div_v_grad = torch.autograd.grad(
-        outputs=v_dot_eps,
-        inputs=x_t,
-        grad_outputs=torch.ones_like(v_dot_eps),
-        create_graph=True,
-        retain_graph=True
-    )[0]
-    div_v_t = (epsilon * div_v_grad).sum(dim=1)  # [batch]
-    
+    # ---------------------------    
     # Difference of divergences
     divergence_diff = div_u_t - div_v_t 
     
     # TERM 2: (u_t - v_t)·∇log p_t
     # ------------------------------
-    if weights_t is None:
-        # Score (single gauss): ∇ log p(x_t | x_1) = -(x_t - t*x_1) / σ²(t)
-        score = -(x_t - mean_t) / (sigma_t ** 2)  # [batch, dim]
-    else:
-        score = gmm_score(x_t, mean_t, sigma_t, weights_t)
-    
     # Velocity difference
-    velocity_diff = dx_t - dx_t_pred  # [batch, dim]
+    velocity_diff = labels - preds  # [batch, dim]
     
     # Dot product with score (sum over dimensions for each batch)
-    velocity_score_dot = (velocity_diff * score).sum(dim=1)  # [batch]
+    velocity_score_dot = (velocity_diff * score_t).sum(dim=1)  # [batch]
     
     # COMBINED DIVERGENCE LOSS
     # L_CDM = E[ |(∇·u - ∇·v) + (u - v)·score| ]

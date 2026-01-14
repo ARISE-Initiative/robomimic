@@ -141,6 +141,19 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         self.load_demo_info(filter_by_attribute=self.filter_by_attribute, demo_limit=demo_limit)
 
+        # TODO: Added divergence stuff here 
+        # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        # Check for divergence and score in the first demo and add to dataset_keys if present
+        if len(self.demos) > 0:
+            demo_0 = self.demos[0]
+            if "data/{}/divergence".format(demo_0) in self.hdf5_file:
+                print("SequenceDataset: found 'divergence' in dataset, adding to dataset_keys")
+                self.dataset_keys = tuple(set(self.dataset_keys).union({"divergence"}))
+            if "data/{}/score".format(demo_0) in self.hdf5_file:
+                print("SequenceDataset: found 'score' in dataset, adding to dataset_keys")
+                self.dataset_keys = tuple(set(self.dataset_keys).union({"score"}))
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
         # maybe prepare for observation normalization
         self.obs_normalization_stats = None
         if self.hdf5_normalize_obs:
