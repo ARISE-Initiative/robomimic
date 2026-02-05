@@ -29,7 +29,7 @@ DATASET_REGISTRY = {}
 MOMART_DATASET_REGISTRY = {}
 
 # Hugging Face repo ID
-HF_REPO_ID = "amandlek/robomimic"
+HF_REPO_ID = "robomimic/robomimic_datasets"
 
 
 def register_dataset_link(task, dataset_type, hdf5_type, link, horizon):
