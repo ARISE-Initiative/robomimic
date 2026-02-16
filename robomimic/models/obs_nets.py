@@ -1166,3 +1166,163 @@ class MIMO_Transformer(Module):
         msg += textwrap.indent("\n\ndecoder={}".format(self.nets["decoder"]), indent)
         msg = header + '(' + msg + '\n)'
         return msg
+
+
+class MIMO_SSM(Module):
+    """
+    Extension to State-Space Models to accept multiple observation dictionaries as input
+    and to output dictionaries of tensors. Inputs are specified as a dictionary of
+    observation dictionaries, with each key corresponding to an observation group.
+
+    This module utilizes @ObservationGroupEncoder to process the multiple input dictionaries and
+    @ObservationDecoder to generate tensor dictionaries. The SSM backbone processes the
+    temporal sequence using selective state-space blocks instead of self-attention, providing
+    O(n) complexity with respect to sequence length.
+    """
+    def __init__(
+        self,
+        input_obs_group_shapes,
+        output_shapes,
+        ssm_embed_dim,
+        ssm_num_layers,
+        ssm_context_length,
+        ssm_state_dim=16,
+        ssm_conv_dim=4,
+        ssm_dropout=0.1,
+        encoder_kwargs=None,
+    ):
+        """
+        Args:
+            input_obs_group_shapes (OrderedDict): a dictionary of dictionaries.
+                Each key in this dictionary should specify an observation group, and
+                the value should be an OrderedDict that maps modalities to
+                expected shapes.
+            output_shapes (OrderedDict): a dictionary that maps modality to
+                expected shapes for outputs.
+            ssm_embed_dim (int): dimension for embeddings used by SSM.
+            ssm_num_layers (int): number of SSM blocks to stack.
+            ssm_context_length (int): expected length of input sequences.
+            ssm_state_dim (int): hidden state dimension for the SSM recurrence.
+            ssm_conv_dim (int): kernel size for local convolution in SSM blocks.
+            ssm_dropout (float): dropout probability.
+            encoder_kwargs (dict): observation encoder config.
+        """
+        super(MIMO_SSM, self).__init__()
+
+        from robomimic.models.ssm_nets import SSM_Backbone
+
+        assert isinstance(input_obs_group_shapes, OrderedDict)
+        assert np.all([isinstance(input_obs_group_shapes[k], OrderedDict) for k in input_obs_group_shapes])
+        assert isinstance(output_shapes, OrderedDict)
+
+        self.input_obs_group_shapes = input_obs_group_shapes
+        self.output_shapes = output_shapes
+
+        self.nets = nn.ModuleDict()
+
+        # encoder for all observation groups
+        self.nets["encoder"] = ObservationGroupEncoder(
+            observation_group_shapes=input_obs_group_shapes,
+            encoder_kwargs=encoder_kwargs,
+            feature_activation=None,
+        )
+
+        # flat encoder output dimension
+        ssm_input_dim = self.nets["encoder"].output_shape()[0]
+
+        # project encoder output to SSM embedding dimension
+        self.nets["embed_encoder"] = nn.Linear(ssm_input_dim, ssm_embed_dim)
+
+        # layer norm for input embeddings
+        self.nets["embed_ln"] = nn.LayerNorm(ssm_embed_dim)
+
+        # dropout for input embeddings
+        self.nets["embed_drop"] = nn.Dropout(ssm_dropout)
+
+        # SSM backbone
+        self.nets["ssm"] = SSM_Backbone(
+            embed_dim=ssm_embed_dim,
+            context_length=ssm_context_length,
+            num_layers=ssm_num_layers,
+            state_dim=ssm_state_dim,
+            conv_dim=ssm_conv_dim,
+            dropout=ssm_dropout,
+        )
+
+        # decoder for output modalities
+        self.nets["decoder"] = ObservationDecoder(
+            decode_shapes=self.output_shapes,
+            input_feat_dim=ssm_embed_dim,
+        )
+
+        self.ssm_context_length = ssm_context_length
+        self.ssm_embed_dim = ssm_embed_dim
+
+    def output_shape(self, input_shape=None):
+        """
+        Returns output shape for this module, which is a dictionary instead
+        of a list since outputs are dictionaries.
+        """
+        return { k : list(self.output_shapes[k]) for k in self.output_shapes }
+
+    def forward(self, **inputs):
+        """
+        Process each set of inputs in its own observation group.
+
+        Args:
+            inputs (dict): a dictionary of dictionaries with one dictionary per
+                observation group. Each observation group's dictionary should map
+                modality to torch.Tensor batches. Should be consistent with
+                @self.input_obs_group_shapes. First two leading dimensions should
+                be batch and time [B, T, ...] for each tensor.
+
+        Returns:
+            outputs (dict): dictionary of output torch.Tensors, that corresponds
+                to @self.output_shapes. Leading dimensions will be batch and time [B, T, ...]
+                for each tensor.
+        """
+        for obs_group in self.input_obs_group_shapes:
+            for k in self.input_obs_group_shapes[obs_group]:
+                if inputs[obs_group][k] is None:
+                    continue
+                assert inputs[obs_group][k].ndim - 2 == len(self.input_obs_group_shapes[obs_group][k])
+
+        # use encoder to extract flat inputs, then project to SSM embedding dimension
+        ssm_inputs = TensorUtils.time_distributed(
+            inputs, self.nets["encoder"], inputs_as_kwargs=True
+        )
+        assert ssm_inputs.ndim == 3  # [B, T, D]
+
+        # embed, normalize, and apply dropout
+        ssm_embeddings = self.nets["embed_encoder"](ssm_inputs)
+        ssm_embeddings = self.nets["embed_ln"](ssm_embeddings)
+        ssm_embeddings = self.nets["embed_drop"](ssm_embeddings)
+
+        # pass through SSM backbone
+        ssm_outputs = self.nets["ssm"](ssm_embeddings)
+
+        # apply decoder to each timestep to get output dictionary
+        outputs = TensorUtils.time_distributed(
+            ssm_outputs, self.nets["decoder"]
+        )
+        outputs["ssm_encoder_outputs"] = ssm_outputs
+        return outputs
+
+    def _to_string(self):
+        """
+        Subclasses should override this method to print out info about network / policy.
+        """
+        return ''
+
+    def __repr__(self):
+        """Pretty print network."""
+        header = '{}'.format(str(self.__class__.__name__))
+        msg = ''
+        indent = ' ' * 4
+        if self._to_string() != '':
+            msg += textwrap.indent("\n" + self._to_string() + "\n", indent)
+        msg += textwrap.indent("\nencoder={}".format(self.nets["encoder"]), indent)
+        msg += textwrap.indent("\n\nssm={}".format(self.nets["ssm"]), indent)
+        msg += textwrap.indent("\n\ndecoder={}".format(self.nets["decoder"]), indent)
+        msg = header + '(' + msg + '\n)'
+        return msg

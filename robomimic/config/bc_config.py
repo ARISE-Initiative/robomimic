@@ -106,3 +106,15 @@ class BCConfig(BaseConfig):
         self.algo.transformer.supervise_all_steps = False           # if true, supervise all intermediate actions, otherwise only final one
         self.algo.transformer.nn_parameter_for_timesteps = True     # if true, use nn.Parameter otherwise use nn.Embedding
         self.algo.transformer.pred_future_acs = False               # shift action prediction forward to predict future actions instead of past actions
+
+        # SSM (State-Space Model) policy settings
+        self.algo.ssm.enabled = False                               # whether to train SSM policy
+        self.algo.ssm.context_length = 10                           # length of observation sequences to feed to SSM - should usually match train.frame_stack
+        self.algo.ssm.embed_dim = 256                               # dimension for embeddings used by SSM
+        self.algo.ssm.num_layers = 4                                # number of SSM blocks to stack
+        self.algo.ssm.state_dim = 16                                # hidden state dimension for the SSM recurrence
+        self.algo.ssm.conv_dim = 4                                  # kernel size for local convolution in SSM blocks
+        self.algo.ssm.dropout = 0.1                                 # dropout probability
+        self.algo.ssm.supervise_all_steps = False                   # if true, supervise all intermediate actions, otherwise only final one
+        self.algo.ssm.pred_future_acs = False                       # shift action prediction forward to predict future actions instead of past actions
+

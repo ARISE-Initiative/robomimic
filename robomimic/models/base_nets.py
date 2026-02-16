@@ -65,6 +65,22 @@ def transformer_args_from_config(transformer_config):
     return transformer_args
 
 
+def ssm_args_from_config(ssm_config):
+    """
+    Takes a Config object corresponding to SSM settings
+    (for example `config.algo.ssm` in BCConfig) and extracts
+    ssm kwargs for instantiating SSM networks.
+    """
+    return dict(
+        ssm_context_length=ssm_config.context_length,
+        ssm_embed_dim=ssm_config.embed_dim,
+        ssm_num_layers=ssm_config.num_layers,
+        ssm_state_dim=ssm_config.state_dim,
+        ssm_conv_dim=ssm_config.conv_dim,
+        ssm_dropout=ssm_config.dropout,
+    )
+
+
 class Module(torch.nn.Module):
     """
     Base class for networks. The only difference from torch.nn.Module is that it

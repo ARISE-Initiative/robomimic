@@ -18,7 +18,7 @@ import torch.distributions as D
 import robomimic.utils.tensor_utils as TensorUtils
 from robomimic.models.base_nets import Module
 from robomimic.models.transformers import GPT_Backbone
-from robomimic.models.obs_nets import MIMO_MLP, RNN_MIMO_MLP, MIMO_Transformer, ObservationDecoder
+from robomimic.models.obs_nets import MIMO_MLP, RNN_MIMO_MLP, MIMO_Transformer, MIMO_SSM, ObservationDecoder
 from robomimic.models.vae_nets import VAE
 from robomimic.models.distributions import TanhWrappedDistribution
 
@@ -1568,3 +1568,297 @@ class VAEActor(Module):
             mod = list(obs_dict.keys())[0]
             n = obs_dict[mod].shape[0]
         return self.decode(obs_dict=obs_dict, goal_dict=goal_dict, z=z, n=n)["action"]
+
+
+class SSMActorNetwork(MIMO_SSM):
+    """
+    An SSM policy network that predicts actions from observation sequences (assumed to be
+    frame stacked from previous observations). Uses a selective state-space model backbone
+    instead of self-attention, providing O(n) complexity with respect to sequence length.
+    """
+    def __init__(
+        self,
+        obs_shapes,
+        ac_dim,
+        ssm_embed_dim,
+        ssm_num_layers,
+        ssm_context_length,
+        ssm_state_dim=16,
+        ssm_conv_dim=4,
+        ssm_dropout=0.1,
+        goal_shapes=None,
+        encoder_kwargs=None,
+    ):
+        """
+        Args:
+            obs_shapes (OrderedDict): a dictionary that maps modality to
+                expected shapes for observations.
+
+            ac_dim (int): dimension of action space.
+
+            ssm_embed_dim (int): dimension for embeddings used by SSM.
+
+            ssm_num_layers (int): number of SSM blocks to stack.
+
+            ssm_context_length (int): expected length of input sequences.
+
+            ssm_state_dim (int): hidden state dimension for the SSM recurrence.
+
+            ssm_conv_dim (int): kernel size for local convolution in SSM blocks.
+
+            ssm_dropout (float): dropout probability.
+
+            goal_shapes (OrderedDict): a dictionary that maps modality to
+                expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs
+                being applied. Otherwise, should be nested dictionary containing relevant
+                per-modality information for encoder networks.
+        """
+        self.ac_dim = ac_dim
+
+        assert isinstance(obs_shapes, OrderedDict)
+        self.obs_shapes = obs_shapes
+
+        observation_group_shapes = OrderedDict()
+        observation_group_shapes["obs"] = OrderedDict(self.obs_shapes)
+
+        self._is_goal_conditioned = False
+        if goal_shapes is not None and len(goal_shapes) > 0:
+            assert isinstance(goal_shapes, OrderedDict)
+            self._is_goal_conditioned = True
+            self.goal_shapes = OrderedDict(goal_shapes)
+            observation_group_shapes["goal"] = OrderedDict(self.goal_shapes)
+        else:
+            self.goal_shapes = OrderedDict()
+
+        output_shapes = self._get_output_shapes()
+        super(SSMActorNetwork, self).__init__(
+            input_obs_group_shapes=observation_group_shapes,
+            output_shapes=output_shapes,
+            ssm_embed_dim=ssm_embed_dim,
+            ssm_num_layers=ssm_num_layers,
+            ssm_context_length=ssm_context_length,
+            ssm_state_dim=ssm_state_dim,
+            ssm_conv_dim=ssm_conv_dim,
+            ssm_dropout=ssm_dropout,
+            encoder_kwargs=encoder_kwargs,
+        )
+
+    def _get_output_shapes(self):
+        """
+        Allow subclasses to re-define outputs from @MIMO_SSM, since we won't
+        always directly predict actions, but may instead predict the parameters
+        of an action distribution.
+        """
+        return OrderedDict(action=(self.ac_dim,))
+
+    def output_shape(self, input_shape):
+        mod = list(self.obs_shapes.keys())[0]
+        T = input_shape[mod][0]
+        TensorUtils.assert_size_at_dim(input_shape, size=T, dim=0,
+                msg="SSMActorNetwork: input_shape inconsistent in temporal dimension")
+        return [T, self.ac_dim]
+
+    def forward(self, obs_dict, actions=None, goal_dict=None):
+        """
+        Forward a sequence of inputs through the SSM.
+
+        Args:
+            obs_dict (dict): batch of observations - each tensor in the dictionary
+                should have leading dimensions batch and time [B, T, ...]
+            actions (torch.Tensor): batch of actions of shape [B, T, D] (unused,
+                kept for interface compatibility with TransformerActorNetwork)
+            goal_dict (dict): if not None, batch of goal observations
+
+        Returns:
+            outputs (torch.Tensor): predicted action sequence of shape [B, T, ac_dim]
+        """
+        if self._is_goal_conditioned:
+            assert goal_dict is not None
+            mod = list(obs_dict.keys())[0]
+            goal_dict = TensorUtils.unsqueeze_expand_at(goal_dict, size=obs_dict[mod].shape[1], dim=1)
+
+        forward_kwargs = dict(obs=obs_dict, goal=goal_dict)
+        outputs = super(SSMActorNetwork, self).forward(**forward_kwargs)
+
+        outputs["action"] = torch.tanh(outputs["action"])
+        return outputs["action"]
+
+    def _to_string(self):
+        """Info to pretty print."""
+        return "action_dim={}".format(self.ac_dim)
+
+
+class SSMGMMActorNetwork(SSMActorNetwork):
+    """
+    An SSM GMM policy network that predicts sequences of action distributions from
+    observation sequences. Uses a selective state-space model backbone with a Gaussian
+    Mixture Model output head.
+    """
+    def __init__(
+        self,
+        obs_shapes,
+        ac_dim,
+        ssm_embed_dim,
+        ssm_num_layers,
+        ssm_context_length,
+        ssm_state_dim=16,
+        ssm_conv_dim=4,
+        ssm_dropout=0.1,
+        num_modes=5,
+        min_std=0.01,
+        std_activation="softplus",
+        low_noise_eval=True,
+        use_tanh=False,
+        goal_shapes=None,
+        encoder_kwargs=None,
+    ):
+        """
+        Args:
+            obs_shapes (OrderedDict): a dictionary that maps modality to
+                expected shapes for observations.
+
+            ac_dim (int): dimension of action space.
+
+            ssm_embed_dim (int): dimension for embeddings used by SSM.
+
+            ssm_num_layers (int): number of SSM blocks to stack.
+
+            ssm_context_length (int): expected length of input sequences.
+
+            ssm_state_dim (int): hidden state dimension for the SSM recurrence.
+
+            ssm_conv_dim (int): kernel size for local convolution in SSM blocks.
+
+            ssm_dropout (float): dropout probability.
+
+            num_modes (int): number of GMM modes.
+
+            min_std (float): minimum std output from network.
+
+            std_activation (None or str): type of activation to use for std deviation.
+                Options are:
+                `'softplus'`: Softplus activation applied
+                `'exp'`: Exp applied; this corresponds to network output being
+                    interpreted as log_std instead of std
+
+            low_noise_eval (float): if True, model will sample from GMM with low std,
+                so that one of the GMM modes will be sampled (approximately).
+
+            use_tanh (bool): if True, use a tanh-Gaussian distribution.
+
+            goal_shapes (OrderedDict): a dictionary that maps modality to
+                expected shapes for goal observations.
+
+            encoder_kwargs (dict or None): If None, results in default encoder_kwargs
+                being applied.
+        """
+        self.num_modes = num_modes
+        self.min_std = min_std
+        self.low_noise_eval = low_noise_eval
+        self.use_tanh = use_tanh
+
+        self.activations = {
+            "softplus": F.softplus,
+            "exp": torch.exp,
+        }
+        assert std_activation in self.activations, \
+            "std_activation must be one of: {}; instead got: {}".format(self.activations.keys(), std_activation)
+        self.std_activation = std_activation
+
+        super(SSMGMMActorNetwork, self).__init__(
+            obs_shapes=obs_shapes,
+            ac_dim=ac_dim,
+            ssm_embed_dim=ssm_embed_dim,
+            ssm_num_layers=ssm_num_layers,
+            ssm_context_length=ssm_context_length,
+            ssm_state_dim=ssm_state_dim,
+            ssm_conv_dim=ssm_conv_dim,
+            ssm_dropout=ssm_dropout,
+            encoder_kwargs=encoder_kwargs,
+            goal_shapes=goal_shapes,
+        )
+
+    def _get_output_shapes(self):
+        """
+        Tells @MIMO_SSM superclass about the output dictionary that should be generated
+        at the last layer. Network outputs parameters of GMM distribution.
+        """
+        return OrderedDict(
+            mean=(self.num_modes, self.ac_dim),
+            scale=(self.num_modes, self.ac_dim),
+            logits=(self.num_modes,),
+        )
+
+    def forward_train(self, obs_dict, actions=None, goal_dict=None, low_noise_eval=None):
+        """
+        Return full GMM distribution, which is useful for computing
+        quantities necessary at train-time, like log-likelihood, KL
+        divergence, etc.
+
+        Args:
+            obs_dict (dict): batch of observations
+            actions (torch.Tensor): batch of actions (unused, kept for interface compatibility)
+            goal_dict (dict): if not None, batch of goal observations
+
+        Returns:
+            dists (Distribution): sequence of GMM distributions over the timesteps
+        """
+        if self._is_goal_conditioned:
+            assert goal_dict is not None
+            mod = list(obs_dict.keys())[0]
+            goal_dict = TensorUtils.unsqueeze_expand_at(goal_dict, size=obs_dict[mod].shape[1], dim=1)
+
+        forward_kwargs = dict(obs=obs_dict, goal=goal_dict)
+        outputs = MIMO_SSM.forward(self, **forward_kwargs)
+
+        means = outputs["mean"]
+        scales = outputs["scale"]
+        logits = outputs["logits"]
+
+        if not self.use_tanh:
+            means = torch.tanh(means)
+
+        if low_noise_eval is None:
+            low_noise_eval = self.low_noise_eval
+        if low_noise_eval and (not self.training):
+            scales = torch.ones_like(means) * 1e-4
+        else:
+            scales = self.activations[self.std_activation](scales) + self.min_std
+
+        component_distribution = D.Normal(loc=means, scale=scales)
+        component_distribution = D.Independent(component_distribution, 1)
+        mixture_distribution = D.Categorical(logits=logits)
+
+        dists = D.MixtureSameFamily(
+            mixture_distribution=mixture_distribution,
+            component_distribution=component_distribution,
+        )
+
+        if self.use_tanh:
+            dists = TanhWrappedDistribution(base_dist=dists, scale=1.)
+
+        return dists
+
+    def forward(self, obs_dict, actions=None, goal_dict=None):
+        """
+        Samples actions from the policy distribution.
+
+        Args:
+            obs_dict (dict): batch of observations
+            actions (torch.Tensor): batch of actions (unused)
+            goal_dict (dict): if not None, batch of goal observations
+
+        Returns:
+            action (torch.Tensor): batch of actions from policy distribution
+        """
+        out = self.forward_train(obs_dict=obs_dict, actions=actions, goal_dict=goal_dict)
+        return out.sample()
+
+    def _to_string(self):
+        """Info to pretty print."""
+        msg = "action_dim={}, std_activation={}, low_noise_eval={}, num_nodes={}, min_std={}".format(
+            self.ac_dim, self.std_activation, self.low_noise_eval, self.num_modes, self.min_std)
+        return msg
+
