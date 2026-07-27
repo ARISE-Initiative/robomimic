@@ -1,15 +1,13 @@
 """
 Implementation of Diffusion Policy https://diffusion-policy.cs.columbia.edu/ by Cheng Chi
 """
-from typing import Callable, Union
-import math
 from collections import OrderedDict, deque
+from copy import deepcopy
+from typing import Callable
 from packaging.version import parse as parse_version
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# requires diffusers==0.11.1
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.training_utils import EMAModel
@@ -22,10 +20,34 @@ import robomimic.utils.obs_utils as ObsUtils
 
 from robomimic.algo import register_algo_factory_func, PolicyAlgo
 
-import random
-import robomimic.utils.torch_utils as TorchUtils
-import robomimic.utils.tensor_utils as TensorUtils
-import robomimic.utils.obs_utils as ObsUtils
+
+class _DiffusionPolicyEMA:
+    """Own a modern Diffusers EMA tracker and its inference network."""
+
+    def __init__(self, model: nn.Module, power: float):
+        self._power = power
+        self.averaged_model = deepcopy(model).eval().requires_grad_(False)
+        self._tracker = self._new_tracker()
+
+    def _new_tracker(self) -> EMAModel:
+        return EMAModel(
+            parameters=self.averaged_model.parameters(),
+            power=self._power,
+        )
+
+    def step(self, model: nn.Module) -> None:
+        """Update averaged weights from the training network."""
+        self._tracker.step(model.parameters())
+        self._tracker.copy_to(self.averaged_model.parameters())
+
+    def state_dict(self):
+        """Return the historical checkpoint representation: model weights."""
+        return self.averaged_model.state_dict()
+
+    def load_state_dict(self, state_dict) -> None:
+        """Restore averaged weights and seed a fresh tracker from them."""
+        self.averaged_model.load_state_dict(state_dict)
+        self._tracker = self._new_tracker()
 
 
 @register_algo_factory_func("diffusion_policy")
@@ -110,7 +132,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
         # setup EMA
         ema = None
         if self.algo_config.ema.enabled:
-            ema = EMAModel(model=nets, power=self.algo_config.ema.power)
+            ema = _DiffusionPolicyEMA(nets, power=self.algo_config.ema.power)
                 
         # set attrs
         self.nets = nets
@@ -375,7 +397,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
             "nets": self.nets.state_dict(),
             "optimizers": { k : self.optimizers[k].state_dict() for k in self.optimizers },
             "lr_schedulers": { k : self.lr_schedulers[k].state_dict() if self.lr_schedulers[k] is not None else None for k in self.lr_schedulers },
-            "ema": self.ema.averaged_model.state_dict() if self.ema is not None else None,
+            "ema": self.ema.state_dict() if self.ema is not None else None,
         }
 
     def deserialize(self, model_dict, load_optimizers=False):
@@ -397,7 +419,7 @@ class DiffusionPolicyUNet(PolicyAlgo):
             model_dict["lr_schedulers"] = {}
 
         if model_dict.get("ema", None) is not None:
-            self.ema.averaged_model.load_state_dict(model_dict["ema"])
+            self.ema.load_state_dict(model_dict["ema"])
 
         if load_optimizers:
             for k in model_dict["optimizers"]:
