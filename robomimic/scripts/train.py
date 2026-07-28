@@ -37,6 +37,7 @@ import robomimic.utils.torch_utils as TorchUtils
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.env_utils as EnvUtils
 import robomimic.utils.file_utils as FileUtils
+import robomimic.utils.lang_utils as LangUtils
 from robomimic.config import config_factory
 from robomimic.algo import algo_factory, RolloutPolicy
 from robomimic.utils.log_utils import PrintLogger, DataLogger, flush_warnings
@@ -87,8 +88,13 @@ def train(config, device, resume=False):
         print("\n============= Loaded Environment Metadata =============")
         env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path=dataset_path)
 
-        # populate language instruction for env in env_meta
-        env_meta["lang"] = dataset_cfg.get("lang", "dummy")
+        # Populate language instruction for env in env_meta, but only if the policy is
+        # language conditioned - otherwise leave it unset so that the env does not need
+        # to compute (and thus load the model for) language embeddings
+        if LangUtils.LANG_EMB_OBS_KEY in config.all_obs_keys:
+            env_meta["lang"] = dataset_cfg.get("lang", "dummy")
+        else:
+            env_meta["lang"] = None
 
         # update env meta if applicable
         from robomimic.utils.python_utils import deep_update
