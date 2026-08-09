@@ -163,7 +163,9 @@ def dataset_factory(config, obs_keys, filter_by_attribute=None, dataset_path=Non
     # NOTE: currently supporting fixed language embedding per dataset
     ## that is fetched from dataset config and not from file
     if LangUtils.LANG_EMB_OBS_KEY in obs_keys:
-        obs_keys.remove(LangUtils.LANG_EMB_OBS_KEY)
+        ## NOTE: copy rather than mutate, since the caller reuses the same obs_keys list for
+        ## both the train and validation datasets (and in shape_meta afterwards)
+        obs_keys = [k for k in obs_keys if k != LangUtils.LANG_EMB_OBS_KEY]
         ds_langs = [ds_cfg.get("lang", "dummy") for ds_cfg in config.train.data]
     else:
         ds_langs = [None for _ in config.train.data]
