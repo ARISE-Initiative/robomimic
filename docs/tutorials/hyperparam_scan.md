@@ -41,7 +41,7 @@ $ cat /tmp/gen_configs/base.json
         "save": {
             "enabled": true,
             "every_n_seconds": null,
-            "every_n_epochs": 50,
+            "every_n_epochs": 200,
             "epochs": [],
             "on_best_validation": false,
             "on_best_rollout_return": false,
@@ -53,7 +53,7 @@ $ cat /tmp/gen_configs/base.json
             "enabled": true,
             "n": 50,
             "horizon": 400,
-            "rate": 50,
+            "rate": 200,
             "warmstart": 0,
             "terminate_on_success": true
         }
