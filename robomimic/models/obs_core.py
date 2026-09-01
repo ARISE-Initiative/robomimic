@@ -581,10 +581,10 @@ class CropRandomizer(Randomizer):
         Do center crops during eval
         """
         assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
-        inputs = inputs.permute(*range(inputs.dim()-3), inputs.dim()-2, inputs.dim()-1, inputs.dim()-3)
-        out = ObsUtils.center_crop(inputs, self.crop_height, self.crop_width)
-        out = out.permute(*range(out.dim()-3), out.dim()-1, out.dim()-3, out.dim()-2)
-        return out
+        source_im = ObsUtils.add_positional_encoding(inputs) if self.pos_enc else inputs
+        crop_h = int((source_im.shape[-2] - self.crop_height) / 2)
+        crop_w = int((source_im.shape[-1] - self.crop_width) / 2)
+        return source_im[..., crop_h:crop_h + self.crop_height, crop_w:crop_w + self.crop_width]
 
     def _forward_out(self, inputs):
         """

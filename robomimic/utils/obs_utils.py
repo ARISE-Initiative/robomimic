@@ -671,6 +671,30 @@ def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
     return crops
 
 
+def add_positional_encoding(images):
+    """
+    Append normalized source-image coordinates to images as two channels.
+
+    Args:
+        images (torch.Tensor): images of shape [..., C, H, W]
+
+    Returns:
+        torch.Tensor: images of shape [..., C + 2, H, W]
+    """
+    device = images.device
+    h, w = images.shape[-2:]
+    pos_y, pos_x = torch.meshgrid(torch.arange(h), torch.arange(w))
+    pos_y = pos_y.float().to(device) / float(h)
+    pos_x = pos_x.float().to(device) / float(w)
+    position_enc = torch.stack((pos_y, pos_x))
+
+    # unsqueeze and expand to match leading dimensions -> shape [..., 2, H, W]
+    leading_shape = images.shape[:-3]
+    position_enc = position_enc[(None,) * len(leading_shape)]
+    position_enc = position_enc.expand(*leading_shape, -1, -1, -1)
+    return torch.cat((images, position_enc), dim=-3)
+
+
 def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_enc=False):
     """
     For each image, randomly sample @num_crops crops of size (@crop_height, @crop_width), from
@@ -696,25 +720,8 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
 
         crop_inds (torch.Tensor): sampled crop indices of shape (..., N, 2)
     """
-    device = images.device
-
     # maybe add 2 channels of spatial encoding to the source image
-    source_im = images
-    if pos_enc:
-        # spatial encoding [y, x] in [0, 1]
-        h, w = source_im.shape[-2:]
-        pos_y, pos_x = torch.meshgrid(torch.arange(h), torch.arange(w))
-        pos_y = pos_y.float().to(device) / float(h)
-        pos_x = pos_x.float().to(device) / float(w)
-        position_enc = torch.stack((pos_y, pos_x)) # shape [C, H, W]
-
-        # unsqueeze and expand to match leading dimensions -> shape [..., C, H, W]
-        leading_shape = source_im.shape[:-3]
-        position_enc = position_enc[(None,) * len(leading_shape)]
-        position_enc = position_enc.expand(*leading_shape, -1, -1, -1)
-
-        # concat across channel dimension with input
-        source_im = torch.cat((source_im, position_enc), dim=-3)
+    source_im = add_positional_encoding(images) if pos_enc else images
 
     # make sure sample boundaries ensure crops are fully within the images
     image_c, image_h, image_w = source_im.shape[-3:]
@@ -727,8 +734,8 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
     # or possibly no leading dimension.
     #
     # Trick: sample in [0, 1) with rand, then re-scale to [0, M) and convert to long to get sampled ints
-    crop_inds_h = (max_sample_h * torch.rand(*source_im.shape[:-3], num_crops).to(device)).long()
-    crop_inds_w = (max_sample_w * torch.rand(*source_im.shape[:-3], num_crops).to(device)).long()
+    crop_inds_h = (max_sample_h * torch.rand(*source_im.shape[:-3], num_crops).to(images.device)).long()
+    crop_inds_w = (max_sample_w * torch.rand(*source_im.shape[:-3], num_crops).to(images.device)).long()
     crop_inds = torch.cat((crop_inds_h.unsqueeze(-1), crop_inds_w.unsqueeze(-1)), dim=-1) # shape [..., N, 2]
 
     crops = crop_image_from_indices(
