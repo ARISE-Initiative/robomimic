@@ -10,6 +10,10 @@ from copy import deepcopy
 import robosuite
 import robosuite.utils.transform_utils as T
 try:
+    import robosuite.macros as ROBOSUITE_MACROS
+except ImportError:
+    ROBOSUITE_MACROS = None
+try:
     # this is needed for ensuring robosuite can find the additional mimicgen environments (see https://mimicgen.github.io)
     import mimicgen
 except ImportError:
@@ -234,9 +238,20 @@ class EnvRobosuite(EB.EnvBase):
             # if self.use_depth_obs:
             #     # render() returns a tuple when self.use_depth_obs=True
             #     return im[0][::-1]
-            return im[::-1]
+            if self._robosuite_uses_opengl_image_convention():
+                return im[::-1]
+            return im.copy()
         else:
             raise NotImplementedError("mode={} is not implemented".format(mode))
+
+    @staticmethod
+    def _robosuite_uses_opengl_image_convention():
+        """
+        robosuite can optionally return OpenCV-style images through its global IMAGE_CONVENTION
+        macro, so avoid flipping observations a second time in that configuration.
+        """
+        image_convention = getattr(ROBOSUITE_MACROS, "IMAGE_CONVENTION", "opengl")
+        return str(image_convention).lower() != "opencv"
 
     def get_observation(self, di=None):
         """
@@ -249,13 +264,12 @@ class EnvRobosuite(EB.EnvBase):
         if di is None:
             di = self.env._get_observations(force_update=True) if self._is_v1 else self.env._get_observation()
         ret = {}
+        should_flip_images = self._robosuite_uses_opengl_image_convention()
         for k in di:
             if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb"):
-                # by default images from mujoco are flipped in height
-                ret[k] = di[k][::-1].copy()
+                ret[k] = di[k][::-1].copy() if should_flip_images else di[k].copy()
             elif (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
-                # by default depth images from mujoco are flipped in height
-                ret[k] = di[k][::-1].copy()
+                ret[k] = di[k][::-1].copy() if should_flip_images else di[k].copy()
                 if len(ret[k].shape) == 2:
                     ret[k] = ret[k][..., None] # (H, W, 1)
                 assert len(ret[k].shape) == 3 
