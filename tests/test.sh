@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "running tests for observation utilities..."
+python test_obs_utils.py
+
 echo "running tests for bc..."
 python test_bc.py
 echo "running tests for hbc..."
