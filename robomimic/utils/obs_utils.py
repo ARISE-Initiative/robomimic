@@ -595,7 +595,7 @@ def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
             the indices can also be of shape [..., 2] if only 1 crop should
             be taken per image. Leading dimensions must be consistent with
             @images argument. Each index specifies the top left of the crop.
-            Values must be in range [0, H - CH - 1] x [0, W - CW - 1] where
+            Values must be in range [0, H - CH] x [0, W - CW] where
             H and W are the height and width of @images and CH and CW are
             @crop_height and @crop_width.
 
@@ -628,9 +628,9 @@ def crop_image_from_indices(images, crop_indices, crop_height, crop_width):
 
     # make sure @crop_indices are in valid range
     assert (crop_indices[..., 0] >= 0).all().item()
-    assert (crop_indices[..., 0] < (image_h - crop_height)).all().item()
+    assert (crop_indices[..., 0] <= (image_h - crop_height)).all().item()
     assert (crop_indices[..., 1] >= 0).all().item()
-    assert (crop_indices[..., 1] < (image_w - crop_width)).all().item()
+    assert (crop_indices[..., 1] <= (image_w - crop_width)).all().item()
 
     # convert each crop index (ch, cw) into a list of pixel indices that correspond to the entire window.
 
@@ -718,8 +718,8 @@ def sample_random_image_crops(images, crop_height, crop_width, num_crops, pos_en
 
     # make sure sample boundaries ensure crops are fully within the images
     image_c, image_h, image_w = source_im.shape[-3:]
-    max_sample_h = image_h - crop_height
-    max_sample_w = image_w - crop_width
+    max_sample_h = image_h - crop_height + 1
+    max_sample_w = image_w - crop_width + 1
 
     # Sample crop locations for all tensor dimensions up to the last 3, which are [C, H, W].
     # Each gets @num_crops samples - typically this will just be the batch dimension (B), so 
