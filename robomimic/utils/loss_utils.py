@@ -182,7 +182,9 @@ def project_values_onto_atoms(values, probabilities, atoms):
         atoms = atoms.squeeze(0)
 
     # helper tensors from @atoms
-    vmin, vmax = atoms[0], atoms[1]
+    # atoms[1] is the second atom. The support maximum is the last one, so a
+    # value sitting on the final atom was clipped onto the first interval.
+    vmin, vmax = atoms[0], atoms[-1]
     d_pos = torch.cat([atoms, vmin[None]], dim=0)[1:]
     d_neg = torch.cat([vmax[None], atoms], dim=0)[:-1]
 
