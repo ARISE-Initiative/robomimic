@@ -2,6 +2,8 @@
 Contains distribution models used as parts of other networks. These
 classes usually inherit or emulate torch distributions.
 """
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -39,9 +41,15 @@ class TanhWrappedDistribution(D.Distribution):
             one_minus_x = (1. - value).clamp(min=self.tanh_epsilon)
             pre_tanh_value = 0.5 * torch.log(one_plus_x / one_minus_x)
         lp = self.base_dist.log_prob(pre_tanh_value)
-        tanh_lp = torch.log(1 - value * value + self.tanh_epsilon)
+        # dy/dz = scale * (1 - tanh(z)^2). Evaluate in latent space so
+        # saturated samples do not lose the Jacobian or its gradient.
+        tanh_lp = math.log(abs(self.scale)) + 2. * (
+            math.log(2.) - pre_tanh_value - F.softplus(-2. * pre_tanh_value)
+        )
         # In case the base dist already sums up the log probs, make sure we do the same
-        return lp - tanh_lp if len(lp.shape) == len(tanh_lp.shape) else lp - tanh_lp.sum(-1)
+        if len(lp.shape) < len(tanh_lp.shape):
+            tanh_lp = tanh_lp.sum(dim=tuple(range(len(lp.shape), len(tanh_lp.shape))))
+        return lp - tanh_lp
 
     def sample(self, sample_shape=torch.Size(), return_pretanh_value=False):
         """
