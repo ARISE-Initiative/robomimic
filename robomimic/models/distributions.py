@@ -119,5 +119,8 @@ class DiscreteValueDistribution(object):
         """
         Sample from the distribution. Make sure to return value atoms, not categorical class indices.
         """
-        inds = self._categorical_dist.sample(sample_shape=sample_shape)
-        return torch.gather(self.values, inds, dim=-1)
+        values, _ = torch.broadcast_tensors(self.values, self.probs)
+        dist = self._categorical_dist.expand(values.shape[:-1])
+        inds = dist.sample(sample_shape=sample_shape)
+        values = values.expand(sample_shape + values.shape)
+        return torch.gather(values, dim=-1, index=inds.unsqueeze(-1)).squeeze(-1)
