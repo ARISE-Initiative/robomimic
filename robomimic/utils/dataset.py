@@ -691,12 +691,24 @@ class CustomWeightedRandomSampler(torch.utils.data.WeightedRandomSampler):
         super().__init__(*args, **kwargs)
 
     def __iter__(self):
-        rand_tensor = np.random.choice(range(0, len(self.weights)),
-                                       size=self.num_samples,
-                                       p=self.weights.numpy() / torch.sum(self.weights).numpy(),
-                                       replace=self.replacement)
-        rand_tensor = torch.from_numpy(rand_tensor)
-        return iter(rand_tensor.tolist())
+        weights = self.weights.detach().cpu().numpy()
+        probabilities = weights / weights.sum()
+        if self.generator is None:
+            # Preserve the existing global NumPy RNG behavior by default.
+            rng = np.random
+        else:
+            # Advance the supplied torch.Generator once per iterator, so its
+            # saved state controls reproducible multi-dataset sampling.
+            seed = torch.randint(
+                0, 2 ** 63 - 1, (1,), generator=self.generator,
+                device=self.generator.device,
+            ).item()
+            rng = np.random.default_rng(seed)
+        indices = rng.choice(
+            len(weights), size=self.num_samples, p=probabilities,
+            replace=self.replacement,
+        )
+        return iter(indices.tolist())
 
 
 class MetaDataset(torch.utils.data.Dataset):
@@ -913,3 +925,4 @@ def action_stats_to_normalization_stats(action_stats, action_config):
                 'action_config.actions.normalization: "{}" is not supported'.format(norm_method))
     
     return action_normalization_stats
+
