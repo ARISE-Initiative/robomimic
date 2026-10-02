@@ -460,10 +460,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         demo_index_offset = 0 if self.pad_frame_stack else (self.n_frame_stack - 1)
         index_in_demo = index - demo_start_index + demo_index_offset
 
-        # end at offset index if not padding for seq length
-        demo_length_offset = 0 if self.pad_seq_length else (self.seq_length - 1)
-        end_index_in_demo = demo_length - demo_length_offset
-
         meta = self.get_dataset_sequence_from_demo(
             demo_id,
             index_in_demo=index_in_demo,
@@ -475,7 +471,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         # determine goal index
         goal_index = None
         if self.goal_mode == "last":
-            goal_index = end_index_in_demo - 1
+            # The terminal next observation is independent of window padding.
+            goal_index = demo_length - 1
 
         meta["obs"] = self.get_obs_sequence_from_demo(
             demo_id,
