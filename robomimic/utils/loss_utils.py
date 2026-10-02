@@ -206,3 +206,41 @@ def project_values_onto_atoms(values, probabilities, atoms):
     delta_hat = (1. - delta_hat).clamp(min=0., max=1.)
     probabilities = probabilities[:, None, :]
     return (delta_hat * probabilities).sum(dim=2)
+
+
+def discounted_return(rewards, dones, discount, infinite_horizon=False):
+    """Compute an n-step return without counting rewards after termination.
+
+    The terminal transition's reward is included exactly once. For an infinite
+    horizon MDP, its reward continues in the absorbing state, giving a tail of
+    terminal_reward / (1 - discount).
+
+    Args:
+        rewards (torch.Tensor): rewards of shape (B, T).
+        dones (torch.Tensor): terminal flags of shape (B, T).
+        discount (float): one-step discount factor.
+        infinite_horizon (bool): whether terminal rewards form an absorbing tail.
+
+    Returns:
+        torch.Tensor: discounted returns of shape (B, 1).
+    """
+    # Demonstrations may store rewards as integer or boolean arrays.
+    # Form fractional discounts in floating point before the final batch cast.
+    if not rewards.is_floating_point():
+        rewards = rewards.float()
+    terminal = dones.bool()
+    active = torch.cat([
+        torch.ones_like(terminal[:, :1]),
+        (~terminal[:, :-1]).cumprod(dim=1).bool(),
+    ], dim=1)
+    discounts = rewards.new_tensor(discount).pow(
+        torch.arange(rewards.shape[1], device=rewards.device)
+    )
+    effective_rewards = rewards
+    if infinite_horizon:
+        if not 0.0 <= discount < 1.0:
+            raise ValueError("Infinite horizon returns require 0 <= discount < 1")
+        effective_rewards = torch.where(terminal, rewards / (1.0 - discount), rewards)
+    effective_rewards = torch.where(active, effective_rewards, torch.zeros_like(rewards))
+    return (effective_rewards * discounts).sum(dim=1, keepdim=True)
+

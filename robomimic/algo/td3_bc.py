@@ -172,22 +172,20 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
 
         # single timestep reward is discounted sum of intermediate rewards in sequence
         reward_seq = batch["rewards"][:, :n_step]
-        discounts = torch.pow(self.algo_config.discount, torch.arange(n_step).float()).unsqueeze(0)
-        input_batch["rewards"] = (reward_seq * discounts).sum(dim=1).unsqueeze(1)
+        done_seq = batch["dones"][:, :n_step]
+        input_batch["rewards"] = LossUtils.discounted_return(
+            rewards=reward_seq,
+            dones=done_seq,
+            discount=self.algo_config.discount,
+            infinite_horizon=self.algo_config.infinite_horizon,
+        )
 
         # discount rate will be gamma^N for computing n-step returns
         new_discount = (self.algo_config.discount ** n_step)
         self.set_discount(new_discount)
 
         # consider this n-step seqeunce done if any intermediate dones are present
-        done_seq = batch["dones"][:, :n_step]
         input_batch["dones"] = (done_seq.sum(dim=1) > 0).float().unsqueeze(1)
-
-        if self.algo_config.infinite_horizon:
-            # scale terminal rewards by 1 / (1 - gamma) for infinite horizon MDPs
-            done_inds = input_batch["dones"].round().long().nonzero(as_tuple=False)[:, 0]
-            if done_inds.shape[0] > 0:
-                input_batch["rewards"][done_inds] = input_batch["rewards"][done_inds] * (1. / (1. - self.discount))
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
         # this minimizes the amount of data transferred to GPU
@@ -565,3 +563,4 @@ class TD3_BC(PolicyAlgo, ValueAlgo):
         assert not self.nets.training
 
         return self.nets["critic"][0](obs_dict, actions, goal_dict)
+

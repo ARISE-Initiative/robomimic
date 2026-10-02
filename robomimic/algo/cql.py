@@ -17,6 +17,7 @@ import robomimic.models.value_nets as ValueNets
 import robomimic.utils.obs_utils as ObsUtils
 import robomimic.utils.tensor_utils as TensorUtils
 import robomimic.utils.torch_utils as TorchUtils
+import robomimic.utils.loss_utils as LossUtils
 from robomimic.algo import register_algo_factory_func, ValueAlgo, PolicyAlgo
 
 
@@ -201,11 +202,14 @@ class CQL(PolicyAlgo, ValueAlgo):
 
         # single timestep reward is discounted sum of intermediate rewards in sequence
         reward_seq = batch["rewards"][:, :self.n_step]
-        discounts = torch.pow(self.algo_config.discount, torch.arange(self.n_step).float()).unsqueeze(0)
-        input_batch["rewards"] = (reward_seq * discounts).sum(dim=1).unsqueeze(1)
+        done_seq = batch["dones"][:, :self.n_step]
+        input_batch["rewards"] = LossUtils.discounted_return(
+            rewards=reward_seq,
+            dones=done_seq,
+            discount=self.algo_config.discount,
+        )
 
         # consider this n-step seqeunce done if any intermediate dones are present
-        done_seq = batch["dones"][:, :self.n_step]
         input_batch["dones"] = (done_seq.sum(dim=1) > 0).float().unsqueeze(1)
 
         # we move to device first before float conversion because image observation modalities will be uint8 -
@@ -666,3 +670,4 @@ class CQL(PolicyAlgo, ValueAlgo):
         assert not self.nets.training
 
         return self.nets["critic"][0](obs_dict, actions, goal_dict)
+
