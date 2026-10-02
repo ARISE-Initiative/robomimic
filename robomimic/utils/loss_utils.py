@@ -146,9 +146,7 @@ def log_sum_exp(x, dim=0):
     Returns:
         y (torch.Tensor): log(sum(exp(x), dim))
     """
-    max_x = torch.max(x, dim)[0]
-    new_x = x - max_x.unsqueeze(dim).expand_as(x)
-    return max_x + (new_x.exp().sum(dim)).log()
+    return torch.logsumexp(x, dim=dim)
 
 
 def project_values_onto_atoms(values, probabilities, atoms):
@@ -206,3 +204,4 @@ def project_values_onto_atoms(values, probabilities, atoms):
     delta_hat = (1. - delta_hat).clamp(min=0., max=1.)
     probabilities = probabilities[:, None, :]
     return (delta_hat * probabilities).sum(dim=2)
+
