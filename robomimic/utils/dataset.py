@@ -229,11 +229,12 @@ class SequenceDataset(torch.utils.data.Dataset):
             if not self.pad_seq_length:
                 num_sequences -= (self.seq_length - 1)
 
-            if self.pad_seq_length:
-                assert demo_length >= 1  # sequence needs to have at least one sample
-                num_sequences = max(num_sequences, 1)
-            else:
-                assert num_sequences >= 1  # assume demo_length >= (self.n_frame_stack - 1 + self.seq_length)
+            if num_sequences < 1:
+                raise ValueError(
+                    f"Demo {ep} has {demo_length} samples, which is insufficient for "
+                    f"frame_stack={self.n_frame_stack} and seq_length={self.seq_length} "
+                    f"with pad_frame_stack={self.pad_frame_stack} and pad_seq_length={self.pad_seq_length}."
+                )
 
             for _ in range(num_sequences):
                 self._index_to_demo_id[self.total_num_sequences] = ep
