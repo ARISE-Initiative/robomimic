@@ -582,9 +582,9 @@ class RolloutPolicy(object):
                     rot_6d = torch.from_numpy(value).unsqueeze(0)
                     conversion_format = action_config[key].get("convert_at_runtime", "rot_axis_angle")
                     if conversion_format == "rot_axis_angle":
-                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_axis_angle(rot_6d=rot_6d).squeeze(0).numpy()
                     elif conversion_format == "rot_euler":
-                        rot = TorchUtils.rot_6d_to_euler_angles(rot_6d=rot_6d, convention="XYZ").squeeze().numpy()
+                        rot = TorchUtils.rot_6d_to_euler_angles(rot_6d=rot_6d, convention="XYZ").squeeze(0).numpy()
                     else:
                         raise ValueError
                     ac_dict[key] = rot
