@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "running tests for crop randomizer..."
+python test_crop_randomizer.py
+
 echo "running tests for bc..."
 python test_bc.py
 echo "running tests for hbc..."
