@@ -578,12 +578,26 @@ class CropRandomizer(Randomizer):
 
     def _forward_in_eval(self, inputs):
         """
-        Do center crops during eval
+        Do center crops during eval, including source-image position encoding if enabled.
         """
         assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        image_h, image_w = inputs.shape[-2:]
         inputs = inputs.permute(*range(inputs.dim()-3), inputs.dim()-2, inputs.dim()-1, inputs.dim()-3)
         out = ObsUtils.center_crop(inputs, self.crop_height, self.crop_width)
         out = out.permute(*range(out.dim()-3), out.dim()-1, out.dim()-3, out.dim()-2)
+        if self.pos_enc:
+            # Match the training convention: [y, x] coordinates normalized by the source size.
+            start_h = (image_h - self.crop_height) // 2
+            start_w = (image_w - self.crop_width) // 2
+            pos_y, pos_x = torch.meshgrid(
+                torch.arange(start_h, start_h + self.crop_height, device=out.device, dtype=torch.float32),
+                torch.arange(start_w, start_w + self.crop_width, device=out.device, dtype=torch.float32),
+                indexing="ij",
+            )
+            position_enc = torch.stack((pos_y / float(image_h), pos_x / float(image_w)))
+            leading_shape = out.shape[:-3]
+            position_enc = position_enc[(None,) * len(leading_shape)].expand(*leading_shape, -1, -1, -1)
+            out = torch.cat((out, position_enc), dim=-3)
         return out
 
     def _forward_out(self, inputs):
