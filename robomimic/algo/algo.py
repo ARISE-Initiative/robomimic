@@ -541,12 +541,14 @@ class RolloutPolicy(object):
             obs_normalization_stats = TensorUtils.to_float(TensorUtils.to_device(TensorUtils.to_tensor(self.obs_normalization_stats), self.policy.device))
             # limit normalization to obs keys being used, in case environment includes extra keys
             ob = { k : ob[k] for k in self.policy.global_config.all_obs_keys }
-            ob = ObsUtils.normalize_dict(ob, normalization_stats=obs_normalization_stats)
         # postprocess visual observations
         if postprocess_visual_obs:
             for k in ob:
                 if ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb") or ObsUtils.key_is_obs_modality(key=k, obs_modality="depth"):
                     ob[k] = ObsUtils.process_obs(obs=ob[k], obs_key=k)
+        if self.obs_normalization_stats is not None:
+            # Statistics are computed from processed observations during training.
+            ob = ObsUtils.normalize_dict(ob, normalization_stats=obs_normalization_stats)
         return ob
 
     def __repr__(self):
