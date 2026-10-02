@@ -376,6 +376,9 @@ class SequenceDataset(torch.utils.data.Dataset):
         action_traj = dict()
         for key in self.action_keys:
             action_traj[key] = self.hdf5_file["data/{}/{}".format(ep, key)][()].astype('float32')
+            # Match the scalar action expansion performed by get_item.
+            if action_traj[key].ndim == 1:
+                action_traj[key] = action_traj[key][:, None]
         return action_traj
    
     def get_action_stats(self):
