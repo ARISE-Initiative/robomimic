@@ -300,9 +300,11 @@ def axis_angle_to_rot_6d(axis_angle):
 
 def euler_angles_to_rot_6d(euler_angles, convention="XYZ"):
     """
-    Converts tensor with rot_6d representation to euler representation.
+    Converts Euler angles to a 6D rotation representation.
+
+    The convention is passed to euler_angles_to_matrix.
     """
-    rot_mat = euler_angles_to_matrix(euler_angles, convention="XYZ")
+    rot_mat = euler_angles_to_matrix(euler_angles, convention=convention)
     rot_6d = matrix_to_rotation_6d(rot_mat)
     return rot_6d
 
