@@ -14,3 +14,5 @@ echo "running tests for scripts..."
 python test_scripts.py
 echo "running tests for examples..."
 python test_examples.py
+echo "running tests for optional egl_probe..."
+python test_egl_probe.py

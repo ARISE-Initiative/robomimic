@@ -99,9 +99,9 @@ class EnvRobosuite(EB.EnvBase):
         if self._is_v1:
             if kwargs["has_offscreen_renderer"]:
                 # ensure that we select the correct GPU device for rendering by testing for EGL rendering
-                # NOTE: this package should be installed from this link (https://github.com/StanfordVL/egl_probe)
-                import egl_probe
-                valid_gpu_devices = egl_probe.get_available_devices()
+                # (uses the optional egl_probe package, see @EnvUtils.get_egl_device_ids)
+                import robomimic.utils.env_utils as EnvUtils
+                valid_gpu_devices = EnvUtils.get_egl_device_ids()
                 if len(valid_gpu_devices) > 0:
                     kwargs["render_gpu_device_id"] = valid_gpu_devices[0]
         else:

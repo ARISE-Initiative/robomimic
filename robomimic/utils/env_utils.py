@@ -8,6 +8,31 @@ import robomimic.envs.env_base as EB
 from robomimic.utils.log_utils import log_warning
 
 
+_EGL_PROBE_WARNING_SHOWN = False
+
+
+def get_egl_device_ids():
+    """
+    Return the ids of GPUs that support EGL rendering, as reported by the optional
+    egl_probe package (install with `pip install "robomimic[egl]"`). If egl_probe is not
+    installed, an empty list is returned (with a one-time warning) so that the simulator
+    falls back to its default rendering device selection.
+    """
+    global _EGL_PROBE_WARNING_SHOWN
+    try:
+        import egl_probe
+    except ImportError:
+        if not _EGL_PROBE_WARNING_SHOWN:
+            _EGL_PROBE_WARNING_SHOWN = True
+            log_warning(
+                "egl_probe is not installed, so the GPU for offscreen rendering will not be "
+                "auto-selected and the simulator default will be used. Install it with "
+                "`pip install \"robomimic[egl]\"` to enable automatic selection."
+            )
+        return []
+    return egl_probe.get_available_devices()
+
+
 def get_env_class(env_meta=None, env_type=None, env=None):
     """
     Return env class from either env_meta, env_type, or env.
