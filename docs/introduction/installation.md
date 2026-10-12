@@ -95,6 +95,16 @@ This is all you need for using the suite of algorithms and utilities packaged wi
 
 See the [datasets page](../datasets/overview.html) for more information on downloading datasets and reproducing experiments.
 
+## GPU selection for offscreen rendering
+
+When rendering offscreen on a machine with several GPUs, robomimic can use [egl_probe](https://github.com/StanfordVL/egl_probe) to pick a GPU that supports EGL rendering. It is optional and builds from source with CMake:
+
+```sh
+$ pip install "robomimic[egl]"   # or: pip install -e ".[egl]"
+```
+
+Without it, the simulator's default rendering device is used. With CMake 4 or newer, building egl_probe currently requires `CMAKE_POLICY_VERSION_MINIMUM=3.5` to be set in the environment.
+
 ## Install simulators
 
 If you would like to run robomimic examples and work with released datasets, please install the following simulators:

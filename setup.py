@@ -26,13 +26,16 @@ setup(
         "imageio",
         "imageio-ffmpeg",
         "matplotlib",
-        "egl_probe>=1.0.1",
         "torch",
         "torchvision",
         "huggingface_hub==0.23.4",
         "transformers==4.41.2",
         "diffusers==0.11.1",
     ],
+    extras_require={
+        # optional: picks a GPU that supports EGL for offscreen rendering
+        "egl": ["egl_probe>=1.0.1"],
+    },
     eager_resources=['*'],
     include_package_data=True,
     python_requires='>=3',
