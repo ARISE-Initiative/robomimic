@@ -14,3 +14,4 @@ echo "running tests for scripts..."
 python test_scripts.py
 echo "running tests for examples..."
 python test_examples.py
+python test_notebooks.py
