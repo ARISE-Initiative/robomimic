@@ -12,5 +12,7 @@ echo "running tests for cql..."
 python test_cql.py
 echo "running tests for scripts..."
 python test_scripts.py
+echo "running tests for conversion..."
+python test_conversion.py
 echo "running tests for examples..."
 python test_examples.py
