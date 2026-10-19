@@ -644,7 +644,6 @@ class SequenceDataset(torch.utils.data.Dataset):
             demo_id,
             index_in_demo=0,
             keys=self.dataset_keys,
-            num_frames_to_stack=self.n_frame_stack - 1, # note: need to decrement self.n_frame_stack by one
             seq_length=demo_length
         )
         meta["obs"] = self.get_obs_sequence_from_demo(
