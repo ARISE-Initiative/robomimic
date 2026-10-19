@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "running tests for dataset trajectory access..."
+python test_dataset.py
+
 echo "running tests for bc..."
 python test_bc.py
 echo "running tests for hbc..."
